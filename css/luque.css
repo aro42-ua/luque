@@ -97,17 +97,30 @@
     will-change: transform, width, height;
   }
   .custom-cursor.active{ opacity:1; }
-  .custom-cursor img{
-    width:100%; height:100%; display:block;
+  /* [MODIFICADO] La marca central se dibuja con una máscara en lugar de
+     un <img>, para que su color sea un color CSS de verdad y se pueda
+     teñir de amarillo mientras el visor está abierto (sobre el escenario
+     negro, el negro no se veía). El intercambio cursor-1/cursor-2 pasa a
+     hacerse cambiando la variable --marca. Las rutas son relativas a esta
+     hoja, que vive en css/, de ahí el prefijo ../ */
+  .custom-cursor{ --marca: url('../cursor-1.svg'); }
+  .custom-cursor.hover{ --marca: url('../cursor-2.svg'); }
+  .custom-cursor .marca{
+    position:absolute; inset:0;
+    background: var(--black);
+    -webkit-mask: var(--marca) center / contain no-repeat;
+            mask: var(--marca) center / contain no-repeat;
     filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
-    transition: opacity 0.15s ease;
+    transition: opacity 0.15s ease, background 0.2s ease;
   }
+  body.visor-abierto .custom-cursor .marca{ background: var(--yellow); }
+  body.visor-abierto .cursor-corner svg polygon{ fill: var(--yellow); }
 
   /* [MODIFICADO] Modo "bbox" — las CUATRO ESQUINAS de cursor-2.svg
      se anclan a las esquinas del bounding box de la foto. Van en
      NEGRO sólido (antes iban en blanco con mix-blend-mode:difference,
      que sobre el fondo amarillo se invertía a azul). */
-  .custom-cursor.bbox img{ opacity:0; }
+  .custom-cursor.bbox .marca{ opacity:0; }
 
   .cursor-corner{
     position:absolute;

@@ -83,7 +83,7 @@ window.Visor = (function () {
       raiz.offsetHeight;                // fuerza el reflujo antes del fundido
       raiz.classList.remove('entrando');
       window.Cursor.mostrar();
-      elCerrar.focus();
+      elCerrar.focus({ preventScroll: true });
       despertarChrome();
       return;
     }
@@ -120,7 +120,7 @@ window.Visor = (function () {
       setTimeout(function () {
         raiz.classList.remove('viajando');
         window.Cursor.mostrar();
-        elCerrar.focus();
+        elCerrar.focus({ preventScroll: true });
         despertarChrome();
       }, 640);
     }
@@ -185,7 +185,10 @@ window.Visor = (function () {
       sobreLaTira = false;
       window.Galeria.descongelar();
       window.Cursor.mostrar();
-      if (elementoQueAbrio) elementoQueAbrio.focus();
+      // preventScroll: sin esto el navegador arrastra la página para traer el
+      // botón a la vista, y como el lienzo es enorme y scroll-behavior es smooth,
+      // la página se va al hero durante un segundo.
+      if (elementoQueAbrio) elementoQueAbrio.focus({ preventScroll: true });
       elementoQueAbrio = null;
       proyecto = null;
     }

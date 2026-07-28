@@ -1,6 +1,6 @@
 window.Cursor = (function () {
   var cursorEl = null;
-  var cursorImg = null;
+  var cursorMarca = null;
   var bboxImg = null;
 
   var DEFAULT_SIZE = 34;
@@ -69,9 +69,9 @@ window.Cursor = (function () {
        ================================================================ */
     if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
 
-    cursorEl  = document.getElementById('customCursor');
-    cursorImg = document.getElementById('cursorImg');
-    if(!cursorEl || !cursorImg) return;
+    cursorEl   = document.getElementById('customCursor');
+    cursorMarca = document.getElementById('cursorMarca');
+    if(!cursorEl || !cursorMarca) return;
 
     window.addEventListener('mousemove', (e) => {
       mouseX = e.clientX; mouseY = e.clientY;
@@ -97,7 +97,9 @@ window.Cursor = (function () {
         bboxImg = null;
         cursorEl.classList.add('hover');
         cursorEl.classList.remove('bbox');
-        cursorImg.src = 'cursor-2.svg';
+        // El intercambio a cursor-2.svg lo hace ahora el CSS con la clase
+        // .hover (--marca): así la ruta se declara en la hoja de estilos,
+        // que es donde el ../ es correcto. Ver css/luque.css.
       }
     });
 
@@ -114,7 +116,6 @@ window.Cursor = (function () {
       if (e.target.closest && e.target.closest(NAV_SELECTOR) && !stillInNav){
         if (state === 'nav-hover') state = 'default';
         cursorEl.classList.remove('hover');
-        cursorImg.src = 'cursor-1.svg';
       }
     });
   }
