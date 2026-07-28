@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "luque-worktree",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "C:/Users/angel/Documents/LIDIA/files/files/.worktrees/visor-galeria"
+      ],
+      "port": 8765
+    }
+  ]
+}
