@@ -172,12 +172,12 @@ window.Galeria = (function () {
 
     // Navegación desde el menú: centra la categoría pulsada
     function focusCategory(catId){
-      const el = document.querySelector(`.proj[data-cat="${catId}"]`);
+      var el = document.querySelector('.proj[data-cat="' + catId + '"]');
       if(!el) return;
-      const elCenterX = el.offsetLeft + el.offsetWidth / 2;
-      const elCenterY = el.offsetTop + el.offsetHeight / 2;
-      targetX = clamp(stageW / 2 - elCenterX, minX, 0);
-      targetY = clamp(stageH / 2 - elCenterY, minY, 0);
+      var r = el.getBoundingClientRect();
+      var s = stage.getBoundingClientRect();
+      targetX = clamp(curX + (s.left + stageW / 2) - (r.left + r.width / 2), minX, 0);
+      targetY = clamp(curY + (s.top  + stageH / 2) - (r.top  + r.height / 2), minY, 0);
     }
 
     document.querySelectorAll('.navbar .nav-svg a[href^="#"]').forEach((a) => {
