@@ -97,24 +97,27 @@
     will-change: transform, width, height;
   }
   .custom-cursor.active{ opacity:1; }
-  /* [MODIFICADO] La marca central se dibuja con una máscara en lugar de
-     un <img>, para que su color sea un color CSS de verdad y se pueda
-     teñir de amarillo mientras el visor está abierto (sobre el escenario
-     negro, el negro no se veía). El intercambio cursor-1/cursor-2 pasa a
-     hacerse cambiando la variable --marca. Las rutas son relativas a esta
-     hoja, que vive en css/, de ahí el prefijo ../ */
-  .custom-cursor{ --marca: url('../cursor-1.svg'); }
-  .custom-cursor.hover{ --marca: url('../cursor-2.svg'); }
+  /* La marca central va incrustada como SVG en el marcado, no cargada
+     como máscara externa: bajo file:// el navegador trata cada archivo
+     como un origen opaco y bloquea las máscaras externas, lo que dejaba
+     el cursor completamente invisible. Al ir incrustada, el color es un
+     color CSS de verdad (currentColor) y basta cambiar `color` para
+     teñir la marca y las cuatro esquinas a la vez. */
+  .custom-cursor{ color: var(--black); }
+  body.visor-abierto .custom-cursor{ color: var(--yellow); }
+
   .custom-cursor .marca{
     position:absolute; inset:0;
-    background: var(--black);
-    -webkit-mask: var(--marca) center / contain no-repeat;
-            mask: var(--marca) center / contain no-repeat;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
-    transition: opacity 0.15s ease, background 0.2s ease;
+    transition: opacity 0.15s ease;
   }
-  body.visor-abierto .custom-cursor .marca{ background: var(--yellow); }
-  body.visor-abierto .cursor-corner svg polygon{ fill: var(--yellow); }
+  .custom-cursor .marca svg{
+    width:100%; height:100%; display:block;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
+  }
+  .custom-cursor .marca polygon{ fill: currentColor; }
+
+  /* cursor-2 es cursor-1 sin la cruz central */
+  .custom-cursor.hover .marca .cruz{ opacity:0; }
 
   /* [MODIFICADO] Modo "bbox" — las CUATRO ESQUINAS de cursor-2.svg
      se anclan a las esquinas del bounding box de la foto. Van en
@@ -130,7 +133,7 @@
     pointer-events:none;
   }
   .cursor-corner svg{ width:100%; height:100%; display:block; }
-  .cursor-corner svg polygon{ fill:var(--black); }
+  .cursor-corner svg polygon{ fill: currentColor; }
 
   .custom-cursor.bbox .cursor-corner{ opacity:1; }
 
