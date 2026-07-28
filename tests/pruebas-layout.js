@@ -12,6 +12,17 @@ describe('posicionesCompactas', function () {
     igual(LayoutFiltrado.posicionesCompactas(6), LayoutFiltrado.RANURAS);
   });
 
+  prueba('las ranuras conservan las coordenadas de la composición', function () {
+    igual(LayoutFiltrado.RANURAS, [
+      { x: 6,  y: 10, w: 22 },
+      { x: 38, y: 34, w: 18 },
+      { x: 66, y: 6,  w: 20 },
+      { x: 12, y: 52, w: 19 },
+      { x: 44, y: 72, w: 17 },
+      { x: 72, y: 46, w: 21 }
+    ]);
+  });
+
   prueba('ninguna de las seis primeras comparte posición', function () {
     var vistas = {};
     LayoutFiltrado.posicionesCompactas(6).forEach(function (p) {
