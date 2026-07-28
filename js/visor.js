@@ -195,6 +195,7 @@ window.Visor = (function () {
     var img = escena.querySelector('img');
     var actual = img.getBoundingClientRect();
     raiz.classList.add('viajando');
+    raiz.offsetHeight;                 // fuerza el reflujo antes de animar la vuelta
     img.style.transform = 'translate(' + (destino.left - actual.left) + 'px,' +
                                          (destino.top - actual.top) + 'px) scale(' +
                           (destino.width / actual.width) + ',' +
