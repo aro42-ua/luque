@@ -1009,6 +1009,8 @@ Añadir dentro del módulo. `paneoCongelado` es una bandera nueva que el paneo d
 
 Cancelar el temporizador pendiente antes de armar uno nuevo no es opcional: sin ello, pulsar dos categorías seguidas hace que el temporizador de la primera quite la clase `recomponiendo` a media animación de la segunda, y como esa clase es la que lleva la transición, las fotos saltan en seco.
 
+La lectura de `canvas.offsetHeight` tampoco es opcional, y es más sutil. La transición del `transform` está condicionada a la clase `recomponiendo`. Si se añade la clase y se cambian los `transform` en el mismo tick, el navegador funde ambos cambios en un solo recálculo de estilo: nunca existe un estado previo con la transición activa, así que el `transform` se aplica de golpe y las fotos saltan. Leer `offsetHeight` fuerza el reflujo y separa los dos pasos. La transición de `opacity`, que vive en `.proj` sin condicionar, sí funciona sin esta precaución — de ahí que el síntoma sea «se desvanece y luego salta».
+
 ```js
 var categoria = null;
 var paneoCongelado = false;
@@ -1019,6 +1021,7 @@ function conRecomposicion(fn) {
   var canvas = document.getElementById('spatialCanvas');
   if (temporizadorRecomposicion) clearTimeout(temporizadorRecomposicion);
   canvas.classList.add('recomponiendo');
+  canvas.offsetHeight;   // fuerza el reflujo antes de mover nada
   fn(canvas);
   temporizadorRecomposicion = setTimeout(function () {
     temporizadorRecomposicion = null;
