@@ -5,6 +5,7 @@ window.Visor = (function () {
 
   var raiz, escena, chrome, tira, elTitulo, elCat, elContador, elCerrar;
   var temporizador = null;
+  var sobreLaTira = false;
   var OCULTAR_TRAS = 2000;
 
   function init() {
@@ -23,8 +24,15 @@ window.Visor = (function () {
     document.addEventListener('keydown', alPulsarTecla);
     raiz.addEventListener('mousemove', despertarChrome);
     raiz.addEventListener('wheel', alRodar, { passive: true });
-    tira.addEventListener('mouseenter', pararTemporizador);
-    tira.addEventListener('mouseleave', despertarChrome);
+    tira.addEventListener('mouseenter', function () {
+      sobreLaTira = true;
+      chrome.classList.remove('oculto');
+      pararTemporizador();
+    });
+    tira.addEventListener('mouseleave', function () {
+      sobreLaTira = false;
+      despertarChrome();
+    });
 
     document.addEventListener('click', function (e) {
       var boton = e.target.closest ? e.target.closest('.proj') : null;
@@ -43,7 +51,7 @@ window.Visor = (function () {
 
   function abrir(id) {
     var p = window.Datos.porId(id);
-    if (!p || !p.piezas) return;
+    if (!p || !p.piezas || !p.piezas.length) return;
 
     proyecto = p;
     elementoQueAbrio = window.Galeria.elementoDe(id);
@@ -64,6 +72,7 @@ window.Visor = (function () {
     raiz.hidden = true;
     document.body.classList.remove('visor-abierto');
     pararTemporizador();
+    sobreLaTira = false;
     if (elementoQueAbrio) elementoQueAbrio.focus();
     elementoQueAbrio = null;
     proyecto = null;
@@ -147,6 +156,7 @@ window.Visor = (function () {
   function despertarChrome() {
     chrome.classList.remove('oculto');
     pararTemporizador();
+    if (sobreLaTira) return;   // la tira no se desvanece bajo el cursor
     temporizador = setTimeout(function () { chrome.classList.add('oculto'); }, OCULTAR_TRAS);
   }
 
