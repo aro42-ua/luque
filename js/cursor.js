@@ -119,5 +119,11 @@ window.Cursor = (function () {
     });
   }
 
-  return { init: init };
+  // cursorEl es null en táctil (init() sale antes de crearlo): sin guarda,
+  // abrir/cerrar el visor en un dispositivo sin cursor fino lanzaría y
+  // dejaría la galería congelada, el fallo más caro de esta tarea.
+  function ocultar() { if (cursorEl) cursorEl.style.display = 'none'; }
+  function mostrar() { if (cursorEl) cursorEl.style.display = ''; }
+
+  return { init: init, ocultar: ocultar, mostrar: mostrar };
 })();

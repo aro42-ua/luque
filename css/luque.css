@@ -525,8 +525,10 @@
   display:flex;
   align-items:center;
   justify-content:center;
+  transition:opacity 0.34s ease;
 }
 .visor[hidden]{ display:none; }
+.visor.entrando{ opacity:0; }
 
 body.visor-abierto{ overflow:hidden; }
 body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
@@ -536,20 +538,39 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   width:26px; height:26px;
   z-index:3;
   pointer-events:none;
+  color:var(--yellow);
 }
-.visor-esquina::before,
-.visor-esquina::after{
+.visor-esquina i{
+  position:absolute; inset:0;
+  display:block;
+}
+.visor-esquina i::before,
+.visor-esquina i::after{
   content:'';
   position:absolute;
-  background:var(--yellow);
+  background:currentColor;
 }
-.visor-esquina::before{ top:0; left:0; width:100%; height:3px; }
-.visor-esquina::after{  top:0; left:0; width:3px;  height:100%; }
+.visor-esquina i::before{ top:0; left:0; width:100%; height:3px; }
+.visor-esquina i::after{  top:0; left:0; width:3px;  height:100%; }
 
 .visor-esquina.tl{ top:22px;    left:22px;  }
-.visor-esquina.tr{ top:22px;    right:22px; transform:scaleX(-1); }
-.visor-esquina.bl{ bottom:22px; left:22px;  transform:scaleY(-1); }
-.visor-esquina.br{ bottom:22px; right:22px; transform:scale(-1,-1); }
+.visor-esquina.tr{ top:22px;    right:22px; }
+.visor-esquina.bl{ bottom:22px; left:22px;  }
+.visor-esquina.br{ bottom:22px; right:22px; }
+
+.visor-esquina.tr i{ transform:scaleX(-1); }
+.visor-esquina.bl i{ transform:scaleY(-1); }
+.visor-esquina.br i{ transform:scale(-1,-1); }
+
+.visor.viajando .visor-esquina{
+  transition:transform 0.62s cubic-bezier(.2,.7,.2,1),
+             color 0.62s cubic-bezier(.2,.7,.2,1);
+}
+
+.visor.viajando .visor-escena img{
+  transition:transform 0.62s cubic-bezier(.2,.7,.2,1),
+             filter 0.62s cubic-bezier(.2,.7,.2,1);
+}
 
 .visor-escena{
   position:absolute;
@@ -563,6 +584,7 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   max-height:100%;
   object-fit:contain;
   display:block;
+  transform-origin:0 0;
 }
 
 .visor-chrome{
@@ -574,6 +596,7 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 }
 .visor-chrome > *{ pointer-events:auto; }
 .visor-chrome.oculto{ opacity:0; pointer-events:none; }
+.visor .visor-chrome{ transition:opacity 0.3s ease 0.42s; }
 
 .visor-cabecera{
   position:absolute; top:32px; left:60px; right:60px;
@@ -653,4 +676,11 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   .visor-escena{ inset:76px 24px 104px; }
   .visor-cabecera{ left:26px; right:26px; top:26px; }
   .visor-tira{ padding:0 20px; bottom:32px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .visor{ transition:opacity 0.2s ease; }
+  .visor.viajando .visor-esquina,
+  .visor.viajando .visor-escena img{ transition:none; }
+  .visor .visor-chrome{ transition:opacity 0.2s ease; }
 }

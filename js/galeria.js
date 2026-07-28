@@ -161,6 +161,9 @@ window.Galeria = (function () {
 
   function categoriaActiva() { return categoria; }
 
+  function congelar()    { paneoCongelado = true;  }
+  function descongelar() { paneoCongelado = false; }
+
   function init() {
     var problemas = window.Datos.validarDatos(window.Datos.PROYECTOS, window.Datos.CATEGORIAS);
     if (problemas.length) console.warn('Problemas en los datos:\n' + problemas.join('\n'));
@@ -283,6 +286,8 @@ window.Galeria = (function () {
     elementoDe: elementoDe,
     aplicarFiltro: aplicarFiltro,
     quitarFiltro: quitarFiltro,
-    categoriaActiva: categoriaActiva
+    categoriaActiva: categoriaActiva,
+    congelar: congelar,
+    descongelar: descongelar
   };
 })();
