@@ -10,6 +10,7 @@ window.Galeria = (function () {
 
   var categoria = null;
   var paneoCongelado = false;
+  var temporizadorRecomposicion = null;
   var DURACION_MS = 620;
 
   var ETIQUETAS = {
@@ -89,9 +90,11 @@ window.Galeria = (function () {
 
   function conRecomposicion(fn) {
     var canvas = document.getElementById('spatialCanvas');
+    if (temporizadorRecomposicion) clearTimeout(temporizadorRecomposicion);
     canvas.classList.add('recomponiendo');
     fn(canvas);
-    setTimeout(function () {
+    temporizadorRecomposicion = setTimeout(function () {
+      temporizadorRecomposicion = null;
       canvas.classList.remove('recomponiendo');
       measure();
       paneoCongelado = false;
@@ -229,12 +232,14 @@ window.Galeria = (function () {
       let startPX = 0, startPY = 0, startTX = 0, startTY = 0;
 
       stage.addEventListener('pointerdown', (e) => {
+        if (paneoCongelado) return;
         dragging = true;
         startPX = e.clientX; startPY = e.clientY;
         startTX = targetX; startTY = targetY;
         stage.setPointerCapture(e.pointerId);
       });
       stage.addEventListener('pointermove', (e) => {
+        if (paneoCongelado) return;
         if(!dragging) return;
         const dx = e.clientX - startPX;
         const dy = e.clientY - startPY;

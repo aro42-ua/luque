@@ -482,6 +482,11 @@
   .navbar .nav-svg a.activa path,
   .navbar .nav-svg a.activa polygon{ fill:var(--yellow); }
 
+  /* La celda activa no se atenúa al pasar el ratón: la regla general de
+     hover la lavaría y se perdería la inversión que la marca. */
+  .navbar .nav-svg a.activa:hover,
+  .navbar .nav-svg a.activa:focus-visible{ opacity:1; }
+
   /* Proyecto que no pertenece a la categoría filtrada */
   .proj{ transition:opacity 0.45s ease; }
   .proj.apagado{
