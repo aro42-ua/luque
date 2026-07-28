@@ -239,6 +239,35 @@
 
   </section>
 
+  <!-- ============================================================
+       VISOR DE PROYECTO
+  ============================================================ -->
+  <div class="visor" id="visor" role="dialog" aria-modal="true"
+       aria-labelledby="visorTitulo" hidden>
+
+    <span class="visor-esquina tl" aria-hidden="true"></span>
+    <span class="visor-esquina tr" aria-hidden="true"></span>
+    <span class="visor-esquina bl" aria-hidden="true"></span>
+    <span class="visor-esquina br" aria-hidden="true"></span>
+
+    <div class="visor-chrome" id="visorChrome">
+      <header class="visor-cabecera">
+        <p class="visor-titulo"><span id="visorTitulo"></span><span class="visor-cat" id="visorCat"></span></p>
+        <div class="visor-acciones">
+          <span class="visor-contador" id="visorContador"></span>
+          <button class="visor-cerrar" id="visorCerrar" type="button" aria-label="Cerrar el visor">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 5.4L5.4 4 12 10.6 18.6 4 20 5.4 13.4 12 20 18.6 18.6 20 12 13.4 5.4 20 4 18.6 10.6 12z"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+      <nav class="visor-tira" id="visorTira" aria-label="Piezas del proyecto"></nav>
+    </div>
+
+    <div class="visor-escena" id="visorEscena"></div>
+  </div>
+
   <footer>
     <p>LUQUE!</p>
     <p>© 2026 — Estudio de fotografía y cine</p>
@@ -254,13 +283,16 @@
   <script src="js/datos.js"></script>
   <script src="js/router.js"></script>
   <script src="js/layout-filtrado.js"></script>
+  <script src="js/visor-estado.js"></script>
   <script src="js/cursor.js"></script>
   <script src="js/galeria.js"></script>
+  <script src="js/visor.js"></script>
   <script>
   gsap.registerPlugin(ScrollTrigger);
   window.Hero.init();
   window.Cursor.init();
   window.Galeria.init();
+  window.Visor.init();
   window.Router.init();
   </script>
 
