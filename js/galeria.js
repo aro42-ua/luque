@@ -92,6 +92,7 @@ window.Galeria = (function () {
     var canvas = document.getElementById('spatialCanvas');
     if (temporizadorRecomposicion) clearTimeout(temporizadorRecomposicion);
     canvas.classList.add('recomponiendo');
+    canvas.offsetHeight;   // fuerza el reflujo: sin esto la transición no arranca
     fn(canvas);
     temporizadorRecomposicion = setTimeout(function () {
       temporizadorRecomposicion = null;
