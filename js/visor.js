@@ -37,6 +37,9 @@ window.Visor = (function () {
 
     escena.addEventListener('click', function () {
       if (!estado.abierto) return;
+      // El navegador dispara click al soltar un arrastre, así que sin esta
+      // guarda cada paneo de la lupa la cerraría al terminar.
+      if (estado.lupa && window.VisorLupa.huboArrastre()) return;
       alternarLupa();
     });
 

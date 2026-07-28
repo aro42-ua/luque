@@ -2,6 +2,9 @@ window.VisorLupa = (function () {
   var x = 0, y = 0;
   var arrastrando = false;
   var px = 0, py = 0;
+  var ox = 0, oy = 0;        // punto donde empezó el arrastre, no se actualiza al mover
+  var movio = false;
+  var UMBRAL_ARRASTRE = 4;   // px: por debajo de esto lo tratamos como un clic
   var img = null;
   var escena = null;
   var PASO_TECLADO = 80;
@@ -57,18 +60,25 @@ window.VisorLupa = (function () {
     escena.removeEventListener('pointercancel', alSubir);
     if (img) img.style.transform = '';
     arrastrando = false;
+    movio = false;
     img = null;
     escena = null;
   }
 
   function alBajar(e) {
     arrastrando = true;
+    movio = false;
     px = e.clientX; py = e.clientY;
+    ox = e.clientX; oy = e.clientY;
     escena.setPointerCapture(e.pointerId);
   }
 
   function alMover(e) {
     if (!arrastrando) return;
+    // El umbral se mide contra el punto de partida, no contra el movimiento
+    // anterior: si no, un arrastre lento nunca lo superaría.
+    if (Math.abs(e.clientX - ox) > UMBRAL_ARRASTRE ||
+        Math.abs(e.clientY - oy) > UMBRAL_ARRASTRE) movio = true;
     x += e.clientX - px;
     y += e.clientY - py;
     px = e.clientX; py = e.clientY;
@@ -78,6 +88,8 @@ window.VisorLupa = (function () {
 
   function alSubir() { arrastrando = false; }
 
+  function huboArrastre() { return movio; }
+
   function desplazar(dx, dy) {
     if (!img) return;
     x += dx * PASO_TECLADO;
@@ -86,5 +98,11 @@ window.VisorLupa = (function () {
     pintar();
   }
 
-  return { entrar: entrar, salir: salir, puedeAmpliar: puedeAmpliar, desplazar: desplazar };
+  return {
+    entrar: entrar,
+    salir: salir,
+    puedeAmpliar: puedeAmpliar,
+    desplazar: desplazar,
+    huboArrastre: huboArrastre
+  };
 })();
