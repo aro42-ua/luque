@@ -787,7 +787,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 El entregable es una galería visualmente idéntica a la actual, pero generada desde `Datos.PROYECTOS` en vez de escrita a mano, y colocada con `transform` para que la Task 6 pueda animarla.
 
 **Files:**
-- Modify: `index.html` (borrar los doce `<div class="proj">`, líneas 695-733 del archivo original)
+- Modify: `index.html` (borrar los doce `<div class="proj">`, líneas 236-274 tras la Task 1)
 - Modify: `js/galeria.js`
 - Modify: `css/luque.css` (regla `.proj`)
 
