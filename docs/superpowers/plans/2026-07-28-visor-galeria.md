@@ -969,6 +969,11 @@ Añadir al final de `css/luque.css`:
 .navbar .nav-svg a.activa path,
 .navbar .nav-svg a.activa polygon{ fill:var(--yellow); }
 
+/* La regla de hover que ya existía atenúa cualquier enlace al 50%, lo
+   que lavaría la inversión de la celda activa. Se exceptúa. */
+.navbar .nav-svg a.activa:hover,
+.navbar .nav-svg a.activa:focus-visible{ opacity:1; }
+
 /* Proyecto que no pertenece a la categoría filtrada */
 .proj{ transition:opacity 0.45s ease; }
 .proj.apagado{
@@ -1000,18 +1005,23 @@ Añadir al final de `css/luque.css`:
 
 - [ ] **Step 3: Escribir el filtrado en `js/galeria.js`**
 
-Añadir dentro del módulo. `paneoCongelado` es una bandera nueva que el bucle de `mousemove` debe respetar: en el manejador de `mousemove` del ratón, salir con `if (paneoCongelado) return;` como primera línea.
+Añadir dentro del módulo. `paneoCongelado` es una bandera nueva que el paneo debe respetar: poner `if (paneoCongelado) return;` como primera línea del manejador de `mousemove` del ratón y también de los de `pointerdown` y `pointermove` del arrastre táctil. `pointerup` y `pointercancel` se dejan sin guarda, porque siempre tienen que poder terminar un arrastre.
+
+Cancelar el temporizador pendiente antes de armar uno nuevo no es opcional: sin ello, pulsar dos categorías seguidas hace que el temporizador de la primera quite la clase `recomponiendo` a media animación de la segunda, y como esa clase es la que lleva la transición, las fotos saltan en seco.
 
 ```js
 var categoria = null;
 var paneoCongelado = false;
+var temporizadorRecomposicion = null;
 var DURACION_MS = 620;
 
 function conRecomposicion(fn) {
   var canvas = document.getElementById('spatialCanvas');
+  if (temporizadorRecomposicion) clearTimeout(temporizadorRecomposicion);
   canvas.classList.add('recomponiendo');
   fn(canvas);
-  setTimeout(function () {
+  temporizadorRecomposicion = setTimeout(function () {
+    temporizadorRecomposicion = null;
     canvas.classList.remove('recomponiendo');
     measure();
     paneoCongelado = false;
