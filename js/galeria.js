@@ -6,7 +6,59 @@ window.Galeria = (function () {
   var curX = 0, curY = 0, targetX = 0, targetY = 0;
   var raf = null;
 
+  var porElemento = {};
+
+  var ETIQUETAS = {
+    'foto-stills': 'Foto Stills',
+    'editorial': 'Editorial',
+    'videoclip': 'Videoclip',
+    'cortometraje': 'Cortometraje'
+  };
+
   function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
+
+  function colocar(elemento, x, y, escala) {
+    elemento.style.transform =
+      'translate3d(' + x + 'vw, ' + y + 'vw, 0) scale(' + escala + ')';
+  }
+
+  function elementoDe(id) { return porElemento[id] || null; }
+
+  function construir() {
+    var canvas = document.getElementById('spatialCanvas');
+    if (!canvas) return;
+
+    window.Datos.PROYECTOS.forEach(function (p) {
+      var boton = document.createElement('button');
+      boton.className = 'proj';
+      boton.type = 'button';
+      boton.dataset.id = p.id;
+      boton.dataset.cat = p.categoria;
+      boton.style.width = p.pos.w + 'vw';
+      boton.setAttribute('aria-label', 'Abrir el proyecto ' + p.titulo);
+
+      var interior = document.createElement('div');
+      interior.className = 'proj-inner';
+
+      var img = document.createElement('img');
+      img.src = p.portada;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+
+      var etiqueta = document.createElement('span');
+      etiqueta.className = 'tag';
+      etiqueta.textContent = ETIQUETAS[p.categoria] || p.categoria;
+
+      interior.appendChild(img);
+      interior.appendChild(etiqueta);
+      boton.appendChild(interior);
+      canvas.appendChild(boton);
+
+      porElemento[p.id] = boton;
+      colocar(boton, p.pos.x, p.pos.y, 1);
+    });
+  }
 
   function measure(){
     const r = stage.getBoundingClientRect();
@@ -32,6 +84,10 @@ window.Galeria = (function () {
   }
 
   function init() {
+    var problemas = window.Datos.validarDatos(window.Datos.PROYECTOS, window.Datos.CATEGORIAS);
+    if (problemas.length) console.warn('Problemas en los datos:\n' + problemas.join('\n'));
+    construir();
+
     /* ================================================================
        3) STICKY NAVBAR REVEAL
        ================================================================ */
@@ -135,5 +191,5 @@ window.Galeria = (function () {
     });
   }
 
-  return { init: init };
+  return { init: init, colocar: colocar, elementoDe: elementoDe };
 })();
