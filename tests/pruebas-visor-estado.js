@@ -69,4 +69,13 @@ describe('VisorEstado', function () {
     VisorEstado.escapar(e);
     igual(e, copia, 'el estado original ha cambiado');
   });
+
+  prueba('con el visor cerrado, ninguna función lo mueve', function () {
+    var c = VisorEstado.inicial();
+    igual(VisorEstado.siguiente(c), c);
+    igual(VisorEstado.anterior(c), c);
+    igual(VisorEstado.irA(c, 2), c);
+    igual(VisorEstado.alternarLupa(c), c);
+    igual(VisorEstado.alternarFicha(c), c);
+  });
 });
