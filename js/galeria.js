@@ -8,6 +8,10 @@ window.Galeria = (function () {
 
   var porElemento = {};
 
+  var categoria = null;
+  var paneoCongelado = false;
+  var DURACION_MS = 620;
+
   var ETIQUETAS = {
     'foto-stills': 'Foto Stills',
     'editorial': 'Editorial',
@@ -83,6 +87,76 @@ window.Galeria = (function () {
     raf = requestAnimationFrame(loop);
   }
 
+  function conRecomposicion(fn) {
+    var canvas = document.getElementById('spatialCanvas');
+    canvas.classList.add('recomponiendo');
+    fn(canvas);
+    setTimeout(function () {
+      canvas.classList.remove('recomponiendo');
+      measure();
+      paneoCongelado = false;
+    }, DURACION_MS);
+  }
+
+  function aplicarFiltro(nueva) {
+    categoria = nueva;
+    paneoCongelado = true;
+
+    var dentro = window.Datos.porCategoria(nueva);
+    var ranuras = window.LayoutFiltrado.posicionesCompactas(dentro.length);
+
+    conRecomposicion(function (canvas) {
+      window.Datos.PROYECTOS.forEach(function (p) {
+        var el = elementoDe(p.id);
+        var indice = dentro.indexOf(p);
+        if (indice === -1) {
+          el.classList.add('apagado');
+          el.setAttribute('tabindex', '-1');
+          el.setAttribute('aria-hidden', 'true');
+        } else {
+          var r = ranuras[indice];
+          el.classList.remove('apagado');
+          el.removeAttribute('tabindex');
+          el.removeAttribute('aria-hidden');
+          colocar(el, r.x, r.y, r.w / p.pos.w);
+        }
+      });
+
+      canvas.style.width = window.LayoutFiltrado.ANCHO + 'vw';
+      canvas.style.height = window.LayoutFiltrado.altoLienzoFiltrado(dentro.length) + 'vw';
+    });
+
+    marcarNavbar(nueva);
+  }
+
+  function quitarFiltro() {
+    categoria = null;
+    paneoCongelado = true;
+
+    conRecomposicion(function (canvas) {
+      window.Datos.PROYECTOS.forEach(function (p) {
+        var el = elementoDe(p.id);
+        el.classList.remove('apagado');
+        el.removeAttribute('tabindex');
+        el.removeAttribute('aria-hidden');
+        colocar(el, p.pos.x, p.pos.y, 1);
+      });
+
+      canvas.style.width = '';
+      canvas.style.height = '';
+    });
+
+    marcarNavbar(null);
+  }
+
+  function marcarNavbar(activa) {
+    document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
+      a.classList.toggle('activa', a.dataset.cat === activa);
+    });
+  }
+
+  function categoriaActiva() { return categoria; }
+
   function init() {
     var problemas = window.Datos.validarDatos(window.Datos.PROYECTOS, window.Datos.CATEGORIAS);
     if (problemas.length) console.warn('Problemas en los datos:\n' + problemas.join('\n'));
@@ -129,6 +203,7 @@ window.Galeria = (function () {
       const STRENGTH = 0.9; // 0-1, cuánto "empuja" el cursor el lienzo
 
       stage.addEventListener('mousemove', (e) => {
+        if (paneoCongelado) return;
         const r = stage.getBoundingClientRect();
         const px = (e.clientX - r.left) / stageW;       // 0..1
         const py = (e.clientY - r.top) / stageH;        // 0..1
@@ -170,26 +245,38 @@ window.Galeria = (function () {
       stage.addEventListener('pointercancel', () => { dragging = false; });
     }
 
-    // Navegación desde el menú: centra la categoría pulsada
-    function focusCategory(catId){
-      var el = document.querySelector('.proj[data-cat="' + catId + '"]');
-      if(!el) return;
-      var r = el.getBoundingClientRect();
-      var s = stage.getBoundingClientRect();
-      targetX = clamp(curX + (s.left + stageW / 2) - (r.left + r.width / 2), minX, 0);
-      targetY = clamp(curY + (s.top  + stageH / 2) - (r.top  + r.height / 2), minY, 0);
-    }
-
-    document.querySelectorAll('.navbar .nav-svg a[href^="#"]').forEach((a) => {
-      a.addEventListener('click', (e) => {
+    // Navegación desde el menú: recompone el lienzo con la categoría pulsada
+    document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
+      a.addEventListener('click', function (e) {
         e.preventDefault();
-        const id = a.getAttribute('href').slice(1);
+        var cat = a.dataset.cat;
         document.getElementById('gallery').scrollIntoView({ behavior: 'smooth' });
-        // pequeño margen para que el scroll haya llegado antes de medir
-        setTimeout(() => { measure(); focusCategory(id); }, 350);
+        if (categoria === cat) window.Router.ir('todos');
+        else window.Router.ir('categoria', cat);
       });
+    });
+
+    window.Router.alCambiar(function (ruta) {
+      if (ruta.tipo === 'categoria') {
+        if (categoria !== ruta.valor) aplicarFiltro(ruta.valor);
+      } else if (categoria !== null) {
+        quitarFiltro();
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (document.body.classList.contains('visor-abierto')) return;
+      if (categoria !== null) window.Router.ir('todos');
     });
   }
 
-  return { init: init, colocar: colocar, elementoDe: elementoDe };
+  return {
+    init: init,
+    colocar: colocar,
+    elementoDe: elementoDe,
+    aplicarFiltro: aplicarFiltro,
+    quitarFiltro: quitarFiltro,
+    categoriaActiva: categoriaActiva
+  };
 })();

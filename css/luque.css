@@ -470,3 +470,42 @@
     html{ scroll-behavior:auto; }
     .proj img{ transition:none; }
   }
+
+  /* ============================================================
+     FILTRADO POR CATEGORÍA (navbar)
+  ============================================================ */
+
+  /* Celda activa del navbar: se invierte por completo. El rect .nav-hit
+     se pinta primero, así que hace de fondo negro y las letras y las
+     esquinas pasan a amarillo encima. */
+  .navbar .nav-svg a.activa .nav-hit{ fill:var(--black); }
+  .navbar .nav-svg a.activa path,
+  .navbar .nav-svg a.activa polygon{ fill:var(--yellow); }
+
+  /* Proyecto que no pertenece a la categoría filtrada */
+  .proj{ transition:opacity 0.45s ease; }
+  .proj.apagado{
+    opacity:0;
+    pointer-events:none;
+  }
+
+  /* La recomposición se anima con CSS y no con GSAP: es la única forma de
+     respetar la curva exacta que fijan las restricciones globales, porque
+     la compilación gratuita de GSAP no incluye CustomEase. La clase la
+     pone y la quita el JavaScript, para que colocar() no anime en los
+     demás momentos (construcción inicial, paneo). */
+  .spatial-canvas.recomponiendo .proj{
+    transition:transform 0.62s cubic-bezier(.2,.7,.2,1),
+               opacity 0.45s ease;
+  }
+
+  .spatial-canvas{
+    transition:width 0.62s cubic-bezier(.2,.7,.2,1),
+               height 0.62s cubic-bezier(.2,.7,.2,1);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .proj,
+    .spatial-canvas,
+    .spatial-canvas.recomponiendo .proj{ transition:none; }
+  }
