@@ -6,6 +6,7 @@ window.Visor = (function () {
   var raiz, escena, chrome, tira, elTitulo, elCat, elContador, elCerrar;
   var temporizador = null;
   var sobreLaTira = false;
+  var abiertoConRaton = false;
   var OCULTAR_TRAS = 2000;
 
   var CLAVES = ['tl', 'tr', 'bl', 'br'];
@@ -38,7 +39,10 @@ window.Visor = (function () {
 
     document.addEventListener('click', function (e) {
       var boton = e.target.closest ? e.target.closest('.proj') : null;
-      if (boton) window.Router.ir('proyecto', boton.dataset.id);
+      if (!boton) return;
+      // detail === 0 en el click sintético de Enter/Espacio; >0 con el ratón
+      abiertoConRaton = e.detail > 0;
+      window.Router.ir('proyecto', boton.dataset.id);
     });
 
     window.Router.alCambiar(function (ruta) {
@@ -68,6 +72,7 @@ window.Visor = (function () {
 
     window.Galeria.congelar();
     window.Cursor.ocultar();
+    window.Cursor.restablecer();
 
     construirTira();
     raiz.hidden = false;
@@ -185,10 +190,23 @@ window.Visor = (function () {
       sobreLaTira = false;
       window.Galeria.descongelar();
       window.Cursor.mostrar();
+      window.Cursor.restablecer();
       // preventScroll: sin esto el navegador arrastra la página para traer el
       // botón a la vista, y como el lienzo es enorme y scroll-behavior es smooth,
       // la página se va al hero durante un segundo.
-      if (elementoQueAbrio) elementoQueAbrio.focus({ preventScroll: true });
+      var origen = elementoQueAbrio;
+      if (origen) {
+        // El anillo de foco se suprime solo si se abrió con el ratón, y solo
+        // para esta restauración: se quita al perder el foco o al tocar el
+        // teclado, así que nunca puede ocultárselo a quien navega con teclado.
+        if (abiertoConRaton) {
+          origen.classList.add('sin-anillo');
+          var limpiar = function () { origen.classList.remove('sin-anillo'); };
+          origen.addEventListener('blur', limpiar, { once: true });
+          document.addEventListener('keydown', limpiar, { once: true });
+        }
+        origen.focus({ preventScroll: true });
+      }
       elementoQueAbrio = null;
       proyecto = null;
     }

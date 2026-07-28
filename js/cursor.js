@@ -126,5 +126,15 @@ window.Cursor = (function () {
   function ocultar() { if (cursorEl) cursorEl.style.display = 'none'; }
   function mostrar() { if (cursorEl) cursorEl.style.display = ''; }
 
-  return { init: init, ocultar: ocultar, mostrar: mostrar };
+  /* Saca al cursor del modo encuadre a la fuerza. El visor se abre por
+     encima de la foto, así que el mouseout que normalmente devolvería el
+     cursor a su estado normal nunca llega. */
+  function restablecer() {
+    if (!cursorEl) return;
+    state = 'default';
+    bboxImg = null;
+    cursorEl.classList.remove('bbox', 'hover');
+  }
+
+  return { init: init, ocultar: ocultar, mostrar: mostrar, restablecer: restablecer };
 })();
