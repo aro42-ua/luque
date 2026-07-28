@@ -607,6 +607,15 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   transform-origin:0 0;
 }
 
+.visor.lupa .visor-escena{ overflow:hidden; }
+
+.visor.lupa .visor-escena img{
+  max-width:none; max-height:none;
+  width:auto; height:auto;
+  transform-origin:0 0;
+  transition:none;
+}
+
 .visor-chrome{
   position:absolute; inset:0;
   z-index:2;

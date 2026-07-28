@@ -9,8 +9,6 @@ window.Visor = (function () {
   var abiertoConRaton = false;
   var OCULTAR_TRAS = 2000;
 
-  var CLAVES = ['tl', 'tr', 'bl', 'br'];
-
   function init() {
     estado = window.VisorEstado.inicial();
 
@@ -35,6 +33,11 @@ window.Visor = (function () {
     tira.addEventListener('mouseleave', function () {
       sobreLaTira = false;
       despertarChrome();
+    });
+
+    escena.addEventListener('click', function () {
+      if (!estado.abierto) return;
+      alternarLupa();
     });
 
     document.addEventListener('click', function (e) {
@@ -93,76 +96,29 @@ window.Visor = (function () {
       return;
     }
 
-    volar(origen);
+    window.VisorTransicion.volar({
+      raiz: raiz, escena: escena, chrome: chrome, elCerrar: elCerrar,
+      alTerminar: despertarChrome
+    }, origen);
   }
 
-  function volar(origen) {
+  function alternarLupa() {
     var img = escena.querySelector('img');
-    chrome.classList.add('oculto');
+    if (!estado.lupa && !window.VisorLupa.puedeAmpliar(img)) return;
 
-    function arrancar() {
-      var destino = img.getBoundingClientRect();
-      var ex = origen.width  / destino.width;
-      var ey = origen.height / destino.height;
-      var dx = origen.left - destino.left;
-      var dy = origen.top  - destino.top;
+    estado = window.VisorEstado.alternarLupa(estado);
 
-      img.style.transition = 'none';
-      img.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + ex + ',' + ey + ')';
-      img.style.filter = 'grayscale(35%) contrast(1.05)';
-
-      prepararEsquinas(origen);
-
-      raiz.offsetHeight;                 // fuerza el reflujo antes de animar
-      raiz.classList.remove('entrando');
-      raiz.classList.add('viajando');
-
-      img.style.transition = '';
-      img.style.transform = 'none';
-      img.style.filter = 'none';
-      soltarEsquinas();
-
-      setTimeout(function () {
-        raiz.classList.remove('viajando');
-        window.Cursor.mostrar();
-        elCerrar.focus({ preventScroll: true });
-        despertarChrome();
-      }, 640);
+    if (estado.lupa) {
+      raiz.classList.add('lupa');
+      if (!window.VisorLupa.entrar(escena)) {
+        estado = window.VisorEstado.alternarLupa(estado);
+        raiz.classList.remove('lupa');
+      }
+    } else {
+      window.VisorLupa.salir(escena);
+      raiz.classList.remove('lupa');
     }
-
-    if (img.complete) requestAnimationFrame(arrancar);
-    else img.addEventListener('load', function () { requestAnimationFrame(arrancar); }, { once: true });
-  }
-
-  function prepararEsquinas(origen) {
-    var margen = 9;
-    var puntos = {
-      tl: { x: origen.left  - margen, y: origen.top    - margen },
-      tr: { x: origen.right + margen, y: origen.top    - margen },
-      bl: { x: origen.left  - margen, y: origen.bottom + margen },
-      br: { x: origen.right + margen, y: origen.bottom + margen }
-    };
-
-    CLAVES.forEach(function (clave) {
-      var el = raiz.querySelector('.visor-esquina.' + clave);
-      el.style.transition = 'none';
-      el.style.transform = 'none';
-      var r = el.getBoundingClientRect();
-      var anclaX = (clave === 'tl' || clave === 'bl') ? r.left : r.right;
-      var anclaY = (clave === 'tl' || clave === 'tr') ? r.top  : r.bottom;
-      el.style.transform = 'translate(' + (puntos[clave].x - anclaX) + 'px,' +
-                                          (puntos[clave].y - anclaY) + 'px)';
-      el.style.color = '#0a0a0a';
-    });
-  }
-
-  function soltarEsquinas() {
-    CLAVES.forEach(function (clave) {
-      var el = raiz.querySelector('.visor-esquina.' + clave);
-      el.style.transition = '';
-      el.style.transform = 'none';
-      el.style.color = '';
-    });
+    despertarChrome();
   }
 
   function cerrar() { window.Router.ir('todos'); }
@@ -182,7 +138,7 @@ window.Visor = (function () {
       raiz.style.opacity = '';
       var img = escena.querySelector('img');
       if (img) { img.style.transform = ''; img.style.filter = ''; img.style.transition = ''; }
-      CLAVES.forEach(function (c) {
+      window.VisorTransicion.CLAVES.forEach(function (c) {
         var el = raiz.querySelector('.visor-esquina.' + c);
         el.style.transition = ''; el.style.transform = ''; el.style.color = '';
       });
@@ -222,29 +178,10 @@ window.Visor = (function () {
                           (destino.width / actual.width) + ',' +
                           (destino.height / actual.height) + ')';
     img.style.filter = 'grayscale(35%) contrast(1.05)';
-    prepararEsquinasHacia(destino);
+    window.VisorTransicion.prepararEsquinasHacia(raiz, destino);
     raiz.style.opacity = '0';
 
     setTimeout(rematar, 640);
-  }
-
-  function prepararEsquinasHacia(destino) {
-    var margen = 9;
-    var puntos = {
-      tl: { x: destino.left  - margen, y: destino.top    - margen },
-      tr: { x: destino.right + margen, y: destino.top    - margen },
-      bl: { x: destino.left  - margen, y: destino.bottom + margen },
-      br: { x: destino.right + margen, y: destino.bottom + margen }
-    };
-    CLAVES.forEach(function (clave) {
-      var el = raiz.querySelector('.visor-esquina.' + clave);
-      var r = el.getBoundingClientRect();
-      var anclaX = (clave === 'tl' || clave === 'bl') ? r.left : r.right;
-      var anclaY = (clave === 'tl' || clave === 'tr') ? r.top  : r.bottom;
-      el.style.transform = 'translate(' + (puntos[clave].x - anclaX) + 'px,' +
-                                          (puntos[clave].y - anclaY) + 'px)';
-      el.style.color = '#0a0a0a';
-    });
   }
 
   function construirTira() {
@@ -261,6 +198,9 @@ window.Visor = (function () {
       b.appendChild(img);
       b.addEventListener('click', function () {
         estado = window.VisorEstado.irA(estado, i);
+        // irA no toca la lupa: si seguía puesta, se suelta aquí para que
+        // cambiar de pieza sea también una forma de salir de la lupa.
+        if (estado.lupa) estado = window.VisorEstado.alternarLupa(estado);
         renderizar();
       });
       tira.appendChild(b);
@@ -269,6 +209,11 @@ window.Visor = (function () {
 
   function renderizar() {
     if (!estado.abierto) return;
+
+    if (raiz.classList.contains('lupa') && !estado.lupa) {
+      window.VisorLupa.salir(escena);
+      raiz.classList.remove('lupa');
+    }
 
     elTitulo.textContent = proyecto.titulo;
     elCat.textContent = proyecto.categoria.replace('-', ' ');
@@ -293,8 +238,19 @@ window.Visor = (function () {
     if (e.key === 'Escape') {
       e.preventDefault();
       var tras = window.VisorEstado.escapar(estado);
+      if (estado.lupa && !tras.lupa) { window.VisorLupa.salir(escena); raiz.classList.remove('lupa'); }
       if (!tras.abierto) cerrar();
       else { estado = tras; renderizar(); }
+      return;
+    }
+
+    if (estado.lupa && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' ||
+                        e.key === 'ArrowUp'    || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      var dx = (e.key === 'ArrowLeft' ? 1 : e.key === 'ArrowRight' ? -1 : 0);
+      var dy = (e.key === 'ArrowUp'   ? 1 : e.key === 'ArrowDown'  ? -1 : 0);
+      window.VisorLupa.desplazar(dx, dy);
+      despertarChrome();
       return;
     }
 
