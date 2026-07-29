@@ -8,6 +8,11 @@ window.VisorCarga = (function () {
 
   function marcar(si) { raiz.classList.toggle('cargando', si); }
 
+  // limpiar: apaga el indicador incondicionalmente. renderizar() lo
+  // llama antes de decidir la rama: una navegación directa de una foto
+  // a medio cargar hacia un vídeo dejaría el indicador clavado encima.
+  function limpiar() { marcar(false); }
+
   // pintar: crea la <img> de la pieza actual, la añade a la escena,
   // engancha el indicador de carga y precarga las piezas vecinas.
   // Sustituye por completo la rama de fotos de renderizar() en visor.js.
@@ -42,5 +47,5 @@ window.VisorCarga = (function () {
     i.src = lista[indice];
   }
 
-  return { init: init, pintar: pintar };
+  return { init: init, pintar: pintar, limpiar: limpiar };
 })();

@@ -221,6 +221,7 @@ window.Visor = (function () {
     elCat.textContent = proyecto.categoria.replace('-', ' ');
 
     escena.innerHTML = '';
+    window.VisorCarga.limpiar();
     if (!window.VisorVideo.pintar(escena, proyecto)) {
       window.VisorCarga.pintar(escena, proyecto, estado, piezas());
     }
