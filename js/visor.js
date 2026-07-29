@@ -6,7 +6,7 @@ window.Visor = (function () {
   var raiz, escena, chrome, tira, elTitulo, elCat, elContador, elCerrar;
   var temporizador = null;
   var sobreLaTira = false;
-  var abiertoConRaton = false;
+  var abiertoConRaton = false, pendienteConRaton = false;
   var OCULTAR_TRAS = 2000;
 
   function init() {
@@ -42,8 +42,8 @@ window.Visor = (function () {
     document.addEventListener('click', function (e) {
       var boton = e.target.closest ? e.target.closest('.proj') : null;
       if (!boton) return;
-      // detail === 0 en el click sintético de Enter/Espacio; >0 con el ratón
-      abiertoConRaton = e.detail > 0;
+      // detail===0 en el click sintético de Enter/Espacio; >0 con el ratón. abrir() lo consume.
+      pendienteConRaton = e.detail > 0;
       window.Router.ir('proyecto', boton.dataset.id);
     });
 
@@ -58,15 +58,15 @@ window.Visor = (function () {
   function movimientoReducido() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
 
   function abrir(id) {
-    var p = window.Datos.porId(id);
-    if (!p) return;
+    var p = window.Datos.porId(id); if (!p) return;
 
-    proyecto = p;
-    elementoQueAbrio = window.Galeria.elementoDe(id);
+    abiertoConRaton = pendienteConRaton; pendienteConRaton = false; // se consume: solo para esta apertura
+    proyecto = p; elementoQueAbrio = window.Galeria.elementoDe(id);
     estado = window.VisorEstado.abrir(estado, id, p.video ? 1 : p.piezas.length); raiz.classList.toggle('video', !!p.video);
 
+    var enVuelo = raiz.classList.contains('viajando'); // vuelo en marcha: se monta directo, sin solapar un segundo
     var imgOrigen = elementoQueAbrio ? elementoQueAbrio.querySelector('img') : null;
-    var origen = (imgOrigen && !movimientoReducido()) ? imgOrigen.getBoundingClientRect() : null;
+    var origen = (imgOrigen && !movimientoReducido() && !enVuelo) ? imgOrigen.getBoundingClientRect() : null;
 
     window.Galeria.congelar();
     window.Cursor.ocultar();

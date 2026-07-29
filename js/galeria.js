@@ -67,25 +67,27 @@ window.Galeria = (function () {
 
   function measure(){
     const r = stage.getBoundingClientRect();
-    stageW = r.width;
-    stageH = r.height;
-    canvasW = canvas.offsetWidth;
-    canvasH = canvas.offsetHeight;
-    minX = Math.min(0, stageW - canvasW);
-    minY = Math.min(0, stageH - canvasH);
+    stageW = r.width; stageH = r.height; canvasW = canvas.offsetWidth; canvasH = canvas.offsetHeight;
+    minX = Math.min(0, stageW - canvasW); minY = Math.min(0, stageH - canvasH);
     // posición de reposo: lienzo centrado en el escenario
-    targetX = minX / 2;
-    targetY = minY / 2;
-    curX = targetX;
-    curY = targetY;
+    targetX = minX / 2; targetY = minY / 2;
+    curX = targetX; curY = targetY;
     canvas.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
   }
 
   function loop(){
-    curX += (targetX - curX) * 0.07;
-    curY += (targetY - curY) * 0.07;
+    curX += (targetX - curX) * 0.07; curY += (targetY - curY) * 0.07;
     canvas.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
     raf = requestAnimationFrame(loop);
+  }
+
+  // Centra el lienzo sobre el elemento que recibe el foco (tabulador). Se
+  // trabaja con deltas entre rectángulos, no con coordenadas absolutas: así
+  // funciona igual con el lienzo filtrado y sin filtrar.
+  function centrarEn(el) {
+    var r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+    targetX = clamp(targetX + (s.left + stageW / 2) - (r.left + r.width  / 2), minX, 0);
+    targetY = clamp(targetY + (s.top  + stageH / 2) - (r.top  + r.height / 2), minY, 0);
   }
 
   function conRecomposicion(fn) {
@@ -103,8 +105,7 @@ window.Galeria = (function () {
   }
 
   function aplicarFiltro(nueva) {
-    categoria = nueva;
-    paneoCongelado = true;
+    categoria = nueva; paneoCongelado = true;
 
     var dentro = window.Datos.porCategoria(nueva);
     var ranuras = window.LayoutFiltrado.posicionesCompactas(dentro.length);
@@ -134,8 +135,7 @@ window.Galeria = (function () {
   }
 
   function quitarFiltro() {
-    categoria = null;
-    paneoCongelado = true;
+    categoria = null; paneoCongelado = true;
 
     conRecomposicion(function (canvas) {
       window.Datos.PROYECTOS.forEach(function (p) {
@@ -206,6 +206,14 @@ window.Galeria = (function () {
     measure();
     loop();
 
+    // Sin esto, tabular hacia un proyecto fuera de la vista deja el foco
+    // en un elemento invisible: el lienzo no lo sigue.
+    stage.addEventListener('focusin', function (e) {
+      var boton = e.target.closest ? e.target.closest('.proj') : null; if (!boton) return;
+      document.getElementById('gallery').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      centrarEn(boton);
+    });
+
     if (isFinePointer){
       const STRENGTH = 0.9; // 0-1, cuánto "empuja" el cursor el lienzo
 
@@ -227,8 +235,7 @@ window.Galeria = (function () {
       });
 
       stage.addEventListener('mouseleave', () => {
-        targetX = minX / 2;
-        targetY = minY / 2;
+        targetX = minX / 2; targetY = minY / 2;
       });
     } else {
       // Fallback táctil: arrastre directo con inercia
@@ -237,16 +244,14 @@ window.Galeria = (function () {
 
       stage.addEventListener('pointerdown', (e) => {
         if (paneoCongelado) return;
-        dragging = true;
-        startPX = e.clientX; startPY = e.clientY;
+        dragging = true; startPX = e.clientX; startPY = e.clientY;
         startTX = targetX; startTY = targetY;
         stage.setPointerCapture(e.pointerId);
       });
       stage.addEventListener('pointermove', (e) => {
         if (paneoCongelado) return;
         if(!dragging) return;
-        const dx = e.clientX - startPX;
-        const dy = e.clientY - startPY;
+        const dx = e.clientX - startPX, dy = e.clientY - startPY;
         targetX = clamp(startTX + dx, minX, 0);
         targetY = clamp(startTY + dy, minY, 0);
       });
@@ -288,6 +293,7 @@ window.Galeria = (function () {
     quitarFiltro: quitarFiltro,
     categoriaActiva: categoriaActiva,
     congelar: congelar,
-    descongelar: descongelar
+    descongelar: descongelar,
+    centrarEn: centrarEn
   };
 })();
