@@ -21,19 +21,15 @@ window.Visor = (function () {
     elContador = document.getElementById('visorContador');
     elCerrar   = document.getElementById('visorCerrar');
 
+    window.VisorFicha.init(alternarFicha);
     elCerrar.addEventListener('click', cerrar);
     document.addEventListener('keydown', alPulsarTecla);
     raiz.addEventListener('mousemove', despertarChrome);
     raiz.addEventListener('wheel', alRodar, { passive: true });
     tira.addEventListener('mouseenter', function () {
-      sobreLaTira = true;
-      chrome.classList.remove('oculto');
-      pararTemporizador();
+      sobreLaTira = true; chrome.classList.remove('oculto'); pararTemporizador();
     });
-    tira.addEventListener('mouseleave', function () {
-      sobreLaTira = false;
-      despertarChrome();
-    });
+    tira.addEventListener('mouseleave', function () { sobreLaTira = false; despertarChrome(); });
 
     escena.addEventListener('click', function () {
       if (!estado.abierto) return;
@@ -57,13 +53,9 @@ window.Visor = (function () {
     });
   }
 
-  function piezas() {
-    return proyecto && proyecto.piezas ? proyecto.piezas : [];
-  }
+  function piezas() { return proyecto && proyecto.piezas ? proyecto.piezas : []; }
 
-  function movimientoReducido() {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }
+  function movimientoReducido() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
 
   function abrir(id) {
     var p = window.Datos.porId(id);
@@ -81,6 +73,7 @@ window.Visor = (function () {
     window.Cursor.restablecer();
 
     construirTira();
+    window.VisorFicha.pintar(proyecto, estado.total);
     raiz.hidden = false;
     raiz.classList.add('entrando');
     document.body.classList.add('visor-abierto');
@@ -124,6 +117,11 @@ window.Visor = (function () {
     despertarChrome();
   }
 
+  function alternarFicha() {
+    estado = window.VisorEstado.alternarFicha(estado);
+    window.VisorFicha.aplicar(raiz, estado.ficha); despertarChrome();
+  }
+
   function cerrar() { window.Router.ir('todos'); }
 
   function cerrarSinTocarLaRuta() {
@@ -146,6 +144,7 @@ window.Visor = (function () {
         el.style.transition = ''; el.style.transform = ''; el.style.color = '';
       });
       document.body.classList.remove('visor-abierto');
+      window.VisorFicha.aplicar(raiz, false);
       sobreLaTira = false;
       window.Galeria.descongelar();
       window.Cursor.mostrar();
@@ -242,10 +241,13 @@ window.Visor = (function () {
       e.preventDefault();
       var tras = window.VisorEstado.escapar(estado);
       if (estado.lupa && !tras.lupa) { window.VisorLupa.salir(escena); raiz.classList.remove('lupa'); }
+      if (estado.ficha && !tras.ficha) window.VisorFicha.aplicar(raiz, false);
       if (!tras.abierto) cerrar();
       else { estado = tras; renderizar(); }
       return;
     }
+
+    if (window.VisorFicha.esTeclaAlternar(e)) { e.preventDefault(); alternarFicha(); return; }
 
     if (estado.lupa && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' ||
                         e.key === 'ArrowUp'    || e.key === 'ArrowDown')) {
@@ -288,9 +290,7 @@ window.Visor = (function () {
     temporizador = setTimeout(function () { chrome.classList.add('oculto'); }, OCULTAR_TRAS);
   }
 
-  function pararTemporizador() {
-    if (temporizador) { clearTimeout(temporizador); temporizador = null; }
-  }
+  function pararTemporizador() { if (temporizador) { clearTimeout(temporizador); temporizador = null; } }
 
   function estaAbierto() { return estado && estado.abierto; }
 

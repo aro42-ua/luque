@@ -598,6 +598,8 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   display:flex;
   align-items:center;
   justify-content:center;
+  /* transform, no left: left es una propiedad de layout y no debe animarse */
+  transition:transform 0.45s cubic-bezier(.2,.7,.2,1);
 }
 .visor-escena img{
   max-width:100%;
@@ -699,6 +701,53 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   bottom:-5px; right:-5px; border-left:none; border-top:none;
 }
 
+.visor-ficha{
+  position:absolute; top:0; bottom:0; left:0;
+  width:340px;
+  background:var(--yellow);
+  color:var(--black);
+  padding:32px 28px;
+  transform:translateX(-100%);
+  transition:transform 0.45s cubic-bezier(.2,.7,.2,1);
+  z-index:4;
+  overflow-y:auto;
+}
+.visor.ficha-abierta .visor-ficha{ transform:translateX(0); }
+/* Desplaza la escena con un transform, no con left: left es layout y no
+   debe animarse. 340px es el ancho de la ficha, así que el hueco que deja
+   coincide con lo que ocuparía cambiar el left del 64px por defecto a 404px. */
+.visor.ficha-abierta .visor-escena{ transform:translateX(340px); }
+
+.visor-ficha-cat{
+  font-size:0.68rem; font-weight:500;
+  letter-spacing:0.18em; text-transform:uppercase;
+  opacity:0.55;
+}
+.visor-ficha-titulo{
+  font-size:2.4rem; font-weight:700;
+  letter-spacing:-0.05em; line-height:0.95;
+  margin:14px 0 22px;
+}
+.visor-ficha-datos{ font-size:0.8rem; }
+.visor-ficha-datos div{
+  display:flex; justify-content:space-between; gap:16px;
+  padding:9px 0;
+  border-top:1px solid rgba(10,10,10,0.25);
+}
+.visor-ficha-datos div:last-child{ border-bottom:1px solid rgba(10,10,10,0.25); }
+.visor-ficha-datos dt{ opacity:0.6; }
+.visor-ficha-datos dd{ text-align:right; }
+
+.visor-info{
+  border:none; background:none; padding:0;
+  color:var(--yellow);
+  font:inherit;
+  font-size:0.68rem; font-weight:700;
+  letter-spacing:0.18em; text-transform:uppercase;
+  cursor:none;
+}
+.visor-info:hover{ opacity:0.5; }
+
 .visor :focus-visible{ outline:2px solid var(--yellow); outline-offset:4px; }
 
 @media (max-width: 720px){
@@ -707,9 +756,17 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   .visor-tira{ padding:0 20px; bottom:32px; }
 }
 
+@media (max-width: 860px){
+  .visor-ficha{ width:100%; }
+  /* La ficha cubre todo el ancho, así que la foto solo necesita
+     desvanecerse: el desplazamiento exacto ya no se ve. */
+  .visor.ficha-abierta .visor-escena{ transform:translateX(40px); opacity:0; }
+}
+
 @media (prefers-reduced-motion: reduce){
   .visor{ transition:opacity 0.2s ease; }
   .visor.viajando .visor-esquina,
   .visor.viajando .visor-escena img{ transition:none; }
   .visor .visor-chrome{ transition:opacity 0.2s ease; }
+  .visor-ficha, .visor-escena{ transition:none; }
 }

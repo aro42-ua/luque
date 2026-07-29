@@ -262,6 +262,8 @@
       <header class="visor-cabecera">
         <p class="visor-titulo"><span id="visorTitulo"></span><span class="visor-cat" id="visorCat"></span></p>
         <div class="visor-acciones">
+          <button class="visor-info" id="visorInfo" type="button"
+                  aria-expanded="false" aria-controls="visorFicha">Ficha</button>
           <span class="visor-contador" id="visorContador"></span>
           <button class="visor-cerrar" id="visorCerrar" type="button" aria-label="Cerrar el visor">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -271,6 +273,11 @@
         </div>
       </header>
       <nav class="visor-tira" id="visorTira" aria-label="Piezas del proyecto"></nav>
+      <aside class="visor-ficha" id="visorFicha" aria-hidden="true">
+        <p class="visor-ficha-cat" id="fichaCat"></p>
+        <p class="visor-ficha-titulo" id="fichaTitulo"></p>
+        <dl class="visor-ficha-datos" id="fichaDatos"></dl>
+      </aside>
     </div>
 
     <div class="visor-escena" id="visorEscena"></div>
@@ -296,6 +303,7 @@
   <script src="js/galeria.js"></script>
   <script src="js/visor-transicion.js"></script>
   <script src="js/visor-lupa.js"></script>
+  <script src="js/visor-ficha.js"></script>
   <script src="js/visor.js"></script>
   <script>
   gsap.registerPlugin(ScrollTrigger);
