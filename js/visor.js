@@ -277,10 +277,10 @@ window.Visor = (function () {
   }
 
   function atraparFoco(e) {
-    var focos = raiz.querySelectorAll('button:not([disabled])');
+    var focos = Array.prototype.filter.call(raiz.querySelectorAll('button:not([disabled]), [role="slider"]'),
+      function (el) { return el.offsetParent !== null; });   // offsetParent nulo con display:none: fuera la línea en modo foto
     if (!focos.length) return;
-    var primero = focos[0];
-    var ultimo = focos[focos.length - 1];
+    var primero = focos[0], ultimo = focos[focos.length - 1];
     if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
     else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
   }

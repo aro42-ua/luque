@@ -68,7 +68,8 @@ window.VisorVideo = (function () {
 
   function alternarReproduccion() {
     if (!video) return;
-    if (video.paused) video.play(); else video.pause();
+    // Sin los mp4 reales la promesa de play() se rechaza; el catch vacío evita que algunas consolas la muestren.
+    if (video.paused) video.play().catch(function () {}); else video.pause();
     if (alDespertarChrome) alDespertarChrome();
   }
 
