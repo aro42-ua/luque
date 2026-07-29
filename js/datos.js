@@ -4,7 +4,7 @@ window.Datos = (function () {
   function serie(semilla, cuantas) {
     var piezas = [];
     for (var i = 1; i <= cuantas; i++) {
-      piezas.push('https://picsum.photos/seed/' + semilla + i + '/1600/2000');
+      piezas.push('https://picsum.photos/seed/' + semilla + i + '/2400/3000');
     }
     return piezas;
   }
@@ -51,8 +51,23 @@ window.Datos = (function () {
       video: { src:'video/litoral.mp4', poster:'https://picsum.photos/seed/luque12/1600/900' } }
   ];
 
+  // Las portadas se solicitan a 800x1000 porque solo aparecen pequeñas en la galería,
+  // mientras que las piezas se solicitan a 2400x3000 para que la lupa tenga recorrido.
+  // Todo es relleno hasta que lleguen las fotografías reales del estudio.
   PROYECTOS.forEach(function (p) {
-    if (!p.portada) p.portada = p.piezas ? p.piezas[0] : p.video.poster;
+    if (!p.portada) {
+      if (p.piezas) {
+        var primeraPieza = p.piezas[0];
+        var match = primeraPieza.match(/seed\/([^/]+)\//);
+        if (match && match[1]) {
+          p.portada = 'https://picsum.photos/seed/' + match[1] + '/800/1000';
+        } else {
+          p.portada = primeraPieza;
+        }
+      } else {
+        p.portada = p.video.poster;
+      }
+    }
   });
 
   function validarDatos(proyectos, categorias) {
