@@ -32,12 +32,15 @@ window.VisorVideo = (function () {
   }
 
   // pintar: si el proyecto es de vídeo crea el <video>, lo conecta a la
-  // línea de tiempo y lo añade a la escena; devuelve true. Si no, no toca
-  // nada y devuelve false para que js/visor.js pinte la <img> de siempre.
-  // Este módulo decide el "cómo" (qué elemento crear, cómo cablearlo);
-  // js/visor.js sigue decidiendo el "cuándo" (en qué proyecto tocaba).
+  // línea de tiempo y lo añade a la escena; devuelve true. Si no, suelta
+  // el vídeo que hubiera y devuelve false para que js/visor.js pinte la
+  // <img> de siempre. Este módulo decide el "cómo" (qué elemento crear,
+  // cómo cablearlo); js/visor.js sigue decidiendo el "cuándo".
   function pintar(escena, proyecto) {
-    if (!proyecto.video) return false;
+    if (!proyecto.video) {
+      detener();          // una navegación directa por hash no pasa por rematar():
+      return false;       // sin esto, activo() seguiría respondiendo true y las
+    }                     // guardas del modo vídeo matarían las flechas sobre la foto
     var v = document.createElement('video');
     v.src = proyecto.video.src;
     v.poster = proyecto.video.poster;
