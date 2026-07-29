@@ -587,7 +587,8 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
              color 0.62s cubic-bezier(.2,.7,.2,1);
 }
 
-.visor.viajando .visor-escena img{
+.visor.viajando .visor-escena img,
+.visor.viajando .visor-escena video{
   transition:transform 0.62s cubic-bezier(.2,.7,.2,1),
              filter 0.62s cubic-bezier(.2,.7,.2,1);
 }
@@ -617,6 +618,15 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   transform-origin:0 0;
   transition:none;
 }
+
+.visor-escena video{
+  max-width:100%; max-height:100%;
+  object-fit:contain;
+  display:block;
+  transform-origin:0 0;
+}
+
+.visor.video .visor-escena{ inset:82px 64px 104px; }
 
 .visor-chrome{
   position:absolute; inset:0;
@@ -701,6 +711,33 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   bottom:-5px; right:-5px; border-left:none; border-top:none;
 }
 
+.visor-linea{ display:none; }
+.visor.video .visor-tira{ display:none; }
+.visor.video .visor-linea{
+  display:block;
+  position:absolute; bottom:52px; left:60px; right:60px;
+  height:3px;
+  background:rgba(255,255,0,0.25);
+  cursor:none;
+}
+.visor-linea-hecho{
+  position:absolute; top:0; left:0; height:100%;
+  width:0;
+  background:var(--yellow);
+}
+.visor-linea-marca{
+  position:absolute; top:50%; left:0;
+  width:0; height:0;
+  transform:translateY(-50%);
+}
+.visor-linea-marca i{
+  position:absolute;
+  width:9px; height:9px;
+  border:2px solid var(--yellow);
+}
+.visor-linea-marca i:first-child{ top:-11px; left:-5px; border-right:none; border-bottom:none; }
+.visor-linea-marca i:last-child{  top:2px;   left:-5px; border-right:none; border-top:none; }
+
 .visor-ficha{
   position:absolute; top:0; bottom:0; left:0;
   width:340px;
@@ -754,6 +791,7 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   .visor-escena{ inset:76px 24px 104px; }
   .visor-cabecera{ left:26px; right:26px; top:26px; }
   .visor-tira{ padding:0 20px; bottom:32px; }
+  .visor.video .visor-linea{ left:26px; right:26px; bottom:40px; }
 }
 
 @media (max-width: 860px){
@@ -766,7 +804,8 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 @media (prefers-reduced-motion: reduce){
   .visor{ transition:opacity 0.2s ease; }
   .visor.viajando .visor-esquina,
-  .visor.viajando .visor-escena img{ transition:none; }
+  .visor.viajando .visor-escena img,
+  .visor.viajando .visor-escena video{ transition:none; }
   .visor .visor-chrome{ transition:opacity 0.2s ease; }
   .visor-ficha, .visor-escena{ transition:none; }
 }

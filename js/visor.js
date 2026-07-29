@@ -21,7 +21,7 @@ window.Visor = (function () {
     elContador = document.getElementById('visorContador');
     elCerrar   = document.getElementById('visorCerrar');
 
-    window.VisorFicha.init(alternarFicha);
+    window.VisorFicha.init(alternarFicha); window.VisorVideo.init(despertarChrome);
     elCerrar.addEventListener('click', cerrar);
     document.addEventListener('keydown', alPulsarTecla);
     raiz.addEventListener('mousemove', despertarChrome);
@@ -36,7 +36,7 @@ window.Visor = (function () {
       // El navegador dispara click al soltar un arrastre, así que sin esta
       // guarda cada paneo de la lupa la cerraría al terminar.
       if (estado.lupa && window.VisorLupa.huboArrastre()) return;
-      alternarLupa();
+      if (window.VisorVideo.activo()) window.VisorVideo.alternarReproduccion(); else alternarLupa();
     });
 
     document.addEventListener('click', function (e) {
@@ -59,11 +59,11 @@ window.Visor = (function () {
 
   function abrir(id) {
     var p = window.Datos.porId(id);
-    if (!p || !p.piezas) return;
+    if (!p) return;
 
     proyecto = p;
     elementoQueAbrio = window.Galeria.elementoDe(id);
-    estado = window.VisorEstado.abrir(estado, id, p.piezas.length);
+    estado = window.VisorEstado.abrir(estado, id, p.video ? 1 : p.piezas.length); raiz.classList.toggle('video', !!p.video);
 
     var imgOrigen = elementoQueAbrio ? elementoQueAbrio.querySelector('img') : null;
     var origen = (imgOrigen && !movimientoReducido()) ? imgOrigen.getBoundingClientRect() : null;
@@ -86,8 +86,7 @@ window.Visor = (function () {
       // un solo recálculo y el fundido de opacidad nunca llega a verse.
       raiz.offsetHeight;                // fuerza el reflujo antes del fundido
       raiz.classList.remove('entrando');
-      window.Cursor.mostrar();
-      elCerrar.focus({ preventScroll: true });
+      window.Cursor.mostrar(); elCerrar.focus({ preventScroll: true });
       despertarChrome();
       return;
     }
@@ -133,12 +132,13 @@ window.Visor = (function () {
     window.Cursor.ocultar();
 
     function rematar() {
+      window.VisorVideo.detener(); raiz.classList.remove('video');
       estado = window.VisorEstado.inicial();
       raiz.hidden = true;
       raiz.classList.remove('viajando', 'entrando');
       raiz.style.opacity = '';
-      var img = escena.querySelector('img');
-      if (img) { img.style.transform = ''; img.style.filter = ''; img.style.transition = ''; }
+      var elLienzo = escena.querySelector('img, video');
+      if (elLienzo) { elLienzo.style.transform = ''; elLienzo.style.filter = ''; elLienzo.style.transition = ''; }
       window.VisorTransicion.CLAVES.forEach(function (c) {
         var el = raiz.querySelector('.visor-esquina.' + c);
         el.style.transition = ''; el.style.transform = ''; el.style.color = '';
@@ -171,15 +171,15 @@ window.Visor = (function () {
 
     if (!destino) { rematar(); return; }
 
-    var img = escena.querySelector('img');
-    var actual = img.getBoundingClientRect();
+    var elLienzo = escena.querySelector('img, video');
+    var actual = elLienzo.getBoundingClientRect();
     raiz.classList.add('viajando');
     raiz.offsetHeight;                 // fuerza el reflujo antes de animar la vuelta
-    img.style.transform = 'translate(' + (destino.left - actual.left) + 'px,' +
+    elLienzo.style.transform = 'translate(' + (destino.left - actual.left) + 'px,' +
                                          (destino.top - actual.top) + 'px) scale(' +
                           (destino.width / actual.width) + ',' +
                           (destino.height / actual.height) + ')';
-    img.style.filter = 'grayscale(35%) contrast(1.05)';
+    elLienzo.style.filter = 'grayscale(35%) contrast(1.05)';
     window.VisorTransicion.prepararEsquinasHacia(raiz, destino);
     raiz.style.opacity = '0';
 
@@ -219,13 +219,13 @@ window.Visor = (function () {
 
     elTitulo.textContent = proyecto.titulo;
     elCat.textContent = proyecto.categoria.replace('-', ' ');
-    elContador.textContent = pad(estado.indice + 1) + ' / ' + pad(estado.total);
 
     escena.innerHTML = '';
-    var img = document.createElement('img');
-    img.src = piezas()[estado.indice];
-    img.alt = proyecto.titulo + ', pieza ' + (estado.indice + 1) + ' de ' + estado.total;
-    escena.appendChild(img);
+    if (!window.VisorVideo.pintar(escena, proyecto)) {
+      var img = document.createElement('img');
+      img.src = piezas()[estado.indice]; img.alt = proyecto.titulo + ', pieza ' + (estado.indice + 1) + ' de ' + estado.total; escena.appendChild(img);
+    }
+    elContador.textContent = proyecto.video ? '' : pad(estado.indice + 1) + ' / ' + pad(estado.total);
 
     Array.prototype.forEach.call(tira.children, function (b, i) {
       b.setAttribute('aria-current', i === estado.indice ? 'true' : 'false');
@@ -259,15 +259,17 @@ window.Visor = (function () {
       return;
     }
 
-    if (e.key === 'ArrowRight') { e.preventDefault(); estado = window.VisorEstado.siguiente(estado); renderizar(); }
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); estado = window.VisorEstado.anterior(estado);  renderizar(); }
+    if (window.VisorVideo.alPulsarTecla(e)) return;
+
+    if (e.key === 'ArrowRight' && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.siguiente(estado); renderizar(); }
+    if (e.key === 'ArrowLeft'  && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.anterior(estado);  renderizar(); }
     if (e.key === 'Tab') atraparFoco(e);
 
     despertarChrome();
   }
 
   function alRodar(e) {
-    if (!estado.abierto || estado.lupa) return;
+    if (!estado.abierto || estado.lupa || window.VisorVideo.activo()) return;
     estado = (e.deltaY > 0) ? window.VisorEstado.siguiente(estado)
                             : window.VisorEstado.anterior(estado);
     renderizar();

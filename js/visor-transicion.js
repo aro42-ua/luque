@@ -3,19 +3,22 @@ window.VisorTransicion = (function () {
 
   function volar(ctx, origen) {
     var raiz = ctx.raiz, escena = ctx.escena, chrome = ctx.chrome, elCerrar = ctx.elCerrar;
-    var img = escena.querySelector('img');
+    // Puede ser la <img> de una foto o el <video> de un videoclip: en
+    // ambos casos es el único hijo de la escena y el vuelo es idéntico,
+    // así que basta con no fijar la etiqueta.
+    var el = escena.querySelector('img, video');
     chrome.classList.add('oculto');
 
     function arrancar() {
-      var destino = img.getBoundingClientRect();
+      var destino = el.getBoundingClientRect();
       var ex = origen.width  / destino.width;
       var ey = origen.height / destino.height;
       var dx = origen.left - destino.left;
       var dy = origen.top  - destino.top;
 
-      img.style.transition = 'none';
-      img.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + ex + ',' + ey + ')';
-      img.style.filter = 'grayscale(35%) contrast(1.05)';
+      el.style.transition = 'none';
+      el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + ex + ',' + ey + ')';
+      el.style.filter = 'grayscale(35%) contrast(1.05)';
 
       prepararEsquinas(raiz, origen);
 
@@ -23,9 +26,9 @@ window.VisorTransicion = (function () {
       raiz.classList.remove('entrando');
       raiz.classList.add('viajando');
 
-      img.style.transition = '';
-      img.style.transform = 'none';
-      img.style.filter = 'none';
+      el.style.transition = '';
+      el.style.transform = 'none';
+      el.style.filter = 'none';
       soltarEsquinas(raiz);
 
       setTimeout(function () {
@@ -36,8 +39,11 @@ window.VisorTransicion = (function () {
       }, 640);
     }
 
-    if (img.complete) requestAnimationFrame(arrancar);
-    else img.addEventListener('load', function () { requestAnimationFrame(arrancar); }, { once: true });
+    // Un <video> no tiene .complete: su póster ya se pinta en cuanto se
+    // añade al DOM, así que el vuelo puede arrancar en el siguiente frame
+    // sin esperar ningún evento de carga.
+    if (el.tagName === 'VIDEO' || el.complete) requestAnimationFrame(arrancar);
+    else el.addEventListener('load', function () { requestAnimationFrame(arrancar); }, { once: true });
   }
 
   function prepararEsquinas(raiz, origen) {

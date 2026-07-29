@@ -273,6 +273,11 @@
         </div>
       </header>
       <nav class="visor-tira" id="visorTira" aria-label="Piezas del proyecto"></nav>
+      <div class="visor-linea" id="visorLinea" role="slider" tabindex="0"
+           aria-label="Posición del vídeo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span class="visor-linea-hecho" id="visorLineaHecho"></span>
+        <span class="visor-linea-marca" id="visorLineaMarca"><i></i><i></i></span>
+      </div>
       <aside class="visor-ficha" id="visorFicha" aria-hidden="true">
         <p class="visor-ficha-cat" id="fichaCat"></p>
         <p class="visor-ficha-titulo" id="fichaTitulo"></p>
@@ -304,6 +309,7 @@
   <script src="js/visor-transicion.js"></script>
   <script src="js/visor-lupa.js"></script>
   <script src="js/visor-ficha.js"></script>
+  <script src="js/visor-video.js"></script>
   <script src="js/visor.js"></script>
   <script>
   gsap.registerPlugin(ScrollTrigger);
