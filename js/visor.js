@@ -212,10 +212,9 @@ window.Visor = (function () {
   function renderizar() {
     if (!estado.abierto) return;
 
-    if (raiz.classList.contains('lupa') && !estado.lupa) {
-      window.VisorLupa.salir(escena);
-      raiz.classList.remove('lupa');
-    }
+    if (raiz.classList.contains('lupa') && !estado.lupa) { window.VisorLupa.salir(escena); raiz.classList.remove('lupa'); }
+    // La ficha se recoge igual que la lupa: un salto directo por hash no pasa por rematar()
+    if (raiz.classList.contains('ficha-abierta') && !estado.ficha) window.VisorFicha.aplicar(raiz, false);
 
     elTitulo.textContent = proyecto.titulo;
     elCat.textContent = proyecto.categoria.replace('-', ' ');
