@@ -21,7 +21,7 @@ window.Visor = (function () {
     elContador = document.getElementById('visorContador');
     elCerrar   = document.getElementById('visorCerrar');
 
-    window.VisorFicha.init(alternarFicha); window.VisorVideo.init(despertarChrome);
+    window.VisorFicha.init(alternarFicha); window.VisorVideo.init(despertarChrome); window.VisorCarga.init(raiz);
     elCerrar.addEventListener('click', cerrar);
     document.addEventListener('keydown', alPulsarTecla);
     raiz.addEventListener('mousemove', despertarChrome);
@@ -222,8 +222,7 @@ window.Visor = (function () {
 
     escena.innerHTML = '';
     if (!window.VisorVideo.pintar(escena, proyecto)) {
-      var img = document.createElement('img');
-      img.src = piezas()[estado.indice]; img.alt = proyecto.titulo + ', pieza ' + (estado.indice + 1) + ' de ' + estado.total; escena.appendChild(img);
+      window.VisorCarga.pintar(escena, proyecto, estado, piezas());
     }
     elContador.textContent = proyecto.video ? '' : pad(estado.indice + 1) + ' / ' + pad(estado.total);
 

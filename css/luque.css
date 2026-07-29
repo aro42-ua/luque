@@ -628,6 +628,18 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 
 .visor.video .visor-escena{ inset:82px 64px 104px; }
 
+.visor-cargando{
+  position:absolute; inset:0;
+  display:none;
+  align-items:center; justify-content:center;
+  z-index:5;
+  pointer-events:none;
+  color:var(--yellow);
+}
+.visor.cargando .visor-cargando{ display:flex; }
+.visor-cargando .brand-frames{ width:min(20vw, 110px); }
+.visor-cargando svg{ fill:currentColor; }
+
 .visor-chrome{
   position:absolute; inset:0;
   z-index:2;
