@@ -243,7 +243,7 @@ window.Visor = (function () {
       if (estado.lupa && !tras.lupa) { window.VisorLupa.salir(escena); raiz.classList.remove('lupa'); }
       if (estado.ficha && !tras.ficha) window.VisorFicha.aplicar(raiz, false);
       if (!tras.abierto) cerrar();
-      else { estado = tras; renderizar(); }
+      else { estado = tras; renderizar(); despertarChrome(); }
       return;
     }
 
@@ -286,7 +286,7 @@ window.Visor = (function () {
   function despertarChrome() {
     chrome.classList.remove('oculto');
     pararTemporizador();
-    if (sobreLaTira) return;   // la tira no se desvanece bajo el cursor
+    if (sobreLaTira || estado.ficha) return;   // la tira bajo el cursor y la ficha abierta no se desvanecen
     temporizador = setTimeout(function () { chrome.classList.add('oculto'); }, OCULTAR_TRAS);
   }
 
