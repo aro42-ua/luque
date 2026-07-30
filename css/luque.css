@@ -610,7 +610,7 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   transform-origin:0 0;
 }
 
-.visor.lupa .visor-escena{ overflow:hidden; }
+.visor.lupa .visor-escena{ overflow:hidden; touch-action:none; }
 
 .visor.lupa .visor-escena img{
   max-width:none; max-height:none;
@@ -731,6 +731,7 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   height:3px;
   background:rgba(255,255,0,0.25);
   cursor:none;
+  touch-action:none;
 }
 .visor-linea-hecho{
   position:absolute; top:0; left:0; height:100%;

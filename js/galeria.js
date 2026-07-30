@@ -88,6 +88,11 @@ window.Galeria = (function () {
     var r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
     targetX = clamp(targetX + (s.left + stageW / 2) - (r.left + r.width  / 2), minX, 0);
     targetY = clamp(targetY + (s.top  + stageH / 2) - (r.top  + r.height / 2), minY, 0);
+    // Con movimiento reducido no hay paneo animado: se salta al objetivo.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      curX = targetX; curY = targetY;
+      canvas.style.transform = 'translate3d(' + curX + 'px, ' + curY + 'px, 0)';
+    }
   }
 
   function conRecomposicion(fn) {
@@ -184,18 +189,11 @@ window.Galeria = (function () {
       onEnterBack: () => navbar.classList.add('visible')
     });
 
-    /* ================================================================
-       4) GALERÍA — NAVEGACIÓN ESPACIAL 2D
-       - El lienzo (.spatial-canvas) es mucho más grande que el
-         "escenario" visible (.spatial-stage).
-       - Con ratón: el lienzo se desplaza en dirección OPUESTA a la
-         posición del cursor dentro del escenario (offset respecto al
-         centro), con una interpolación (lerp) para dar inercia.
-       - Con touch: se sustituye por arrastre (drag) directo, con la
-         misma inercia al soltar.
-       - Los enlaces del menú centran la categoría correspondiente
-         animando el mismo sistema de coordenadas.
-       ================================================================ */
+    /* 4) GALERÍA — NAVEGACIÓN ESPACIAL 2D. El lienzo (.spatial-canvas) es
+       mucho mayor que el escenario visible (.spatial-stage): con ratón se
+       desplaza en dirección opuesta al cursor con inercia (lerp); con touch
+       se arrastra directo. Los enlaces del menú centran la categoría con el
+       mismo sistema de coordenadas. */
     stage  = document.getElementById('spatialStage');
     canvas = document.getElementById('spatialCanvas');
     if(!stage || !canvas) return;
@@ -271,9 +269,10 @@ window.Galeria = (function () {
     });
 
     window.Router.alCambiar(function (ruta) {
+      // 'proyecto' se ignora: abrir un proyecto no dice nada del filtro.
       if (ruta.tipo === 'categoria') {
         if (categoria !== ruta.valor) aplicarFiltro(ruta.valor);
-      } else if (categoria !== null) {
+      } else if (ruta.tipo === 'todos' && categoria !== null) {
         quitarFiltro();
       }
     });

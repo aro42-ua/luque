@@ -1,5 +1,8 @@
 window.VisorTransicion = (function () {
   var CLAVES = ['tl', 'tr', 'bl', 'br'];
+  // Color de las esquinas mientras vuelan: se lee de --black en vez de
+  // repetirlo a mano, así sigue a la paleta si --black cambia algún día.
+  var NEGRO = getComputedStyle(document.documentElement).getPropertyValue('--black').trim() || '#0a0a0a';
 
   function volar(ctx, origen) {
     var raiz = ctx.raiz, escena = ctx.escena, chrome = ctx.chrome, elCerrar = ctx.elCerrar;
@@ -64,7 +67,7 @@ window.VisorTransicion = (function () {
       var anclaY = (clave === 'tl' || clave === 'tr') ? r.top  : r.bottom;
       el.style.transform = 'translate(' + (puntos[clave].x - anclaX) + 'px,' +
                                           (puntos[clave].y - anclaY) + 'px)';
-      el.style.color = '#0a0a0a';
+      el.style.color = NEGRO;
     });
   }
 
@@ -92,7 +95,7 @@ window.VisorTransicion = (function () {
       var anclaY = (clave === 'tl' || clave === 'tr') ? r.top  : r.bottom;
       el.style.transform = 'translate(' + (puntos[clave].x - anclaX) + 'px,' +
                                           (puntos[clave].y - anclaY) + 'px)';
-      el.style.color = '#0a0a0a';
+      el.style.color = NEGRO;
     });
   }
 

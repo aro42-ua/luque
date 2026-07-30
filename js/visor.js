@@ -4,10 +4,7 @@ window.Visor = (function () {
   var elementoQueAbrio = null;
 
   var raiz, escena, chrome, tira, elTitulo, elCat, elContador, elCerrar;
-  var temporizador = null;
-  var sobreLaTira = false;
   var abiertoConRaton = false, pendienteConRaton = false;
-  var OCULTAR_TRAS = 2000;
 
   function init() {
     estado = window.VisorEstado.inicial();
@@ -21,15 +18,12 @@ window.Visor = (function () {
     elContador = document.getElementById('visorContador');
     elCerrar   = document.getElementById('visorCerrar');
 
-    window.VisorFicha.init(alternarFicha); window.VisorVideo.init(despertarChrome); window.VisorCarga.init(raiz);
+    window.VisorFicha.init(alternarFicha); window.VisorVideo.init(window.VisorChrome.despertar); window.VisorCarga.init(raiz);
+    window.VisorChrome.init(chrome, tira, function () { return estado.ficha; });
     elCerrar.addEventListener('click', cerrar);
     document.addEventListener('keydown', alPulsarTecla);
-    raiz.addEventListener('mousemove', despertarChrome);
+    raiz.addEventListener('mousemove', window.VisorChrome.despertar);
     raiz.addEventListener('wheel', alRodar, { passive: true });
-    tira.addEventListener('mouseenter', function () {
-      sobreLaTira = true; chrome.classList.remove('oculto'); pararTemporizador();
-    });
-    tira.addEventListener('mouseleave', function () { sobreLaTira = false; despertarChrome(); });
 
     escena.addEventListener('click', function () {
       if (!estado.abierto) return;
@@ -87,13 +81,13 @@ window.Visor = (function () {
       raiz.offsetHeight;                // fuerza el reflujo antes del fundido
       raiz.classList.remove('entrando');
       window.Cursor.mostrar(); elCerrar.focus({ preventScroll: true });
-      despertarChrome();
+      window.VisorChrome.despertar();
       return;
     }
 
     window.VisorTransicion.volar({
       raiz: raiz, escena: escena, chrome: chrome, elCerrar: elCerrar,
-      alTerminar: despertarChrome
+      alTerminar: window.VisorChrome.despertar
     }, origen);
   }
 
@@ -113,21 +107,26 @@ window.Visor = (function () {
       window.VisorLupa.salir(escena);
       raiz.classList.remove('lupa');
     }
-    despertarChrome();
+    window.VisorChrome.despertar();
   }
 
   function alternarFicha() {
     estado = window.VisorEstado.alternarFicha(estado);
-    window.VisorFicha.aplicar(raiz, estado.ficha); despertarChrome();
+    window.VisorFicha.aplicar(raiz, estado.ficha); window.VisorChrome.despertar();
   }
 
-  function cerrar() { window.Router.ir('todos'); }
+  // cerrar: vuelve a la categoría activa de la galería si la había, no siempre a 'todos'.
+  function cerrar() {
+    var cat = window.Galeria.categoriaActiva();
+    if (cat) window.Router.ir('categoria', cat);
+    else window.Router.ir('todos');
+  }
 
   function cerrarSinTocarLaRuta() {
     var imgDestino = elementoQueAbrio ? elementoQueAbrio.querySelector('img') : null;
     var destino = (imgDestino && !movimientoReducido()) ? imgDestino.getBoundingClientRect() : null;
 
-    pararTemporizador();
+    window.VisorChrome.pararTemporizador();
     chrome.classList.add('oculto');
     window.Cursor.ocultar();
 
@@ -145,10 +144,16 @@ window.Visor = (function () {
       });
       document.body.classList.remove('visor-abierto');
       window.VisorFicha.aplicar(raiz, false);
-      sobreLaTira = false;
+      window.VisorChrome.olvidarTira();
       window.Galeria.descongelar();
       window.Cursor.mostrar();
       window.Cursor.restablecer();
+      // Entrar por enlace directo y cerrar sin tocar la galería la deja fuera
+      // de la vista: si no está visible se trae ella misma antes del foco.
+      var seccion = document.getElementById('gallery');
+      var rSeccion = seccion && seccion.getBoundingClientRect();
+      var fueraDeVista = rSeccion && (rSeccion.top >= window.innerHeight || rSeccion.bottom <= 0);
+      if (fueraDeVista) seccion.scrollIntoView({ block: 'start', behavior: movimientoReducido() ? 'auto' : 'smooth' });
       // preventScroll: sin esto el navegador arrastra la página para traer el
       // botón a la vista, y como el lienzo es enorme y scroll-behavior es smooth,
       // la página se va al hero durante un segundo.
@@ -242,11 +247,14 @@ window.Visor = (function () {
       if (estado.lupa && !tras.lupa) { window.VisorLupa.salir(escena); raiz.classList.remove('lupa'); }
       if (estado.ficha && !tras.ficha) window.VisorFicha.aplicar(raiz, false);
       if (!tras.abierto) cerrar();
-      else { estado = tras; renderizar(); despertarChrome(); }
+      else { estado = tras; renderizar(); window.VisorChrome.despertar(); }
       return;
     }
 
-    if (window.VisorFicha.esTeclaAlternar(e)) { e.preventDefault(); alternarFicha(); return; }
+    if (window.VisorFicha.esTeclaAlternar(e, 'i')) { e.preventDefault(); alternarFicha(); return; }
+
+    // l de "lupa": mismo hueco y guarda que i, único camino de teclado hasta ahora.
+    if (window.VisorFicha.esTeclaAlternar(e, 'l') && !window.VisorVideo.activo()) { e.preventDefault(); alternarLupa(); return; }
 
     if (estado.lupa && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' ||
                         e.key === 'ArrowUp'    || e.key === 'ArrowDown')) {
@@ -254,7 +262,7 @@ window.Visor = (function () {
       var dx = (e.key === 'ArrowLeft' ? 1 : e.key === 'ArrowRight' ? -1 : 0);
       var dy = (e.key === 'ArrowUp'   ? 1 : e.key === 'ArrowDown'  ? -1 : 0);
       window.VisorLupa.desplazar(dx, dy);
-      despertarChrome();
+      window.VisorChrome.despertar();
       return;
     }
 
@@ -264,7 +272,7 @@ window.Visor = (function () {
     if (e.key === 'ArrowLeft'  && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.anterior(estado);  renderizar(); }
     if (e.key === 'Tab') atraparFoco(e);
 
-    despertarChrome();
+    window.VisorChrome.despertar();
   }
 
   function alRodar(e) {
@@ -272,7 +280,7 @@ window.Visor = (function () {
     estado = (e.deltaY > 0) ? window.VisorEstado.siguiente(estado)
                             : window.VisorEstado.anterior(estado);
     renderizar();
-    despertarChrome();
+    window.VisorChrome.despertar();
   }
 
   function atraparFoco(e) {
@@ -283,15 +291,6 @@ window.Visor = (function () {
     if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
     else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
   }
-
-  function despertarChrome() {
-    chrome.classList.remove('oculto');
-    pararTemporizador();
-    if (sobreLaTira || estado.ficha) return;   // la tira bajo el cursor y la ficha abierta no se desvanecen
-    temporizador = setTimeout(function () { chrome.classList.add('oculto'); }, OCULTAR_TRAS);
-  }
-
-  function pararTemporizador() { if (temporizador) { clearTimeout(temporizador); temporizador = null; } }
 
   function estaAbierto() { return estado && estado.abierto; }
 

@@ -43,10 +43,11 @@ window.VisorFicha = (function () {
     elInfo.setAttribute('aria-expanded', abierta ? 'true' : 'false');
   }
 
-  // Guarda de la tecla i: no hay campos de texto en esta página hoy, pero
-  // si algún día los hay, la tecla no debe robarles la escritura.
-  function esTeclaAlternar(e) {
-    if (e.key !== 'i' && e.key !== 'I') return false;
+  // Guarda genérica para atajos de una letra (i de ficha, l de lupa): no hay
+  // campos de texto en esta página hoy, pero si algún día los hay, la tecla
+  // no debe robarles la escritura. tecla llega en minúscula.
+  function esTeclaAlternar(e, tecla) {
+    if (e.key !== tecla && e.key !== tecla.toUpperCase()) return false;
     var el = document.activeElement;
     if (!el) return true;
     return el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && !el.isContentEditable;
