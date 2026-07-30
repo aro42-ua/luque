@@ -190,16 +190,15 @@
 
   /* ============================================================
      HERO
-     [NUEVO] Transición limpia hero -> galería:
-     El hero ya NO se fija mediante ScrollTrigger(pin:true). En su
-     lugar es `position:fixed` permanente (z-index bajo) y un
-     "spacer" invisible justo debajo (#heroSpacer) reserva la
-     distancia de scroll necesaria para el crossfade intro -> logo.
-     La galería, en flujo normal justo después del spacer, lleva un
-     z-index superior y fondo opaco: al hacer scroll, se desliza
-     literalmente POR ENCIMA del hero (que sigue fijo debajo) y lo
-     cubre por completo sin que se vean ambas secciones "cortadas"
-     a la vez.
+     Transición limpia hero -> galería:
+     El hero ya NO se fija mediante ScrollTrigger(pin:true), ni depende
+     del scroll: es `position:fixed` a pantalla completa y con fondo
+     opaco, y se apila POR ENCIMA de la galería. Como no ocupa sitio en
+     el flujo, la galería vive debajo desde el primer momento, ya
+     montada pero tapada. El hero no se descubre haciendo scroll: se
+     retira al pulsar el botón (el JS le pone `hidden`), y en ese
+     instante la galería queda a la vista sin que las dos secciones se
+     vean nunca "cortadas" a la vez.
   ============================================================ */
   .hero{
     position:fixed;
@@ -208,7 +207,7 @@
     width:100%;
     background:var(--yellow);
     overflow:hidden;
-    z-index:1; /* por debajo de la galería/footer, ver más abajo */
+    z-index:600;   /* por encima del navbar (500), por debajo del visor (900) */
   }
 
   /* [MODIFICADO] FASE A del hero — logo "Fin de carga".
@@ -360,9 +359,9 @@
      se sustituye por arrastre directo (drag) con la misma inercia.
   ============================================================ */
   .gallery{
-    position:relative;  /* [NUEVO] necesario para que z-index surta efecto */
-    z-index:2;          /* [NUEVO] por encima del hero fijo (z-index:1) */
-    background:var(--yellow); /* opaco: cubre el hero por completo al deslizarse encima */
+    position:relative;  /* necesario para que z-index surta efecto */
+    z-index:2;          /* por debajo del hero fijo (600): el hero la tapa hasta que se pulsa el botón */
+    background:var(--yellow); /* opaco: no deja ver nada por debajo */
     padding:14vh 0 0;
   }
 
@@ -469,8 +468,8 @@
      FOOTER
   ============================================================ */
   footer{
-    position:relative; /* [NUEVO] necesario para que z-index surta efecto */
-    z-index:2;         /* [NUEVO] por encima del hero fijo (z-index:1) */
+    position:relative; /* necesario para que z-index surta efecto */
+    z-index:2;         /* por debajo del hero fijo (600), igual que la galería */
     background:var(--black);
     color:var(--yellow);
     text-align:center;
@@ -495,7 +494,6 @@
   @media (prefers-reduced-motion: reduce){
     .brand-frames .frame{ animation:none; }
     .brand-frames .frame:first-child{ opacity:1; }
-    .hero-intro .scroll-label::after{ animation:none; }
     html{ scroll-behavior:auto; }
     .proj img{ transition:none; }
   }
