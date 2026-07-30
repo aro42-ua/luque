@@ -206,13 +206,13 @@ window.Galeria = (function () {
     measure();
     loop();
 
-    // Sin esto, tabular hacia un proyecto fuera de la vista deja el foco
-    // en un elemento invisible: el lienzo no lo sigue.
+    // El foco llega por clic, restauración o el tabulador (GaleriaTeclado);
+    // en todos los casos basta centrar el lienzo, sin tocar el scroll.
     stage.addEventListener('focusin', function (e) {
       var boton = e.target.closest ? e.target.closest('.proj') : null; if (!boton) return;
-      document.getElementById('gallery').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       centrarEn(boton);
     });
+    window.GaleriaTeclado.init(stage, centrarEn);
 
     if (isFinePointer){
       const STRENGTH = 0.9; // 0-1, cuánto "empuja" el cursor el lienzo
