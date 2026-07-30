@@ -148,15 +148,8 @@ window.Visor = (function () {
       window.Galeria.descongelar();
       window.Cursor.mostrar();
       window.Cursor.restablecer();
-      // Entrar por enlace directo y cerrar sin tocar la galería la deja fuera
-      // de la vista: si no está visible se trae ella misma antes del foco.
-      var seccion = document.getElementById('gallery');
-      var rSeccion = seccion && seccion.getBoundingClientRect();
-      var fueraDeVista = rSeccion && (rSeccion.top >= window.innerHeight || rSeccion.bottom <= 0);
-      if (fueraDeVista) seccion.scrollIntoView({ block: 'start', behavior: movimientoReducido() ? 'auto' : 'smooth' });
-      // preventScroll: sin esto el navegador arrastra la página para traer el
-      // botón a la vista, y como el lienzo es enorme y scroll-behavior es smooth,
-      // la página se va al hero durante un segundo.
+      // preventScroll: aunque la página ya no se desplaza, el navegador
+      // intentaría igualmente traer el botón a la vista al enfocarlo.
       var origen = elementoQueAbrio;
       if (origen) {
         // El anillo de foco se suprime solo si se abrió con el ratón, y solo

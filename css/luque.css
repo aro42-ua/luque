@@ -54,14 +54,12 @@
 
   *{ margin:0; padding:0; box-sizing:border-box; }
 
-  html{ scroll-behavior:smooth; }
-
   body{
     background:var(--yellow);
     color:var(--black);
     font-family:var(--ff);
     letter-spacing:var(--kerning);
-    overflow-x:hidden;
+    overflow:hidden;
     -webkit-font-smoothing:antialiased;
   }
 
@@ -358,29 +356,36 @@
      con inercia (lerp) para que el movimiento sea fluido. En touch
      se sustituye por arrastre directo (drag) con la misma inercia.
   ============================================================ */
+  /* La galería es un estado fijo a pantalla completa, no una sección de
+     un documento. Nace invisible para que el tabulador no la alcance
+     mientras el hero está delante. */
   .gallery{
-    position:relative;  /* necesario para que z-index surta efecto */
-    z-index:2;          /* por debajo del hero fijo (600): el hero la tapa hasta que se pulsa el botón */
-    background:var(--yellow); /* opaco: no deja ver nada por debajo */
-    padding:14vh 0 0;
+    position:fixed; inset:0;
+    z-index:2;
+    background:var(--yellow);
+    visibility:hidden;
   }
+  body.galeria-activa .gallery,
+  body.entrando .gallery{ visibility:visible; }
 
   .gallery-intro{
-    color:var(--black);
+    position:absolute;
+    left:6vw; top:14vh;   /* por debajo de la píldora del navbar */
+    margin:0;
+    font-size:0.72rem;
     font-weight:700;
-    font-size:clamp(1.6rem, 4vw, 3rem);
-    margin-bottom:6vh;
-    max-width:14ch;
-    padding:0 6vw;
+    letter-spacing:0.15em;
+    text-transform:uppercase;
+    opacity:0.55;
+    z-index:5;
+    pointer-events:none;
   }
 
   .spatial-stage{
-    position:relative;
-    width:100%;
-    height:100vh;
+    position:absolute; inset:0;
     overflow:hidden;
     background:var(--yellow);
-    touch-action:none; /* el drag táctil lo gestionamos a mano */
+    touch-action:none;
   }
 
   .spatial-stage::after{
@@ -468,25 +473,24 @@
      FOOTER
   ============================================================ */
   footer{
-    position:relative; /* necesario para que z-index surta efecto */
-    z-index:2;         /* por debajo del hero fijo (600), igual que la galería */
-    background:var(--black);
-    color:var(--yellow);
-    text-align:center;
-    padding:10vh 6vw 6vh;
-    font-weight:700;
-    letter-spacing:0.04em;
+    position:fixed;
+    left:6vw; bottom:5vh;
+    z-index:3;
+    color:var(--black);
+    font-size:0.66rem;
+    font-weight:500;
+    letter-spacing:0.12em;
+    opacity:0.45;
+    pointer-events:none;
   }
-  footer p{ opacity:0.6; font-weight:500; margin-top:10px; font-size:0.85rem; }
+  body:not(.galeria-activa) footer{ opacity:0; }
 
   /* ============================================================
      RESPONSIVE
   ============================================================ */
   @media (max-width: 720px){
     .navbar{ width:min(96vw, 520px); padding:10px 16px; top:12px; }
-    .gallery{ padding:10vh 0 0; }
     .gallery-intro{ padding:0 5vw; }
-    .spatial-stage{ height:78vh; }
     .spatial-canvas{ width:320vw; height:230vw; }
   }
 
@@ -494,7 +498,6 @@
   @media (prefers-reduced-motion: reduce){
     .brand-frames .frame{ animation:none; }
     .brand-frames .frame:first-child{ opacity:1; }
-    html{ scroll-behavior:auto; }
     .proj img{ transition:none; }
   }
 

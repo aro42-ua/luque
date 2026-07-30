@@ -47,6 +47,7 @@ window.Hero = (function () {
   function entrar() {
     heroEl.hidden = true;
     document.body.classList.add('galeria-activa');
+    window.Galeria.activar();
   }
 
   function init() {

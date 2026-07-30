@@ -169,25 +169,18 @@ window.Galeria = (function () {
   function congelar()    { paneoCongelado = true;  }
   function descongelar() { paneoCongelado = false; }
 
+  /* Activa la galería como estado visible: muestra el navbar y remide el
+     lienzo, porque hasta ahora estaba oculto y sus rectángulos valían cero. */
+  function activar() {
+    var navbar = document.getElementById('navbar');
+    if (navbar) navbar.classList.add('visible');
+    measure();
+  }
+
   function init() {
     var problemas = window.Datos.validarDatos(window.Datos.PROYECTOS, window.Datos.CATEGORIAS);
     if (problemas.length) console.warn('Problemas en los datos:\n' + problemas.join('\n'));
     construir();
-
-    /* ================================================================
-       3) STICKY NAVBAR REVEAL
-       ================================================================ */
-    const navbar = document.getElementById('navbar');
-
-    ScrollTrigger.create({
-      trigger: '#gallery',
-      start: 'top 85%',
-      end: 'bottom bottom',
-      onEnter:     () => navbar.classList.add('visible'),
-      onLeaveBack: () => navbar.classList.remove('visible'),
-      onLeave:     () => navbar.classList.remove('visible'),
-      onEnterBack: () => navbar.classList.add('visible')
-    });
 
     /* 4) GALERÍA — NAVEGACIÓN ESPACIAL 2D. El lienzo (.spatial-canvas) es
        mucho mayor que el escenario visible (.spatial-stage): con ratón se
@@ -262,7 +255,6 @@ window.Galeria = (function () {
       a.addEventListener('click', function (e) {
         e.preventDefault();
         var cat = a.dataset.cat;
-        document.getElementById('gallery').scrollIntoView({ behavior: 'smooth' });
         if (categoria === cat) window.Router.ir('todos');
         else window.Router.ir('categoria', cat);
       });
@@ -293,6 +285,7 @@ window.Galeria = (function () {
     categoriaActiva: categoriaActiva,
     congelar: congelar,
     descongelar: descongelar,
-    centrarEn: centrarEn
+    centrarEn: centrarEn,
+    activar: activar
   };
 })();
