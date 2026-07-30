@@ -109,7 +109,9 @@ Añadir, junto al resto de reglas del hero:
   .hero-boton.visible{ opacity:1; }
   .hero-boton:hover{ opacity:0.55; }
   .hero-boton:focus-visible{ outline:none; }
-  .hero-boton:focus-visible .hero-boton-esq{ width:16px; height:16px; }
+  /* El foco agranda las esquinas con transform y no con width/height:
+     animar propiedades de layout está prohibido por las restricciones. */
+  .hero-boton:focus-visible .hero-boton-esq{ transform:scale(1.45); }
 
   .hero-boton-esq{
     position:absolute;
@@ -117,13 +119,15 @@ Añadir, junto al resto de reglas del hero:
     border-color:currentColor;
     border-style:solid;
     border-width:0;
-    transition:width 0.2s ease, height 0.2s ease;
+    transition:transform 0.2s ease;
   }
-  .hero-boton-esq.tl{ top:0; left:0;     border-top-width:2px; border-left-width:2px; }
-  .hero-boton-esq.tr{ top:0; right:0;    border-top-width:2px; border-right-width:2px; }
-  .hero-boton-esq.bl{ bottom:0; left:0;  border-bottom-width:2px; border-left-width:2px; }
-  .hero-boton-esq.br{ bottom:0; right:0; border-bottom-width:2px; border-right-width:2px; }
+  .hero-boton-esq.tl{ top:0; left:0;     border-top-width:2px; border-left-width:2px; transform-origin:top left; }
+  .hero-boton-esq.tr{ top:0; right:0;    border-top-width:2px; border-right-width:2px; transform-origin:top right; }
+  .hero-boton-esq.bl{ bottom:0; left:0;  border-bottom-width:2px; border-left-width:2px; transform-origin:bottom left; }
+  .hero-boton-esq.br{ bottom:0; right:0; border-bottom-width:2px; border-right-width:2px; transform-origin:bottom right; }
 ```
+
+Cada esquina crece desde su propio anclaje, de modo que el marco se abre hacia fuera en lugar de desplazarse.
 
 - [ ] **Step 4: Reescribir `js/hero.js`**
 
