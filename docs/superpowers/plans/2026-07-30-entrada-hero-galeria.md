@@ -296,13 +296,9 @@ En `css/luque.css`, borrar `html{ scroll-behavior:smooth; }` (línea 57) y la l�
 
 En la regla `body` que ya existe, cambiar `overflow-x:hidden;` por `overflow:hidden;`. No añadir una regla `body` nueva más abajo: habría dos declaraciones compitiendo y la última ganaría por orden, que es justo el tipo de cosa que luego nadie entiende.
 
-**Subir el hero por encima de la galería.** Hoy `.hero` tiene `z-index:1` y `.gallery` tiene `z-index:2`, porque el diseño anterior consistía precisamente en que la galería se deslizara por encima del hero. Ahora es al revés: el hero tapa a la galería hasta que se retira. Sin este cambio la galería aparecería delante del hero desde el primer momento y no se vería nada de la portada.
+**El apilamiento del hero ya está resuelto — no hay nada que hacer aquí.** Este plan situaba en esta tarea el cambio de `z-index` del hero, y era un error de secuenciación: la Task 1 es la que borra el espaciador y, por tanto, la que rompe el apilamiento. Se corrigió allí, en el commit `2cd8411`, dejando `.hero` en `z-index:600` — por encima del navbar (500) y por debajo del visor (900).
 
-En la regla `.hero`, cambiar `z-index:1;` por:
-
-```css
-    z-index:600;   /* por encima del navbar (500), por debajo del visor (900) */
-```
+Al leer el CSS, `.hero` debe tener ya `z-index:600`. Si aparece `z-index:1`, algo ha ido mal antes de llegar aquí: **detenerse y reportarlo** en lugar de arreglarlo sobre la marcha.
 
 Sustituir la regla `.gallery` (línea 353) por:
 
