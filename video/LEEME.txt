@@ -1,0 +1,7 @@
+Aquí van los archivos de vídeo reales de los proyectos de videoclip y
+cortometraje (reflejo.mp4, estatica.mp4, humo.mp4, ceniza.mp4, raiz.mp4,
+litoral.mp4 — ver js/datos.js para la lista completa y los nombres exactos
+que espera cada proyecto).
+
+Hasta que se coloquen aquí, el visor mostrará el póster de cada proyecto
+sin poder reproducir nada: es el comportamiento esperado, no un error.

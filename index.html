@@ -4,466 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LUQUE! — Estudio de fotografía y cine</title>
-<style>
-  /* ============================================================
-     TIPOGRAFÍA PERSONALIZADA — ABC Favorit (Trial)
-     Los 3 archivos deben estar en la misma carpeta que este HTML.
-  ============================================================ */
-  @font-face{
-    font-family:'ABC Favorit';
-    src:url('ABCFavorit-Regular-Trial.otf') format('opentype');
-    font-weight:400;
-    font-style:normal;
-    font-display:swap;
-  }
-  @font-face{
-    font-family:'ABC Favorit';
-    src:url('ABCFavorit-Bold-Trial.otf') format('opentype');
-    font-weight:700;
-    font-style:normal;
-    font-display:swap;
-  }
-  @font-face{
-    font-family:'ABC Favorit';
-    src:url('ABCFavorit-BoldItalic-Trial.otf') format('opentype');
-    font-weight:700;
-    font-style:italic;
-    font-display:swap;
-  }
-
-  /* ============================================================
-     TOKENS
-  ============================================================ */
-  :root{
-    --yellow:#FFFF00;
-    --black:#0a0a0a;
-    --grey-dark:#1c1c1c;
-    --grey-mid:#3a3a3a;
-    --pill-bg-yellow: rgba(255,255,0,0.96);
-    --ff: 'ABC Favorit', 'Montserrat', Helvetica, Arial, sans-serif;
-
-    /* NOTA SOBRE EL KERNING:
-       -100px de letter-spacing literal cerraría cualquier texto
-       hasta hacerlo ilegible (letras superpuestas). Se traduce esa
-       intención de "tracking muy cerrado" a una unidad relativa al
-       tamaño de fuente (em), que es como debe expresarse el kerning
-       en CSS. -0.03em en cuerpo de texto y algo más marcado en los
-       titulares grandes conserva el espíritu "apretado" del pedido
-       sin romper la legibilidad. */
-    --kerning: -0.03em;
-
-    /* [NUEVO] Tamaño ÚNICO compartido por el logo de carga del
-       preloader y el logo "Fin de carga" del hero: ambos usan
-       viewBox 290x290 con el mismo visor de 250 unidades centrado,
-       así que con el mismo width se ven exactamente iguales. */
-    --logo-carga-size: min(28vw, 150px);
-  }
-
-  *{ margin:0; padding:0; box-sizing:border-box; }
-
-  html{ scroll-behavior:smooth; }
-
-  body{
-    background:var(--yellow);
-    color:var(--black);
-    font-family:var(--ff);
-    letter-spacing:var(--kerning);
-    overflow-x:hidden;
-    -webkit-font-smoothing:antialiased;
-  }
-
-  ::selection{ background:var(--black); color:var(--yellow); }
-
-  a{ color:inherit; text-decoration:none; }
-
-  /* ============================================================
-     CURSOR PERSONALIZADO
-     - Cursor por defecto del sistema oculto en toda la web.
-     - Cursor 1.svg -> estado normal.
-     - Cursor 2.svg -> estado hover ÚNICAMENTE sobre los enlaces del
-       navbar (clase .hover).
-     - Sobre .proj -> modo "bbox": la imagen central se oculta y las
-       CUATRO ESQUINAS de cursor-2.svg (elementos .cursor-corner) se
-       anclan a las esquinas del bounding box de la imagen del
-       proyecto: el cursor conserva su forma de visor, solo que
-       "abierto" al tamaño de la foto. El tamaño/posición se
-       recalculan cada frame en JS (rAF) con interpolación (lerp).
-     - En touch/mobile se restaura el comportamiento nativo (no hay
-       puntero físico que sustituir).
-  ============================================================ */
-  body, a, button, .proj, .nav-svg a{ cursor:none; }
-
-  .custom-cursor{
-    position:fixed;
-    top:0; left:0;
-    width:34px; height:34px;
-    pointer-events:none;
-    z-index:99999;
-    opacity:0;
-    transition: opacity 0.2s ease;
-    will-change: transform, width, height;
-  }
-  .custom-cursor.active{ opacity:1; }
-  .custom-cursor img{
-    width:100%; height:100%; display:block;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
-    transition: opacity 0.15s ease;
-  }
-
-  /* [MODIFICADO] Modo "bbox" — las CUATRO ESQUINAS de cursor-2.svg
-     se anclan a las esquinas del bounding box de la foto. Van en
-     NEGRO sólido (antes iban en blanco con mix-blend-mode:difference,
-     que sobre el fondo amarillo se invertía a azul). */
-  .custom-cursor.bbox img{ opacity:0; }
-
-  .cursor-corner{
-    position:absolute;
-    width:22px; height:22px;
-    opacity:0;                      /* solo visibles en modo bbox */
-    transition: opacity 0.15s ease;
-    pointer-events:none;
-  }
-  .cursor-corner svg{ width:100%; height:100%; display:block; }
-  .cursor-corner svg polygon{ fill:var(--black); }
-
-  .custom-cursor.bbox .cursor-corner{ opacity:1; }
-
-  /* La misma esquina (L superior-izquierda de cursor-2.svg) se
-     refleja con transform para las otras tres posiciones */
-  .cursor-corner.tl{ top:0;    left:0;  }
-  .cursor-corner.tr{ top:0;    right:0; transform:scaleX(-1); }
-  .cursor-corner.bl{ bottom:0; left:0;  transform:scaleY(-1); }
-  .cursor-corner.br{ bottom:0; right:0; transform:scale(-1,-1); }
-
-  @media (hover:none), (pointer:coarse){
-    body, a, button, .proj, .nav-svg a{ cursor:auto; }
-    .custom-cursor{ display:none !important; }
-  }
-
-  /* ============================================================
-     PRELOADER
-  ============================================================ */
-  #preloader{
-    position:fixed; inset:0;
-    background:var(--yellow);
-    z-index:9999;
-    display:flex; align-items:center; justify-content:center;
-  }
-
-  /* ============================================================
-     SVG FRAME SEQUENCE (camera focus / jumping "LUQUE!" mark)
-  ============================================================ */
-  .brand-frames{
-    position:relative;
-    width:var(--logo-carga-size);   /* [MODIFICADO] tamaño compartido */
-    aspect-ratio: 1 / 1;            /* [MODIFICADO] viewBox recortado 290x290 */
-  }
-  .brand-frames .frame{
-    position:absolute; inset:0;
-    width:100%; height:100%;
-    opacity:0;
-    animation: frameCycle 0.8s steps(1, end) infinite;
-  }
-  .brand-frames .frame svg{ width:100%; height:100%; display:block; }
-
-  .brand-frames .frame:nth-child(1){ animation-delay: 0s;    }
-  .brand-frames .frame:nth-child(2){ animation-delay: 0.2s;  }
-  .brand-frames .frame:nth-child(3){ animation-delay: 0.4s;  }
-  .brand-frames .frame:nth-child(4){ animation-delay: 0.6s;  }
-
-  @keyframes frameCycle{
-    0%   { opacity:1; }
-    25%  { opacity:0; }
-    100% { opacity:0; }
-  }
-
-  /* ============================================================
-     HERO
-     [NUEVO] Transición limpia hero -> galería:
-     El hero ya NO se fija mediante ScrollTrigger(pin:true). En su
-     lugar es `position:fixed` permanente (z-index bajo) y un
-     "spacer" invisible justo debajo (#heroSpacer) reserva la
-     distancia de scroll necesaria para el crossfade intro -> logo.
-     La galería, en flujo normal justo después del spacer, lleva un
-     z-index superior y fondo opaco: al hacer scroll, se desliza
-     literalmente POR ENCIMA del hero (que sigue fijo debajo) y lo
-     cubre por completo sin que se vean ambas secciones "cortadas"
-     a la vez.
-  ============================================================ */
-  .hero{
-    position:fixed;
-    top:0; left:0;
-    height:100vh;
-    width:100%;
-    background:var(--yellow);
-    overflow:hidden;
-    z-index:1; /* por debajo de la galería/footer, ver más abajo */
-  }
-
-  /* [MODIFICADO] Reserva la distancia de scroll del hero. Ahora son
-     200vh: los primeros 100vh cubren el crossfade fin-de-carga ->
-     Logotipo Luque; los segundos 100vh son el tramo en el que la
-     galería sube y cubre el hero. Como la galería (en flujo) empieza
-     justo tras el spacer, su borde superior entra por abajo del
-     viewport exactamente cuando el Logotipo Luque ya está completo:
-     nunca se solapan crossfade y cobertura. */
-  .hero-spacer{
-    height:200vh;
-    width:100%;
-    pointer-events:none;
-  }
-
-  /* [MODIFICADO] FASE A del hero — logo "Fin de carga".
-     Aparece en cuanto el preloader termina (fade-in por JS, no por
-     scroll) y con EXACTAMENTE el mismo tamaño que el logo de carga
-     del preloader (mismo width que .brand-frames). */
-  .hero-intro{
-    position:absolute; inset:0;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:28px;
-    opacity:0; /* la revela el JS al terminar el preloader */
-  }
-
-  .hero-intro .logo-fin-carga{
-    width:var(--logo-carga-size);   /* [MODIFICADO] MISMO tamaño que el logo de carga */
-    height:auto;
-    display:block;
-  }
-
-  .hero-intro .scroll-label{
-    font-weight:700;
-    font-size:0.95rem;
-    letter-spacing:0.35em;
-    text-transform:uppercase;
-    opacity:0;
-    animation: fadeInSoft 1.4s ease 0.6s forwards;
-  }
-
-  .hero-intro .scroll-label::after{
-    content:'';
-    display:block;
-    width:1px; height:26px;
-    background:var(--black);
-    margin:10px auto 0;
-    animation: scrollLine 1.6s ease-in-out infinite;
-  }
-
-  @keyframes fadeInSoft{ to{ opacity:1; } }
-  @keyframes scrollLine{
-    0%,100%{ transform:scaleY(0.4); transform-origin:top; opacity:0.4; }
-    50%{ transform:scaleY(1); transform-origin:top; opacity:1; }
-  }
-
-  /* [MODIFICADO] FASE B del hero — Logotipo Luque! en grande.
-     Se revela con el scroll (crossfade desde la fase A). */
-  .hero-main{
-    position:absolute; inset:0;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    opacity:0; /* revelado vía ScrollTrigger scrub */
-    text-align:center;
-    pointer-events:none;
-  }
-
-  .hero-main .logo-mark{
-    width:min(70vw, 900px);
-    height:auto;
-    display:block;
-  }
-
-  .hero-main .roles{
-    margin-top:1.4rem;
-    font-weight:500;
-    font-size:clamp(0.95rem, 1.6vw, 1.35rem);
-    line-height:1.6;
-    letter-spacing:0.03em;
-  }
-
-  .hero-main .roles span{ display:block; }
-
-  /* ============================================================
-     NAVBAR (pill fija) — fondo amarillo, iconografía en negro
-  ============================================================ */
-  .navbar{
-    position:fixed;
-    top:20px; left:50%;
-    width:min(94vw, 760px);
-    transform:translate(-50%, -140%);
-    z-index:500;
-    background:var(--pill-bg-yellow);
-    border:1px solid rgba(10,10,10,0.08);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius:999px;
-    padding:clamp(10px, 1.6vw, 18px) clamp(20px, 3.4vw, 40px);
-    opacity:0;
-    transition: opacity 0.45s ease, transform 0.45s ease;
-    box-shadow: 0 4px 24px rgba(10,10,10,0.12);
-  }
-  .navbar.visible{
-    transform:translate(-50%, 0);
-    opacity:1;
-  }
-
-  /* SVG del menú: paths/polygons sin fill propio, se colorean con currentColor */
-  .navbar .nav-svg{
-    display:block;
-    width:100%;
-    height:auto;
-    color:var(--black);
-  }
-  .navbar .nav-svg path,
-  .navbar .nav-svg polygon{
-    fill:currentColor;
-  }
-  .navbar .nav-svg a{
-    cursor:none;
-    transition: opacity 0.2s ease;
-  }
-  /* [NUEVO] Área de clic de cada categoría: rect invisible que cubre
-     toda la celda de la cuadrícula. Sin él, en SVG solo los trazos
-     pintados (letras/esquinas) reciben clics. fill:transparent lo
-     hace clicable sin verse. */
-  .navbar .nav-svg .nav-hit{
-    fill:transparent;
-    stroke:none;
-    pointer-events:fill;
-  }
-  .navbar .nav-svg a:hover,
-  .navbar .nav-svg a:focus-visible{
-    opacity:0.5;
-  }
-
-  /* ============================================================
-     GALERÍA — NAVEGACIÓN ESPACIAL 2D
-     Los proyectos flotan sobre un lienzo mucho más grande que el
-     viewport. Al mover el ratón, el lienzo se desplaza en dirección
-     OPUESTA al cursor (igual que la referencia democracia.studio),
-     con inercia (lerp) para que el movimiento sea fluido. En touch
-     se sustituye por arrastre directo (drag) con la misma inercia.
-  ============================================================ */
-  .gallery{
-    position:relative;  /* [NUEVO] necesario para que z-index surta efecto */
-    z-index:2;          /* [NUEVO] por encima del hero fijo (z-index:1) */
-    background:var(--yellow); /* opaco: cubre el hero por completo al deslizarse encima */
-    padding:14vh 0 0;
-  }
-
-  .gallery-intro{
-    color:var(--black);
-    font-weight:700;
-    font-size:clamp(1.6rem, 4vw, 3rem);
-    margin-bottom:6vh;
-    max-width:14ch;
-    padding:0 6vw;
-  }
-
-  .spatial-stage{
-    position:relative;
-    width:100%;
-    height:100vh;
-    overflow:hidden;
-    background:var(--yellow);
-    touch-action:none; /* el drag táctil lo gestionamos a mano */
-  }
-
-  .spatial-stage::after{
-    /* pequeña pista visual de que el espacio es explorable */
-    content:'';
-    position:absolute; inset:0;
-    pointer-events:none;
-    box-shadow: inset 0 0 0 1px rgba(10,10,10,0.06);
-  }
-
-  .spatial-hint{
-    position:absolute;
-    left:50%; bottom:5vh;
-    transform:translateX(-50%);
-    font-size:0.72rem;
-    font-weight:700;
-    letter-spacing:0.15em;
-    text-transform:uppercase;
-    opacity:0.55;
-    z-index:5;
-    pointer-events:none;
-  }
-
-  .spatial-canvas{
-    position:absolute;
-    top:0; left:0;
-    width:240vw;
-    height:170vw;
-    will-change: transform;
-  }
-
-  .proj{
-    position:absolute;
-    aspect-ratio:4/5;
-  }
-
-  .proj-inner{
-    position:relative;
-    width:100%; height:100%;
-    overflow:hidden;
-    border-radius:4px;
-    background:var(--grey-dark);
-  }
-
-  .proj img{
-    width:100%; height:100%;
-    object-fit:cover;
-    display:block;
-    filter:grayscale(35%) contrast(1.05);
-    transition: transform 0.7s cubic-bezier(.2,.7,.2,1);
-  }
-  .proj:hover img{ transform:scale(1.07); }
-
-  .proj .tag{
-    position:absolute; left:14px; bottom:14px;
-    color:var(--yellow);
-    font-weight:700;
-    font-size:0.72rem;
-    text-transform:uppercase;
-    letter-spacing:0.12em;
-    background:rgba(0,0,0,0.55);
-    padding:4px 10px;
-    border-radius:20px;
-  }
-
-  /* ============================================================
-     FOOTER
-  ============================================================ */
-  footer{
-    position:relative; /* [NUEVO] necesario para que z-index surta efecto */
-    z-index:2;         /* [NUEVO] por encima del hero fijo (z-index:1) */
-    background:var(--black);
-    color:var(--yellow);
-    text-align:center;
-    padding:10vh 6vw 6vh;
-    font-weight:700;
-    letter-spacing:0.04em;
-  }
-  footer p{ opacity:0.6; font-weight:500; margin-top:10px; font-size:0.85rem; }
-
-  /* ============================================================
-     RESPONSIVE
-  ============================================================ */
-  @media (max-width: 720px){
-    .navbar{ width:min(96vw, 520px); padding:10px 16px; top:12px; }
-    .gallery{ padding:10vh 0 0; }
-    .gallery-intro{ padding:0 5vw; }
-    .spatial-stage{ height:78vh; }
-    .spatial-canvas{ width:320vw; height:230vw; }
-  }
-
-  /* Respeta la preferencia de movimiento reducido */
-  @media (prefers-reduced-motion: reduce){
-    .brand-frames .frame{ animation:none; }
-    .brand-frames .frame:first-child{ opacity:1; }
-    .hero-intro .scroll-label::after{ animation:none; }
-    html{ scroll-behavior:auto; }
-    .proj img{ transition:none; }
-  }
-</style>
+<link rel="stylesheet" href="css/luque.css">
 </head>
 <body>
 
@@ -471,7 +12,15 @@
        CURSOR PERSONALIZADO (solo dispositivos con puntero fino)
   ============================================================ -->
   <div class="custom-cursor" id="customCursor">
-    <img id="cursorImg" src="cursor-1.svg" alt="">
+    <span class="marca" id="cursorMarca" aria-hidden="true">
+      <svg viewBox="-8 5 158.12 158" xmlns="http://www.w3.org/2000/svg">
+        <polygon class="cruz" points="85.62 77.38 76.64 77.38 76.64 68.4 70.94 68.4 70.94 77.38 61.95 77.38 61.95 83.08 70.94 83.08 70.94 92.06 76.64 92.06 76.64 83.08 85.62 83.08 85.62 77.38"/>
+        <polygon points="130.81 113 130.81 143.8 100 143.8 100 155 142 155 142 113 130.81 113"/>
+        <polygon points="42 143.8 11.19 143.8 11.19 113 0 113 0 155 42 155 42 143.8"/>
+        <polygon points="11.19 54.99 11.19 24.19 42 24.19 42 13 0 13 0 54.99 11.19 54.99"/>
+        <polygon points="100.12 24.19 130.93 24.19 130.93 55 142.12 55 142.12 13 100.12 13 100.12 24.19"/>
+      </svg>
+    </span>
     <!-- [NUEVO] Las 4 esquinas del visor de cursor-2.svg. Es la
          misma L (esquina superior-izquierda del SVG original,
          polygon exacto) reflejada por CSS para las otras tres.
@@ -568,7 +117,7 @@
   ============================================================ -->
   <nav class="navbar" id="navbar">
     <svg class="nav-svg" viewBox="0 0 1127.75 90.39" xmlns="http://www.w3.org/2000/svg">
-      <a href="#foto-stills" aria-label="Foto Stills">
+      <a href="#/foto-stills" data-cat="foto-stills" aria-label="Foto Stills">
         <rect class="nav-hit" x="0" y="0" width="247.81" height="90.39"/>
         <g>
           <path d="M55.19,28.15h24.48v4.32h-19.68v9.84h16.8v4.32h-16.8v10.8h20.16v4.32h-24.96V28.15Z"/>
@@ -587,7 +136,7 @@
         <polygon points="242.62 36 242.62 5.2 211.81 5.2 211.81 0 247.81 0 247.81 36 242.62 36"/>
       </a>
 
-      <a href="#editorial" aria-label="Editorial">
+      <a href="#/editorial" data-cat="editorial" aria-label="Editorial">
         <rect class="nav-hit" x="242.62" y="0" width="274.16" height="90.39"/>
         <polygon points="242.62 90.39 242.62 54.39 247.81 54.39 247.81 85.2 278.62 85.2 278.62 90.39 242.62 90.39"/>
         <polygon points="242.62 36 242.62 0 278.62 0 278.62 5.19 247.81 5.19 247.81 36 242.62 36"/>
@@ -606,7 +155,7 @@
         <polygon points="511.59 36 511.59 5.2 480.78 5.2 480.78 0 516.78 0 516.78 36 511.59 36"/>
       </a>
 
-      <a href="#videoclip" aria-label="Videoclip">
+      <a href="#/videoclip" data-cat="videoclip" aria-label="Videoclip">
         <rect class="nav-hit" x="511.59" y="0" width="345.75" height="90.39"/>
         <polygon points="511.59 90.39 511.59 54.39 516.78 54.39 516.78 85.2 547.59 85.2 547.59 90.39 511.59 90.39"/>
         <polygon points="511.59 36 511.59 0 547.59 0 547.59 5.19 516.78 5.19 516.78 36 511.59 36"/>
@@ -628,7 +177,7 @@
         <polygon points="852.15 36 852.15 5.2 821.35 5.2 821.35 0 857.34 0 857.34 36 852.15 36"/>
       </a>
 
-      <a href="#cortometraje" aria-label="Cortometraje">
+      <a href="#/cortometraje" data-cat="cortometraje" aria-label="Cortometraje">
         <rect class="nav-hit" x="852.15" y="0" width="275.6" height="90.39"/>
         <polygon points="852.15 90.39 852.15 54.39 857.34 54.39 857.34 85.2 888.15 85.2 888.15 90.39 852.15 90.39"/>
         <polygon points="852.15 36 852.15 0 888.15 0 888.15 5.19 857.34 5.19 857.34 36 852.15 36"/>
@@ -691,53 +240,61 @@
 
     <div class="spatial-stage" id="spatialStage">
       <div class="spatial-canvas" id="spatialCanvas">
-
-        <div class="proj" data-cat="foto-stills" style="left:4vw; top:8vw; width:20vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque1/800/1000" alt=""><span class="tag">Foto Stills</span></div>
-        </div>
-        <div class="proj" data-cat="foto-stills" style="left:30vw; top:55vw; width:16vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque2/800/1000" alt=""><span class="tag">Foto Stills</span></div>
-        </div>
-        <div class="proj" data-cat="foto-stills" style="left:58vw; top:14vw; width:19vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque3/800/1000" alt=""><span class="tag">Foto Stills</span></div>
-        </div>
-
-        <div class="proj" data-cat="editorial" style="left:88vw; top:40vw; width:17vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque4/800/1000" alt=""><span class="tag">Editorial</span></div>
-        </div>
-        <div class="proj" data-cat="editorial" style="left:118vw; top:70vw; width:20vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque5/800/1000" alt=""><span class="tag">Editorial</span></div>
-        </div>
-        <div class="proj" data-cat="editorial" style="left:148vw; top:10vw; width:16vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque6/800/1000" alt=""><span class="tag">Editorial</span></div>
-        </div>
-
-        <div class="proj" data-cat="videoclip" style="left:176vw; top:48vw; width:19vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque7/800/1000" alt=""><span class="tag">Videoclip</span></div>
-        </div>
-        <div class="proj" data-cat="videoclip" style="left:8vw; top:95vw; width:18vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque8/800/1000" alt=""><span class="tag">Videoclip</span></div>
-        </div>
-        <div class="proj" data-cat="videoclip" style="left:206vw; top:85vw; width:17vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque9/800/1000" alt=""><span class="tag">Videoclip</span></div>
-        </div>
-
-        <div class="proj" data-cat="cortometraje" style="left:46vw; top:100vw; width:20vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque10/800/1000" alt=""><span class="tag">Cortometraje</span></div>
-        </div>
-        <div class="proj" data-cat="cortometraje" style="left:96vw; top:120vw; width:16vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque11/800/1000" alt=""><span class="tag">Cortometraje</span></div>
-        </div>
-        <div class="proj" data-cat="cortometraje" style="left:168vw; top:110vw; width:19vw;">
-          <div class="proj-inner"><img src="https://picsum.photos/seed/luque12/800/1000" alt=""><span class="tag">Cortometraje</span></div>
-        </div>
-
       </div>
 
-      <span class="spatial-hint">Mueve el ratón para explorar</span>
+      <span class="spatial-hint">Mueve el ratón o usa el tabulador para explorar</span>
     </div>
 
   </section>
+
+  <!-- ============================================================
+       VISOR DE PROYECTO
+  ============================================================ -->
+  <div class="visor" id="visor" role="dialog" aria-modal="true"
+       aria-labelledby="visorTitulo" hidden>
+
+    <span class="visor-esquina tl" aria-hidden="true"><i></i></span>
+    <span class="visor-esquina tr" aria-hidden="true"><i></i></span>
+    <span class="visor-esquina bl" aria-hidden="true"><i></i></span>
+    <span class="visor-esquina br" aria-hidden="true"><i></i></span>
+
+    <div class="visor-chrome" id="visorChrome">
+      <header class="visor-cabecera">
+        <p class="visor-titulo"><span id="visorTitulo"></span><span class="visor-cat" id="visorCat"></span></p>
+        <div class="visor-acciones">
+          <button class="visor-info" id="visorInfo" type="button"
+                  aria-expanded="false" aria-controls="visorFicha">Ficha</button>
+          <span class="visor-contador" id="visorContador"></span>
+          <button class="visor-cerrar" id="visorCerrar" type="button" aria-label="Cerrar el visor">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 5.4L5.4 4 12 10.6 18.6 4 20 5.4 13.4 12 20 18.6 18.6 20 12 13.4 5.4 20 4 18.6 10.6 12z"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+      <nav class="visor-tira" id="visorTira" aria-label="Piezas del proyecto"></nav>
+      <div class="visor-linea" id="visorLinea" role="slider" tabindex="0"
+           aria-label="Posición del vídeo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span class="visor-linea-hecho" id="visorLineaHecho"></span>
+        <span class="visor-linea-marca" id="visorLineaMarca"><i></i><i></i></span>
+      </div>
+      <aside class="visor-ficha" id="visorFicha" aria-hidden="true">
+        <p class="visor-ficha-cat" id="fichaCat"></p>
+        <p class="visor-ficha-titulo" id="fichaTitulo"></p>
+        <dl class="visor-ficha-datos" id="fichaDatos"></dl>
+      </aside>
+    </div>
+
+    <div class="visor-escena" id="visorEscena"></div>
+    <div class="visor-cargando" id="visorCargando" aria-hidden="true">
+      <div class="brand-frames">
+        <div class="frame"><svg viewBox="0 0 290 290"><use href="#carga-1" width="290" height="290"/></svg></div>
+        <div class="frame"><svg viewBox="0 0 290 290"><use href="#carga-2" width="290" height="290"/></svg></div>
+        <div class="frame"><svg viewBox="0 0 290 290"><use href="#carga-3" width="290" height="290"/></svg></div>
+        <div class="frame"><svg viewBox="0 0 290 290"><use href="#carga-4" width="290" height="290"/></svg></div>
+      </div>
+    </div>
+  </div>
 
   <footer>
     <p>LUQUE!</p>
@@ -750,343 +307,28 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
+  <script src="js/hero.js"></script>
+  <script src="js/datos.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/layout-filtrado.js"></script>
+  <script src="js/visor-estado.js"></script>
+  <script src="js/cursor.js"></script>
+  <script src="js/galeria-teclado.js"></script>
+  <script src="js/galeria.js"></script>
+  <script src="js/visor-transicion.js"></script>
+  <script src="js/visor-lupa.js"></script>
+  <script src="js/visor-ficha.js"></script>
+  <script src="js/visor-video.js"></script>
+  <script src="js/visor-carga.js"></script>
+  <script src="js/visor-chrome.js"></script>
+  <script src="js/visor.js"></script>
   <script>
   gsap.registerPlugin(ScrollTrigger);
-
-  /* ================================================================
-     1) PRELOADER
-     ================================================================ */
-  const preloader = document.getElementById('preloader');
-  const MIN_PRELOADER_TIME = 1200; // ms
-  const startTime = Date.now();
-
-  function hidePreloader(){
-    const elapsed = Date.now() - startTime;
-    const remaining = Math.max(0, MIN_PRELOADER_TIME - elapsed);
-    gsap.delayedCall(remaining / 1000, () => {
-      gsap.to(preloader, {
-        opacity: 0,
-        duration: 0.7,
-        ease: 'power2.out',
-        onComplete: () => {
-          preloader.style.display = 'none';
-          document.body.classList.add('preloader-done');
-          // [NUEVO] Al terminar la carga aparece el logo "Fin de
-          // carga" (fase A del hero), sin necesidad de scroll y con
-          // el mismo tamaño que el logo de carga del preloader.
-          gsap.to('#heroIntro', { opacity: 1, duration: 0.6, ease: 'power2.out' });
-        }
-      });
-    });
-  }
-  window.addEventListener('load', hidePreloader);
-
-  /* ================================================================
-     2) HERO SCROLL SEQUENCE
-     [MODIFICADO] El spacer mide ahora 200vh y define dos tramos:
-       - Tramo 1 (scroll 0 -> 100vh): crossfade fase A ("Fin de
-         carga") -> fase B (Logotipo Luque! en grande). Este timeline
-         solo cubre este tramo (end:'+=100%' = 1 viewport).
-       - Tramo 2 (scroll 100vh -> 200vh): el Logotipo Luque queda
-         fijo mientras la galería (en flujo, tras el spacer) sube y
-         cubre el hero por completo.
-     ================================================================ */
-  const heroTimeline = gsap.timeline({
-    scrollTrigger: {
-      trigger: '#heroSpacer',
-      start: 'top top',
-      end: '+=100%',   // primeros 100vh de los 200vh del spacer
-      scrub: 0.6
-    }
-  });
-
-  heroTimeline
-    .to('#heroIntro', {
-      opacity: 0,
-      y: -40,
-      scale: 0.85,
-      duration: 1,
-      ease: 'power1.in'
-    }, 0)
-    .fromTo('#heroMain',
-      { opacity: 0, y: 40, scale: 0.92 },
-      { opacity: 1, y: 0, scale: 1, duration: 1, ease: 'power2.out' },
-      0.15
-    );
-
-  /* ================================================================
-     2b) [NUEVO] SNAP ANTI-ATASCO
-     Cubre todo el recorrido de la intro (0 -> 200vh, es decir, todo
-     el spacer) y engancha el scroll a tres posiciones estables:
-       0.0 -> logo "Fin de carga"
-       0.5 -> Logotipo Luque! completo (scroll = 100vh)
-       1.0 -> galería cubriendo el hero por completo (scroll = 200vh)
-     Si el usuario suelta el scroll a medias entre el Logotipo Luque
-     y la galería, GSAP lo lleva automáticamente al punto estable más
-     cercano: es imposible quedarse con las dos secciones cortadas.
-     ================================================================ */
-  ScrollTrigger.create({
-    trigger: '#heroSpacer',
-    start: 'top top',
-    end: 'bottom top',   // los 200vh completos del spacer
-    snap: {
-      snapTo: [0, 0.5, 1],
-      duration: { min: 0.25, max: 0.7 },
-      delay: 0.05,
-      ease: 'power2.inOut'
-    }
-  });
-
-  /* ================================================================
-     3) STICKY NAVBAR REVEAL
-     ================================================================ */
-  const navbar = document.getElementById('navbar');
-
-  ScrollTrigger.create({
-    trigger: '#gallery',
-    start: 'top 85%',
-    end: 'bottom bottom',
-    onEnter:     () => navbar.classList.add('visible'),
-    onLeaveBack: () => navbar.classList.remove('visible'),
-    onLeave:     () => navbar.classList.remove('visible'),
-    onEnterBack: () => navbar.classList.add('visible')
-  });
-
-  /* ================================================================
-     4) GALERÍA — NAVEGACIÓN ESPACIAL 2D
-     - El lienzo (.spatial-canvas) es mucho más grande que el
-       "escenario" visible (.spatial-stage).
-     - Con ratón: el lienzo se desplaza en dirección OPUESTA a la
-       posición del cursor dentro del escenario (offset respecto al
-       centro), con una interpolación (lerp) para dar inercia.
-     - Con touch: se sustituye por arrastre (drag) directo, con la
-       misma inercia al soltar.
-     - Los enlaces del menú centran la categoría correspondiente
-       animando el mismo sistema de coordenadas.
-     ================================================================ */
-  (function initSpatialGallery(){
-    const stage  = document.getElementById('spatialStage');
-    const canvas = document.getElementById('spatialCanvas');
-    if(!stage || !canvas) return;
-
-    const isFinePointer = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
-
-    let stageW = 0, stageH = 0, canvasW = 0, canvasH = 0;
-    let minX = 0, minY = 0; // límites (siempre <= 0)
-    let curX = 0, curY = 0, targetX = 0, targetY = 0;
-    let raf = null;
-
-    function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
-
-    function measure(){
-      const r = stage.getBoundingClientRect();
-      stageW = r.width;
-      stageH = r.height;
-      canvasW = canvas.offsetWidth;
-      canvasH = canvas.offsetHeight;
-      minX = Math.min(0, stageW - canvasW);
-      minY = Math.min(0, stageH - canvasH);
-      // posición de reposo: lienzo centrado en el escenario
-      targetX = minX / 2;
-      targetY = minY / 2;
-      curX = targetX;
-      curY = targetY;
-      canvas.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
-    }
-
-    function loop(){
-      curX += (targetX - curX) * 0.07;
-      curY += (targetY - curY) * 0.07;
-      canvas.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
-      raf = requestAnimationFrame(loop);
-    }
-
-    window.addEventListener('resize', measure);
-    measure();
-    loop();
-
-    if (isFinePointer){
-      const STRENGTH = 0.9; // 0-1, cuánto "empuja" el cursor el lienzo
-
-      stage.addEventListener('mousemove', (e) => {
-        const r = stage.getBoundingClientRect();
-        const px = (e.clientX - r.left) / stageW;       // 0..1
-        const py = (e.clientY - r.top) / stageH;        // 0..1
-        const cxN = (px - 0.5) * 2;                       // -1..1
-        const cyN = (py - 0.5) * 2;                       // -1..1
-
-        const restX = minX / 2, restY = minY / 2;
-        const rangeX = Math.abs(minX) / 2;
-        const rangeY = Math.abs(minY) / 2;
-
-        // El lienzo se mueve en dirección OPUESTA al cursor
-        targetX = clamp(restX - cxN * rangeX * STRENGTH, minX, 0);
-        targetY = clamp(restY - cyN * rangeY * STRENGTH, minY, 0);
-      });
-
-      stage.addEventListener('mouseleave', () => {
-        targetX = minX / 2;
-        targetY = minY / 2;
-      });
-    } else {
-      // Fallback táctil: arrastre directo con inercia
-      let dragging = false;
-      let startPX = 0, startPY = 0, startTX = 0, startTY = 0;
-
-      stage.addEventListener('pointerdown', (e) => {
-        dragging = true;
-        startPX = e.clientX; startPY = e.clientY;
-        startTX = targetX; startTY = targetY;
-        stage.setPointerCapture(e.pointerId);
-      });
-      stage.addEventListener('pointermove', (e) => {
-        if(!dragging) return;
-        const dx = e.clientX - startPX;
-        const dy = e.clientY - startPY;
-        targetX = clamp(startTX + dx, minX, 0);
-        targetY = clamp(startTY + dy, minY, 0);
-      });
-      stage.addEventListener('pointerup',   () => { dragging = false; });
-      stage.addEventListener('pointercancel', () => { dragging = false; });
-    }
-
-    // Navegación desde el menú: centra la categoría pulsada
-    function focusCategory(catId){
-      const el = document.querySelector(`.proj[data-cat="${catId}"]`);
-      if(!el) return;
-      const elCenterX = el.offsetLeft + el.offsetWidth / 2;
-      const elCenterY = el.offsetTop + el.offsetHeight / 2;
-      targetX = clamp(stageW / 2 - elCenterX, minX, 0);
-      targetY = clamp(stageH / 2 - elCenterY, minY, 0);
-    }
-
-    document.querySelectorAll('.navbar .nav-svg a[href^="#"]').forEach((a) => {
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        const id = a.getAttribute('href').slice(1);
-        document.getElementById('gallery').scrollIntoView({ behavior: 'smooth' });
-        // pequeño margen para que el scroll haya llegado antes de medir
-        setTimeout(() => { measure(); focusCategory(id); }, 350);
-      });
-    });
-  })();
-
-  /* ================================================================
-     5) CURSOR PERSONALIZADO
-     [MODIFICADO] Ahora .custom-cursor tiene TRES estados:
-       - normal: sigue al ratón, muestra cursor-1.svg (34px).
-       - hover navbar: sigue al ratón, muestra cursor-2.svg (50px).
-         (comportamiento anterior, ahora limitado solo al navbar)
-       - [NUEVO] bbox sobre .proj: la imagen SVG se oculta y el
-         propio elemento hace snap exacto al bounding box de la
-         <img> del proyecto enfocado (efecto "marco"/bounding box).
-     Para que el snap y el seguimiento normal compartan el mismo
-     código sin saltos, TODO el posicionamiento se expresa siempre
-     como esquina superior-izquierda (left/top) + ancho/alto, y se
-     interpola (lerp) cada frame hacia el "target" correspondiente
-     al estado activo. Como los proyectos se mueven con el pan de la
-     galería espacial, el bounding box se recalcula en cada frame
-     mientras el ratón permanece encima (no solo al entrar).
-     ================================================================ */
-  (function initCustomCursor(){
-    if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-
-    const cursorEl  = document.getElementById('customCursor');
-    const cursorImg = document.getElementById('cursorImg');
-    if(!cursorEl || !cursorImg) return;
-
-    const DEFAULT_SIZE = 34;
-    const NAV_HOVER_SIZE = 50;
-    const LERP = 0.18;
-
-    let mouseX = 0, mouseY = 0;
-    let curX = 0, curY = 0, curW = DEFAULT_SIZE, curH = DEFAULT_SIZE;
-    let started = false;
-
-    // Estado actual: 'default' | 'nav-hover' | 'bbox'
-    let state = 'default';
-    // [NUEVO] elemento <img> del proyecto actualmente enfocado (o null)
-    let bboxImg = null;
-
-    window.addEventListener('mousemove', (e) => {
-      mouseX = e.clientX; mouseY = e.clientY;
-      if(!started){ curX = mouseX; curY = mouseY; started = true; }
-      cursorEl.classList.add('active');
-    });
-    document.addEventListener('mouseleave', () => cursorEl.classList.remove('active'));
-
-    function raf(){
-      let targetW, targetH, targetX, targetY;
-
-      if (state === 'bbox' && bboxImg){
-        // [NUEVO] Bounding box exacto de la imagen del proyecto,
-        // recalculado cada frame (la galería espacial puede seguir
-        // desplazándose bajo el cursor mientras está enfocada).
-        const r = bboxImg.getBoundingClientRect();
-        targetX = r.left;
-        targetY = r.top;
-        targetW = r.width;
-        targetH = r.height;
-      } else {
-        targetW = (state === 'nav-hover') ? NAV_HOVER_SIZE : DEFAULT_SIZE;
-        targetH = targetW;
-        // en modo normal, (mouseX,mouseY) es el CENTRO del cursor
-        targetX = mouseX - targetW / 2;
-        targetY = mouseY - targetH / 2;
-      }
-
-      curX += (targetX - curX) * LERP;
-      curY += (targetY - curY) * LERP;
-      curW += (targetW - curW) * LERP;
-      curH += (targetH - curH) * LERP;
-
-      cursorEl.style.width  = curW + 'px';
-      cursorEl.style.height = curH + 'px';
-      cursorEl.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
-
-      requestAnimationFrame(raf);
-    }
-    raf();
-
-    const NAV_SELECTOR  = '.navbar .nav-svg a';
-    const PROJ_SELECTOR = '.proj';
-
-    document.addEventListener('mouseover', (e) => {
-      const projEl = e.target.closest && e.target.closest(PROJ_SELECTOR);
-      const navEl  = e.target.closest && e.target.closest(NAV_SELECTOR);
-
-      if (projEl){
-        // [NUEVO] modo bbox: engancha al <img> real del proyecto
-        bboxImg = projEl.querySelector('img') || projEl;
-        state = 'bbox';
-        cursorEl.classList.add('bbox');
-        cursorEl.classList.remove('hover');
-      } else if (navEl){
-        state = 'nav-hover';
-        bboxImg = null;
-        cursorEl.classList.add('hover');
-        cursorEl.classList.remove('bbox');
-        cursorImg.src = 'cursor-2.svg';
-      }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-      const toEl = e.relatedTarget;
-      const stillInProj = toEl && toEl.closest && toEl.closest(PROJ_SELECTOR);
-      const stillInNav  = toEl && toEl.closest && toEl.closest(NAV_SELECTOR);
-
-      if (e.target.closest && e.target.closest(PROJ_SELECTOR) && !stillInProj){
-        state = 'default';
-        bboxImg = null;
-        cursorEl.classList.remove('bbox');
-      }
-      if (e.target.closest && e.target.closest(NAV_SELECTOR) && !stillInNav){
-        if (state === 'nav-hover') state = 'default';
-        cursorEl.classList.remove('hover');
-        cursorImg.src = 'cursor-1.svg';
-      }
-    });
-  })();
+  window.Hero.init();
+  window.Cursor.init();
+  window.Galeria.init();
+  window.Visor.init();
+  window.Router.init();
   </script>
 
 </body>

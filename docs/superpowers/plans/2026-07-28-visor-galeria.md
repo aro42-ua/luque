@@ -787,7 +787,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 El entregable es una galería visualmente idéntica a la actual, pero generada desde `Datos.PROYECTOS` en vez de escrita a mano, y colocada con `transform` para que la Task 6 pueda animarla.
 
 **Files:**
-- Modify: `index.html` (borrar los doce `<div class="proj">`, líneas 695-733 del archivo original)
+- Modify: `index.html` (borrar los doce `<div class="proj">`, líneas 236-274 tras la Task 1)
 - Modify: `js/galeria.js`
 - Modify: `css/luque.css` (regla `.proj`)
 
@@ -969,10 +969,26 @@ Añadir al final de `css/luque.css`:
 .navbar .nav-svg a.activa path,
 .navbar .nav-svg a.activa polygon{ fill:var(--yellow); }
 
+/* La regla de hover que ya existía atenúa cualquier enlace al 50%, lo
+   que lavaría la inversión de la celda activa. Se exceptúa. */
+.navbar .nav-svg a.activa:hover,
+.navbar .nav-svg a.activa:focus-visible{ opacity:1; }
+
 /* Proyecto que no pertenece a la categoría filtrada */
+.proj{ transition:opacity 0.45s ease; }
 .proj.apagado{
   opacity:0;
   pointer-events:none;
+}
+
+/* La recomposición se anima con CSS y no con GSAP: es la única forma de
+   respetar la curva exacta que fijan las restricciones globales, porque
+   la compilación gratuita de GSAP no incluye CustomEase. La clase la
+   pone y la quita el JavaScript, para que colocar() no anime en los
+   demás momentos (construcción inicial, paneo). */
+.spatial-canvas.recomponiendo .proj{
+  transition:transform 0.62s cubic-bezier(.2,.7,.2,1),
+             opacity 0.45s ease;
 }
 
 .spatial-canvas{
@@ -981,38 +997,38 @@ Añadir al final de `css/luque.css`:
 }
 
 @media (prefers-reduced-motion: reduce){
-  .spatial-canvas{ transition:none; }
+  .proj,
+  .spatial-canvas,
+  .spatial-canvas.recomponiendo .proj{ transition:none; }
 }
 ```
 
 - [ ] **Step 3: Escribir el filtrado en `js/galeria.js`**
 
-Añadir dentro del módulo. `paneoCongelado` es una bandera nueva que el bucle de `mousemove` debe respetar: en el manejador de `mousemove` del ratón, salir con `if (paneoCongelado) return;` como primera línea.
+Añadir dentro del módulo. `paneoCongelado` es una bandera nueva que el paneo debe respetar: poner `if (paneoCongelado) return;` como primera línea del manejador de `mousemove` del ratón y también de los de `pointerdown` y `pointermove` del arrastre táctil. `pointerup` y `pointercancel` se dejan sin guarda, porque siempre tienen que poder terminar un arrastre.
+
+Cancelar el temporizador pendiente antes de armar uno nuevo no es opcional: sin ello, pulsar dos categorías seguidas hace que el temporizador de la primera quite la clase `recomponiendo` a media animación de la segunda, y como esa clase es la que lleva la transición, las fotos saltan en seco.
+
+La lectura de `canvas.offsetHeight` tampoco es opcional, y es más sutil. La transición del `transform` está condicionada a la clase `recomponiendo`. Si se añade la clase y se cambian los `transform` en el mismo tick, el navegador funde ambos cambios en un solo recálculo de estilo: nunca existe un estado previo con la transición activa, así que el `transform` se aplica de golpe y las fotos saltan. Leer `offsetHeight` fuerza el reflujo y separa los dos pasos. La transición de `opacity`, que vive en `.proj` sin condicionar, sí funciona sin esta precaución — de ahí que el síntoma sea «se desvanece y luego salta».
 
 ```js
 var categoria = null;
 var paneoCongelado = false;
+var temporizadorRecomposicion = null;
+var DURACION_MS = 620;
 
-var DURACION = 0.62;
-var CURVA = 'power2.out';
-
-function movimientoReducido() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function animarA(elemento, x, y, escala) {
-  if (movimientoReducido()) {
-    colocar(elemento, x, y, escala);
-    return;
-  }
-  gsap.to(elemento, {
-    duration: DURACION,
-    ease: CURVA,
-    x: x + 'vw',
-    y: y + 'vw',
-    scale: escala,
-    overwrite: 'auto'
-  });
+function conRecomposicion(fn) {
+  var canvas = document.getElementById('spatialCanvas');
+  if (temporizadorRecomposicion) clearTimeout(temporizadorRecomposicion);
+  canvas.classList.add('recomponiendo');
+  canvas.offsetHeight;   // fuerza el reflujo antes de mover nada
+  fn(canvas);
+  temporizadorRecomposicion = setTimeout(function () {
+    temporizadorRecomposicion = null;
+    canvas.classList.remove('recomponiendo');
+    measure();
+    paneoCongelado = false;
+  }, DURACION_MS);
 }
 
 function aplicarFiltro(nueva) {
@@ -1022,48 +1038,48 @@ function aplicarFiltro(nueva) {
   var dentro = window.Datos.porCategoria(nueva);
   var ranuras = window.LayoutFiltrado.posicionesCompactas(dentro.length);
 
-  window.Datos.PROYECTOS.forEach(function (p) {
-    var el = elementoDe(p.id);
-    var indice = dentro.indexOf(p);
-    if (indice === -1) {
-      el.classList.add('apagado');
-      el.setAttribute('tabindex', '-1');
-      el.setAttribute('aria-hidden', 'true');
-    } else {
-      var r = ranuras[indice];
-      el.classList.remove('apagado');
-      el.removeAttribute('tabindex');
-      el.removeAttribute('aria-hidden');
-      animarA(el, r.x, r.y, r.w / p.pos.w);
-    }
+  conRecomposicion(function (canvas) {
+    window.Datos.PROYECTOS.forEach(function (p) {
+      var el = elementoDe(p.id);
+      var indice = dentro.indexOf(p);
+      if (indice === -1) {
+        el.classList.add('apagado');
+        el.setAttribute('tabindex', '-1');
+        el.setAttribute('aria-hidden', 'true');
+      } else {
+        var r = ranuras[indice];
+        el.classList.remove('apagado');
+        el.removeAttribute('tabindex');
+        el.removeAttribute('aria-hidden');
+        colocar(el, r.x, r.y, r.w / p.pos.w);
+      }
+    });
+
+    canvas.style.width = window.LayoutFiltrado.ANCHO + 'vw';
+    canvas.style.height = window.LayoutFiltrado.altoLienzoFiltrado(dentro.length) + 'vw';
   });
 
-  var canvas = document.getElementById('spatialCanvas');
-  canvas.style.width = window.LayoutFiltrado.ANCHO + 'vw';
-  canvas.style.height = window.LayoutFiltrado.altoLienzoFiltrado(dentro.length) + 'vw';
-
   marcarNavbar(nueva);
-  setTimeout(function () { measure(); paneoCongelado = false; }, DURACION * 1000);
 }
 
 function quitarFiltro() {
   categoria = null;
   paneoCongelado = true;
 
-  window.Datos.PROYECTOS.forEach(function (p) {
-    var el = elementoDe(p.id);
-    el.classList.remove('apagado');
-    el.removeAttribute('tabindex');
-    el.removeAttribute('aria-hidden');
-    animarA(el, p.pos.x, p.pos.y, 1);
+  conRecomposicion(function (canvas) {
+    window.Datos.PROYECTOS.forEach(function (p) {
+      var el = elementoDe(p.id);
+      el.classList.remove('apagado');
+      el.removeAttribute('tabindex');
+      el.removeAttribute('aria-hidden');
+      colocar(el, p.pos.x, p.pos.y, 1);
+    });
+
+    canvas.style.width = '';
+    canvas.style.height = '';
   });
 
-  var canvas = document.getElementById('spatialCanvas');
-  canvas.style.width = '';
-  canvas.style.height = '';
-
   marcarNavbar(null);
-  setTimeout(function () { measure(); paneoCongelado = false; }, DURACION * 1000);
 }
 
 function marcarNavbar(activa) {
@@ -2908,7 +2924,7 @@ Al revisar el plan contra la especificación aparecieron cuatro cosas que convie
 
 **La deformación durante el vuelo.** La foto del lienzo va recortada a 4:5 con `object-fit:cover` y la del visor va entera con `contain`, así que el vuelo usa una escala distinta en cada eje y la imagen se deforma ligeramente durante los 620 ms. A esa velocidad no debería notarse. Si al verlo resulta molesto, la solución es envolver la imagen del visor en un contenedor con `aspect-ratio:4/5` y `overflow:hidden` que vuele con escala uniforme, y fundir a la imagen contenida al aterrizar. No se ha incluido de entrada porque duplica el código de la transición para resolver algo que puede no ser un problema.
 
-**GSAP no llega a la curva pedida.** La compilación gratuita que carga la web no trae `CustomEase`, así que la restricción de `cubic-bezier(.2,.7,.2,1)` solo se puede cumplir con transiciones de CSS. Por eso la Task 6 anima el filtrado con GSAP usando `power2.out`, que es una aproximación, mientras que la Task 9 anima la transición del visor con CSS y la curva exacta. Si la diferencia entre ambos movimientos se nota, pasar el filtrado también a transiciones de CSS.
+**GSAP no llega a la curva pedida, así que no se usa para lo nuevo.** La compilación gratuita que carga la web no trae `CustomEase`, de modo que la restricción de `cubic-bezier(.2,.7,.2,1)` solo se puede cumplir con transiciones de CSS. Tanto el filtrado de la Task 6 como la transición del visor de la Task 9 se animan con CSS y la curva exacta. GSAP se queda donde ya estaba: el preloader y la secuencia del hero, que no están en el alcance de este plan.
 
 **La mitigación del riesgo de la lupa no se puede aplicar tal cual.** La especificación propone cargar la versión de resolución completa solo al entrar en la lupa y liberarla al salir, pero eso da por supuesto que cada pieza existe en dos resoluciones, y el modelo de datos tiene una sola URL por pieza. La Task 10 amplía la imagen que ya está cargada, que es lo único posible con los datos actuales. Si con fotos reales muy grandes la memoria se resiente, la solución es añadir a `datos.js` un campo `piezasGrandes` paralelo a `piezas` y que `VisorLupa.entrar()` intercambie el `src` al entrar y lo devuelva al salir. No se ha incluido de entrada porque duplicaría el mantenimiento de cada proyecto para resolver algo que quizá no ocurra.
 
