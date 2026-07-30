@@ -157,7 +157,9 @@
     background:var(--yellow);
     z-index:9999;
     display:flex; align-items:center; justify-content:center;
+    transition:opacity 0.7s ease;
   }
+  #preloader.fuera{ opacity:0; }
 
   /* ============================================================
      SVG FRAME SEQUENCE (camera focus / jumping "LUQUE!" mark)
@@ -209,19 +211,6 @@
     z-index:1; /* por debajo de la galería/footer, ver más abajo */
   }
 
-  /* [MODIFICADO] Reserva la distancia de scroll del hero. Ahora son
-     200vh: los primeros 100vh cubren el crossfade fin-de-carga ->
-     Logotipo Luque; los segundos 100vh son el tramo en el que la
-     galería sube y cubre el hero. Como la galería (en flujo) empieza
-     justo tras el spacer, su borde superior entra por abajo del
-     viewport exactamente cuando el Logotipo Luque ya está completo:
-     nunca se solapan crossfade y cobertura. */
-  .hero-spacer{
-    height:200vh;
-    width:100%;
-    pointer-events:none;
-  }
-
   /* [MODIFICADO] FASE A del hero — logo "Fin de carga".
      Aparece en cuanto el preloader termina (fade-in por JS, no por
      scroll) y con EXACTAMENTE el mismo tamaño que el logo de carga
@@ -230,8 +219,10 @@
     position:absolute; inset:0;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:28px;
-    opacity:0; /* la revela el JS al terminar el preloader */
+    opacity:0;
+    transition:opacity 0.6s ease;
   }
+  .hero-intro.visible{ opacity:1; }
 
   .hero-intro .logo-fin-carga{
     width:var(--logo-carga-size);   /* [MODIFICADO] MISMO tamaño que el logo de carga */
@@ -239,39 +230,18 @@
     display:block;
   }
 
-  .hero-intro .scroll-label{
-    font-weight:700;
-    font-size:0.95rem;
-    letter-spacing:0.35em;
-    text-transform:uppercase;
-    opacity:0;
-    animation: fadeInSoft 1.4s ease 0.6s forwards;
-  }
-
-  .hero-intro .scroll-label::after{
-    content:'';
-    display:block;
-    width:1px; height:26px;
-    background:var(--black);
-    margin:10px auto 0;
-    animation: scrollLine 1.6s ease-in-out infinite;
-  }
-
   @keyframes fadeInSoft{ to{ opacity:1; } }
-  @keyframes scrollLine{
-    0%,100%{ transform:scaleY(0.4); transform-origin:top; opacity:0.4; }
-    50%{ transform:scaleY(1); transform-origin:top; opacity:1; }
-  }
 
   /* [MODIFICADO] FASE B del hero — Logotipo Luque! en grande.
-     Se revela con el scroll (crossfade desde la fase A). */
+     Se revela con clases desde JS (antes vía ScrollTrigger scrub). */
   .hero-main{
     position:absolute; inset:0;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    opacity:0; /* revelado vía ScrollTrigger scrub */
+    opacity:0;
+    transition:opacity 0.4s ease;
     text-align:center;
-    pointer-events:none;
   }
+  .hero-main.visible{ opacity:1; pointer-events:auto; }
 
   .hero-main .logo-mark{
     width:min(70vw, 900px);
@@ -288,6 +258,45 @@
   }
 
   .hero-main .roles span{ display:block; }
+
+  /* El botón lleva las cuatro esquinas en L alrededor, igual que cada
+     celda del navbar: es una versión pequeña del marco que está a punto
+     de cerrarse cuando se pulsa. */
+  .hero-boton{
+    position:relative;
+    margin-top:2.4rem;
+    padding:10px 26px;
+    border:none;
+    background:none;
+    color:var(--black);
+    font:inherit;
+    font-size:0.72rem;
+    font-weight:700;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    cursor:none;
+    opacity:0;
+    transition:opacity 0.3s ease;
+  }
+  .hero-boton.visible{ opacity:1; }
+  .hero-boton:hover{ opacity:0.55; }
+  .hero-boton:focus-visible{ outline:none; }
+  /* El foco agranda las esquinas con transform y no con width/height:
+     animar propiedades de layout está prohibido por las restricciones. */
+  .hero-boton:focus-visible .hero-boton-esq{ transform:scale(1.45); }
+
+  .hero-boton-esq{
+    position:absolute;
+    width:11px; height:11px;
+    border-color:currentColor;
+    border-style:solid;
+    border-width:0;
+    transition:transform 0.2s ease;
+  }
+  .hero-boton-esq.tl{ top:0; left:0;     border-top-width:2px; border-left-width:2px; transform-origin:top left; }
+  .hero-boton-esq.tr{ top:0; right:0;    border-top-width:2px; border-right-width:2px; transform-origin:top right; }
+  .hero-boton-esq.bl{ bottom:0; left:0;  border-bottom-width:2px; border-left-width:2px; transform-origin:bottom left; }
+  .hero-boton-esq.br{ bottom:0; right:0; border-bottom-width:2px; border-right-width:2px; transform-origin:bottom right; }
 
   /* ============================================================
      NAVBAR (pill fija) — fondo amarillo, iconografía en negro

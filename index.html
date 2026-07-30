@@ -210,7 +210,6 @@
          el #preloader. -->
     <div class="hero-intro" id="heroIntro">
       <img class="logo-fin-carga" src="fin-de-carga.svg" alt="LUQUE!">
-      <span class="scroll-label">Scroll</span>
     </div>
 
     <!-- [MODIFICADO] FASE B: al scrollear, crossfade hacia el
@@ -221,15 +220,16 @@
         <span>Dirección de fotografía</span>
         <span>Operadora de cámara</span>
       </div>
+      <button class="hero-boton" id="heroBoton" type="button">
+        <span>Entrar</span>
+        <i class="hero-boton-esq tl" aria-hidden="true"></i>
+        <i class="hero-boton-esq tr" aria-hidden="true"></i>
+        <i class="hero-boton-esq bl" aria-hidden="true"></i>
+        <i class="hero-boton-esq br" aria-hidden="true"></i>
+      </button>
     </div>
 
   </section>
-
-  <!-- [NUEVO] Spacer de scroll — el hero es position:fixed, así que
-       este elemento (100vh) es quien reserva en el documento la
-       distancia de scroll necesaria para el crossfade del hero antes
-       de que la galería empiece a montarse por encima. -->
-  <div class="hero-spacer" id="heroSpacer" aria-hidden="true"></div>
 
   <!-- ============================================================
        GALERÍA — NAVEGACIÓN ESPACIAL 2D
