@@ -419,7 +419,7 @@ En `js/hero.js`, en la función `entrar()`, añadir la llamada:
 8. Abrir una foto y cerrarla funciona, y la foto vuelve a su hueco.
 9. La consola no muestra ningún error.
 
-El punto 6 es el que más fácilmente se rompe: el lienzo se mide con `getBoundingClientRect`, y mientras la galería estaba oculta esos rectángulos valían cero. Si el paneo no responde, el problema está en que `measure()` no se llamó tras hacerla visible.
+Una advertencia que este plan daba y que resultó ser **falsa**, comprobada en el navegador: no es cierto que los rectángulos de la galería valgan cero mientras está oculta. `visibility:hidden` conserva la caja de layout — es `display:none` el que la destruye. Con la galería oculta, el escenario ya mide lo mismo que después de activarla. El `measure()` de `activar()` es una remedida barata, no una reparación, y el trabajo real de `activar()` es revelar el navbar.
 
 - [ ] **Step 8: Commit**
 
@@ -870,7 +870,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 **Lo que sí se puede comprobar sin ver el movimiento:** que la página no tenga scroll, que las clases y los fotogramas clave existan y estén bien escritos, que `animationend` remate una sola vez, que los enlaces directos salten el hero, que el foco acabe donde debe, y que no quede ninguna petición externa.
 
-**El riesgo que más vigilaría** es el paso 4 de la Task 2: la galería nace con `visibility:hidden` y sus rectángulos miden cero mientras está oculta. Todo el paneo del lienzo se calcula con `getBoundingClientRect`. Si `activar()` no llama a `measure()` después de hacerla visible, la galería aparece pero no se puede explorar, y el síntoma —un lienzo quieto— no se parece en nada a la causa.
+**Un riesgo que este plan señaló y que no existía.** Advertí que la galería, al nacer con `visibility:hidden`, mediría cero y habría que remedirla al activarla. Es falso: `visibility:hidden` conserva la caja de layout, y solo `display:none` la destruye. Comprobado en el navegador con la galería oculta, el escenario mide ya 279×335 y el lienzo 893×642, exactamente lo mismo que después. La advertencia llegó a repetirse en el resumen de la tarea, en el informe del implementador y en un comentario del código antes de que la revisión la desmontara.
+
+Lo dejo escrito porque el error es instructivo: un aviso formulado con seguridad se copia sin cuestionarse, y acaba siendo más caro que no haber avisado. Si algún día el paneo no responde, la causa **no** será esta.
 
 **Una decisión que dejé fuera a propósito.** El botón «atrás» del navegador saca del sitio en lugar de devolver al hero. Arreglarlo requiere empujar una entrada al historial y escuchar `popstate`, y los casos límite de rutas ya han causado tres defectos en este proyecto. Si más adelante se quiere, es un añadido aislado que no toca nada de lo de aquí.
 
