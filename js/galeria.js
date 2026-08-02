@@ -169,8 +169,11 @@ window.Galeria = (function () {
   function congelar()    { paneoCongelado = true;  }
   function descongelar() { paneoCongelado = false; }
 
-  /* Activa la galería como estado visible: muestra el navbar y remide el
-     lienzo, porque hasta ahora estaba oculto y sus rectángulos valían cero. */
+  /* Activa la galería como estado visible. Su trabajo real es revelar el
+     navbar; el measure() es solo una remedida barata por si el viewport
+     cambió mientras el hero estaba delante. No arregla rectángulos a cero:
+     visibility:hidden conserva la caja de layout, así que las medidas que
+     tomó init() ya eran correctas. */
   function activar() {
     var navbar = document.getElementById('navbar');
     if (navbar) navbar.classList.add('visible');

@@ -490,7 +490,6 @@
   ============================================================ */
   @media (max-width: 720px){
     .navbar{ width:min(96vw, 520px); padding:10px 16px; top:12px; }
-    .gallery-intro{ padding:0 5vw; }
     .spatial-canvas{ width:320vw; height:230vw; }
   }
 
