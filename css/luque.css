@@ -295,6 +295,88 @@
   .hero-boton-esq.bl{ bottom:0; left:0;  border-bottom-width:2px; border-left-width:2px; transform-origin:bottom left; }
   .hero-boton-esq.br{ bottom:0; right:0; border-bottom-width:2px; border-right-width:2px; transform-origin:bottom right; }
 
+  /* Las esquinas del hero son un tercer juego, propio de este componente:
+     no son las del cursor ni las del visor. Van dibujadas con bordes y se
+     colorean con currentColor, nunca cargadas como recurso externo. */
+  .hero-esquina{
+    position:absolute;
+    width:26px; height:26px;
+    z-index:3;
+    pointer-events:none;
+    color:var(--black);
+  }
+  .hero-esquina i{
+    position:absolute; inset:0;
+    display:block;
+  }
+  .hero-esquina i::before,
+  .hero-esquina i::after{
+    content:'';
+    position:absolute;
+    background:currentColor;
+  }
+  .hero-esquina i::before{ top:0; left:0; width:100%; height:3px; }
+  .hero-esquina i::after{  top:0; left:0; width:3px;  height:100%; }
+
+  .hero-esquina.tl{ top:22px;    left:22px;  }
+  .hero-esquina.tr{ top:22px;    right:22px; }
+  .hero-esquina.bl{ bottom:22px; left:22px;  }
+  .hero-esquina.br{ bottom:22px; right:22px; }
+
+  .hero-esquina.tr i{ transform:scaleX(-1); }
+  .hero-esquina.bl i{ transform:scaleY(-1); }
+  .hero-esquina.br i{ transform:scale(-1,-1); }
+
+  /* Cuatro pasos de 200 ms con steps(1, end): cada tramo sostiene su valor
+     inicial y salta al siguiente, igual que frameCycle en el preloader.
+       0-25 %  reposo, en las esquinas del viewport
+       25-50 % saltan SOLO la diagonal tl/br: parece un autofoco tanteando
+       50-75 % saltan las otras dos; las cuatro ciñen el logotipo
+       75-100 % salen fuera del viewport */
+  @keyframes entradaTL{
+    0%        { transform:translate(0, 0); }
+    25%       { transform:translate(calc(10vw - 22px), calc(15vh - 22px)); }
+    50%       { transform:translate(calc(20vw - 22px), calc(30vh - 22px)); }
+    75%, 100% { transform:translate(calc(-14vw - 22px), calc(-20vh - 22px)); }
+  }
+  @keyframes entradaBR{
+    0%        { transform:translate(0, 0); }
+    25%       { transform:translate(calc(-10vw + 22px), calc(-15vh + 22px)); }
+    50%       { transform:translate(calc(-20vw + 22px), calc(-30vh + 22px)); }
+    75%, 100% { transform:translate(calc(14vw + 22px), calc(20vh + 22px)); }
+  }
+  @keyframes entradaTR{
+    0%, 25%   { transform:translate(0, 0); }
+    50%       { transform:translate(calc(-20vw + 22px), calc(30vh - 22px)); }
+    75%, 100% { transform:translate(calc(14vw + 22px), calc(-20vh - 22px)); }
+  }
+  @keyframes entradaBL{
+    0%, 25%   { transform:translate(0, 0); }
+    50%       { transform:translate(calc(20vw - 22px), calc(-30vh + 22px)); }
+    75%, 100% { transform:translate(calc(-14vw - 22px), calc(20vh + 22px)); }
+  }
+
+  /* El contenido del hero se corta en el mismo paso en que las esquinas
+     salen, y el fondo del hero se vuelve transparente para descubrir la
+     galería, que ya es amarilla: por eso el amarillo nunca se interrumpe
+     y lo único que cambia es que el logotipo se va y llegan las fotos. */
+  @keyframes entradaContenido{
+    0%, 50%   { opacity:1; }
+    75%, 100% { opacity:0; }
+  }
+  @keyframes entradaFondo{
+    0%, 50%   { background-color:var(--yellow); }
+    75%, 100% { background-color:transparent; }
+  }
+
+  .hero.saliendo{ animation:entradaFondo 0.8s steps(1, end) forwards; }
+  .hero.saliendo .hero-intro,
+  .hero.saliendo .hero-main{ animation:entradaContenido 0.8s steps(1, end) forwards; }
+  .hero.saliendo .hero-esquina.tl{ animation:entradaTL 0.8s steps(1, end) forwards; }
+  .hero.saliendo .hero-esquina.tr{ animation:entradaTR 0.8s steps(1, end) forwards; }
+  .hero.saliendo .hero-esquina.bl{ animation:entradaBL 0.8s steps(1, end) forwards; }
+  .hero.saliendo .hero-esquina.br{ animation:entradaBR 0.8s steps(1, end) forwards; }
+
   /* ============================================================
      NAVBAR (pill fija) — fondo amarillo, iconografía en negro
   ============================================================ */
@@ -498,6 +580,12 @@
     .brand-frames .frame{ animation:none; }
     .brand-frames .frame:first-child{ opacity:1; }
     .proj img{ transition:none; }
+
+    .hero.saliendo,
+    .hero.saliendo .hero-intro,
+    .hero.saliendo .hero-main,
+    .hero.saliendo .hero-esquina{ animation:none; }
+    .hero.saliendo{ opacity:0; transition:opacity 0.2s ease; }
   }
 
   /* ============================================================
