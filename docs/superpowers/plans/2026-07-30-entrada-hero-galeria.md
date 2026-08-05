@@ -759,7 +759,11 @@ En `js/hero.js`, añadir el foco como última línea de `rematarEntrada()`. Al r
 3. Abrir `index.html#/editorial`: tras el preloader aparece la galería ya filtrada.
 4. Abrir `index.html` sin fragmento: aparece el hero completo con su botón.
 5. Entrar por el botón y comprobar que el lienzo se queda **centrado**, sin desplazarse solo.
-6. Tras entrar, la primera pulsación de `Tab` lleva al navbar, no a un proyecto.
+6. Tras entrar, el foco está en la **sección** de la galería, no en un proyecto: eso es lo que impide que el lienzo se desplace solo al aparecer.
+
+   Este plan afirmaba aquí que la primera pulsación de `Tab` llevaría al navbar. Es **falso**, y se comprobó midiendo el orden real de tabulación: el navbar va antes que la galería en el marcado, así que desde la sección el `Tab` avanza **hacia dentro**, al primer proyecto. Al navbar se llega con `Shift+Tab`.
+
+   El comportamiento real es además el deseable: tabular desde la galería lleva a su contenido, y que el lienzo se centre sobre el proyecto enfocado es la navegación por teclado que ya existía. Lo que había que evitar era enfocar un proyecto **automáticamente al entrar**, y eso sí se cumple.
 7. Estando en la galería, pulsar `Esc` para quitar un filtro no resucita el hero.
 
 - [ ] **Step 8: Commit**
