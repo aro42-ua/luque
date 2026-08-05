@@ -80,7 +80,12 @@ window.Hero = (function () {
     document.body.classList.remove('entrando');
     document.body.classList.add('galeria-activa');
     window.Galeria.activar();
-    document.getElementById('gallery').focus({ preventScroll: true });
+    /* En un enlace directo a un proyecto el visor ya se ha abierto y ha puesto
+       el foco dentro de su diálogo, donde lo atrapa. Robárselo dejaría la
+       trampa sin efecto y un Tab se escaparía por detrás del diálogo abierto. */
+    if (!window.Visor.estaAbierto()) {
+      document.getElementById('gallery').focus({ preventScroll: true });
+    }
   }
 
   function init() {
