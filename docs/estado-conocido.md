@@ -16,14 +16,11 @@ Las portadas se piden a 800×1000 y las piezas interiores a 2400×3000: la lupa
 necesita que la pieza sea bastante mayor que la pantalla para tener recorrido, y
 la portada solo se ve pequeña en la galería.
 
-## Dos cosas que dependen de la red
+## Una cosa que conviene saber
 
-**GSAP viene de un CDN.** Abrir `index.html` con doble clic **sin conexión a
-internet** da una página muerta, porque el preloader y la secuencia del hero
-dependen de esa librería. Preexistente, anterior a este trabajo. Si alguna vez hay
-que enseñar la web sin red, la solución es descargar `gsap.min.js` y
-`ScrollTrigger.min.js` al repositorio y apuntar los `<script>` a las copias
-locales.
+**Ya no hay ninguna dependencia de red.** GSAP se eliminó al rehacer la entrada
+del hero: solo quedaba usándose para dos fundidos del preloader, que ahora son
+transiciones de CSS. La web funciona abriéndola con doble clic sin conexión.
 
 **Las fuentes se cargan desde el CSS.** Comprobado que funcionan abriendo el
 archivo con doble clic. Si algún día se mueve `css/luque.css` de carpeta, hay que
