@@ -449,6 +449,7 @@
   }
   body.galeria-activa .gallery,
   body.entrando .gallery{ visibility:visible; }
+  .gallery:focus{ outline:none; }
 
   .gallery-intro{
     position:absolute;

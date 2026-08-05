@@ -14,6 +14,13 @@ window.Hero = (function () {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  /* Quien llega por un enlace a un trabajo concreto no quiere una portada:
+     el preloader hace su trabajo y de ahí se pasa directo a la galería. */
+  function debeSaltarse(ruta) {
+    if (!ruta) return false;
+    return ruta.tipo === 'proyecto' || ruta.tipo === 'categoria';
+  }
+
   /* Retira el preloader respetando su tiempo mínimo y encadena la fase A. */
   function retirarPreloader() {
     var transcurrido = Date.now() - arranque;
@@ -23,7 +30,8 @@ window.Hero = (function () {
       setTimeout(function () {
         preloader.style.display = 'none';
         document.body.classList.add('preloader-done');
-        mostrarFaseA();
+        if (debeSaltarse(window.Router.rutaActual())) rematarEntrada();
+        else mostrarFaseA();
       }, 700);
     }, restante);
   }
@@ -72,6 +80,7 @@ window.Hero = (function () {
     document.body.classList.remove('entrando');
     document.body.classList.add('galeria-activa');
     window.Galeria.activar();
+    document.getElementById('gallery').focus({ preventScroll: true });
   }
 
   function init() {
@@ -87,5 +96,5 @@ window.Hero = (function () {
     window.addEventListener('load', retirarPreloader);
   }
 
-  return { init: init };
+  return { init: init, debeSaltarse: debeSaltarse };
 })();
