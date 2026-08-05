@@ -18,9 +18,12 @@ la portada solo se ve pequeña en la galería.
 
 ## Una cosa que conviene saber
 
-**Ya no hay ninguna dependencia de red.** GSAP se eliminó al rehacer la entrada
-del hero: solo quedaba usándose para dos fundidos del preloader, que ahora son
-transiciones de CSS. La web funciona abriéndola con doble clic sin conexión.
+**El código ya no depende de la red.** GSAP era la última librería y se eliminó al
+rehacer la entrada del hero: solo quedaba usándose para dos fundidos del preloader,
+que ahora son transiciones de CSS. Lo único que se sigue pidiendo fuera son las doce
+fotografías de relleno de picsum, así que abrir el archivo sin conexión da una web
+que funciona entera pero con todas las fotos rotas. Esa dependencia desaparece sola
+en cuanto entren los archivos reales del estudio.
 
 **Las fuentes se cargan desde el CSS.** Comprobado que funcionan abriendo el
 archivo con doble clic. Si algún día se mueve `css/luque.css` de carpeta, hay que
@@ -59,9 +62,10 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 ## Cómo se prueba
 
-`tests/test.html` se abre con doble clic y ejecuta 46 comprobaciones sobre la
+`tests/test.html` se abre con doble clic y ejecuta 51 comprobaciones sobre la
 lógica pura: el enrutado, la validación de datos, el cálculo de la composición
-filtrada y la máquina de estado del visor. No hace falta Node ni servidor.
+filtrada, la máquina de estado del visor y el salto del hero. No hace falta Node
+ni servidor.
 
 Lo que ese arnés **no** puede ver, por diseño: nada que se mueva. Las
 transiciones, el vuelo del visor, la recomposición del filtrado y el paneo con
