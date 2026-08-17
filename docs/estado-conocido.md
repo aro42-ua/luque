@@ -25,6 +25,15 @@ fotografías de relleno de picsum, así que abrir el archivo sin conexión da un
 que funciona entera pero con todas las fotos rotas. Esa dependencia desaparece sola
 en cuanto entren los archivos reales del estudio.
 
+Con una excepción que conviene conocer: **sin conexión, un enlace directo a un
+proyecto deja el visor a medias.** `js/visor-transicion.js:48-49` espera a que la
+portada esté cargada (`img.complete` o su evento `load`) antes de volar la foto
+hasta el visor. Si la imagen de picsum no llega nunca, `volar()` no se ejecuta, así
+que abrir `#/bruma` sin conexión deja un diálogo abierto con opacidad 0 y el foco
+sin llegar a su botón de cerrar. Es anterior a rehacer la entrada del hero y queda
+fuera de su alcance —la especificación deja el visor explícitamente fuera—, y
+desaparece sola con las fotografías reales, igual que las fotos rotas.
+
 **Las fuentes se cargan desde el CSS.** Comprobado que funcionan abriendo el
 archivo con doble clic. Si algún día se mueve `css/luque.css` de carpeta, hay que
 revisar los `../` de las tres reglas `@font-face`: se resuelven contra la hoja de

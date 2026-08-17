@@ -36,17 +36,27 @@ window.Hero = (function () {
     }, restante);
   }
 
-  /* Fase A: el logo de fin de carga. Se sostiene y avanza sola. */
+  /* Fase A: el logo de fin de carga. Se sostiene y avanza sola.
+     Las dos fases se plantan si la salida ya ha empezado: un temporizador
+     rezagado no debe devolver la clase `visible` a un hero que ya se ha ido
+     ni pedir el foco para un nodo con `display:none`. */
   function mostrarFaseA() {
+    if (saliendo) return;
     intro.classList.add('visible');
     setTimeout(mostrarFaseB, SOSTEN_FASE_A);
   }
 
   /* Fase B: el logotipo grande con los roles, y el botón debajo. */
   function mostrarFaseB() {
+    if (saliendo) return;
     intro.classList.remove('visible');
     principal.classList.add('visible');
     setTimeout(function () {
+      if (saliendo) return;
+      /* El botón se habilita en el mismo instante en que aparece, no antes:
+         deshabilitado no es enfocable, así que hasta aquí el tabulador no
+         puede llegar a él ni se puede pulsar el hueco donde estará. */
+      boton.disabled = false;
       boton.classList.add('visible');
       boton.focus();
     }, 400);
@@ -95,6 +105,9 @@ window.Hero = (function () {
     principal  = document.getElementById('heroMain');
     boton      = document.getElementById('heroBoton');
 
+    /* Nace deshabilitado: mientras es invisible no debe poder pulsarse ni
+       recibir el foco. Lo habilita la fase B al mostrarlo. */
+    boton.disabled = true;
     boton.addEventListener('click', entrar);
 
     arranque = Date.now();

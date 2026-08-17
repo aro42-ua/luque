@@ -200,9 +200,11 @@
   ============================================================ */
   .hero{
     position:fixed;
-    top:0; left:0;
-    height:100vh;
-    width:100%;
+    /* inset:0, igual que .gallery, y no height:100vh: sin documento que
+       recorrer, 100vh puede ser el viewport GRANDE en los navegadores de
+       móvil y entonces el borde inferior del hero —con las esquinas bl/br
+       a 22px— queda debajo de la barra de direcciones. */
+    inset:0;
     background:var(--yellow);
     overflow:hidden;
     z-index:600;   /* por encima del navbar (500), por debajo del visor (900) */
@@ -237,6 +239,9 @@
     opacity:0;
     transition:opacity 0.4s ease;
     text-align:center;
+    /* Invisible es también intocable: sin esto, el botón que hay dentro
+       responde a elementFromPoint y se puede pulsar durante la fase A. */
+    pointer-events:none;
   }
   .hero-main.visible{ opacity:1; pointer-events:auto; }
 
@@ -277,6 +282,19 @@
   }
   .hero-boton.visible{ opacity:1; }
   .hero-boton:hover{ opacity:0.55; }
+  /* El pointer-events:none de .hero-main no cubre los 400 ms en que la fase B
+     ya está en pantalla y el botón todavía no ha fundido: ahí .hero-main.visible
+     ya ha devuelto el auto y se hereda. Medido en el flujo real — de t=2851 a
+     t=3267 el impacto en el centro del botón devolvía su SPAN. La conducta la
+     cierra el `disabled`, pero la regla va aquí para que siga cerrada si alguien
+     retira el `disabled` algún día. */
+  .hero-boton:not(.visible){ pointer-events:none; }
+  /* El botón nace deshabilitado y vuelve a deshabilitarse al pulsarlo, así
+     que solo está habilitado justo mientras se ve. El estado deshabilitado
+     no debe distinguirse: se devuelve el color del texto, que el navegador
+     agrisaría por su cuenta. No se toca aquí la opacidad, que es lo que
+     gobierna si el botón se ve o no. */
+  .hero-boton:disabled{ color:var(--black); }
   .hero-boton:focus-visible{ outline:none; }
   /* El foco agranda las esquinas con transform y no con width/height:
      animar propiedades de layout está prohibido por las restricciones. */
@@ -369,9 +387,24 @@
     75%, 100% { background-color:transparent; }
   }
 
-  .hero.saliendo{ animation:entradaFondo 0.8s steps(1, end) forwards; }
+  /* En cuanto arranca la secuencia el hero deja de recibir clics: su
+     contenido sigue en pantalla 600 ms más, y a partir del cuarto paso está
+     invisible sobre unas fotos que ya se pueden pulsar. Las esquinas ya
+     llevan pointer-events:none propio, así que sus saltos no se ven
+     afectados. */
+  .hero.saliendo{
+    animation:entradaFondo 0.8s steps(1, end) forwards;
+    pointer-events:none;
+  }
+  /* El pointer-events:none de .hero.saliendo se hereda, pero no basta:
+     .hero-main.visible lo devuelve a auto dentro. Medido — sin esta línea, en
+     el centro del viewport elementFromPoint seguía devolviendo la IMG del
+     logotipo con el hero ya invisible. */
   .hero.saliendo .hero-intro,
-  .hero.saliendo .hero-main{ animation:entradaContenido 0.8s steps(1, end) forwards; }
+  .hero.saliendo .hero-main{
+    animation:entradaContenido 0.8s steps(1, end) forwards;
+    pointer-events:none;
+  }
   .hero.saliendo .hero-esquina.tl{ animation:entradaTL 0.8s steps(1, end) forwards; }
   .hero.saliendo .hero-esquina.tr{ animation:entradaTR 0.8s steps(1, end) forwards; }
   .hero.saliendo .hero-esquina.bl{ animation:entradaBL 0.8s steps(1, end) forwards; }
@@ -400,6 +433,13 @@
     transform:translate(-50%, 0);
     opacity:1;
   }
+  /* Mientras el hero está delante, el navbar no solo es invisible: es
+     inalcanzable. Sin esto, Shift+Tab desde ENTRAR lo alcanza y activar una
+     categoría filtra la galería oculta, sin que el usuario vea nada. La
+     visibilidad no está en la lista de propiedades con transición, así que
+     al activarse la galería salta a visible en el acto y el fundido y el
+     desplazamiento del navbar siguen siendo los de siempre. */
+  body:not(.galeria-activa) .navbar{ visibility:hidden; }
 
   /* SVG del menú: paths/polygons sin fill propio, se colorean con currentColor */
   .navbar .nav-svg{
@@ -481,7 +521,17 @@
 
   .spatial-hint{
     position:absolute;
-    left:50%; bottom:5vh;
+    /* La pista y el pie descansaban los dos a 5vh del borde inferior, el pie
+       a la izquierda y la pista centrada, y se solapaban: los dos van pegados
+       al mismo borde, así que sus bandas verticales coinciden siempre y basta
+       con que se toquen en horizontal. Medido: a 375x667 la pista ocupa tres
+       líneas y se cruzaban en una banda de 12,8 px (el alto de la línea del
+       pie); a 1000x700 las últimas 53,7 px del pie caían sobre el arranque de
+       la pista. Solo dejan de tocarse por encima de unos 1120 px de ancho, así
+       que la separación va aquí y no en una consulta de medios: los 22 px —el
+       margen de siempre en este sitio— dejan la pista 9,2 px por encima del
+       pie a cualquier tamaño de viewport. */
+    left:50%; bottom:calc(5vh + 22px);
     transform:translateX(-50%);
     font-size:0.72rem;
     font-weight:700;
@@ -648,7 +698,6 @@
 .visor[hidden]{ display:none; }
 .visor.entrando{ opacity:0; }
 
-body.visor-abierto{ overflow:hidden; }
 body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 
 .visor-esquina{
