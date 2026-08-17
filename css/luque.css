@@ -405,7 +405,14 @@
      .hero-main.visible lo devuelve a auto dentro. Medido — sin esta línea, en
      el centro del viewport elementFromPoint seguía devolviendo la IMG del
      logotipo con el hero ya invisible. */
-  .hero.saliendo .hero-intro,
+  /* La fase A NO lleva entradaContenido. Su primer fotograma fija opacity:1, y
+     al empezar la salida la fase A ya se ha ido: la animación la resucitaba a
+     plena opacidad y pintaba el logo de fin de carga ENCIMA del logotipo
+     durante los 600 ms de la secuencia. Medido: 0,05 antes del clic, 1,00 desde
+     el fotograma del clic hasta t=600. Se fuerza a cero y sin transición, que
+     además borra el residuo de su propio fundido si se pulsa el botón recién
+     aparecido, cuando aún le quedaban 200 ms de desvanecerse. */
+  .hero.saliendo .hero-intro{ opacity:0; transition:none; }
   .hero.saliendo .hero-main{
     animation:entradaContenido 0.8s steps(1, end) forwards;
     pointer-events:none;
