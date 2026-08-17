@@ -203,7 +203,12 @@
     /* inset:0, igual que .gallery, y no height:100vh: sin documento que
        recorrer, 100vh puede ser el viewport GRANDE en los navegadores de
        móvil y entonces el borde inferior del hero —con las esquinas bl/br
-       a 22px— queda debajo de la barra de direcciones. */
+       a 22px— queda debajo de la barra de direcciones.
+       Queda un resto por resolver: los fotogramas de la entrada siguen
+       desplazando en vw/vh, así que en esos navegadores la caja es el viewport
+       pequeño y los saltos el grande, y el encuadre del logotipo en el paso 2
+       sale holgado por el alto de la barra. Se cambia a dvh solo si al probarlo
+       en un móvil real se nota; una esquina cortada era peor. */
     inset:0;
     background:var(--yellow);
     overflow:hidden;
@@ -405,6 +410,11 @@
     animation:entradaContenido 0.8s steps(1, end) forwards;
     pointer-events:none;
   }
+  /* Quitar el hit-testing deja de cumplir :hover, así que quien pulsara con el
+     ratón encima veía el rótulo ACLARARSE de 0,55 a 1 en 300 ms justo mientras
+     saltan las esquinas, y quien pulsara con el teclado no. Se fija el mismo
+     valor para los dos y sin transición: si hay salto, dura un fotograma. */
+  .hero.saliendo .hero-boton{ opacity:1; transition:none; }
   .hero.saliendo .hero-esquina.tl{ animation:entradaTL 0.8s steps(1, end) forwards; }
   .hero.saliendo .hero-esquina.tr{ animation:entradaTR 0.8s steps(1, end) forwards; }
   .hero.saliendo .hero-esquina.bl{ animation:entradaBL 0.8s steps(1, end) forwards; }
@@ -530,7 +540,9 @@
        la pista. Solo dejan de tocarse por encima de unos 1120 px de ancho, así
        que la separación va aquí y no en una consulta de medios: los 22 px —el
        margen de siempre en este sitio— dejan la pista 9,2 px por encima del
-       pie a cualquier tamaño de viewport. */
+       pie desde 320 px de ancho en adelante. Por debajo de 316 px el pie pasa
+       a dos líneas y volverían a cruzarse, pero no hay viewport real ahí: el
+       más estrecho que existe son los 320 px del iPhone SE. */
     left:50%; bottom:calc(5vh + 22px);
     transform:translateX(-50%);
     font-size:0.72rem;
