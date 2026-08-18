@@ -1,15 +1,10 @@
 window.Galeria = (function () {
   var stage = null;
   var canvas = null;
-  var stageW = 0, stageH = 0, canvasW = 0, canvasH = 0;
-  var minX = 0, minY = 0; // límites (siempre <= 0)
-  var curX = 0, curY = 0, targetX = 0, targetY = 0;
-  var raf = null;
 
   var porElemento = {};
 
   var categoria = null;
-  var paneoCongelado = false;
   var temporizadorRecomposicion = null;
   var DURACION_MS = 620;
 
@@ -19,8 +14,6 @@ window.Galeria = (function () {
     'videoclip': 'Videoclip',
     'cortometraje': 'Cortometraje'
   };
-
-  function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
 
   function colocar(elemento, x, y, escala) {
     elemento.style.transform =
@@ -65,36 +58,6 @@ window.Galeria = (function () {
     });
   }
 
-  function measure(){
-    const r = stage.getBoundingClientRect();
-    stageW = r.width; stageH = r.height; canvasW = canvas.offsetWidth; canvasH = canvas.offsetHeight;
-    minX = Math.min(0, stageW - canvasW); minY = Math.min(0, stageH - canvasH);
-    // posición de reposo: lienzo centrado en el escenario
-    targetX = minX / 2; targetY = minY / 2;
-    curX = targetX; curY = targetY;
-    canvas.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
-  }
-
-  function loop(){
-    curX += (targetX - curX) * 0.07; curY += (targetY - curY) * 0.07;
-    canvas.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
-    raf = requestAnimationFrame(loop);
-  }
-
-  // Centra el lienzo sobre el elemento que recibe el foco (tabulador). Se
-  // trabaja con deltas entre rectángulos, no con coordenadas absolutas: así
-  // funciona igual con el lienzo filtrado y sin filtrar.
-  function centrarEn(el) {
-    var r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
-    targetX = clamp(targetX + (s.left + stageW / 2) - (r.left + r.width  / 2), minX, 0);
-    targetY = clamp(targetY + (s.top  + stageH / 2) - (r.top  + r.height / 2), minY, 0);
-    // Con movimiento reducido no hay paneo animado: se salta al objetivo.
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      curX = targetX; curY = targetY;
-      canvas.style.transform = 'translate3d(' + curX + 'px, ' + curY + 'px, 0)';
-    }
-  }
-
   function conRecomposicion(fn) {
     var canvas = document.getElementById('spatialCanvas');
     if (temporizadorRecomposicion) clearTimeout(temporizadorRecomposicion);
@@ -104,13 +67,13 @@ window.Galeria = (function () {
     temporizadorRecomposicion = setTimeout(function () {
       temporizadorRecomposicion = null;
       canvas.classList.remove('recomponiendo');
-      measure();
-      paneoCongelado = false;
+      window.GaleriaPaneo.medir();
+      window.GaleriaPaneo.descongelar();
     }, DURACION_MS);
   }
 
   function aplicarFiltro(nueva) {
-    categoria = nueva; paneoCongelado = true;
+    categoria = nueva; window.GaleriaPaneo.congelar();
 
     var dentro = window.Datos.porCategoria(nueva);
     var ranuras = window.LayoutFiltrado.posicionesCompactas(dentro.length);
@@ -140,7 +103,7 @@ window.Galeria = (function () {
   }
 
   function quitarFiltro() {
-    categoria = null; paneoCongelado = true;
+    categoria = null; window.GaleriaPaneo.congelar();
 
     conRecomposicion(function (canvas) {
       window.Datos.PROYECTOS.forEach(function (p) {
@@ -166,18 +129,19 @@ window.Galeria = (function () {
 
   function categoriaActiva() { return categoria; }
 
-  function congelar()    { paneoCongelado = true;  }
-  function descongelar() { paneoCongelado = false; }
+  function congelar()    { window.GaleriaPaneo.congelar(); }
+  function descongelar() { window.GaleriaPaneo.descongelar(); }
+  function centrarEn(el) { window.GaleriaPaneo.centrarEn(el); }
 
   /* Activa la galería como estado visible. Su trabajo real es revelar el
-     navbar; el measure() es solo una remedida barata por si el viewport
+     navbar; el medir() es solo una remedida barata por si el viewport
      cambió mientras el hero estaba delante. No arregla rectángulos a cero:
      visibility:hidden conserva la caja de layout, así que las medidas que
      tomó init() ya eran correctas. */
   function activar() {
     var navbar = document.getElementById('navbar');
     if (navbar) navbar.classList.add('visible');
-    measure();
+    window.GaleriaPaneo.medir();
   }
 
   function init() {
@@ -185,73 +149,20 @@ window.Galeria = (function () {
     if (problemas.length) console.warn('Problemas en los datos:\n' + problemas.join('\n'));
     construir();
 
-    /* 4) GALERÍA — NAVEGACIÓN ESPACIAL 2D. El lienzo (.spatial-canvas) es
-       mucho mayor que el escenario visible (.spatial-stage): con ratón se
-       desplaza en dirección opuesta al cursor con inercia (lerp); con touch
-       se arrastra directo. Los enlaces del menú centran la categoría con el
-       mismo sistema de coordenadas. */
     stage  = document.getElementById('spatialStage');
     canvas = document.getElementById('spatialCanvas');
-    if(!stage || !canvas) return;
+    if (!stage || !canvas) return;
 
-    const isFinePointer = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
-
-    window.addEventListener('resize', measure);
-    measure();
-    loop();
+    window.GaleriaPaneo.init(stage, canvas);
 
     // El foco llega por clic, restauración o el tabulador (GaleriaTeclado);
     // en todos los casos basta centrar el lienzo, sin tocar el scroll.
     stage.addEventListener('focusin', function (e) {
-      var boton = e.target.closest ? e.target.closest('.proj') : null; if (!boton) return;
-      centrarEn(boton);
+      var boton = e.target.closest ? e.target.closest('.proj') : null;
+      if (!boton) return;
+      window.GaleriaPaneo.centrarEn(boton);
     });
-    window.GaleriaTeclado.init(stage, centrarEn);
-
-    if (isFinePointer){
-      const STRENGTH = 0.9; // 0-1, cuánto "empuja" el cursor el lienzo
-
-      stage.addEventListener('mousemove', (e) => {
-        if (paneoCongelado) return;
-        const r = stage.getBoundingClientRect();
-        const px = (e.clientX - r.left) / stageW;       // 0..1
-        const py = (e.clientY - r.top) / stageH;        // 0..1
-        const cxN = (px - 0.5) * 2;                       // -1..1
-        const cyN = (py - 0.5) * 2;                       // -1..1
-
-        const restX = minX / 2, restY = minY / 2;
-        const rangeX = Math.abs(minX) / 2;
-        const rangeY = Math.abs(minY) / 2;
-
-        // El lienzo se mueve en dirección OPUESTA al cursor
-        targetX = clamp(restX - cxN * rangeX * STRENGTH, minX, 0);
-        targetY = clamp(restY - cyN * rangeY * STRENGTH, minY, 0);
-      });
-
-      stage.addEventListener('mouseleave', () => {
-        targetX = minX / 2; targetY = minY / 2;
-      });
-    } else {
-      // Fallback táctil: arrastre directo con inercia
-      let dragging = false;
-      let startPX = 0, startPY = 0, startTX = 0, startTY = 0;
-
-      stage.addEventListener('pointerdown', (e) => {
-        if (paneoCongelado) return;
-        dragging = true; startPX = e.clientX; startPY = e.clientY;
-        startTX = targetX; startTY = targetY;
-        stage.setPointerCapture(e.pointerId);
-      });
-      stage.addEventListener('pointermove', (e) => {
-        if (paneoCongelado) return;
-        if(!dragging) return;
-        const dx = e.clientX - startPX, dy = e.clientY - startPY;
-        targetX = clamp(startTX + dx, minX, 0);
-        targetY = clamp(startTY + dy, minY, 0);
-      });
-      stage.addEventListener('pointerup',   () => { dragging = false; });
-      stage.addEventListener('pointercancel', () => { dragging = false; });
-    }
+    window.GaleriaTeclado.init(stage, window.GaleriaPaneo.centrarEn);
 
     // Navegación desde el menú: recompone el lienzo con la categoría pulsada
     document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
