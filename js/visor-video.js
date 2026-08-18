@@ -37,13 +37,16 @@ window.VisorVideo = (function () {
   // <img> de siempre. Este módulo decide el "cómo" (qué elemento crear,
   // cómo cablearlo); js/visor.js sigue decidiendo el "cuándo".
   function pintar(escena, proyecto) {
-    if (!proyecto.video) {
+    if (proyecto.tipo !== 'video') {
       detener();          // una navegación directa por hash no pasa por rematar():
       return false;       // sin esto, activo() seguiría respondiendo true y las
     }                     // guardas del modo vídeo matarían las flechas sobre la foto
     var v = document.createElement('video');
-    v.src = proyecto.video.src;
-    v.poster = proyecto.video.poster;
+    /* vimeo llega null hasta el bloque 4: sin fuente, el <video> se queda en su
+       poster en vez de pedir una URL que no existe. Asignar null a src lo
+       convertiría en la cadena "null" y el navegador pediría /null. */
+    if (proyecto.vimeo) v.src = proyecto.vimeo;
+    v.poster = proyecto.poster;
     v.preload = 'metadata';
     v.playsInline = true;
     v.setAttribute('aria-label', proyecto.titulo);

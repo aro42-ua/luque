@@ -6,15 +6,24 @@ aplazadas, que conviene tener a mano antes de tocar el código.
 
 ## Contenido de relleno
 
-Los doce proyectos de `js/datos.js` son de ejemplo: imágenes de picsum, títulos y
-fichas técnicas inventadas. Los archivos `video/*.mp4` no existen todavía, así que
-los proyectos de videoclip y cortometraje muestran el póster sin poder reproducir.
-Es la conducta esperada hasta que entre el trabajo real del estudio.
+**El contenido ya no está en `js/datos.js`, sino en `contenido.json`.** `js/datos.js`
+pasó de contenerlo a custodiarlo: `js/contenido.js` pide el JSON, lo valida y se lo
+entrega con `Datos.establecer()`. Si el archivo no llega o no valida, la galería sale
+vacía con un aviso en pantalla (`Galeria.mostrarError`) en vez de callarse.
 
-Añadir un proyecto real consiste en añadir un objeto a `js/datos.js` y nada más.
-Las portadas se piden a 800×1000 y las piezas interiores a 2400×3000: la lupa
-necesita que la pieza sea bastante mayor que la pantalla para tener recorrido, y
-la portada solo se ve pequeña en la galería.
+Los doce proyectos siguen siendo de ejemplo: imágenes de picsum, títulos y fichas
+técnicas inventadas. Los proyectos de vídeo llevan `vimeo: null` hasta el bloque 4,
+así que se ven con su póster y sin reproducción posible. Es la conducta esperada
+hasta que entre el trabajo real del estudio.
+
+Añadir un proyecto real consiste en añadir un objeto a la lista `proyectos` de
+`contenido.json` y nada más. Las portadas se piden a 800×1000 y las piezas interiores
+a 2400×3000: la lupa necesita que la pieza sea bastante mayor que la pantalla para
+tener recorrido, y la portada solo se ve pequeña en la galería.
+
+**La composición ya no está escrita a mano.** `js/composicion.js` la genera a partir
+del **orden de la lista**: reordenar los proyectos en `contenido.json` recompone la
+galería, sin tocar ni una coordenada. No hay `x`/`y` que mantener.
 
 ## Desplegada
 
@@ -91,7 +100,7 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 ## Cómo se prueba
 
-`tests/test.html` se abre con doble clic y ejecuta 51 comprobaciones sobre la
+`tests/test.html` se abre con doble clic y ejecuta 53 comprobaciones sobre la
 lógica pura: el enrutado, la validación de datos, el cálculo de la composición
 filtrada, la máquina de estado del visor y el salto del hero. No hace falta Node
 ni servidor.
@@ -103,7 +112,8 @@ inercia solo se pueden juzgar mirándolos en un navegador de verdad.
 ## Estructura
 
 El código está repartido en módulos de una responsabilidad cada uno, ninguno por
-encima de 300 líneas. `js/datos.js` es el único sitio donde vive el contenido.
+encima de 300 líneas. `contenido.json` es el único sitio donde vive el contenido, y
+`js/datos.js` el único que lo custodia en memoria.
 `js/router.js` es la única fuente de verdad sobre qué está abierto: la galería y
 el visor reaccionan a él y no se llaman entre sí.
 

@@ -47,7 +47,13 @@ window.Visor = (function () {
     });
   }
 
-  function piezas() { return proyecto && proyecto.piezas ? proyecto.piezas : []; }
+  /* contenido.json trae {url}; la tira y VisorCarga esperan rutas sueltas. Se
+     normaliza aquí, el único sitio que las sirve, y no en cada consumidor. */
+  function piezas() {
+    return proyecto && proyecto.piezas
+      ? proyecto.piezas.map(function (pieza) { return pieza.url; })
+      : [];
+  }
 
   function movimientoReducido() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
 
@@ -56,7 +62,9 @@ window.Visor = (function () {
 
     abiertoConRaton = pendienteConRaton; pendienteConRaton = false; // se consume: solo para esta apertura
     proyecto = p; elementoQueAbrio = window.Galeria.elementoDe(id);
-    estado = window.VisorEstado.abrir(estado, id, p.video ? 1 : p.piezas.length); raiz.classList.toggle('video', !!p.video);
+    var esVideo = (p.tipo === 'video');
+    estado = window.VisorEstado.abrir(estado, id, esVideo ? 1 : p.piezas.length);
+    raiz.classList.toggle('video', esVideo);
 
     var enVuelo = raiz.classList.contains('viajando'); // vuelo en marcha: se monta directo, sin solapar un segundo
     var imgOrigen = elementoQueAbrio ? elementoQueAbrio.querySelector('img') : null;
@@ -222,7 +230,7 @@ window.Visor = (function () {
     if (!window.VisorVideo.pintar(escena, proyecto)) {
       window.VisorCarga.pintar(escena, proyecto, estado, piezas());
     }
-    elContador.textContent = proyecto.video ? '' : pad(estado.indice + 1) + ' / ' + pad(estado.total);
+    elContador.textContent = proyecto.tipo === 'video' ? '' : pad(estado.indice + 1) + ' / ' + pad(estado.total);
 
     Array.prototype.forEach.call(tira.children, function (b, i) {
       b.setAttribute('aria-current', i === estado.indice ? 'true' : 'false');

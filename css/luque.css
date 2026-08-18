@@ -561,6 +561,22 @@
     pointer-events:none;
   }
 
+  /* El aviso de que el contenido no ha cargado. Va centrado en el escenario,
+     donde deberían estar las fotos, para que ocupe el hueco que explica. */
+  .galeria-vacia{
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%, -50%);
+    max-width:min(80vw, 560px);
+    text-align:center;
+    font-size:0.78rem;
+    font-weight:700;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    line-height:1.8;
+    z-index:6;
+  }
+
   .spatial-canvas{
     position:absolute;
     top:0; left:0;

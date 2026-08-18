@@ -134,6 +134,19 @@ window.Galeria = (function () {
     marcarNavbar(null);
   }
 
+  /* Si el contenido no llega, la galería queda vacía. Callar sería peor: quien
+     entre tiene que saber que el fallo es nuestro y no de su conexión, y el
+     estudio tiene que poder verlo sin abrir la consola. */
+  function mostrarError(mensaje) {
+    var escenario = document.getElementById('spatialStage');
+    if (!escenario) return;
+    var aviso = document.createElement('p');
+    aviso.className = 'galeria-vacia';
+    aviso.setAttribute('role', 'status');
+    aviso.textContent = mensaje;
+    escenario.appendChild(aviso);
+  }
+
   function marcarNavbar(activa) {
     document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
       a.classList.toggle('activa', a.dataset.cat === activa);
@@ -211,6 +224,7 @@ window.Galeria = (function () {
     congelar: congelar,
     descongelar: descongelar,
     centrarEn: centrarEn,
-    activar: activar
+    activar: activar,
+    mostrarError: mostrarError
   };
 })();
