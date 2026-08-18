@@ -4,6 +4,10 @@ Thumbs.db
 .claude/settings.local.json
 .worktrees/
 
+# Directorio de trabajo de wrangler al desplegar. No es parte del sitio y no
+# debe versionarse ni publicarse.
+.wrangler/
+
 # Lo genera Python al importar el auditor desde su prueba. Ensucia el arbol y un
 # "git add -A" rutinario acabaria publicando un .pyc en el sitio.
 __pycache__/

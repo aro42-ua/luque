@@ -1,26 +1,67 @@
 # Cómo se despliega
 
-Dos piezas, nada más. Un repositorio privado en GitHub, `aro42-ua/luque`, y un
-proyecto de Cloudflare Pages conectado a su rama `main`. Cada empuje a `main`
-dispara un despliegue nuevo; no hay un tercer sistema ni un paso intermedio.
+La web está publicada en `https://luque.angelrubioortiz2005.workers.dev`. Dos
+piezas: un repositorio privado en GitHub, `aro42-ua/luque`, que guarda el
+código, y un **Worker de Cloudflare con recursos estáticos** — no un proyecto
+de Pages — que sirve el sitio. No hay integración automática entre el
+repositorio y Cloudflare: el despliegue es un comando de `wrangler` que hay
+que ejecutar a mano cada vez.
+
+## Por qué es un Worker y no Cloudflare Pages
+
+La especificación y las primeras versiones de este documento decían Cloudflare
+Pages. No fue posible: al desplegar, `wrangler` contestó `The Pages project
+"luque" does not exist`, y `wrangler pages project list` devolvió una lista
+**vacía** — no hay ningún proyecto de Pages en la cuenta. Lo que el estudio
+creó en el panel de Cloudflare es un Worker, no un proyecto de Pages. Cloudflare
+está absorbiendo Pages dentro de Workers y empuja los proyectos nuevos hacia
+ahí; por eso el panel no mostraba ninguna URL de Pages y ninguna dirección
+`pages.dev` respondía.
+
+Antes de desplegar así se comprobó en la documentación de Cloudflare que los
+Workers con recursos estáticos soportan `_headers` y `_redirects` de forma
+nativa, colocándolos en el directorio de recursos — la misma mecánica que
+Pages. La salvedad que documenta Cloudflare, que esos archivos no se aplican a
+respuestas generadas por código de Worker, no afecta aquí: no hay código, es
+un sitio estático puro.
+
+**Quien vea esto y piense en "arreglarlo" volviendo a Pages: no hay proyecto
+de Pages que recuperar.** La cuenta no tiene ninguno, y crear uno nuevo va
+contra la dirección en la que Cloudflare está moviendo el producto.
 
 ## Sin paso de compilación
 
 La web es HTML, CSS y JavaScript servidos tal cual: sin Node, sin npm, sin nada
-que instalar en la máquina para que funcione. En la configuración de Pages eso
-se traduce en dos campos:
+que instalar en la máquina para que funcione la web en sí — sí hace falta Node
+para instalar la herramienta de despliegue, `wrangler` (ver más abajo). No hay
+comando de compilación ni directorio de salida distinto de la raíz del
+repositorio: lo que se exporta y se sube **es** el sitio.
 
-| Campo | Valor |
-|---|---|
-| Build command | *(vacío)* |
-| Build output directory | `/` |
+## Cómo se despliega, paso a paso
 
-Es el paso donde es más fácil equivocarse, porque Pages ofrece por defecto
-plantillas pensadas para proyectos que sí compilan (React, Next, Hugo...) y
-sugiere un comando y un directorio de salida (`dist`, `build`...) que aquí no
-existen. Si se acepta esa sugerencia, el despliegue construye contra un
-directorio que nunca se genera y sirve un sitio vacío o directamente falla. La
-raíz del repositorio **es** el sitio; el directorio de salida es `/`.
+1. **Instalar `wrangler`:** `npm install -g wrangler`. Necesita Node en el
+   PATH.
+2. **Iniciar sesión:** `wrangler login`. Abre el navegador para autenticar
+   contra Cloudflare, así que lo hace el estudio: es su cuenta y sus
+   credenciales.
+3. **Exportar el árbol versionado a un directorio temporal:**
+
+   ```
+   git archive main | tar -x -C <directorio-temporal>
+   ```
+
+   No se despliega el directorio de trabajo tal cual. El directorio de trabajo
+   contiene `.superpowers/`, `.worktrees/` y `.wrangler/` — directorios de
+   trabajo de las herramientas, no parte del sitio — y publicarlos filtraría
+   planes internos y rutas locales. `git archive` exporta exactamente lo que
+   está versionado en `main`: 56 archivos, ni uno más ni uno menos. Es el mismo
+   resultado que habría subido una integración automática con GitHub, sólo que
+   aquí el paso se hace a mano.
+4. **Desplegar:**
+
+   ```
+   wrangler deploy --name luque --assets <directorio-temporal> --compatibility-date 2026-08-18
+   ```
 
 ## `_headers`: las reglas que casan se combinan, no se sustituyen
 
@@ -57,40 +98,49 @@ cabeceras fijan.
 
 ## `_redirects`: qué no se publica, y qué sí a propósito
 
-El directorio de salida es `/`, así que **Pages sirve todo lo que esté
-versionado**, no sólo lo que enlaza `index.html`. Sin hacer nada,
-`https://<sitio>/docs/estado-conocido.md` devolvería 200 a cualquiera — y ese
-archivo dice en texto plano que las tipografías son versiones Trial sin
-licencia para uso público, a pocos clics de los propios `.otf` descargables.
-`/.claude/launch.json` filtra además rutas locales del tipo `C:/Users/...`.
-`robots.txt` y `X-Robots-Tag` no sirven aquí: impiden **indexar**, no
-**acceder**.
+El árbol que exporta `git archive` es exactamente lo versionado, así que
+**se sube todo lo versionado**, no sólo lo que enlaza `index.html`. Sin hacer
+nada, `https://luque.angelrubioortiz2005.workers.dev/docs/estado-conocido.md`
+devolvería 200 a cualquiera — y ese archivo dice en texto plano que las
+tipografías son versiones Trial sin licencia para uso público, a pocos clics
+de los propios `.otf` descargables. `/.claude/launch.json` filtra además rutas
+locales del tipo `C:/Users/...`. `robots.txt` y `X-Robots-Tag` no sirven aquí:
+impiden **indexar**, no **acceder**.
 
 `_redirects` cierra `/docs/*` y `/.claude/*`. Funciona aunque el archivo
 exista: la documentación de Cloudflare dice que las reglas se aplican *sin
 importar si un recurso casa con la petición*, así que el redireccionamiento
-gana al archivo real.
+gana al archivo real. **Verificado contra el servidor real:** ambas rutas
+devuelven 302 y sirven la portada, no el markdown ni el JSON.
 
 **Se devuelve un 302, no un 404, y no es una preferencia:** el archivo
-`_redirects` de Cloudflare Pages **no admite el 404**. Los únicos códigos
-válidos son 301, 302, 303, 307 y 308 —más 200, que actúa como proxy—, y la
-propia tabla de compatibilidad de la documentación usa
-`/blog/* /blog/404.html 404` como ejemplo de lo que **no** funciona. Quien
-venga a «arreglar» el 302 poniendo un 404 se encontrará con una regla que
-Cloudflare descarta y con `docs/` otra vez servido. Un 404 de verdad exigiría
-una Pages Function, es decir, dejar de ser un sitio estático sin paso de
-compilación: no compensa. Se elige 302 sobre 301 porque un 301 se queda
-cacheado en los navegadores y sería doloroso de revertir.
+`_redirects` de Cloudflare **no admite el 404**. Los únicos códigos válidos
+son 301, 302, 303, 307 y 308 —más 200, que actúa como proxy—, y la propia
+tabla de compatibilidad de la documentación usa `/blog/* /blog/404.html 404`
+como ejemplo de lo que **no** funciona. Quien venga a «arreglar» el 302
+poniendo un 404 se encontrará con una regla que Cloudflare descarta y con
+`docs/` otra vez servido. Un 404 de verdad exigiría escribir código de
+Worker, es decir, dejar de servir el sitio como recursos estáticos puros: no
+compensa. Se elige 302 sobre 301 porque un 301 se queda cacheado en los
+navegadores y sería doloroso de revertir.
 
 ### `/tests/*` sigue accesible, y es deliberado
 
 **Decisión tomada a conciencia, no un descuido.** `tests/` no contiene nada
 sensible: son el arnés y sus pruebas, el mismo código que ya es público en el
 repositorio del sitio. A cambio, dejarlo accesible permite la verificación más
-valiosa del despliegue: abrir `/tests/test.html` en la URL real y comprobar que
+valiosa del despliegue: abrir la ruta de pruebas en la URL real y comprobar que
 las 51 comprobaciones pasan **servidas desde Cloudflare**, con sus rutas, sus
 tipos MIME y sus mayúsculas de verdad, y no sólo con doble clic en local. Es
 justo lo que ninguna prueba en la máquina de desarrollo puede demostrar.
+**Verificado:** las 51 pasan servidas desde
+`https://luque.angelrubioortiz2005.workers.dev`.
+
+Al pedir `/tests/test.html` (con la extensión) el servidor responde 307 hacia
+`/tests/test`, sin ella. Es la normalización de extensiones que hacen los
+Workers con recursos estáticos, no un fallo: conviene abrir la ruta sin
+`.html`, o dejar que el navegador siga la redirección. Lo mismo le pasa a
+`/index.html`, que redirige con 307 a `/`.
 
 Si algún día se cierra, hay que sustituir esa verificación por otra
 equivalente, no dejarla sin más.
@@ -143,29 +193,36 @@ lista el directorio padre y compara el nombre exacto contra lo que hay dentro.
 
 ## Los pasos que hace el estudio
 
-Dos cosas de este bloque las hace el estudio desde su propio navegador, no
-Claude:
+Estas cosas las hace el estudio desde su propio navegador o su propia sesión,
+no Claude:
 
 - **`gh auth login`.** Autenticar la cuenta `aro42-ua` contra GitHub. Es
-  distinto de crear el repositorio: `gh repo create` lo ejecuta luego el
+  distinto de crear el repositorio: `gh repo create` lo puede ejecutar luego el
   controlador, pero necesita una sesión ya iniciada, y esa sesión sólo la
   puede abrir quien tiene las credenciales. Claude no introduce credenciales
   de nadie.
-- **Crear la cuenta de Cloudflare** y autorizarla contra GitHub al montar el
-  proyecto de Pages. Igual: es una cuenta del estudio, y Claude no crea
-  cuentas.
+- **Crear la cuenta de Cloudflare.** Es una cuenta del estudio, y Claude no
+  crea cuentas.
+- **`wrangler login`**, descrito en el paso 2 de más arriba. Abre el navegador
+  para autenticar la sesión de despliegue; por eso lo tiene que hacer quien
+  tiene las credenciales de la cuenta.
 
-Ambas están marcadas como tales en las tareas 4 y 5 del plan y no se delegan a
-un subagente.
+## Verificado en producción
 
-## Cómo se verifica un despliegue
+Comprobado contra `https://luque.angelrubioortiz2005.workers.dev` después de
+desplegar:
 
-La lista de comprobación completa —que cada recurso responde con el tipo
-correcto, que las cabeceras de caché llegan, que el arnés de pruebas pasa
-51/51 servido desde Cloudflare, y la secuencia visual completa medida contra
-la URL real— es la tarea 6 del plan de este bloque
-(`docs/superpowers/plans/2026-08-18-despliegue-bloque-1.md`). No se repite
-aquí para no tener dos copias que se puedan desincronizar.
+- `/docs/*` y `/.claude/*` devuelven 302 y sirven la portada, no el markdown
+  ni los archivos de configuración.
+- `X-Robots-Tag: noindex` llega en todas las rutas probadas.
+- Cabeceras de caché correctas: `no-cache` en `/`, `3600` en CSS y JS,
+  `31536000, immutable` más `nosniff` en las tipografías.
+- Tipos MIME correctos: `font/otf` en las tipografías, `text/css`,
+  `text/javascript`, `image/svg+xml`.
+- Las 51 pruebas del arnés (`tests/test.html`) pasan con el código servido
+  desde Cloudflare.
+- Los 21 recursos locales que referencian `index.html` y `css/luque.css`
+  devuelven los 21 un 200: nada roto por el despliegue.
 
 ## La deuda de las tipografías
 
