@@ -110,8 +110,17 @@ window.Hero = (function () {
     boton.disabled = true;
     boton.addEventListener('click', entrar);
 
-    arranque = Date.now();
-    window.addEventListener('load', retirarPreloader);
+    /* El preloader está en el marcado, así que se ve desde el primer byte: su
+       tiempo mínimo se cuenta desde que se pintó la página, no desde este
+       init(), que ahora espera al contenido. Contándolo desde aquí, la espera
+       de la red se sumaría entera al mínimo en vez de contar para él. */
+    arranque = Date.now() - performance.now();
+
+    /* Y por lo mismo, init() ya no corre durante el parseo: puede llegar
+       después del load. Suscribirse a un evento que ya se disparó dejaría el
+       preloader puesto para siempre, que es justo lo que se venía a evitar. */
+    if (document.readyState === 'complete') retirarPreloader();
+    else window.addEventListener('load', retirarPreloader);
   }
 
   return { init: init, debeSaltarse: debeSaltarse };

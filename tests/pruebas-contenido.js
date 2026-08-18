@@ -18,6 +18,13 @@ describe('Contenido.validar', function () {
     cierto(Contenido.validar(null).length > 0);
   });
 
+  /* Una lista vacía es contenido legítimo —un estudio que aún no ha subido
+     nada—, no un JSON mal formado. Quien avisa de que no hay nada que enseñar
+     es index.html, con su propia frase; aquí no hay nada que reprochar. */
+  prueba('una lista vacía no es un error de validación', function () {
+    igual(Contenido.validar({ version: 1, proyectos: [] }), []);
+  });
+
   prueba('detecta identificadores repetidos', function () {
     var d = base();
     d.proyectos.push({ id: 'bruma', titulo: 'Otro', categoria: 'editorial',

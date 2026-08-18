@@ -324,16 +324,30 @@
   <script src="js/visor.js"></script>
   <script>
   /* El contenido llega por red, así que la galería no puede construirse hasta
-     que esté. El preloader ya está en pantalla desde el marcado, así que la
-     espera no se ve. Hero.init() va primero porque es quien lo gobierna. */
-  window.Hero.init();
+     que esté. El preloader ya está en pantalla desde el marcado, sin que nadie
+     tenga que arrancarlo, así que la espera no se ve.
+
+     Hero.init() va el último a propósito. Sus temporizadores consultan la ruta
+     —que sale de Datos.PROYECTOS— y pueden llamar a Galeria.activar(), que mide
+     el escenario que monta Galeria.init(). Arrancarlo antes del fetch era una
+     carrera contra la red: si ganaba el hero, los enlaces directos dejaban de
+     saltarse la portada y se medía un escenario que aún no existía. Aquí abajo
+     todo lo que el hero toca está ya puesto. */
   window.Cursor.init();
   window.Contenido.cargar(function (proyectos, error) {
     window.Datos.establecer(proyectos);
     window.Galeria.init();
     window.Visor.init();
     window.Router.init();
+    /* Fallar y no tener nada son cosas distintas y merecen frases distintas:
+       una lista vacía es contenido legítimo de un estudio que aún no ha subido
+       su trabajo, no un error que haya que confesar. */
     if (error) window.Galeria.mostrarError(error);
+    else if (!proyectos.length) window.Galeria.mostrarError('Todavía no hay proyectos que enseñar.');
+    /* También en la rama de error: Contenido.cargar nunca lanza y siempre llama
+       aquí, así que un contenido.json caído da aviso y portada, no un preloader
+       colgado para siempre. */
+    window.Hero.init();
   });
   </script>
 
