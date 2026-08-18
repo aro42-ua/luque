@@ -1,0 +1,5 @@
+# Los doce proyectos son de relleno y las tipografias son de prueba.
+# Hasta que entren los trabajos reales y su licencia, la web no se indexa.
+# Quitar este archivo es el gesto deliberado de "ya se puede anunciar".
+User-agent: *
+Disallow: /
