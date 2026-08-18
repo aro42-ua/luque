@@ -20,24 +20,65 @@ EXTENSIONES = ('.html', '.css', '.js')
 IGNORADOS = ('.git', '.worktrees', '.superpowers', 'fixtures-auditoria')
 
 
+# Esquemas que no apuntan a un archivo servido por el sitio. mailto: y tel: no
+# se descargan nunca, asi que auditarlos daria un falso positivo seguro.
+ESQUEMAS_EXTERNOS = ('http://', 'https://', 'data:', 'mailto:', 'tel:', 'javascript:')
+
+
 def _es_local(ruta):
-    if not ruta or ruta.startswith('#') or ruta.startswith('data:'):
+    """True si la referencia apunta a un archivo de este sitio.
+
+    Las rutas absolutas de raiz (/css/luque.css) SI son locales: son validas en
+    un servidor y hay que auditarlas. Quien las resuelve es auditar(), contra la
+    raiz del sitio y no contra el directorio del archivo que las escribe.
+    """
+    if not ruta:
         return False
-    if ruta.startswith('http://') or ruta.startswith('https://') or ruta.startswith('//'):
+    ruta = ruta.strip()
+    if not ruta or ruta.startswith('#'):
+        return False
+    # //otro-dominio/algo es relativo al protocolo, no a nuestra raiz. Se
+    # comprueba antes que la ruta absoluta, que empieza por una sola barra.
+    if ruta.startswith('//'):
+        return False
+    if ruta.lower().startswith(ESQUEMAS_EXTERNOS):
         return False
     return True
 
 
-def _existe_con_caja_exacta(ruta_absoluta):
-    """True solo si cada segmento del camino coincide en mayusculas y minusculas."""
-    ruta_absoluta = os.path.normpath(ruta_absoluta)
-    padre, nombre = os.path.split(ruta_absoluta)
-    if not os.path.isdir(padre):
-        return False
+def _existe_con_caja_exacta(ruta_absoluta, raiz):
+    """True solo si cada segmento del camino coincide en mayusculas y minusculas.
+
+    Comprobar unicamente el nombre del archivo no basta: os.path.isdir del
+    directorio padre hereda la insensibilidad de Windows, asi que "JS/galeria.js"
+    pasaba por bueno cuando el directorio real es "js". Por eso se recorre el
+    camino segmento a segmento desde la raiz auditada, listando cada nivel y
+    exigiendo el nombre exacto.
+
+    De la raiz hacia arriba no se comprueba nada: esa parte del camino la pone la
+    maquina de desarrollo, no el repositorio, y no se despliega. Una referencia
+    que se sale de la raiz (demasiados "..") no la puede servir el sitio, asi que
+    cuenta como problema.
+    """
+    raiz = os.path.normpath(os.path.abspath(raiz))
+    ruta_absoluta = os.path.normpath(os.path.abspath(ruta_absoluta))
     try:
-        return nombre in os.listdir(padre)
-    except OSError:
-        return False
+        relativa = os.path.relpath(ruta_absoluta, raiz)
+    except ValueError:
+        return False  # otra unidad de disco: imposible que la sirva el sitio
+    segmentos = [s for s in relativa.split(os.sep) if s and s != os.curdir]
+    if not segmentos or os.pardir in segmentos:
+        return False  # se sale de la raiz auditada, o es la raiz misma
+    actual = raiz
+    for segmento in segmentos:
+        try:
+            entradas = os.listdir(actual)
+        except OSError:
+            return False
+        if segmento not in entradas:
+            return False
+        actual = os.path.join(actual, segmento)
+    return True
 
 
 def auditar(raiz):
@@ -61,8 +102,12 @@ def auditar(raiz):
                     referencia = referencia.split('?')[0].split('#')[0]
                     if not _es_local(referencia):
                         continue
-                    destino = os.path.join(actual, referencia)
-                    if not _existe_con_caja_exacta(destino):
+                    if referencia.startswith('/'):
+                        # Absoluta: cuelga de la raiz del sitio, no del archivo
+                        destino = os.path.join(raiz, referencia.lstrip('/'))
+                    else:
+                        destino = os.path.join(actual, referencia)
+                    if not _existe_con_caja_exacta(destino, raiz):
                         problemas.append('%s -> %s (no existe o no coincide en mayusculas)'
                                          % (os.path.relpath(camino, raiz), referencia))
     return problemas

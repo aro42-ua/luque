@@ -1,5 +1,20 @@
 <!doctype html>
 <html>
   <head><link rel="stylesheet" href="estilo.css"></head>
-  <body><img src="recurso.svg" alt=""></body>
+  <body>
+    <img src="recurso.svg" alt="">
+
+    <!-- El directorio real se llama js/, no JS/. El NOMBRE DEL ARCHIVO si
+         coincide, asi que solo se detecta comprobando cada segmento del
+         camino: es el caso que se escapaba y daba 404 en Cloudflare. -->
+    <script src="JS/galeria.js"></script>
+
+    <!-- Ruta absoluta de raiz: es VALIDA en un servidor y se resuelve contra la
+         raiz auditada, no contra el directorio de este archivo. No es problema. -->
+    <img src="/Recurso.svg" alt="">
+
+    <!-- Ni mailto: ni tel: son recursos servidos: se ignoran. -->
+    <a href="mailto:hola@luque.example">correo</a>
+    <a href="tel:+34600000000">telefono</a>
+  </body>
 </html>
