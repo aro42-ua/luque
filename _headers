@@ -17,5 +17,11 @@
   Cache-Control: public, max-age=3600
 
 # El marcado nunca se cachea: es quien decide que version del resto se pide.
+# Hacen falta las DOS rutas porque Cloudflare casa el patron contra la ruta de la
+# peticion, no contra el archivo que acaba sirviendo. El visitante pide "/", y esa
+# peticion no casa con "/index.html" aunque sea ese archivo el que recibe. La
+# regla "/index.html" cubre solo a quien escribe la URL entera.
+/
+  Cache-Control: no-cache
 /index.html
   Cache-Control: no-cache

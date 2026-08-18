@@ -1,0 +1,34 @@
+# Con el directorio de salida en "/", Cloudflare Pages sirve TODO lo versionado.
+# Sin este archivo, https://<sitio>/docs/estado-conocido.md contestaria 200 a
+# cualquiera, y ahi esta escrito en texto plano que las tipografias son versiones
+# Trial cuya licencia probablemente no cubre el uso publico, a pocos clics de los
+# propios .otf descargables. /.claude/launch.json ademas filtra rutas locales del
+# tipo C:/Users/... . robots.txt y X-Robots-Tag NO impiden el acceso directo:
+# solo la indexacion. Esto si lo impide.
+#
+# Sintaxis (documentacion de Cloudflare Pages): "[origen] [destino] [codigo]",
+# un redireccionamiento por linea, "#" para comentarios.
+#
+# POR QUE 302 Y NO 404: Cloudflare Pages NO admite 404 en este archivo. Los
+# unicos codigos validos son 301, 302, 303, 307 y 308 (mas 200, que hace de
+# proxy). Su propia tabla de compatibilidad usa "/blog/* /blog/404.html 404"
+# como ejemplo de lo que NO funciona. Un 302 a la portada cumple lo que importa
+# —el contenido no se sirve nunca— y, a diferencia de un 301, no se queda
+# cacheado en los navegadores si algun dia se decide abrir estas rutas.
+#
+# Funciona aunque el archivo exista: la documentacion dice que las reglas se
+# aplican "regardless of whether or not an asset matches the incoming request".
+#
+# Los redireccionamientos estaticos van antes que los dinamicos, como pide la
+# documentacion. Los estaticos cubren la ruta del directorio sin barra final,
+# que el asterisco no llega a casar.
+/docs / 302
+/.claude / 302
+/docs/* / 302
+/.claude/* / 302
+
+# /tests/* se queda ACCESIBLE a proposito. No es un olvido: no contiene nada
+# sensible —el arnes y sus pruebas— y la verificacion del despliegue necesita
+# abrir /tests/test.html contra la URL real para comprobar que las 51
+# comprobaciones pasan servidas desde Cloudflare. El motivo esta en
+# docs/despliegue.md.

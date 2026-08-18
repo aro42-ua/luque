@@ -55,6 +55,46 @@ inspeccionar la respuesta y ver una cabecera que no tiene sentido. Antes de
 añadir una regla nueva, comprobar qué otras reglas ya casan con esa ruta y qué
 cabeceras fijan.
 
+## `_redirects`: qué no se publica, y qué sí a propósito
+
+El directorio de salida es `/`, así que **Pages sirve todo lo que esté
+versionado**, no sólo lo que enlaza `index.html`. Sin hacer nada,
+`https://<sitio>/docs/estado-conocido.md` devolvería 200 a cualquiera — y ese
+archivo dice en texto plano que las tipografías son versiones Trial sin
+licencia para uso público, a pocos clics de los propios `.otf` descargables.
+`/.claude/launch.json` filtra además rutas locales del tipo `C:/Users/...`.
+`robots.txt` y `X-Robots-Tag` no sirven aquí: impiden **indexar**, no
+**acceder**.
+
+`_redirects` cierra `/docs/*` y `/.claude/*`. Funciona aunque el archivo
+exista: la documentación de Cloudflare dice que las reglas se aplican *sin
+importar si un recurso casa con la petición*, así que el redireccionamiento
+gana al archivo real.
+
+**Se devuelve un 302, no un 404, y no es una preferencia:** el archivo
+`_redirects` de Cloudflare Pages **no admite el 404**. Los únicos códigos
+válidos son 301, 302, 303, 307 y 308 —más 200, que actúa como proxy—, y la
+propia tabla de compatibilidad de la documentación usa
+`/blog/* /blog/404.html 404` como ejemplo de lo que **no** funciona. Quien
+venga a «arreglar» el 302 poniendo un 404 se encontrará con una regla que
+Cloudflare descarta y con `docs/` otra vez servido. Un 404 de verdad exigiría
+una Pages Function, es decir, dejar de ser un sitio estático sin paso de
+compilación: no compensa. Se elige 302 sobre 301 porque un 301 se queda
+cacheado en los navegadores y sería doloroso de revertir.
+
+### `/tests/*` sigue accesible, y es deliberado
+
+**Decisión tomada a conciencia, no un descuido.** `tests/` no contiene nada
+sensible: son el arnés y sus pruebas, el mismo código que ya es público en el
+repositorio del sitio. A cambio, dejarlo accesible permite la verificación más
+valiosa del despliegue: abrir `/tests/test.html` en la URL real y comprobar que
+las 51 comprobaciones pasan **servidas desde Cloudflare**, con sus rutas, sus
+tipos MIME y sus mayúsculas de verdad, y no sólo con doble clic en local. Es
+justo lo que ninguna prueba en la máquina de desarrollo puede demostrar.
+
+Si algún día se cierra, hay que sustituir esa verificación por otra
+equivalente, no dejarla sin más.
+
 ## Cerrada a los buscadores: hacen falta los dos, y no son lo mismo
 
 El sitio está cerrado por dos mecanismos distintos, y **ninguno es redundante
