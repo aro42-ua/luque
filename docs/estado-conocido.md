@@ -16,6 +16,20 @@ Las portadas se piden a 800×1000 y las piezas interiores a 2400×3000: la lupa
 necesita que la pieza sea bastante mayor que la pantalla para tener recorrido, y
 la portada solo se ve pequeña en la galería.
 
+## Desplegada
+
+La web vive en Cloudflare Pages, desplegada desde `main`. Cómo funciona el
+despliegue está en `docs/despliegue.md`. Sigue cerrada a los buscadores por
+`robots.txt` mientras el contenido sea de relleno, y las fotos, como ya se dice
+arriba, siguen siendo de picsum.
+
+**Las tres tipografías son versiones Trial y su licencia probablemente no
+cubre el uso público.** `ABCFavorit-Regular-Trial.otf`,
+`ABCFavorit-Bold-Trial.otf` y `ABCFavorit-BoldItalic-Trial.otf` se distribuyen
+para evaluación, no para un sitio público y menos aún el de un estudio
+comercial. Hay que comprar la licencia web en Dinamo o sustituirlas antes de
+anunciar la web. Es deuda conocida, no un descuido.
+
 ## Una cosa que conviene saber
 
 **El código ya no depende de la red.** GSAP era la última librería y se eliminó al
