@@ -55,18 +55,68 @@ inspeccionar la respuesta y ver una cabecera que no tiene sentido. Antes de
 añadir una regla nueva, comprobar qué otras reglas ya casan con esa ruta y qué
 cabeceras fijan.
 
+## Cerrada a los buscadores: hacen falta los dos, y no son lo mismo
+
+El sitio está cerrado por dos mecanismos distintos, y **ninguno es redundante
+con el otro**. Quien quite uno creyendo que el otro lo cubre se queda sin la
+mitad de la protección y no se entera:
+
+- **`robots.txt` impide RASTREAR.** Le pide al buscador que no descargue las
+  páginas.
+- **`X-Robots-Tag: noindex`, que fija `_headers`, impide INDEXAR.** Le prohíbe
+  listar la URL en sus resultados.
+
+La diferencia importa porque un buscador puede listar una URL que nunca ha
+leído. Basta un enlace externo, una mención o un sitemap ajeno para que
+descubra la dirección: `robots.txt` le impide entrar a leerla, pero no le
+impide publicar la URL desnuda. Sin la cabecera, la web puede aparecer en un
+buscador aunque el rastreador haya obedecido.
+
+Los dos se quitan **a la vez**, el día que la web se pueda anunciar. Quitar
+sólo uno no es medio gesto: es dejarse una puerta abierta.
+
+## Antes de desplegar: el auditor de rutas
+
+```
+python tests/auditar_rutas.py
+```
+
+Se ejecuta desde la raíz del repositorio, **antes de cada despliegue**. Su
+propia prueba, que comprueba que el auditor detecta lo que dice detectar:
+
+```
+python tests/prueba_auditar_rutas.py
+```
+
+**Qué comprueba:** que cada recurso local referenciado desde el marcado y el
+CSS —los `src=`, los `href=` y los `url()`— existe con las mayúsculas exactas.
+
+**Por qué existe:** Windows no distingue mayúsculas y el servidor de
+Cloudflare sí. Una referencia escrita `JS/Galeria.js` cuando el archivo se
+llama `js/galeria.js` funciona perfectamente en la máquina de desarrollo y da
+un 404 en producción. Es un fallo silencioso: en local no hay nada que mirar
+que lo delate.
+
+**Por qué no vale lo obvio:** `os.path.exists` no sirve, porque hereda esa
+misma insensibilidad y contestaría que el archivo existe. Por eso el auditor
+lista el directorio padre y compara el nombre exacto contra lo que hay dentro.
+
 ## Los pasos que hace el estudio
 
-Dos pasos de este bloque los hace el estudio desde su propio navegador, no
+Dos cosas de este bloque las hace el estudio desde su propio navegador, no
 Claude:
 
-- **`gh auth login`**, para crear el repositorio en GitHub. Requiere una
-  sesión autenticada de verdad; Claude no introduce credenciales de nadie.
-- **Crear la cuenta de Cloudflare** y el proyecto de Pages. Igual: es una
-  cuenta del estudio, y crearla o autorizarla no es algo que se delegue.
+- **`gh auth login`.** Autenticar la cuenta `aro42-ua` contra GitHub. Es
+  distinto de crear el repositorio: `gh repo create` lo ejecuta luego el
+  controlador, pero necesita una sesión ya iniciada, y esa sesión sólo la
+  puede abrir quien tiene las credenciales. Claude no introduce credenciales
+  de nadie.
+- **Crear la cuenta de Cloudflare** y autorizarla contra GitHub al montar el
+  proyecto de Pages. Igual: es una cuenta del estudio, y Claude no crea
+  cuentas.
 
-Ambos están marcados como tales en las tareas 4 y 5 del plan y no se ejecutan
-desde un subagente.
+Ambas están marcadas como tales en las tareas 4 y 5 del plan y no se delegan a
+un subagente.
 
 ## Cómo se verifica un despliegue
 
