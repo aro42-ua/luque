@@ -1,3 +1,10 @@
+# Acompaña al robots.txt y hace falta porque hacen cosas distintas: robots.txt
+# impide RASTREAR, esta cabecera impide INDEXAR. Sin ella, un enlace externo a
+# una URL nuestra basta para que un buscador la liste sin haberla leido nunca.
+# Los dos se quitan a la vez el dia que la web se pueda anunciar.
+/*
+  X-Robots-Tag: noindex
+
 # Las tipografias no cambian nunca: se cachean un año.
 /*.otf
   Cache-Control: public, max-age=31536000, immutable

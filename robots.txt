@@ -1,5 +1,8 @@
 # Los doce proyectos son de relleno y las tipografias son de prueba.
-# Hasta que entren los trabajos reales y su licencia, la web no se indexa.
-# Quitar este archivo es el gesto deliberado de "ya se puede anunciar".
+# Hasta que entren los trabajos reales y su licencia, la web no se rastrea.
+# Este archivo por si solo no basta: impide rastrear, no impide indexar. Quien
+# cierra la indexacion es la cabecera X-Robots-Tag: noindex del archivo
+# _headers. Se quitan los dos a la vez: ese es el gesto deliberado de decir
+# "ya se puede anunciar".
 User-agent: *
 Disallow: /
