@@ -16,12 +16,32 @@ Las portadas se piden a 800×1000 y las piezas interiores a 2400×3000: la lupa
 necesita que la pieza sea bastante mayor que la pantalla para tener recorrido, y
 la portada solo se ve pequeña en la galería.
 
-## Desplegada
+## Preparada para desplegar, todavía sin desplegar
 
-La web vive en Cloudflare Pages, desplegada desde `main`. Cómo funciona el
-despliegue está en `docs/despliegue.md`. Sigue cerrada a los buscadores por
-`robots.txt` mientras el contenido sea de relleno, y las fotos, como ya se dice
-arriba, siguen siendo de picsum.
+**La web no está publicada en ningún sitio.** Hoy sólo se abre desde el disco,
+con doble clic en `index.html`. No hay repositorio en GitHub, no hay proyecto de
+Cloudflare Pages y no hay URL que enseñar a nadie.
+
+Lo que sí hay es todo lo que el despliegue necesita, ya escrito y comprobado en
+local:
+
+- `docs/despliegue.md`, que explica la configuración de Pages —sin comando de
+  compilación y con el directorio de salida en `/`— y cómo se verifica.
+- `_headers`, con las cabeceras de caché y `X-Robots-Tag: noindex`.
+- `_redirects`, que cierra `/docs/*` y `/.claude/*` para que no se sirvan.
+- `robots.txt`, que impide el rastreo.
+- `tests/auditar_rutas.py`, que comprueba antes de cada despliegue que ninguna
+  ruta local falla por mayúsculas — el fallo que sólo aparece en producción.
+
+Lo que falta son pasos que no dependen del código: crear el repositorio en
+GitHub, crear la cuenta de Cloudflare —la abre el estudio, no Claude— y
+verificar el primer despliegue contra la URL real. Son las tareas 4, 5 y 6 del
+plan `docs/superpowers/plans/2026-08-18-despliegue-bloque-1.md`.
+
+Cuando se publique, saldrá **cerrada a los buscadores** por `robots.txt` y por
+la cabecera `X-Robots-Tag`, y sin dominio propio, mientras el contenido sea de
+relleno y las tipografías sigan siendo Trial. Las fotos, como ya se dice arriba,
+siguen siendo de picsum.
 
 **Las tres tipografías son versiones Trial y su licencia probablemente no
 cubre el uso público.** `ABCFavorit-Regular-Trial.otf`,
