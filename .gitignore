@@ -3,3 +3,8 @@
 Thumbs.db
 .claude/settings.local.json
 .worktrees/
+
+# Lo genera Python al importar el auditor desde su prueba. Ensucia el arbol y un
+# "git add -A" rutinario acabaria publicando un .pyc en el sitio.
+__pycache__/
+*.pyc
