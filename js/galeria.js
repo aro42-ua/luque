@@ -3,6 +3,7 @@ window.Galeria = (function () {
   var canvas = null;
 
   var porElemento = {};
+  var anchoBase = {};
 
   var categoria = null;
   var temporizadorRecomposicion = null;
@@ -26,20 +27,29 @@ window.Galeria = (function () {
     var canvas = document.getElementById('spatialCanvas');
     if (!canvas) return;
 
-    window.Datos.PROYECTOS.forEach(function (p) {
+    var ranuras = window.Composicion.disponer(window.Datos.PROYECTOS.length, 'amplio');
+    var tam = window.Composicion.tamano(window.Datos.PROYECTOS.length, 'amplio');
+    canvas.style.width  = tam.ancho + 'vw';
+    canvas.style.height = tam.alto  + 'vw';
+
+    window.Datos.PROYECTOS.forEach(function (p, i) {
+      var r = ranuras[i];
+      /* El ancho se fija una vez y no se vuelve a tocar: filtrar cambia el
+         tamaño con transform:scale, porque animar width está prohibido. */
+      anchoBase[p.id] = r.w;
       var boton = document.createElement('button');
       boton.className = 'proj';
       boton.type = 'button';
       boton.dataset.id = p.id;
       boton.dataset.cat = p.categoria;
-      boton.style.width = p.pos.w + 'vw';
+      boton.style.width = r.w + 'vw';
       boton.setAttribute('aria-label', 'Abrir el proyecto ' + p.titulo);
 
       var interior = document.createElement('div');
       interior.className = 'proj-inner';
 
       var img = document.createElement('img');
-      img.src = p.portada;
+      img.src = p.portadaUrl;
       img.alt = '';
       img.loading = 'lazy';
       img.decoding = 'async';
@@ -54,7 +64,7 @@ window.Galeria = (function () {
       canvas.appendChild(boton);
 
       porElemento[p.id] = boton;
-      colocar(boton, p.pos.x, p.pos.y, 1);
+      colocar(boton, r.x, r.y, 1);
     });
   }
 
@@ -76,7 +86,8 @@ window.Galeria = (function () {
     categoria = nueva; window.GaleriaPaneo.congelar();
 
     var dentro = window.Datos.porCategoria(nueva);
-    var ranuras = window.LayoutFiltrado.posicionesCompactas(dentro.length);
+    var ranuras = window.Composicion.disponer(dentro.length, 'compacto');
+    var tam = window.Composicion.tamano(dentro.length, 'compacto');
 
     conRecomposicion(function (canvas) {
       window.Datos.PROYECTOS.forEach(function (p) {
@@ -91,12 +102,12 @@ window.Galeria = (function () {
           el.classList.remove('apagado');
           el.removeAttribute('tabindex');
           el.removeAttribute('aria-hidden');
-          colocar(el, r.x, r.y, r.w / p.pos.w);
+          colocar(el, r.x, r.y, r.w / anchoBase[p.id]);
         }
       });
 
-      canvas.style.width = window.LayoutFiltrado.ANCHO + 'vw';
-      canvas.style.height = window.LayoutFiltrado.altoLienzoFiltrado(dentro.length) + 'vw';
+      canvas.style.width  = tam.ancho + 'vw';
+      canvas.style.height = tam.alto  + 'vw';
     });
 
     marcarNavbar(nueva);
@@ -105,17 +116,19 @@ window.Galeria = (function () {
   function quitarFiltro() {
     categoria = null; window.GaleriaPaneo.congelar();
 
+    var ranuras = window.Composicion.disponer(window.Datos.PROYECTOS.length, 'amplio');
+    var tam = window.Composicion.tamano(window.Datos.PROYECTOS.length, 'amplio');
+
     conRecomposicion(function (canvas) {
-      window.Datos.PROYECTOS.forEach(function (p) {
+      window.Datos.PROYECTOS.forEach(function (p, i) {
         var el = elementoDe(p.id);
         el.classList.remove('apagado');
         el.removeAttribute('tabindex');
         el.removeAttribute('aria-hidden');
-        colocar(el, p.pos.x, p.pos.y, 1);
+        colocar(el, ranuras[i].x, ranuras[i].y, 1);
       });
-
-      canvas.style.width = '';
-      canvas.style.height = '';
+      canvas.style.width  = tam.ancho + 'vw';
+      canvas.style.height = tam.alto  + 'vw';
     });
 
     marcarNavbar(null);
@@ -145,8 +158,6 @@ window.Galeria = (function () {
   }
 
   function init() {
-    var problemas = window.Datos.validarDatos(window.Datos.PROYECTOS, window.Datos.CATEGORIAS);
-    if (problemas.length) console.warn('Problemas en los datos:\n' + problemas.join('\n'));
     construir();
 
     stage  = document.getElementById('spatialStage');

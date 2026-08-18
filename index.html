@@ -307,8 +307,9 @@
 
   <script src="js/hero.js"></script>
   <script src="js/datos.js"></script>
+  <script src="js/contenido.js"></script>
+  <script src="js/composicion.js"></script>
   <script src="js/router.js"></script>
-  <script src="js/layout-filtrado.js"></script>
   <script src="js/visor-estado.js"></script>
   <script src="js/cursor.js"></script>
   <script src="js/galeria-teclado.js"></script>
@@ -322,11 +323,18 @@
   <script src="js/visor-chrome.js"></script>
   <script src="js/visor.js"></script>
   <script>
+  /* El contenido llega por red, así que la galería no puede construirse hasta
+     que esté. El preloader ya está en pantalla desde el marcado, así que la
+     espera no se ve. Hero.init() va primero porque es quien lo gobierna. */
   window.Hero.init();
   window.Cursor.init();
-  window.Galeria.init();
-  window.Visor.init();
-  window.Router.init();
+  window.Contenido.cargar(function (proyectos, error) {
+    window.Datos.establecer(proyectos);
+    window.Galeria.init();
+    window.Visor.init();
+    window.Router.init();
+    if (error) window.Galeria.mostrarError(error);
+  });
   </script>
 
 </body>
