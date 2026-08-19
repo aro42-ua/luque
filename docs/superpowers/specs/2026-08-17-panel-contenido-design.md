@@ -2,6 +2,35 @@
 
 Fecha: 2026-08-17
 
+## Correcciones tras implementar los bloques 1 y 2
+
+Añadido el 2026-08-19. Los bloques 1 y 2 están hechos y fusionados, y al
+hacerlos se descubrió que cuatro afirmaciones de este documento no se sostenían.
+Se corrigen aquí y en su sitio, porque el plan del bloque 3 se argumenta desde
+esta especificación y heredaría los errores.
+
+1. **No es Cloudflare Pages, es un Worker.** La cuenta no tiene ningún proyecto
+   de Pages: `wrangler` contestó `The Pages project "luque" does not exist`. La
+   web se sirve desde un Worker de Cloudflare con recursos estáticos. El
+   procedimiento está en `docs/despliegue.md`.
+2. **Cada foto se guarda en tres medidas, no en dos.** Este documento pedía
+   portada a 800×1000 y pieza a 2400×3000. Falta una: la tira de miniaturas del
+   visor pedía la pieza entera —745 KB para enseñarla a 52 px—. Las medidas
+   quedan en portada 1200×1500, pieza 2400×3000 y miniatura 200×250, y el
+   criterio de aceptación 7 se corrige en consecuencia.
+3. **`validarDatos` ya no existe.** El bloque 2 la retiró; su relevo es
+   `Contenido.validar`, en `js/contenido.js`, que valida el modelo nuevo.
+4. **Las piezas no guardan `ancho` ni `alto`.** Se decidió no añadir datos que
+   nadie lee: `js/visor-lupa.js` toma las medidas de `naturalWidth` y
+   `naturalHeight` de la imagen ya cargada, y la galería recorta con
+   `object-fit:cover` dentro de un marco 4:5. Si algún día hace falta evitar el
+   salto de maquetación al cargar, se añaden entonces.
+
+Además, el arnés ya no tiene 51 pruebas sino 61, y parte de lo que la sección
+**Pruebas** pedía añadir ya está hecho: el patrón de ranuras con su no solape
+(`tests/pruebas-composicion.js`) y la validación del contenido
+(`tests/pruebas-contenido.js` y `tests/pruebas-contenido-real.js`).
+
 ## Objetivo
 
 Hoy el contenido de la web está escrito a mano en `js/datos.js`: doce proyectos
@@ -39,7 +68,7 @@ Queda corregido aquí para que la afirmación no sobreviva en ninguna parte.
 
 Dentro:
 
-- Desplegar la web pública en Cloudflare Pages.
+- Desplegar la web pública en Cloudflare (hecho en el bloque 1, como Worker).
 - Un panel de administración con autenticación para dos personas.
 - Crear y borrar proyectos.
 - Subir, borrar y ordenar fotografías; elegir cuál es la portada.
@@ -63,9 +92,9 @@ Fuera, decidido explícitamente:
 Cuatro piezas y **ninguna base de datos**:
 
 ```
-Cloudflare Pages     la web pública + /panel
+Worker (assets)      la web pública + /panel        ← no es Pages, ver correcciones
 Cloudflare Access    deja entrar al panel sólo a dos correos
-Worker               el único código con permisos de escritura
+Worker (API)         el único código con permisos de escritura
 R2                   borrador.json · contenido.json · las imágenes
 ```
 
@@ -153,7 +182,7 @@ la ranura que le corresponde por su índice en la lista. El orden de la lista
 (`#/bruma`), así que renombrar un proyecto no puede romper un enlace que la
 fotógrafa ya haya mandado a un cliente. Al crearlo, el panel lo deriva del
 título, comprueba que no se repita y que no choque con el nombre de una
-categoría — esa comprobación ya existe en `validarDatos`.
+categoría — esa comprobación ya existe en `Contenido.validar`.
 
 **La portada es una de las piezas, elegida.** Hoy se deduce de la primera foto;
 pasa a ser una decisión de quien publica.
@@ -204,19 +233,22 @@ Tres pantallas:
 
 ### Las imágenes se redimensionan en el navegador
 
-Un original ronda entre 20 y 50 MB. El panel genera dos tamaños **antes de
-subir**, tomando como referencia los que usa la web hoy:
+Un original ronda entre 20 y 50 MB. El panel genera **tres** tamaños **antes de
+subir**, uno por cada sitio donde la foto se ve:
 
-- **800 × 1000** como máximo para la portada en la galería.
+- **1200 × 1500** como máximo para la portada, que la galería enseña doce a la
+  vez. Pedir ahí la pieza entera costaba 8,7 MB de entrada en vez de 2,1.
 - **2400 × 3000** como máximo para la pieza, que es lo que le da recorrido a la
-  lupa.
+  lupa y lo único que se guarda a calidad completa.
+- **200 × 250** como máximo para la miniatura de la tira del visor, que se ve a
+  52 px.
 
 Son **cotas, no medidas exactas**: se reduce hasta caber en esa caja
 **conservando la proporción original**, y una foto apaisada saldrá con otras
 cifras. Deformar la fotografía de alguien para cuadrar un número sería
 inaceptable, y el sitio ya está preparado para ello: la portada se recorta con
 `object-fit:cover` dentro de un marco 4:5 y la pieza se muestra entera con
-`object-fit:contain`. Por eso cada pieza guarda su `ancho` y su `alto` reales.
+`object-fit:contain`.
 
 Así no hay procesado de imagen en el servidor ni subidas de 50 MB desde una
 conexión doméstica.
@@ -252,13 +284,13 @@ tuvo que hacerse operable con teclado.
   propósito, para que un borrado accidental sea recuperable. Limpiarlas es una
   acción aparte y explícita.
 - **Un borrador inválido no se puede publicar.** El Worker valida con las mismas
-  reglas que `validarDatos` y devuelve la lista de problemas.
+  reglas que `Contenido.validar` y devuelve la lista de problemas.
 - **Si `contenido.json` no carga**, la web muestra un estado vacío honesto, no
   una galería rota a medias.
 
 ## Pruebas
 
-El arnés actual (`tests/test.html`, 51 pruebas, ES5, sin Node) cubre la lógica
+El arnés actual (`tests/test.html`, 61 pruebas, ES5, sin Node) cubre la lógica
 pura y se amplía con: generación y unicidad de identificadores, validación del
 borrador, el patrón de ranuras —incluido que nunca se solapen— y el cálculo de
 qué ha cambiado entre borrador y publicado.
@@ -307,9 +339,9 @@ y se confirman al implementar.
    Worker.
 6. Todo lo que se hace arrastrando se puede hacer con teclado, y el panel es
    operable de principio a fin sin ratón.
-7. Ninguna imagen subida a R2 supera su cota —800 × 1000 las portadas,
-   2400 × 3000 las piezas— y ninguna sale deformada: la proporción original se
-   conserva siempre.
+7. Ninguna imagen subida a R2 supera su cota —1200 × 1500 las portadas,
+   2400 × 3000 las piezas, 200 × 250 las miniaturas— y ninguna sale deformada:
+   la proporción original se conserva siempre.
 8. Un proyecto de vídeo se reproduce con la línea de tiempo propia del visor, no
    con la interfaz de Vimeo.
 9. Con dos sesiones editando a la vez, la segunda en guardar recibe un conflicto
