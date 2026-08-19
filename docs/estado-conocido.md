@@ -41,6 +41,25 @@ piezas, como ya decía la especificación.
 del **orden de la lista**: reordenar los proyectos en `contenido.json` recompone la
 galería, sin tocar ni una coordenada. No hay `x`/`y` que mantener.
 
+**Las dos calles anchas del lienzo son conocidas y están aceptadas.** El ciclo de
+variantes tiene seis entradas y el modo amplio cuatro columnas; como comparten el
+divisor 2, las columnas pares reciben siempre las cajas anchas pegadas a la izquierda
+y las impares las estrechas empujadas a la derecha. Eso deja dos franjas verticales de
+31,2 vw por las que se puede pasear sin que aparezca nada:
+
+```
+col 0: ocupa   1,2 → 42,0     calle antes:  1,2 vw
+col 1: ocupa  73,2 → 106,8    calle antes: 31,2 vw
+col 2: ocupa 121,2 → 162,0    calle antes: 14,4 vw
+col 3: ocupa 193,2 → 226,8    calle antes: 31,2 vw
+```
+
+Se midió, se miró en pantalla y **se decidió dejarlo**: sobre el lienzo real no se
+percibe como una rejilla. Queda escrito para que nadie lo tome por un fallo nuevo. Si
+algún día molesta, basta con que el número de variantes sea coprimo con 4 y con 2
+—cinco o siete— y las calles quedan todas en 14,4 vw; está comprobado que ni el no
+solape ni el determinismo se ven afectados.
+
 ## Desplegada
 
 **La web está publicada en `https://luque.angelrubioortiz2005.workers.dev`.**
