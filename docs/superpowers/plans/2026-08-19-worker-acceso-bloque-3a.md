@@ -486,7 +486,11 @@ export function reclamacionesValidas(reclamaciones, aud, equipo, ahora) {
     problemas.push('el token no lo emitió nuestro equipo');
   }
 
-  if (!reclamaciones.exp || reclamaciones.exp + MARGEN_RELOJ < ahora) {
+  /* El margen resta, no suma: un token que expira dentro de los próximos
+     MARGEN_RELOJ segundos ya se trata como caducado. Sumando, se aceptarían
+     tokens muertos hasta un minuto — en el extremo que da permiso de
+     escritura, el margen tiene que equivocarse hacia rechazar. */
+  if (!reclamaciones.exp || reclamaciones.exp - MARGEN_RELOJ < ahora) {
     problemas.push('el token ha caducado');
   }
 
