@@ -197,6 +197,28 @@ que lo delate.
 misma insensibilidad y contestaría que el archivo existe. Por eso el auditor
 lista el directorio padre y compara el nombre exacto contra lo que hay dentro.
 
+## Antes de desplegar: el peso de las imágenes
+
+```
+python tests/pesar_imagenes.py
+```
+
+También desde la raíz, **antes de cada despliegue**. Baja por la red, así que
+tarda unos segundos: por eso no está en el arnés del navegador, que tiene que
+ser rápido y no fallar nunca por la conexión.
+
+**Qué comprueba:** lo que pesa cada superficie. La galería tiene presupuesto
+—3 MB— porque se carga **entera** al entrar y es lo que espera quien llega por
+primera vez. Las piezas del visor no lo tienen y no deben tenerlo: son la
+calidad que vende un estudio de fotografía, se piden de una en una y sólo
+cuando alguien abre un proyecto. Sale con código 1 si la galería se pasa.
+
+**Por qué existe:** el bloque 2 dejó la galería pidiendo 8,7 MB al entrar
+—doce piezas a 2400×3000— donde antes pedía 0,8, y nada saltó. Ni el arnés, ni
+el auditor, ni una revisión completa de la rama lo vieron: todos miraban si el
+código era correcto, y lo era. Lo encontró el estudio abriendo la página. Esto
+es lo que faltaba.
+
 ## Los pasos que hace el estudio
 
 Estas cosas las hace el estudio desde su propio navegador o su propia sesión,
