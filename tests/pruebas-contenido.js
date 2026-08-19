@@ -1,3 +1,13 @@
+describe('ReglasContenido.validar', function () {
+  prueba('recibe las categorías en vez de buscarlas', function () {
+    var datos = { proyectos: [ { id: 'x', titulo: 'X', categoria: 'inventada',
+                                 tipo: 'fotos', portada: 'p.jpg',
+                                 piezas: [{ url: 'a.jpg' }] } ] };
+    cierto(ReglasContenido.validar(datos, ['editorial']).length > 0);
+    igual(ReglasContenido.validar(datos, ['inventada']), []);
+  });
+});
+
 describe('Contenido.validar', function () {
   function base() {
     return {
