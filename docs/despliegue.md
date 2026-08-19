@@ -54,9 +54,15 @@ repositorio: lo que se exporta y se sube **es** el sitio.
    contiene `.superpowers/`, `.worktrees/` y `.wrangler/` — directorios de
    trabajo de las herramientas, no parte del sitio — y publicarlos filtraría
    planes internos y rutas locales. `git archive` exporta exactamente lo que
-   está versionado en `main`: 56 archivos, ni uno más ni uno menos. Es el mismo
+   está versionado en `main`, ni un archivo más ni uno menos. Es el mismo
    resultado que habría subido una integración automática con GitHub, sólo que
    aquí el paso se hace a mano.
+
+   Si quieres saber cuántos archivos van a salir antes de desplegar:
+
+   ```
+   git archive main | tar -t | grep -v '/$' | wc -l
+   ```
 4. **Desplegar:**
 
    ```
