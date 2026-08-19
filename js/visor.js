@@ -200,7 +200,7 @@ window.Visor = (function () {
       b.type = 'button';
       b.setAttribute('aria-label', 'Pieza ' + (i + 1) + ' de ' + piezas().length);
       var img = document.createElement('img');
-      img.src = ruta;
+      img.src = proyecto.piezas[i].miniatura || ruta;   // se ven a 52px: pedirlas enteras eran 745 KB cada una
       img.alt = '';
       img.loading = 'lazy';
       b.appendChild(img);

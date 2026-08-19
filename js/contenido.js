@@ -18,9 +18,13 @@ window.Contenido = (function () {
       if (cats.indexOf(p.categoria) === -1) problemas.push(donde + ': categoría desconocida: ' + p.categoria);
       if (p.tipo === 'fotos') {
         if (!p.piezas || !p.piezas.length) problemas.push(donde + ': sin piezas');
-        else if (typeof p.portada !== 'number' || p.portada < 0 || p.portada >= p.piezas.length) {
-          problemas.push(donde + ': la portada no apunta a ninguna pieza');
-        }
+        /* La portada es su propia imagen, más pequeña: la galería enseña doce a
+           la vez y pedirlas a tamaño completo cuesta once veces más. La calidad
+           se reserva para piezas[].url, que es lo que abre el visor. */
+        if (!p.portada) problemas.push(donde + ': sin portada');
+        (p.piezas || []).forEach(function (pieza, j) {
+          if (!pieza || !pieza.url) problemas.push(donde + ': la pieza n.º ' + (j + 1) + ' no trae url');
+        });
       } else if (p.tipo === 'video') {
         if (!p.poster) problemas.push(donde + ': un proyecto de vídeo necesita poster');
       } else {

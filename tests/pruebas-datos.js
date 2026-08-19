@@ -1,8 +1,9 @@
 describe('Datos.establecer', function () {
   function proyectoDeFotos(id) {
     return { id: id, titulo: id, categoria: 'editorial',
-             tipo: 'fotos', portada: 1,
-             piezas: [{ url: 'a.jpg' }, { url: 'b.jpg' }] };
+             tipo: 'fotos', portada: 'portada.jpg',
+             piezas: [{ url: 'a.jpg', miniatura: 'a-min.jpg' },
+                      { url: 'b.jpg', miniatura: 'b-min.jpg' }] };
   }
   function proyectoDeVideo(id) {
     return { id: id, titulo: id, categoria: 'videoclip',
@@ -14,9 +15,11 @@ describe('Datos.establecer', function () {
     igual(Datos.PROYECTOS.length, 2);
   });
 
-  prueba('resuelve portadaUrl a partir del índice de portada', function () {
+  /* La portada tiene imagen propia, más ligera: no es ninguna de las piezas,
+     que se reservan a tamaño completo para el visor. */
+  prueba('portadaUrl es la portada, no una pieza', function () {
     Datos.establecer([proyectoDeFotos('a')]);
-    igual(Datos.PROYECTOS[0].portadaUrl, 'b.jpg');
+    igual(Datos.PROYECTOS[0].portadaUrl, 'portada.jpg');
   });
 
   prueba('en un proyecto de vídeo, portadaUrl es el poster', function () {

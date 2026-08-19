@@ -4,7 +4,8 @@ describe('Contenido.validar', function () {
       version: 1,
       proyectos: [
         { id: 'bruma', titulo: 'Bruma', categoria: 'editorial', tipo: 'fotos',
-          portada: 0, ficha: {}, piezas: [{ url: 'a.jpg' }] }
+          portada: 'portada.jpg', ficha: {},
+          piezas: [{ url: 'a.jpg', miniatura: 'a-min.jpg' }] }
       ]
     };
   }
@@ -28,7 +29,7 @@ describe('Contenido.validar', function () {
   prueba('detecta identificadores repetidos', function () {
     var d = base();
     d.proyectos.push({ id: 'bruma', titulo: 'Otro', categoria: 'editorial',
-                       tipo: 'fotos', portada: 0, ficha: {}, piezas: [{ url: 'b.jpg' }] });
+                       tipo: 'fotos', portada: 'otra.jpg', ficha: {}, piezas: [{ url: 'b.jpg' }] });
     cierto(Contenido.validar(d).join(' ').indexOf('bruma') !== -1);
   });
 
@@ -50,9 +51,21 @@ describe('Contenido.validar', function () {
     cierto(Contenido.validar(d).length > 0);
   });
 
-  prueba('la portada tiene que apuntar a una pieza que existe', function () {
+  prueba('un proyecto de fotos sin portada es un problema', function () {
     var d = base();
-    d.proyectos[0].portada = 3;
+    delete d.proyectos[0].portada;
+    cierto(Contenido.validar(d).length > 0);
+  });
+
+  /* La portada es su propia imagen y no una de las piezas: la galería enseña
+     doce a la vez, así que pedirlas a tamaño completo costaba once veces más. */
+  prueba('la portada no tiene por qué estar entre las piezas', function () {
+    igual(Contenido.validar(base()), []);
+  });
+
+  prueba('una pieza sin url es un problema', function () {
+    var d = base();
+    d.proyectos[0].piezas = [{ miniatura: 'solo-min.jpg' }];
     cierto(Contenido.validar(d).length > 0);
   });
 

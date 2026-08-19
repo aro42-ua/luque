@@ -5,104 +5,250 @@
       "id": "niebla",
       "titulo": "Niebla",
       "categoria": "foto-stills",
-      "ficha": { "cliente": "Personal", "anio": 2025, "camara": "Alexa Mini", "optica": "Zeiss Super Speed" },
+      "ficha": {
+        "cliente": "Personal",
+        "anio": 2025,
+        "camara": "Alexa Mini",
+        "optica": "Zeiss Super Speed"
+      },
       "tipo": "fotos",
-      "portada": 0,
+      "portada": "https://picsum.photos/seed/luque11/1200/1500",
       "piezas": [
-        { "url": "https://picsum.photos/seed/luque11/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque12/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque13/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque14/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque15/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque16/2400/3000" }
+        {
+          "url": "https://picsum.photos/seed/luque11/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque11/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque12/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque12/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque13/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque13/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque14/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque14/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque15/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque15/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque16/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque16/200/250"
+        }
       ]
     },
     {
       "id": "arena",
       "titulo": "Arena",
       "categoria": "foto-stills",
-      "ficha": { "cliente": "Personal", "anio": 2024, "camara": "Alexa Mini", "optica": "Cooke S4" },
+      "ficha": {
+        "cliente": "Personal",
+        "anio": 2024,
+        "camara": "Alexa Mini",
+        "optica": "Cooke S4"
+      },
       "tipo": "fotos",
-      "portada": 0,
+      "portada": "https://picsum.photos/seed/luque21/1200/1500",
       "piezas": [
-        { "url": "https://picsum.photos/seed/luque21/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque22/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque23/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque24/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque25/2400/3000" }
+        {
+          "url": "https://picsum.photos/seed/luque21/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque21/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque22/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque22/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque23/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque23/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque24/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque24/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque25/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque25/200/250"
+        }
       ]
     },
     {
       "id": "vidrio",
       "titulo": "Vidrio",
       "categoria": "foto-stills",
-      "ficha": { "cliente": "Personal", "anio": 2024, "camara": "Sony FX3", "optica": "Zeiss Super Speed" },
+      "ficha": {
+        "cliente": "Personal",
+        "anio": 2024,
+        "camara": "Sony FX3",
+        "optica": "Zeiss Super Speed"
+      },
       "tipo": "fotos",
-      "portada": 0,
+      "portada": "https://picsum.photos/seed/luque31/1200/1500",
       "piezas": [
-        { "url": "https://picsum.photos/seed/luque31/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque32/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque33/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque34/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque35/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque36/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque37/2400/3000" }
+        {
+          "url": "https://picsum.photos/seed/luque31/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque31/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque32/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque32/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque33/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque33/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque34/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque34/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque35/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque35/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque36/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque36/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque37/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque37/200/250"
+        }
       ]
     },
     {
       "id": "bruma",
       "titulo": "Bruma",
       "categoria": "editorial",
-      "ficha": { "cliente": "Vogue ES", "anio": 2025, "camara": "Alexa Mini", "optica": "Zeiss Super Speed" },
+      "ficha": {
+        "cliente": "Vogue ES",
+        "anio": 2025,
+        "camara": "Alexa Mini",
+        "optica": "Zeiss Super Speed"
+      },
       "tipo": "fotos",
-      "portada": 0,
+      "portada": "https://picsum.photos/seed/luque41/1200/1500",
       "piezas": [
-        { "url": "https://picsum.photos/seed/luque41/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque42/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque43/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque44/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque45/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque46/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque47/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque48/2400/3000" }
+        {
+          "url": "https://picsum.photos/seed/luque41/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque41/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque42/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque42/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque43/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque43/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque44/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque44/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque45/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque45/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque46/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque46/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque47/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque47/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque48/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque48/200/250"
+        }
       ]
     },
     {
       "id": "salitre",
       "titulo": "Salitre",
       "categoria": "editorial",
-      "ficha": { "cliente": "Neo2", "anio": 2025, "camara": "Sony FX3", "optica": "Sigma Art" },
+      "ficha": {
+        "cliente": "Neo2",
+        "anio": 2025,
+        "camara": "Sony FX3",
+        "optica": "Sigma Art"
+      },
       "tipo": "fotos",
-      "portada": 0,
+      "portada": "https://picsum.photos/seed/luque51/1200/1500",
       "piezas": [
-        { "url": "https://picsum.photos/seed/luque51/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque52/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque53/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque54/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque55/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque56/2400/3000" }
+        {
+          "url": "https://picsum.photos/seed/luque51/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque51/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque52/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque52/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque53/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque53/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque54/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque54/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque55/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque55/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque56/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque56/200/250"
+        }
       ]
     },
     {
       "id": "oleaje",
       "titulo": "Oleaje",
       "categoria": "editorial",
-      "ficha": { "cliente": "Metal", "anio": 2023, "camara": "Alexa Mini", "optica": "Cooke S4" },
+      "ficha": {
+        "cliente": "Metal",
+        "anio": 2023,
+        "camara": "Alexa Mini",
+        "optica": "Cooke S4"
+      },
       "tipo": "fotos",
-      "portada": 0,
+      "portada": "https://picsum.photos/seed/luque61/1200/1500",
       "piezas": [
-        { "url": "https://picsum.photos/seed/luque61/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque62/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque63/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque64/2400/3000" },
-        { "url": "https://picsum.photos/seed/luque65/2400/3000" }
+        {
+          "url": "https://picsum.photos/seed/luque61/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque61/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque62/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque62/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque63/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque63/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque64/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque64/200/250"
+        },
+        {
+          "url": "https://picsum.photos/seed/luque65/2400/3000",
+          "miniatura": "https://picsum.photos/seed/luque65/200/250"
+        }
       ]
     },
     {
       "id": "reflejo",
       "titulo": "Reflejo",
       "categoria": "videoclip",
-      "ficha": { "cliente": "Amaia", "anio": 2025, "camara": "Alexa Mini", "optica": "Zeiss Super Speed" },
+      "ficha": {
+        "cliente": "Amaia",
+        "anio": 2025,
+        "camara": "Alexa Mini",
+        "optica": "Zeiss Super Speed"
+      },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque7/1600/900",
       "vimeo": null
@@ -111,7 +257,12 @@
       "id": "estatica",
       "titulo": "Estática",
       "categoria": "videoclip",
-      "ficha": { "cliente": "Rusowsky", "anio": 2024, "camara": "Sony FX3", "optica": "Sigma Art" },
+      "ficha": {
+        "cliente": "Rusowsky",
+        "anio": 2024,
+        "camara": "Sony FX3",
+        "optica": "Sigma Art"
+      },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque8/1600/900",
       "vimeo": null
@@ -120,7 +271,12 @@
       "id": "humo",
       "titulo": "Humo",
       "categoria": "videoclip",
-      "ficha": { "cliente": "Ralphie", "anio": 2024, "camara": "Alexa Mini", "optica": "Cooke S4" },
+      "ficha": {
+        "cliente": "Ralphie",
+        "anio": 2024,
+        "camara": "Alexa Mini",
+        "optica": "Cooke S4"
+      },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque9/1600/900",
       "vimeo": null
@@ -129,7 +285,12 @@
       "id": "ceniza",
       "titulo": "Ceniza",
       "categoria": "cortometraje",
-      "ficha": { "cliente": "ECAM", "anio": 2025, "camara": "Alexa Mini", "optica": "Zeiss Super Speed" },
+      "ficha": {
+        "cliente": "ECAM",
+        "anio": 2025,
+        "camara": "Alexa Mini",
+        "optica": "Zeiss Super Speed"
+      },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque10/1600/900",
       "vimeo": null
@@ -138,7 +299,12 @@
       "id": "raiz",
       "titulo": "Raíz",
       "categoria": "cortometraje",
-      "ficha": { "cliente": "Autofinanciado", "anio": 2023, "camara": "Sony FX3", "optica": "Sigma Art" },
+      "ficha": {
+        "cliente": "Autofinanciado",
+        "anio": 2023,
+        "camara": "Sony FX3",
+        "optica": "Sigma Art"
+      },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque11/1600/900",
       "vimeo": null
@@ -147,7 +313,12 @@
       "id": "litoral",
       "titulo": "Litoral",
       "categoria": "cortometraje",
-      "ficha": { "cliente": "Canal Sur", "anio": 2022, "camara": "Alexa Mini", "optica": "Cooke S4" },
+      "ficha": {
+        "cliente": "Canal Sur",
+        "anio": 2022,
+        "camara": "Alexa Mini",
+        "optica": "Cooke S4"
+      },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque12/1600/900",
       "vimeo": null

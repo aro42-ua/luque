@@ -17,9 +17,25 @@ así que se ven con su póster y sin reproducción posible. Es la conducta esper
 hasta que entre el trabajo real del estudio.
 
 Añadir un proyecto real consiste en añadir un objeto a la lista `proyectos` de
-`contenido.json` y nada más. Las portadas se piden a 800×1000 y las piezas interiores
-a 2400×3000: la lupa necesita que la pieza sea bastante mayor que la pantalla para
-tener recorrido, y la portada solo se ve pequeña en la galería.
+`contenido.json` y nada más.
+
+**Cada foto se guarda en tres medidas, y no es capricho.** Cada una se pide donde
+se ve, porque la diferencia entre la mayor y la menor es de casi cuarenta veces:
+
+| Campo | Medida | Dónde se ve | Peso |
+|---|---|---|---|
+| `portada` | 1200×1500 | la galería, doce a la vez | 167 KB |
+| `piezas[].url` | 2400×3000 | la foto grande del visor y la lupa | 746 KB |
+| `piezas[].miniatura` | 200×250 | la tira del visor, a 52 px | 19 KB |
+
+`piezas[].url` es la única que se guarda a tamaño completo, y no se toca: la lupa
+necesita que la pieza sea bastante mayor que la pantalla para tener recorrido, y en
+un estudio de fotografía la calidad de lo que se mira es el producto.
+
+Las otras dos existen para no pagar esa calidad donde no se aprecia. El bloque 2 las
+perdió al migrar —la galería acabó pidiendo doce piezas enteras, 8,7 MB en vez de
+0,8— y por eso la portada volvió a tener imagen propia en vez de ser un índice a las
+piezas, como ya decía la especificación.
 
 **La composición ya no está escrita a mano.** `js/composicion.js` la genera a partir
 del **orden de la lista**: reordenar los proyectos en `contenido.json` recompone la

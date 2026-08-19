@@ -9,10 +9,10 @@ window.Datos = (function () {
   function establecer(proyectos) {
     PROYECTOS.length = 0;
     proyectos.forEach(function (p) { PROYECTOS.push(p); });
-    /* La portada es un índice dentro de piezas, no una URL: se resuelve una
-       sola vez aquí para que el resto del sitio siga leyendo p.portadaUrl. */
+    /* La portada tiene imagen propia, más ligera que las piezas: se resuelve
+       una sola vez aquí para que el resto del sitio siga leyendo p.portadaUrl. */
     PROYECTOS.forEach(function (p) {
-      p.portadaUrl = (p.tipo === 'video') ? p.poster : p.piezas[p.portada].url;
+      p.portadaUrl = (p.tipo === 'video') ? p.poster : p.portada;
     });
   }
 
