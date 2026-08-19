@@ -1,0 +1,7 @@
+name = "luque-api"
+main = "src/index.js"
+compatibility_date = "2026-08-19"
+
+[[r2_buckets]]
+binding = "ALMACEN"
+bucket_name = "luque-contenido"
