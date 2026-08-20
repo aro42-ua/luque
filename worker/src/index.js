@@ -1,6 +1,7 @@
 /* Sólo enruta. Cada ruta la atiende su módulo, para que este archivo se pueda
    leer entero de un vistazo y no crezca con cada cosa que se añada. */
 import { identificar } from './identidad.js';
+import { leerBorrador, guardarBorrador, ConflictoDeVersion } from './almacen.js';
 
 export default {
   async fetch(peticion, entorno) {
@@ -24,6 +25,23 @@ export default {
         return new Response(JSON.stringify({ error: e.message }), {
           status: 403, headers: { 'content-type': 'application/json' }
         });
+      }
+    }
+
+    if (ruta === '/api/borrador' && peticion.method === 'GET') {
+      return Response.json(await leerBorrador(entorno));
+    }
+
+    if (ruta === '/api/borrador' && peticion.method === 'PUT') {
+      try {
+        return Response.json(await guardarBorrador(entorno, await peticion.json()));
+      } catch (e) {
+        /* 409 es exactamente esto: la petición es válida, pero choca con el
+           estado actual. El panel lo distingue de un error de verdad. */
+        if (e instanceof ConflictoDeVersion) {
+          return Response.json({ error: e.message, guardada: e.guardada }, { status: 409 });
+        }
+        throw e;
       }
     }
 
