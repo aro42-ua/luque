@@ -21,3 +21,137 @@ test('borrador sin token de Access responde 403', async () => {
   const r = await worker.fetch(new Request('https://x/api/borrador'), entorno);
   assert.equal(r.status, 403);
 });
+
+/* Lo que sigue prueba las rutas de /api/borrador, que sólo se alcanzan pasando
+   la identidad. Se le pone delante un Access de mentira y se firma el token
+   con una clave RSA de verdad, igual que en identidad.test.js: así la petición
+   recorre el mismo camino que desplegada, puerta incluida.
+
+   La clave se genera una sola vez para todo el archivo a propósito:
+   `identidad.js` cachea las claves en su ámbito de módulo, así que una segunda
+   clave con el mismo `kid` chocaría con la cacheada y estas pruebas fallarían
+   por la firma en vez de por lo que quieren comprobar. */
+const base64url = (t) => Buffer.from(t).toString('base64url');
+
+const par = await crypto.subtle.generateKey(
+  { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+  true, ['sign', 'verify']
+);
+const jwk = { ...(await crypto.subtle.exportKey('jwk', par.publicKey)), kid: 'K1' };
+
+/* Ninguna prueba de este archivo necesita la red de verdad, así que el Access
+   de mentira se deja puesto para todo el archivo. */
+globalThis.fetch = async () => Response.json({ keys: [jwk] });
+
+const TOKEN = await (async () => {
+  const cabecera = base64url(JSON.stringify({ alg: 'RS256', kid: 'K1' }));
+  const cuerpo = base64url(JSON.stringify({
+    aud: ['aud'], iss: 'https://eq.cloudflareaccess.com',
+    exp: Math.floor(Date.now() / 1000) + 3600, email: 'a@x.com'
+  }));
+  const firma = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5', par.privateKey, new TextEncoder().encode(`${cabecera}.${cuerpo}`)
+  );
+  return `${cabecera}.${cuerpo}.${Buffer.from(firma).toString('base64url')}`;
+})();
+
+function peticionBorrador(metodo, cuerpo) {
+  return new Request('https://x/api/borrador', {
+    method: metodo,
+    headers: { 'Cf-Access-Jwt-Assertion': TOKEN },
+    body: cuerpo
+  });
+}
+
+const entornoCon = (ALMACEN) => ({ ...entorno, ALMACEN });
+
+const almacenVacio = () => ({
+  async get() { return null; },
+  async put() { }
+});
+
+function silenciarRegistro(t) {
+  const original = console.error;
+  const lineas = [];
+  console.error = (...partes) => lineas.push(partes.join(' '));
+  t.after(() => { console.error = original; });
+  return lineas;
+}
+
+test('con identidad válida, GET borrador devuelve el borrador vacío', async () => {
+  const r = await worker.fetch(peticionBorrador('GET'), entornoCon(almacenVacio()));
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { version: 0, proyectos: [] });
+});
+
+/* Los dos caminos de error que la revisión encontró sin cubrir. El defecto
+   venía del patrón del brief: GET sin try/catch, y un `throw e` en PUT que
+   relanzaba sin traducir todo lo que no fuera ConflictoDeVersion. */
+
+test('un cuerpo que no es JSON da 400 con mensaje nuestro, no el de JSON.parse', async (t) => {
+  const registro = silenciarRegistro(t);
+
+  const r = await worker.fetch(peticionBorrador('PUT', 'esto no es json'), entornoCon(almacenVacio()));
+  assert.equal(r.status, 400, 'la petición vino mal, no el servidor');
+
+  const { error } = await r.json();
+  assert.equal(error, 'el cuerpo de la petición no es JSON válido');
+  assert.doesNotMatch(error, /Unexpected token|not valid JSON|SyntaxError/,
+    'el mensaje de JSON.parse no puede llegar al cliente');
+  assert.match(registro.join(' '), /JSON/, 'el detalle queda en el registro');
+});
+
+test('si el almacén falla al leer, GET da 500 en castellano', async (t) => {
+  const registro = silenciarRegistro(t);
+  const roto = {
+    async get() { throw new Error('R2 unavailable: connection reset'); },
+    async put() { }
+  };
+
+  const r = await worker.fetch(peticionBorrador('GET'), entornoCon(roto));
+  assert.equal(r.status, 500);
+
+  const { error } = await r.json();
+  assert.equal(error, 'no se pudo leer el borrador guardado');
+  assert.doesNotMatch(error, /R2 unavailable|connection reset/,
+    'el error de R2 no puede llegar al cliente');
+  assert.match(registro.join(' '), /connection reset/, 'el detalle queda en el registro');
+});
+
+test('si el almacén falla al escribir, PUT da 500 en castellano', async (t) => {
+  const registro = silenciarRegistro(t);
+  const roto = {
+    async get() { return null; },
+    async put() { throw new Error('R2 unavailable: connection reset'); }
+  };
+
+  const r = await worker.fetch(
+    peticionBorrador('PUT', JSON.stringify({ version: 0, proyectos: [] })), entornoCon(roto)
+  );
+  assert.equal(r.status, 500);
+
+  const { error } = await r.json();
+  assert.equal(error, 'no se pudo guardar el borrador');
+  assert.doesNotMatch(error, /R2 unavailable|connection reset/,
+    'el error de R2 no puede llegar al cliente');
+  assert.match(registro.join(' '), /connection reset/, 'el detalle queda en el registro');
+});
+
+/* El 409 se comprueba aquí porque el catch que lo distingue se acaba de
+   reestructurar: si un día cae en el 500 genérico, el panel dejaría de poder
+   avisar del choque y esta prueba es la que lo nota. */
+test('un guardado que choca sigue dando 409 y no 500', async () => {
+  const conVersionCuatro = {
+    async get() { return { async json() { return { version: 4, proyectos: [] }; } }; },
+    async put() { }
+  };
+
+  const r = await worker.fetch(
+    peticionBorrador('PUT', JSON.stringify({ version: 1, proyectos: [] })), entornoCon(conVersionCuatro)
+  );
+  assert.equal(r.status, 409);
+
+  const cuerpo = await r.json();
+  assert.equal(cuerpo.guardada, 4);
+  assert.match(cuerpo.error, /cambió mientras editabas/);
+});
