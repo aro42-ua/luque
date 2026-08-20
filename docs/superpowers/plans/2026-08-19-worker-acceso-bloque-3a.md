@@ -868,19 +868,32 @@ const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
     if (ruta === '/api/imagen' && peticion.method === 'POST') {
       const nombre = nombreSeguro(new URL(peticion.url).searchParams.get('nombre'));
       if (!nombre) return Response.json({ error: 'falta el nombre del archivo' }, { status: 400 });
-      await entorno.ALMACEN.put(`img/${nombre}`, peticion.body, {
-        httpMetadata: { contentType: peticion.headers.get('content-type') || 'image/jpeg' }
-      });
+      try {
+        await entorno.ALMACEN.put(`img/${nombre}`, peticion.body, {
+          httpMetadata: { contentType: peticion.headers.get('content-type') || 'image/jpeg' }
+        });
+      } catch (e) {
+        return fallo(500, 'no se pudo guardar la imagen', e);
+      }
       return Response.json({ url: `/img/${nombre}` });
     }
 
     if (ruta === '/api/publicar' && peticion.method === 'POST') {
-      const resultado = await publicar(entorno, CATEGORIAS);
-      /* 422 y no 400: la peticion esta bien formada, lo que no se sostiene es
-         el contenido que se quiere publicar. */
-      return Response.json(resultado, { status: resultado.problemas ? 422 : 200 });
+      try {
+        const resultado = await publicar(entorno, CATEGORIAS);
+        /* 422 y no 400: la peticion esta bien formada, lo que no se sostiene es
+           el contenido que se quiere publicar. */
+        return Response.json(resultado, { status: resultado.problemas ? 422 : 200 });
+      } catch (e) {
+        return fallo(500, 'no se pudo publicar', e);
+      }
     }
 ```
+
+**Usa el ayudante `fallo(estado, mensaje, e)` que ya dejó la Tarea 4**, que registra el
+detalle en `console.error` y devuelve sólo mensaje propio. Sin `catch`, un fallo
+de R2 sale al cliente como excepción del Worker con el texto de la plataforma en
+inglés — el mismo defecto que las Tareas 3 y 4 tuvieron que cerrar.
 
 - [ ] **Paso 6: Commit**
 
