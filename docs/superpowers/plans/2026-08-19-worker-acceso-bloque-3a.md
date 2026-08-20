@@ -711,22 +711,42 @@ import { leerBorrador, guardarBorrador, ConflictoDeVersion } from './almacen.js'
 
 // dentro de fetch(), tras la comprobación de identidad:
     if (ruta === '/api/borrador' && peticion.method === 'GET') {
-      return Response.json(await leerBorrador(entorno));
+      try {
+        return Response.json(await leerBorrador(entorno));
+      } catch (e) {
+        console.error('No se pudo leer el borrador:', e);
+        return Response.json({ error: 'No se pudo leer el borrador' }, { status: 500 });
+      }
     }
 
     if (ruta === '/api/borrador' && peticion.method === 'PUT') {
+      let datos;
       try {
-        return Response.json(await guardarBorrador(entorno, await peticion.json()));
+        datos = await peticion.json();
+      } catch (e) {
+        console.error('Cuerpo de PUT ilegible:', e);
+        return Response.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 });
+      }
+      try {
+        return Response.json(await guardarBorrador(entorno, datos));
       } catch (e) {
         /* 409 es exactamente esto: la peticion es valida, pero choca con el
            estado actual. El panel lo distingue de un error de verdad. */
         if (e instanceof ConflictoDeVersion) {
           return Response.json({ error: e.message, guardada: e.guardada }, { status: 409 });
         }
-        throw e;
+        /* Nada de `throw e`: sin un catch global, la excepcion sale cruda y en
+           ingles al cliente, que es justo lo que la Tarea 3 vino a cerrar. */
+        console.error('No se pudo guardar el borrador:', e);
+        return Response.json({ error: 'No se pudo guardar el borrador' }, { status: 500 });
       }
     }
 ```
+
+**Lo que sale al cliente es siempre nuestro y en castellano.** El detalle interno
+va a `console.error` y se queda en el registro. Un `throw` sin capturar aquí no
+da un 500 con mensaje propio: da una excepción del Worker con el texto en inglés
+de la plataforma.
 
 - [ ] **Paso 6: Commit**
 
