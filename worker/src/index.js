@@ -2,6 +2,14 @@
    leer entero de un vistazo y no crezca con cada cosa que se añada. */
 import { identificar } from './identidad.js';
 import { leerBorrador, guardarBorrador, ConflictoDeVersion } from './almacen.js';
+import { publicar, nombreSeguro } from './publicar.js';
+
+/* Misma lista que `js/datos.js`, pero copiada: `datos.js` cuelga de `window`
+   sin la comprobación de `globalThis` que sí tiene `reglas-contenido.js`, así
+   que importarlo aquí rompería contra un Worker, donde no hay `window`.
+   Mientras esa lista no cambie de un lado sin el otro, mantenerla en dos
+   sitios es el precio de no forzar ese refactor dentro de esta tarea. */
+const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
 
 /* Lo que sale de aquí se le enseña al cliente, así que sólo salen mensajes
    nuestros y en castellano. R2 y `JSON.parse` lanzan en inglés y con detalle
@@ -66,6 +74,34 @@ export default {
           return Response.json({ error: e.message, guardada: e.guardada }, { status: 409 });
         }
         return fallo(500, 'no se pudo guardar el borrador', e);
+      }
+    }
+
+    /* El panel redimensiona antes de subir (a lo sumo unos 750 KB), así que
+       pasar por el Worker con un binding de R2 no tiene coste apreciable y
+       elimina las claves del problema entero: un binding no usa credenciales,
+       así que no hay nada que firmar ni nada que se pueda filtrar. */
+    if (ruta === '/api/imagen' && peticion.method === 'POST') {
+      const nombre = nombreSeguro(new URL(peticion.url).searchParams.get('nombre'));
+      if (!nombre) return Response.json({ error: 'falta el nombre del archivo' }, { status: 400 });
+      try {
+        await entorno.ALMACEN.put(`img/${nombre}`, peticion.body, {
+          httpMetadata: { contentType: peticion.headers.get('content-type') || 'image/jpeg' }
+        });
+      } catch (e) {
+        return fallo(500, 'no se pudo guardar la imagen', e);
+      }
+      return Response.json({ url: `/img/${nombre}` });
+    }
+
+    if (ruta === '/api/publicar' && peticion.method === 'POST') {
+      try {
+        const resultado = await publicar(entorno, CATEGORIAS);
+        /* 422 y no 400: la petición está bien formada, lo que no se sostiene es
+           el contenido que se quiere publicar. */
+        return Response.json(resultado, { status: resultado.problemas ? 422 : 200 });
+      } catch (e) {
+        return fallo(500, 'no se pudo publicar', e);
       }
     }
 

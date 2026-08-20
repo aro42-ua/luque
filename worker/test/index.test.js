@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import worker from '../src/index.js';
+import { generarPar, firmarToken, silenciarRegistro } from './apoyo-token.js';
 
 const entorno = { CORREOS_AUTORIZADOS: 'a@x.com', ACCESS_AUD: 'aud', ACCESS_EQUIPO: 'eq' };
 
@@ -22,6 +23,22 @@ test('borrador sin token de Access responde 403', async () => {
   assert.equal(r.status, 403);
 });
 
+/* Mismo motivo, para las dos rutas de la Tarea 5: si `/api/imagen` o
+   `/api/publicar` se colaran por encima de la comprobación de identidad,
+   quedarían sin proteger y sólo una prueba posicional como ésta lo notaría.
+   El resto del comportamiento de estas rutas se prueba en publicar.test.js. */
+test('imagen sin token de Access responde 403', async () => {
+  const r = await worker.fetch(
+    new Request('https://x/api/imagen?nombre=a.jpg', { method: 'POST' }), entorno
+  );
+  assert.equal(r.status, 403);
+});
+
+test('publicar sin token de Access responde 403', async () => {
+  const r = await worker.fetch(new Request('https://x/api/publicar', { method: 'POST' }), entorno);
+  assert.equal(r.status, 403);
+});
+
 /* Lo que sigue prueba las rutas de /api/borrador, que sólo se alcanzan pasando
    la identidad. Se le pone delante un Access de mentira y se firma el token
    con una clave RSA de verdad, igual que en identidad.test.js: así la petición
@@ -31,29 +48,16 @@ test('borrador sin token de Access responde 403', async () => {
    `identidad.js` cachea las claves en su ámbito de módulo, así que una segunda
    clave con el mismo `kid` chocaría con la cacheada y estas pruebas fallarían
    por la firma en vez de por lo que quieren comprobar. */
-const base64url = (t) => Buffer.from(t).toString('base64url');
-
-const par = await crypto.subtle.generateKey(
-  { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
-  true, ['sign', 'verify']
-);
-const jwk = { ...(await crypto.subtle.exportKey('jwk', par.publicKey)), kid: 'K1' };
+const par = await generarPar('K1');
 
 /* Ninguna prueba de este archivo necesita la red de verdad, así que el Access
    de mentira se deja puesto para todo el archivo. */
-globalThis.fetch = async () => Response.json({ keys: [jwk] });
+globalThis.fetch = async () => Response.json({ keys: [par.jwk] });
 
-const TOKEN = await (async () => {
-  const cabecera = base64url(JSON.stringify({ alg: 'RS256', kid: 'K1' }));
-  const cuerpo = base64url(JSON.stringify({
-    aud: ['aud'], iss: 'https://eq.cloudflareaccess.com',
-    exp: Math.floor(Date.now() / 1000) + 3600, email: 'a@x.com'
-  }));
-  const firma = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5', par.privateKey, new TextEncoder().encode(`${cabecera}.${cuerpo}`)
-  );
-  return `${cabecera}.${cuerpo}.${Buffer.from(firma).toString('base64url')}`;
-})();
+const TOKEN = await firmarToken(par, {
+  aud: ['aud'], iss: 'https://eq.cloudflareaccess.com',
+  exp: Math.floor(Date.now() / 1000) + 3600, email: 'a@x.com'
+});
 
 function peticionBorrador(metodo, cuerpo) {
   return new Request('https://x/api/borrador', {
@@ -69,14 +73,6 @@ const almacenVacio = () => ({
   async get() { return null; },
   async put() { }
 });
-
-function silenciarRegistro(t) {
-  const original = console.error;
-  const lineas = [];
-  console.error = (...partes) => lineas.push(partes.join(' '));
-  t.after(() => { console.error = original; });
-  return lineas;
-}
 
 test('con identidad válida, GET borrador devuelve el borrador vacío', async () => {
   const r = await worker.fetch(peticionBorrador('GET'), entornoCon(almacenVacio()));

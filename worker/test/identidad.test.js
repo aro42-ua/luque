@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { correoPermitido, reclamacionesValidas } from '../src/identidad.js';
+import { base64url, generarPar, firmarToken, silenciarRegistro } from './apoyo-token.js';
 
 const AHORA = 1_800_000_000;
 
@@ -54,24 +55,10 @@ function reclamacionesBuenas() {
   };
 }
 
-async function parDeClaves(kid) {
-  const par = await crypto.subtle.generateKey(
-    { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
-    true, ['sign', 'verify']
-  );
-  const jwk = await crypto.subtle.exportKey('jwk', par.publicKey);
-  return { privada: par.privateKey, jwk: { ...jwk, kid } };
-}
+const parDeClaves = generarPar;
 
-const base64url = (t) => Buffer.from(t).toString('base64url');
-
-async function tokenFirmadoCon(par, reclamaciones = reclamacionesBuenas()) {
-  const cabecera = base64url(JSON.stringify({ alg: 'RS256', kid: par.jwk.kid }));
-  const cuerpo = base64url(JSON.stringify(reclamaciones));
-  const firma = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5', par.privada, new TextEncoder().encode(`${cabecera}.${cuerpo}`)
-  );
-  return `${cabecera}.${cuerpo}.${Buffer.from(firma).toString('base64url')}`;
+function tokenFirmadoCon(par, reclamaciones = reclamacionesBuenas()) {
+  return firmarToken(par, reclamaciones);
 }
 
 const peticionCon = (token) =>
@@ -95,14 +82,6 @@ function accessQueSirve(respuestas, t) {
   };
   t.after(() => { globalThis.fetch = original; });
   return cuenta;
-}
-
-function silenciarRegistro(t) {
-  const original = console.error;
-  const lineas = [];
-  console.error = (...partes) => lineas.push(partes.join(' '));
-  t.after(() => { console.error = original; });
-  return lineas;
 }
 
 test('una rotacion de claves en Access no deja la escritura muerta', async (t) => {
