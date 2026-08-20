@@ -944,14 +944,71 @@ Esto es lo que de verdad importa de esta tarea:
 3. **Un token de otra aplicación no vale.** Si el estudio tiene otra aplicación
    en Access, prueba con su cookie. Esperado: 403 por el `aud`.
 
-- [ ] **Paso 4: Anota lo aprendido**
+- [ ] **Paso 4: Conectar lo que se publica con lo que se lee**
+
+**Sin este paso, publicar no cambia nada de lo que ve un visitante.** Lo detectó
+la revisión de la Tarea 5 y es un hueco de este plan, no de su implementación:
+
+- `publicar()` escribe la llave `contenido.json` **dentro del bucket de R2**.
+- La web pública son recursos estáticos, y `js/contenido.js` pide
+  `contenido.json` por **ruta relativa**: lee el archivo versionado en el
+  repositorio, no el de R2.
+- `POST /api/imagen` devuelve URLs `/img/<nombre>` y **nadie sirve `/img/*`**.
+
+**La decisión: el Worker de los recursos estáticos gana un *binding* de R2 y
+sirve exactamente dos rutas desde él**, dejando pasar todo lo demás a los
+archivos estáticos:
+
+```js
+export default {
+  async fetch(peticion, entorno) {
+    const ruta = new URL(peticion.url).pathname;
+
+    /* Sólo estas dos cosas salen de R2. Todo lo demás son archivos estáticos.
+       Que la lista sea explícita es lo que impide que borrador.json quede
+       legible: no está enrutado, así que no hay URL que lo alcance. */
+    if (ruta === '/contenido.json' || ruta.startsWith('/img/')) {
+      const objeto = await entorno.ALMACEN.get(ruta.slice(1));
+      if (!objeto) return new Response('No existe', { status: 404 });
+      return new Response(objeto.body, {
+        headers: { 'content-type': objeto.httpMetadata?.contentType || 'application/octet-stream' }
+      });
+    }
+
+    return entorno.ASSETS.fetch(peticion);
+  }
+};
+```
+
+**Por qué así y no con un dominio público apuntando al bucket.** La otra opción
+era exponer R2 en su propio dominio. Se descarta por dos motivos concretos:
+
+1. **`borrador.json` vive en el mismo bucket.** Un dominio apuntado al bucket lo
+   dejaría legible por cualquiera que adivine el nombre — el trabajo sin
+   publicar del estudio, expuesto. Con la lista explícita de arriba, no hay ruta
+   que llegue a él.
+2. **Mismo origen.** `contenido.json` desde otro dominio obliga a CORS y a
+   cambiar `RUTA` en `js/contenido.js`. Así la web sigue pidiendo
+   `contenido.json` relativo y no se entera de nada.
+
+Y una restricción que la Tarea 5 ya impuso sobre ésta: **la forma `/img/<nombre>`
+está comprometida**, porque esas URLs se escriben dentro de `contenido.json` y
+se quedan ahí. O se sirve exactamente esa ruta desde el mismo origen, o todo lo
+ya publicado apunta a la nada.
+
+Comprueba, con el estudio delante:
+- `GET /contenido.json` en la web pública devuelve lo que acaba de publicarse.
+- `GET /img/<algo-subido>` devuelve la imagen.
+- `GET /borrador.json` devuelve **404**. Si devuelve el borrador, para.
+
+- [ ] **Paso 5: Anota lo aprendido**
 
 En `docs/despliegue.md`, la sección del Worker de la API: cómo se despliega, qué
 secretos necesita y qué devuelve cada ruta. Y **las cifras reales de las capas
 gratuitas** que hayas confirmado, con su fecha — la especificación pide no dar
 por buenas las de agosto de 2026.
 
-- [ ] **Paso 5: Commit**
+- [ ] **Paso 6: Commit**
 
 ```bash
 git add docs/despliegue.md
