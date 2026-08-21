@@ -3,6 +3,18 @@
    dos veces serían dos reglas que se separan sin que nadie se entere. */
 (function (raiz) {
 
+  /* La lista vive aquí y no en `datos.js` porque la usan los dos lados: el
+     navegador para enrutar y para validar, y el Worker antes de publicar.
+     Estuvo copiada en `worker/src/index.js` y en `js/datos.js` durante el
+     bloque 3a, con un comentario que admitía la copia. Una divergencia haría
+     que el Worker rechace con 422 contenido que el navegador da por bueno, o
+     al revés — que es literalmente el fallo del bloque 2 que motivó sacar
+     estas reglas a un archivo común. `validar` la usa dos veces (choque de id
+     con categoría, y categoría desconocida), así que el sitio natural es éste.
+     `datos.js` la reexporta para no romper a quien lee `Datos.CATEGORIAS`, y
+     por eso `reglas-contenido.js` tiene que cargarse ANTES que `datos.js`. */
+  var CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
+
   function validar(datos, categorias) {
     var problemas = [];
     if (!datos || Object.prototype.toString.call(datos.proyectos) !== '[object Array]') {
@@ -45,5 +57,5 @@
     return problemas;
   }
 
-  raiz.ReglasContenido = { validar: validar };
+  raiz.ReglasContenido = { CATEGORIAS: CATEGORIAS, validar: validar };
 })(typeof window !== 'undefined' ? window : globalThis);

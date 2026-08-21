@@ -1,11 +1,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { problemasDelBorrador, nombreSeguro, publicar } from '../src/publicar.js';
+import {
+  problemasDelBorrador, nombreSeguro, publicar, CATEGORIAS as LA_DEL_WORKER
+} from '../src/publicar.js';
 import { ConflictoDeVersion } from '../src/almacen.js';
 import worker from '../src/index.js';
 import { generarPar, firmarToken, silenciarRegistro } from './apoyo-token.js';
 
 const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
+
+/* La lista estuvo escrita tres veces: aquí, en `worker/src/index.js` y en
+   `js/datos.js`. Una divergencia haría que el Worker rechace con 422 contenido
+   que el navegador da por bueno, o al revés — el fallo del bloque 2 que motivó
+   sacar estas reglas a un archivo común, repetido dentro del bloque que existe
+   para eliminarlo. Aquí se conserva escrita a mano porque es el valor esperado
+   de todas las pruebas del archivo; lo que se afirma es que el Worker no la
+   copia, sino que la lee de donde la lee el navegador. */
+test('el Worker usa la misma lista de categorías que el navegador', () => {
+  assert.deepEqual(LA_DEL_WORKER, CATEGORIAS);
+  assert.equal(LA_DEL_WORKER, globalThis.ReglasContenido.CATEGORIAS,
+    'tiene que ser la misma lista, no otra con el mismo contenido');
+});
 
 test('un borrador valido no da problemas', () => {
   const b = { version: 3, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',

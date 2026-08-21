@@ -2,14 +2,9 @@
    leer entero de un vistazo y no crezca con cada cosa que se añada. */
 import { identificar, FalloDeIdentidad } from './identidad.js';
 import { leerBorrador, guardarBorrador, ConflictoDeVersion } from './almacen.js';
-import { publicar, guardarImagen } from './publicar.js';
-
-/* Misma lista que `js/datos.js`, pero copiada: `datos.js` cuelga de `window`
-   sin la comprobación de `globalThis` que sí tiene `reglas-contenido.js`, así
-   que importarlo aquí rompería contra un Worker, donde no hay `window`.
-   Mientras esa lista no cambie de un lado sin el otro, mantenerla en dos
-   sitios es el precio de no forzar ese refactor dentro de esta tarea. */
-const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
+/* CATEGORIAS sale de `js/reglas-contenido.js`, que es lo que valida en los dos
+   lados. Estuvo copiada aquí durante el bloque 3a. */
+import { publicar, guardarImagen, CATEGORIAS } from './publicar.js';
 
 /* Lo que sale de aquí se le enseña al cliente, así que sólo salen mensajes
    nuestros y en castellano. R2 y `JSON.parse` lanzan en inglés y con detalle

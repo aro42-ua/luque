@@ -7,6 +7,16 @@ import { LLAVE_BORRADOR, LLAVE_CONTENIDO, leerJson, ConflictoDeVersion } from '.
 
 const reglas = globalThis.ReglasContenido;
 
+/* La misma lista que usa el navegador, y no una copia. Estuvo escrita también
+   en `index.js`, con un comentario que reconocía el duplicado: el pretexto era
+   que `datos.js` cuelga de `window` sin el guardián de `globalThis`, pero la
+   lista no tenía por qué vivir en `datos.js`. Ahora la custodia
+   `reglas-contenido.js`, que es este mismo archivo que ya se importa aquí por
+   su efecto, y `datos.js` la lee de ahí. Se reexporta desde aquí en vez de
+   volver a importar el archivo desde `index.js` para que sólo un sitio del
+   Worker sepa del guardián dual. */
+export const CATEGORIAS = reglas.CATEGORIAS;
+
 export function problemasDelBorrador(borrador, categorias) {
   /* Revisión de la Tarea 1: `ReglasContenido.validar` hace `categorias || []`
      por dentro, así que una lista ausente o mal formada no la hace lanzar:
