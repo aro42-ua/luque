@@ -12,6 +12,15 @@
     var vistos = {};
     datos.proyectos.forEach(function (p, i) {
       var donde = p && p.id ? p.id : 'el proyecto n.º ' + (i + 1);
+      /* Un hueco en la lista no puede reventar la validación. Esta línea de
+         arriba ya se protegía con `p &&`, pero las de abajo no: un `null`
+         entre los proyectos lanzaba aquí mismo, y quien publica recibía un
+         500 opaco en vez del 422 con el motivo. Es alcanzable porque guardar
+         el borrador no valida lo que guarda. */
+      if (!p || typeof p !== 'object') {
+        problemas.push(donde + ': no es un proyecto');
+        return;
+      }
       if (!p.id)      problemas.push(donde + ': sin identificador');
       if (!p.titulo)  problemas.push(donde + ': sin título');
       if (vistos[p.id]) problemas.push('identificador repetido: ' + p.id);

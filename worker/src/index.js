@@ -2,7 +2,7 @@
    leer entero de un vistazo y no crezca con cada cosa que se añada. */
 import { identificar } from './identidad.js';
 import { leerBorrador, guardarBorrador, ConflictoDeVersion } from './almacen.js';
-import { publicar, nombreSeguro } from './publicar.js';
+import { publicar, guardarImagen } from './publicar.js';
 
 /* Misma lista que `js/datos.js`, pero copiada: `datos.js` cuelga de `window`
    sin la comprobación de `globalThis` que sí tiene `reglas-contenido.js`, así
@@ -19,6 +19,12 @@ const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
 function fallo(estado, mensaje, e) {
   console.error(`${mensaje}:`, e && e.message);
   return Response.json({ error: mensaje }, { status: estado });
+}
+
+/* Guardar y publicar chocan por la misma razón, así que responden igual: un
+   solo sitio para que las dos formas no se separen con el tiempo. */
+function conflicto(e) {
+  return Response.json({ error: e.message, guardada: e.guardada }, { status: 409 });
 }
 
 export default {
@@ -70,9 +76,7 @@ export default {
       } catch (e) {
         /* 409 es exactamente esto: la petición es válida, pero choca con el
            estado actual. El panel lo distingue de un error de verdad. */
-        if (e instanceof ConflictoDeVersion) {
-          return Response.json({ error: e.message, guardada: e.guardada }, { status: 409 });
-        }
+        if (e instanceof ConflictoDeVersion) return conflicto(e);
         return fallo(500, 'no se pudo guardar el borrador', e);
       }
     }
@@ -80,27 +84,36 @@ export default {
     /* El panel redimensiona antes de subir (a lo sumo unos 750 KB), así que
        pasar por el Worker con un binding de R2 no tiene coste apreciable y
        elimina las claves del problema entero: un binding no usa credenciales,
-       así que no hay nada que firmar ni nada que se pueda filtrar. */
+       así que no hay nada que firmar ni nada que se pueda filtrar. Lo que se
+       acepta y lo que no lo decide `guardarImagen`. */
     if (ruta === '/api/imagen' && peticion.method === 'POST') {
-      const nombre = nombreSeguro(new URL(peticion.url).searchParams.get('nombre'));
-      if (!nombre) return Response.json({ error: 'falta el nombre del archivo' }, { status: 400 });
       try {
-        await entorno.ALMACEN.put(`img/${nombre}`, peticion.body, {
-          httpMetadata: { contentType: peticion.headers.get('content-type') || 'image/jpeg' }
-        });
+        const { estado, cuerpo } = await guardarImagen(entorno, peticion);
+        return Response.json(cuerpo, { status: estado });
       } catch (e) {
         return fallo(500, 'no se pudo guardar la imagen', e);
       }
-      return Response.json({ url: `/img/${nombre}` });
     }
 
     if (ruta === '/api/publicar' && peticion.method === 'POST') {
+      /* La versión es obligatoria: publicar sin decir qué se publica es
+         justo el descuido contra el que sirve el control de versión. Se
+         exige dígitos y no `Number()`, porque `Number(null)` y `Number('')`
+         valen 0, que es una versión legítima. */
+      const version = new URL(peticion.url).searchParams.get('version');
+      if (!/^\d+$/.test(String(version))) {
+        return Response.json(
+          { error: 'falta la versión del borrador que se quiere publicar' }, { status: 400 }
+        );
+      }
+
       try {
-        const resultado = await publicar(entorno, CATEGORIAS);
+        const resultado = await publicar(entorno, CATEGORIAS, Number(version));
         /* 422 y no 400: la petición está bien formada, lo que no se sostiene es
            el contenido que se quiere publicar. */
         return Response.json(resultado, { status: resultado.problemas ? 422 : 200 });
       } catch (e) {
+        if (e instanceof ConflictoDeVersion) return conflicto(e);
         return fallo(500, 'no se pudo publicar', e);
       }
     }

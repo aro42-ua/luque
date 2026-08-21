@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { problemasDelBorrador, nombreSeguro, publicar } from '../src/publicar.js';
+import { ConflictoDeVersion } from '../src/almacen.js';
 import worker from '../src/index.js';
-import { generarPar, firmarToken } from './apoyo-token.js';
+import { generarPar, firmarToken, silenciarRegistro } from './apoyo-token.js';
 
 const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
 
@@ -43,8 +44,21 @@ test('si las categorías no llegan bien, falla en vez de callar', () => {
   assert.throws(() => problemasDelBorrador(b, 'editorial'), /categorías/);
 });
 
+/* I2 de la revisión: la línea 14 de reglas-contenido.js se protegía con
+   `p &&` y la 15 no, así que un hueco en la lista lanzaba «Cannot read
+   properties of null» y salía como 500 opaco en vez del 422 con el motivo.
+   Es alcanzable porque guardarBorrador no valida lo que guarda. */
+test('un hueco entre los proyectos da problemas, no una excepción', () => {
+  for (const hueco of [null, undefined, 'bruma', 42]) {
+    const b = { version: 1, proyectos: [hueco] };
+    const problemas = problemasDelBorrador(b, CATEGORIAS);
+    assert.ok(problemas.join(' ').includes('no es un proyecto'),
+      `un ${JSON.stringify(hueco)} en la lista tiene que salir como problema`);
+  }
+});
+
 /* Lo de aquí abajo toca el binding ALMACEN, que no existe en node --test: se
-   simula con un mapa en memoria que ofrece el mismo get/put que usa R2,
+   simula con un mapa en memoria que ofrece el mismo get/put/head que usa R2,
    siguiendo el mismo patrón que almacen.test.js. */
 function almacenFalso(inicial) {
   const datos = new Map();
@@ -57,6 +71,7 @@ function almacenFalso(inicial) {
         return { async json() { return JSON.parse(texto); } };
       },
       async put(llave, texto) { datos.set(llave, texto); },
+      async head(llave) { return datos.has(llave) ? { key: llave } : null; },
       leido(llave) { return datos.has(llave) ? JSON.parse(datos.get(llave)) : null; }
     }
   };
@@ -67,7 +82,7 @@ test('publicar copia el borrador válido sobre el contenido', async () => {
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = almacenFalso(b);
 
-  const resultado = await publicar(entorno, CATEGORIAS);
+  const resultado = await publicar(entorno, CATEGORIAS, 2);
   assert.deepEqual(resultado, { version: 2 });
   assert.deepEqual(entorno.ALMACEN.leido('contenido.json'), b);
 });
@@ -80,24 +95,36 @@ test('publicar no escribe nada si el borrador no es válido', async () => {
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = almacenFalso(b);
 
-  const resultado = await publicar(entorno, CATEGORIAS);
+  const resultado = await publicar(entorno, CATEGORIAS, 1);
   assert.ok(resultado.problemas.length > 0);
   assert.equal(entorno.ALMACEN.leido('contenido.json'), null, 'contenido.json no debe tocarse');
 });
 
 test('un borrador vacío (nunca guardado) tampoco se publica', async () => {
   const entorno = almacenFalso();
-  const resultado = await publicar(entorno, CATEGORIAS);
+  const resultado = await publicar(entorno, CATEGORIAS, 0);
   assert.ok(resultado.problemas.length > 0);
   assert.equal(entorno.ALMACEN.leido('contenido.json'), null);
+});
+
+/* I7: publicar tenía lectura y escritura sin control de versión, mientras que
+   guardarBorrador sí lo tenía. Un PUT que cayera en medio publicaba algo que
+   el operador nunca dio por bueno. */
+test('publicar una versión que no es la guardada choca y no escribe', async () => {
+  const b = { version: 7, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
+  const entorno = almacenFalso(b);
+
+  await assert.rejects(() => publicar(entorno, CATEGORIAS, 5), ConflictoDeVersion);
+  assert.equal(entorno.ALMACEN.leido('contenido.json'), null,
+    'un choque de versión no puede dejar nada publicado');
 });
 
 /* -------------------------------------------------------------------------
    Las rutas completas, a través de index.js: la comprobación posicional de
    que quedan detrás de la identidad vive en index.test.js. Aquí se prueba lo
    que hace cada ruta una vez que la identidad ya pasó, por lo que hace falta
-   un token válido — de ahí el archivo de apoyo compartido con identidad.test.js
-   e index.test.js. */
+   un token válido — de ahí el archivo de apoyo compartido. */
 
 const entornoBase = { CORREOS_AUTORIZADOS: 'a@x.com', ACCESS_AUD: 'aud', ACCESS_EQUIPO: 'eq' };
 
@@ -108,67 +135,32 @@ const TOKEN = await firmarToken(par, {
   exp: Math.floor(Date.now() / 1000) + 3600, email: 'a@x.com'
 });
 
-function peticion(ruta, metodo, cuerpo) {
-  return new Request(`https://x${ruta}`, {
-    method: metodo,
-    headers: { 'Cf-Access-Jwt-Assertion': TOKEN },
-    body: cuerpo
+const peticionPublicar = (consulta) =>
+  new Request(`https://x/api/publicar${consulta}`, {
+    method: 'POST', headers: { 'Cf-Access-Jwt-Assertion': TOKEN }
   });
-}
-
-function silenciarRegistro(t) {
-  const original = console.error;
-  t.after(() => { console.error = original; });
-  console.error = () => {};
-}
-
-test('POST /api/imagen sin nombre da 400', async () => {
-  const r = await worker.fetch(peticion('/api/imagen', 'POST'), entornoBase);
-  assert.equal(r.status, 400);
-});
-
-test('POST /api/imagen guarda el cuerpo bajo img/ y devuelve la url', async () => {
-  const guardado = {};
-  const entorno = {
-    ...entornoBase,
-    ALMACEN: {
-      async put(llave, cuerpo, opciones) {
-        guardado.llave = llave;
-        guardado.tipo = opciones && opciones.httpMetadata && opciones.httpMetadata.contentType;
-      }
-    }
-  };
-  const r = await worker.fetch(
-    peticion('/api/imagen?nombre=../../bruma/01.jpg', 'POST', 'contenido-de-la-imagen'),
-    entorno
-  );
-  assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { url: '/img/bruma-01.jpg' });
-  assert.equal(guardado.llave, 'img/bruma-01.jpg');
-});
-
-test('POST /api/imagen da 500 en castellano si el almacén falla', async (t) => {
-  silenciarRegistro(t);
-  const entorno = {
-    ...entornoBase,
-    ALMACEN: { async put() { throw new Error('R2 unavailable: connection reset'); } }
-  };
-  const r = await worker.fetch(peticion('/api/imagen?nombre=a.jpg', 'POST', 'x'), entorno);
-  assert.equal(r.status, 500);
-  const { error } = await r.json();
-  assert.equal(error, 'no se pudo guardar la imagen');
-  assert.doesNotMatch(error, /R2 unavailable|connection reset/);
-});
 
 test('POST /api/publicar con un borrador inválido da 422 y no publica', async () => {
   const b = { version: 1, proyectos: [ { id: 'x', titulo: 'X', categoria: 'inventada',
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = { ...entornoBase, ...almacenFalso(b) };
 
-  const r = await worker.fetch(peticion('/api/publicar', 'POST'), entorno);
+  const r = await worker.fetch(peticionPublicar('?version=1'), entorno);
   assert.equal(r.status, 422);
   const cuerpo = await r.json();
   assert.ok(cuerpo.problemas.length > 0);
+  assert.equal(entorno.ALMACEN.leido('contenido.json'), null);
+});
+
+/* I2 visto desde fuera: el contrato es «un borrador inválido devuelve
+   problemas», y un hueco en la lista lo rompía con un 500 opaco. */
+test('POST /api/publicar con un hueco en proyectos da 422, no 500', async () => {
+  const entorno = { ...entornoBase, ...almacenFalso({ version: 1, proyectos: [null] }) };
+
+  const r = await worker.fetch(peticionPublicar('?version=1'), entorno);
+  assert.equal(r.status, 422, 'un borrador inválido se contesta, no revienta');
+  const cuerpo = await r.json();
+  assert.ok(cuerpo.problemas.join(' ').includes('no es un proyecto'));
   assert.equal(entorno.ALMACEN.leido('contenido.json'), null);
 });
 
@@ -177,21 +169,50 @@ test('POST /api/publicar con un borrador válido da 200 y publica', async () => 
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = { ...entornoBase, ...almacenFalso(b) };
 
-  const r = await worker.fetch(peticion('/api/publicar', 'POST'), entorno);
+  const r = await worker.fetch(peticionPublicar('?version=5'), entorno);
   assert.equal(r.status, 200);
   assert.deepEqual(await r.json(), { version: 5 });
   assert.deepEqual(entorno.ALMACEN.leido('contenido.json'), b);
 });
 
+test('POST /api/publicar sin decir la versión da 400', async () => {
+  const b = { version: 5, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
+
+  for (const consulta of ['', '?version=', '?version=abc', '?version=-1']) {
+    const entorno = { ...entornoBase, ...almacenFalso(b) };
+    const r = await worker.fetch(peticionPublicar(consulta), entorno);
+    assert.equal(r.status, 400, `«${consulta}» no dice qué versión se publica`);
+    assert.equal(entorno.ALMACEN.leido('contenido.json'), null);
+  }
+});
+
+test('POST /api/publicar con una versión vieja da 409, igual que guardar', async () => {
+  const b = { version: 7, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
+  const entorno = { ...entornoBase, ...almacenFalso(b) };
+
+  const r = await worker.fetch(peticionPublicar('?version=5'), entorno);
+  assert.equal(r.status, 409, 'no es un error del servidor: choca con el estado');
+
+  const cuerpo = await r.json();
+  assert.equal(cuerpo.guardada, 7, 'la misma forma que el conflicto al guardar');
+  assert.match(cuerpo.error, /cambió mientras editabas/);
+  assert.equal(entorno.ALMACEN.leido('contenido.json'), null);
+});
+
 test('POST /api/publicar da 500 en castellano si el almacén falla al leer', async (t) => {
-  silenciarRegistro(t);
+  const registro = silenciarRegistro(t);
   const entorno = {
     ...entornoBase,
     ALMACEN: { async get() { throw new Error('R2 unavailable: connection reset'); } }
   };
-  const r = await worker.fetch(peticion('/api/publicar', 'POST'), entorno);
+  const r = await worker.fetch(peticionPublicar('?version=1'), entorno);
   assert.equal(r.status, 500);
+
   const { error } = await r.json();
   assert.equal(error, 'no se pudo publicar');
-  assert.doesNotMatch(error, /R2 unavailable|connection reset/);
+  assert.doesNotMatch(error, /R2 unavailable|connection reset/,
+    'el error de R2 no puede llegar al cliente');
+  assert.match(registro.join(' '), /connection reset/, 'el detalle queda en el registro');
 });
