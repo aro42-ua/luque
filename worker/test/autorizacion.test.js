@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { identificar } from '../src/identidad.js';
+import { identificar, correoPermitido } from '../src/identidad.js';
 import worker from '../src/index.js';
 import { generarPar, firmarToken, silenciarRegistro } from './apoyo-token.js';
 
@@ -112,4 +112,55 @@ test('por la puerta, un correo ajeno no llega a escribir en el bucket', async (t
   assert.equal(r.status, 403, 'un correo ajeno no puede escribir');
   assert.equal((await r.json()).error, 'ese correo no tiene permiso');
   assert.deepEqual(escrituras, [], 'no puede quedar nada escrito en el bucket');
+});
+
+/* -------------------------------------------------------------------------
+   R-4 de la revisión final, que es un doble fallo: `correoPermitido`
+   coaccionaba con `String()`, así que `['a@x.com']` pasaba la lista blanca; y
+   entonces `reclamaciones.email.trim()` reventaba y el TypeError salía tal cual
+   al cliente, en inglés, por el único punto de index.js que no pasaba por
+   `fallo()`. Se prueban los dos caminos por separado, porque cerrar uno solo
+   dejaría el otro esperando al siguiente descuido. */
+
+test('la lista blanca no acepta lo que no es una cadena', () => {
+  /* Un array de un elemento es el caso que reprodujo la revisión: `String()`
+     lo convertía en la cadena de dentro. Los demás cierran la familia. */
+  assert.equal(correoPermitido(['a@x.com'], 'a@x.com'), false, 'un array no es un correo');
+  assert.equal(correoPermitido({ toString: () => 'a@x.com' }, 'a@x.com'), false);
+  assert.equal(correoPermitido(['a@x.com', 'b@x.com'], 'a@x.com,b@x.com'), false);
+  assert.equal(correoPermitido(123, '123'), false);
+  assert.equal(correoPermitido(true, 'true'), false);
+  // Y lo de siempre sigue funcionando, para que no pase por rechazarlo todo.
+  assert.equal(correoPermitido('a@x.com', 'a@x.com'), true);
+});
+
+test('un email que es un array da 403 en castellano, no un TypeError en inglés', async (t) => {
+  const registro = silenciarRegistro(t);
+  const r = await worker.fetch(
+    peticionCon(await tokenCon({ email: ['a@x.com'] })),
+    { ...ENTORNO, ALMACEN: { async get() { return null; } } }
+  );
+  assert.equal(r.status, 403);
+
+  const { error } = await r.json();
+  assert.equal(error, 'ese correo no tiene permiso');
+  assert.doesNotMatch(error, /is not a function|TypeError|Cannot read properties/,
+    'el mensaje de la plataforma no puede llegar al cliente');
+  assert.equal(registro.length, 1, 'el detalle queda en el registro');
+});
+
+/* La confusión de tipos que hacía esto alcanzable ya está cerrada, así que aquí
+   se provoca de la única forma que queda: un entorno sin configurar. Lo que se
+   fija no es ese caso concreto, sino la regla — index.js no reenvía nunca un
+   mensaje que no hayamos escrito nosotros. */
+test('si identidad revienta con algo que no es suyo, tampoco sale en inglés', async (t) => {
+  const registro = silenciarRegistro(t);
+  const r = await worker.fetch(peticionCon(await tokenCon({})), undefined);
+  assert.equal(r.status, 403);
+
+  const { error } = await r.json();
+  assert.equal(error, 'no se pudo comprobar tu identidad');
+  assert.doesNotMatch(error, /Cannot read properties|undefined|TypeError/,
+    'el mensaje de la plataforma no puede llegar al cliente');
+  assert.match(registro.join(' '), /ACCESS_EQUIPO|undefined/, 'el diagnóstico no se pierde');
 });

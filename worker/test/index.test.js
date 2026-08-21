@@ -18,7 +18,8 @@ test('salud responde 200 sin pedir identidad', async () => {
 /* La comprobación de identidad es un `if` posicional, no una envoltura: una
    ruta añadida por encima de esa línea quedaría sin proteger y ninguna otra
    prueba lo notaría. Esta prueba es la que lo cierra para /api/borrador. */
-test('borrador sin token de Access responde 403', async () => {
+test('borrador sin token de Access responde 403', async (t) => {
+  silenciarRegistro(t);
   const r = await worker.fetch(new Request('https://x/api/borrador'), entorno);
   assert.equal(r.status, 403);
 });
@@ -27,14 +28,16 @@ test('borrador sin token de Access responde 403', async () => {
    `/api/publicar` se colaran por encima de la comprobación de identidad,
    quedarían sin proteger y sólo una prueba posicional como ésta lo notaría.
    El resto del comportamiento de estas rutas se prueba en publicar.test.js. */
-test('imagen sin token de Access responde 403', async () => {
+test('imagen sin token de Access responde 403', async (t) => {
+  silenciarRegistro(t);
   const r = await worker.fetch(
     new Request('https://x/api/imagen?nombre=a.jpg', { method: 'POST' }), entorno
   );
   assert.equal(r.status, 403);
 });
 
-test('publicar sin token de Access responde 403', async () => {
+test('publicar sin token de Access responde 403', async (t) => {
+  silenciarRegistro(t);
   const r = await worker.fetch(new Request('https://x/api/publicar', { method: 'POST' }), entorno);
   assert.equal(r.status, 403);
 });

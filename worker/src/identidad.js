@@ -5,9 +5,29 @@
 
 const MARGEN_RELOJ = 60;   // segundos de tolerancia entre relojes
 
+/* Los mensajes que nacen aquí están escritos para enseñarse: dicen en
+   castellano por qué no se pudo establecer la identidad, y el panel los
+   necesita para distinguir «vuelve a entrar» de «pide permiso». Lo que NO nace
+   aquí —un TypeError nuestro, un fallo de plataforma— sale en inglés y con
+   detalle interno, que es justo lo que esta rama ha cerrado tres veces.
+   Marcar los nuestros con una clase propia es lo que le permite a index.js
+   distinguirlos, igual que ya hace con ConflictoDeVersion. Sin esto, index.js
+   reenviaba `e.message` a ciegas y bastaba una reclamación `email` que fuera
+   un array para servir «reclamaciones.email.trim is not a function». */
+export class FalloDeIdentidad extends Error {
+  constructor(mensaje) {
+    super(mensaje);
+    this.name = 'FalloDeIdentidad';
+  }
+}
+
 export function correoPermitido(correo, lista) {
-  if (!correo) return false;
-  const limpio = String(correo).trim().toLowerCase();
+  /* Exigir cadena, y no coaccionar con String(): `['a@x.com']` se convertía en
+     `'a@x.com'` y **pasaba la lista blanca**. Es una confusión de tipos en la
+     comprobación de autorización, no un descuido de formato: lo que Access
+     firma es JSON, y en JSON `email` puede llegar siendo cualquier cosa. */
+  if (typeof correo !== 'string') return false;
+  const limpio = correo.trim().toLowerCase();
   if (!limpio) return false;
   return String(lista || '')
     .split(',')
@@ -54,22 +74,22 @@ async function descargarClaves(equipo) {
     /* Si la red falla, `fetch` lanza su propio mensaje en inglés («fetch
        failed»), y este error acaba servido al cliente. */
     console.error('No se pudo hablar con Access:', e.message);
-    throw new Error('no se pudieron leer las claves de Access');
+    throw new FalloDeIdentidad('no se pudieron leer las claves de Access');
   }
-  if (!r.ok) throw new Error('no se pudieron leer las claves de Access');
+  if (!r.ok) throw new FalloDeIdentidad('no se pudieron leer las claves de Access');
 
   let claves;
   try {
     claves = (await r.json()).keys;
   } catch (e) {
     console.error('Access devolvió unas claves ilegibles:', e.message);
-    throw new Error('no se pudieron leer las claves de Access');
+    throw new FalloDeIdentidad('no se pudieron leer las claves de Access');
   }
   /* Se comprueba antes de cachear: una respuesta sin `keys` dejaría la caché
      valiendo `undefined` y el fallo saldría mucho después, como un error de
      plataforma en inglés servido al cliente. */
   if (!Array.isArray(claves) || !claves.length) {
-    throw new Error('no se pudieron leer las claves de Access');
+    throw new FalloDeIdentidad('no se pudieron leer las claves de Access');
   }
 
   /* Sólo se cachea lo que sirve: si la descarga falla, la caché se queda
@@ -117,7 +137,7 @@ function trozoDeToken(texto, queEs) {
     return valor;
   } catch (e) {
     console.error(`No se pudo leer ${queEs} del token de Access:`, e.message);
-    throw new Error(`el token trae ${queEs} ilegible`);
+    throw new FalloDeIdentidad(`el token trae ${queEs} ilegible`);
   }
 }
 
@@ -131,10 +151,10 @@ function bytesDeBase64(s) {
    razonable "a medias" cuando la identidad no se puede establecer. */
 export async function identificar(peticion, entorno) {
   const token = peticion.headers.get('Cf-Access-Jwt-Assertion');
-  if (!token) throw new Error('la petición no trae identidad de Access');
+  if (!token) throw new FalloDeIdentidad('la petición no trae identidad de Access');
 
   const [cabecera, cuerpo, firma] = token.split('.');
-  if (!firma) throw new Error('el token no tiene el formato esperado');
+  if (!firma) throw new FalloDeIdentidad('el token no tiene el formato esperado');
 
   const veniaDeCache = cacheClaves !== null;
   const claves = await clavesDeAcceso(entorno.ACCESS_EQUIPO);
@@ -145,7 +165,7 @@ export async function identificar(peticion, entorno) {
     const renovadas = await clavesTrasRotacion(entorno.ACCESS_EQUIPO);
     if (renovadas) jwk = renovadas.find((k) => k.kid === kid);
   }
-  if (!jwk) throw new Error('el token viene firmado con una clave desconocida');
+  if (!jwk) throw new FalloDeIdentidad('el token viene firmado con una clave desconocida');
 
   let valida = false;
   try {
@@ -161,18 +181,18 @@ export async function identificar(peticion, entorno) {
        a quien llama, de una firma que no cuadra: en ambos casos no se puede
        establecer la identidad. Lo que no puede es salir el error en inglés. */
     console.error('No se pudo comprobar la firma del token de Access:', e.message);
-    throw new Error('la firma del token no se pudo comprobar');
+    throw new FalloDeIdentidad('la firma del token no se pudo comprobar');
   }
-  if (!valida) throw new Error('la firma del token no es válida');
+  if (!valida) throw new FalloDeIdentidad('la firma del token no es válida');
 
   const reclamaciones = trozoDeToken(cuerpo, 'el contenido');
   const problemas = reclamacionesValidas(
     reclamaciones, entorno.ACCESS_AUD, entorno.ACCESS_EQUIPO, Math.floor(Date.now() / 1000)
   );
-  if (problemas.length) throw new Error(problemas.join('; '));
+  if (problemas.length) throw new FalloDeIdentidad(problemas.join('; '));
 
   if (!correoPermitido(reclamaciones.email, entorno.CORREOS_AUTORIZADOS)) {
-    throw new Error('ese correo no tiene permiso');
+    throw new FalloDeIdentidad('ese correo no tiene permiso');
   }
 
   return { correo: reclamaciones.email.trim().toLowerCase() };

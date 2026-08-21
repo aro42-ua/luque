@@ -1,6 +1,6 @@
 /* Sólo enruta. Cada ruta la atiende su módulo, para que este archivo se pueda
    leer entero de un vistazo y no crezca con cada cosa que se añada. */
-import { identificar } from './identidad.js';
+import { identificar, FalloDeIdentidad } from './identidad.js';
 import { leerBorrador, guardarBorrador, ConflictoDeVersion } from './almacen.js';
 import { publicar, guardarImagen } from './publicar.js';
 
@@ -17,7 +17,11 @@ const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
    excepción sale cruda del Worker en vez de como respuesta. El detalle se
    queda en el registro, que es donde sirve para diagnosticar. */
 function fallo(estado, mensaje, e) {
-  console.error(`${mensaje}:`, e && e.message);
+  /* El detalle sólo se añade si aporta algo. Los fallos de identidad son los
+     únicos que salen con su propio mensaje, así que sin esto el registro los
+     escribiría dos veces seguidas y el mismo. */
+  const detalle = e && e.message;
+  console.error(detalle && detalle !== mensaje ? `${mensaje}: ${detalle}` : mensaje);
   return Response.json({ error: mensaje }, { status: estado });
 }
 
@@ -45,10 +49,17 @@ export default {
         identidad = await identificar(peticion, entorno);
       } catch (e) {
         /* 403 y no 401: Access ya autenticó a quien llega hasta aquí, así que
-           esto no es "no sé quién eres" sino "sé quién eres y no puedes". */
-        return new Response(JSON.stringify({ error: e.message }), {
-          status: 403, headers: { 'content-type': 'application/json' }
-        });
+           esto no es "no sé quién eres" sino "sé quién eres y no puedes".
+
+           Éste era el único punto del archivo que no pasaba por `fallo()`, y
+           reenviaba `e.message` a ciegas: bastaba un token bien firmado cuya
+           reclamación `email` fuera un array para servir al cliente
+           «reclamaciones.email.trim is not a function». Ahora sólo se enseña
+           el mensaje si lo escribimos nosotros —eso es lo que marca
+           FalloDeIdentidad—; cualquier otra cosa se registra y sale con
+           mensaje propio, como el resto de las rutas. */
+        return fallo(403,
+          e instanceof FalloDeIdentidad ? e.message : 'no se pudo comprobar tu identidad', e);
       }
     }
 
