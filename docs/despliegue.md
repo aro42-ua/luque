@@ -22,8 +22,24 @@ Antes de desplegar así se comprobó en la documentación de Cloudflare que los
 Workers con recursos estáticos soportan `_headers` y `_redirects` de forma
 nativa, colocándolos en el directorio de recursos — la misma mecánica que
 Pages. La salvedad que documenta Cloudflare, que esos archivos no se aplican a
-respuestas generadas por código de Worker, no afecta aquí: no hay código, es
+respuestas generadas por código de Worker, no afecta **hoy**: no hay código, es
 un sitio estático puro.
+
+> **Aviso: esa salvedad deja de no afectar en cuanto este Worker tenga código.**
+> El Paso 4 de la Tarea 6 del plan del bloque 3a le da a **este mismo Worker**
+> un `main` con un `fetch()` que sirve `/contenido.json` y `/img/*` desde R2 y
+> delega el resto en `entorno.ASSETS.fetch(peticion)`. El día que eso se
+> despliegue, `_redirects` puede dejar de aplicarse sin ningún error ni aviso, y
+> lo que se reabre en silencio es exactamente lo que el bloque 1 cerró:
+> `/docs/estado-conocido.md`, que dice en texto plano que las tipografías son
+> versiones Trial sin licencia, `/.claude/launch.json` con rutas `C:/Users/...`
+> y `/worker/*` con el código del servidor.
+>
+> **Quien despliegue ese paso tiene que comprobar, después de desplegar, que
+> `GET /docs/estado-conocido.md`, `GET /.claude/launch.json` y
+> `GET /worker/wrangler.toml` siguen devolviendo 302.** Si devuelven el
+> contenido, el enrutado por código se ha comido `_redirects` y hay que cerrar
+> esas rutas dentro del propio `fetch()` antes de dejarlo puesto.
 
 **Quien vea esto y piense en "arreglarlo" volviendo a Pages: no hay proyecto
 de Pages que recuperar.** La cuenta no tiene ninguno, y crear uno nuevo va
@@ -113,11 +129,20 @@ de los propios `.otf` descargables. `/.claude/launch.json` filtra además rutas
 locales del tipo `C:/Users/...`. `robots.txt` y `X-Robots-Tag` no sirven aquí:
 impiden **indexar**, no **acceder**.
 
-`_redirects` cierra `/docs/*` y `/.claude/*`. Funciona aunque el archivo
-exista: la documentación de Cloudflare dice que las reglas se aplican *sin
-importar si un recurso casa con la petición*, así que el redireccionamiento
-gana al archivo real. **Verificado contra el servidor real:** ambas rutas
-devuelven 302 y sirven la portada, no el markdown ni el JSON.
+`_redirects` cierra `/docs/*`, `/.claude/*` y `/worker/*`. Funciona aunque el
+archivo exista: la documentación de Cloudflare dice que las reglas se aplican
+*sin importar si un recurso casa con la petición*, así que el
+redireccionamiento gana al archivo real. **Verificado contra el servidor real:**
+`/docs/*` y `/.claude/*` devuelven 302 y sirven la portada, no el markdown ni el
+JSON. `/worker/*` se añadió en el bloque 3a y **está sin verificar contra el
+servidor**, porque la rama todavía no se ha desplegado.
+
+**`/worker/*` es la lección que conviene no repetir.** El bloque 3a añadió un
+directorio de primer nivel entero —el código del Worker de la API, sus pruebas
+y `wrangler.toml` con el nombre del bucket— y nadie volvió a abrir este archivo
+hasta la revisión final. `git archive` lo subía con todo lo demás. **Añadir un
+directorio de primer nivel obliga a decidir aquí si se sirve o no**, porque el
+valor por omisión es servirlo.
 
 **Se devuelve un 302, no un 404, y no es una preferencia:** el archivo
 `_redirects` de Cloudflare **no admite el 404**. Los únicos códigos válidos

@@ -6,6 +6,15 @@
 # tipo C:/Users/... . robots.txt y X-Robots-Tag NO impiden el acceso directo:
 # solo la indexacion. Esto si lo impide.
 #
+# QUIEN ANADA UN DIRECTORIO DE PRIMER NIVEL TIENE QUE VOLVER AQUI. El bloque 3a
+# creo worker/ y nadie volvio a abrir este archivo: `git archive` subia sus 14
+# archivos y /worker/src/identidad.js y /worker/wrangler.toml —con el nombre del
+# bucket y el del Worker de la API— habrian contestado 200 a cualquiera. No hay
+# credenciales dentro, pero la logica de verificacion de identidad entera y los
+# nombres de la infraestructura no tienen por que ser publicos. Se cierra igual
+# que docs/ y .claude/, y no sacandolo del despliegue: asi el arbol desplegado
+# sigue siendo exactamente lo versionado, que es lo que dice docs/despliegue.md.
+#
 # Sintaxis (documentacion de Cloudflare Pages): "[origen] [destino] [codigo]",
 # un redireccionamiento por linea, "#" para comentarios.
 #
@@ -24,8 +33,10 @@
 # que el asterisco no llega a casar.
 /docs / 302
 /.claude / 302
+/worker / 302
 /docs/* / 302
 /.claude/* / 302
+/worker/* / 302
 
 # /tests/* se queda ACCESIBLE a proposito. No es un olvido: no contiene nada
 # sensible —el arnes y sus pruebas— y la verificacion del despliegue necesita
