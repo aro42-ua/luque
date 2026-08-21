@@ -1,0 +1,17 @@
+/* Existe para que la prueba del auditor ejercite de verdad el patron de las
+   url de CSS. Hasta el bloque 3a no lo ejercitaba nadie: las fixtures solo
+   tenian src y href, asi que ese patron se podia romper entero y la prueba
+   seguia en verde — y de hecho hubo que tocarlo para arreglar un falso
+   positivo. Ojo al escribir comentarios aqui: el auditor lee el archivo entero,
+   comentarios incluidos, asi que un ejemplo escrito literalmente se auditaria
+   como si fuera una referencia de verdad. */
+
+.roto {
+  /* Este SI es un problema: el archivo no existe. */
+  background-image: url(fondo-que-no-existe.png);
+}
+
+.bueno {
+  /* Este NO lo es: Recurso.svg esta al lado y con las mayusculas exactas. */
+  background-image: url("Recurso.svg");
+}

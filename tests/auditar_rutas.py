@@ -10,9 +10,18 @@ import os
 import re
 
 # src="..." y href="..." del marcado, y url(...) del CSS
+#
+# El (?<![\w-]) de url( no es adorno: sin el, el patron casa DENTRO de cualquier
+# identificador que termine en "url", y el bloque 3a introdujo uno —base64url(—
+# en las pruebas del Worker. El auditor pasaba entonces a reportar
+# "JSON.stringify(reclamaciones" y "no soy json" como rutas rotas, salia con
+# codigo 1 y dejaba en rojo una comprobacion previa al despliegue que nadie
+# volveria a mirar. Se arregla la causa —exigir que "url(" no venga pegado a una
+# letra, un digito, un guion bajo o un guion— y no se oculta ningun directorio:
+# meter worker/ en IGNORADOS habria escondido codigo que el sitio si sirve.
 PATRONES = [
     re.compile(r'(?:src|href)\s*=\s*["\']([^"\']+)["\']'),
-    re.compile(r'url\(\s*["\']?([^"\')]+)["\']?\s*\)'),
+    re.compile(r'(?<![\w-])url\(\s*["\']?([^"\')]+)["\']?\s*\)'),
 ]
 
 EXTENSIONES = ('.html', '.css', '.js')
