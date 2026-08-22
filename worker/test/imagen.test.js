@@ -50,7 +50,12 @@ function subir(consulta, cuerpo, cabeceras = {}) {
 }
 
 /* Bucket falso con el get/put/head de R2 y memoria de lo escrito, para poder
-   afirmar que una subida rechazada no dejó nada dentro. */
+   afirmar que una subida rechazada no dejó nada dentro.
+   `cuerpo` guarda los bytes tal cual llegan al `put`, no sólo su longitud:
+   una revisión anterior dejó el simulacro quedándose sólo con `byteLength` y
+   `contentType`, así que un `guardarImagen` que mandara a R2 cualquier otra
+   cosa con el mismo tamaño y el mismo tipo habría seguido dejando las
+   pruebas en verde. Ver 'lo que llega a R2 es lo que se mandó' más abajo. */
 function bucketFalso(existentes = []) {
   const datos = new Map(existentes.map((llave) => [llave, { bytes: 1 }]));
   return {
@@ -59,6 +64,7 @@ function bucketFalso(existentes = []) {
       async put(llave, cuerpo, opciones) {
         datos.set(llave, {
           bytes: cuerpo.byteLength,
+          cuerpo: cuerpo instanceof ArrayBuffer ? new Uint8Array(cuerpo).slice() : cuerpo,
           tipo: opciones && opciones.httpMetadata && opciones.httpMetadata.contentType
         });
       },
@@ -88,6 +94,39 @@ test('POST /api/imagen guarda el cuerpo bajo img/ y devuelve la url', async () =
   const guardado = entorno.ALMACEN.guardado('img/bruma-01.jpg');
   assert.ok(guardado, 'la llave saneada es la que se escribe');
   assert.equal(guardado.tipo, 'image/jpeg');
+});
+
+/* Ninguna otra prueba de este archivo comprobaba que lo que llega a R2 es
+   el cuerpo que se mandó: comprobaban tipo y longitud, y esas dos cuadran
+   igual aunque `guardarImagen` mande a `put` otra cosa del mismo tamaño.
+   Verificado por mutación: con el `put` guardando `'BASURA'.repeat(...)` en
+   vez de `cuerpo`, o con `guardarImagen` pasando cualquier valor que no sea
+   los bytes reales, esta prueba cae; con el código tal cual, pasa. */
+test('lo que llega a R2 es exactamente lo que se mandó', async () => {
+  const entorno = { ...entornoBase, ...bucketFalso() };
+  const contenido = 'estos-son-los-bytes-reales-de-la-imagen-0123456789';
+  const r = await worker.fetch(
+    subir('?nombre=real.jpg', contenido, { 'content-type': 'image/jpeg' }), entorno
+  );
+  assert.equal(r.status, 200);
+
+  const guardado = entorno.ALMACEN.guardado('img/real.jpg');
+  assert.equal(new TextDecoder().decode(guardado.cuerpo), contenido,
+    'el cuerpo guardado en R2 tiene que ser byte a byte el que se mandó');
+});
+
+/* La revisión final: un `?nombre=` de más de mil caracteres pasaba esta
+   comprobación, moría al llegar a R2 (que rechaza llaves de más de 1024
+   bytes) y salía como un 500 opaco que no explicaba nada. */
+test('un nombre demasiado largo da 400 y no llega a R2', async () => {
+  const entorno = { ...entornoBase, ...bucketFalso() };
+  const nombreLargo = `${'a'.repeat(1504)}.jpg`;
+  const r = await worker.fetch(
+    subir(`?nombre=${nombreLargo}`, 'x', { 'content-type': 'image/jpeg' }), entorno
+  );
+  assert.equal(r.status, 400, 'tiene que rechazarse antes de intentar R2, no morir contra R2');
+  assert.match((await r.json()).error, /demasiado largo/);
+  assert.equal(entorno.ALMACEN.cuantos, 0, 'un nombre inválido no puede escribir nada');
 });
 
 /* I1: el tipo que se guarda sale de la extensión, nunca de lo que declara
