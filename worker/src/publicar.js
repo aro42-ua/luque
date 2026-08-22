@@ -45,6 +45,15 @@ export function nombreSeguro(nombre) {
   return limpio || null;
 }
 
+/* R2 rechaza llaves de mas de 1024 bytes. `nombreSeguro` sólo deja pasar
+   ASCII, así que un carácter es un byte y contar caracteres basta. 200 deja
+   de sobra para cualquier nombre real —"reportaje-boda-marina-y-diego.jpg"
+   no llega ni a 40— y queda muy por debajo del límite de R2 incluso sumando
+   el prefijo `img/`. Sin este tope, un nombre de más de mil caracteres pasaba
+   esta comprobación, moría al llegar a R2, y el estudio veía un 500 opaco que
+   no explicaba qué había pasado. */
+export const TOPE_NOMBRE = 200;
+
 /* Lista blanca de formatos, y el tipo que se guarda lo decide la extensión,
    nunca lo que declara quien sube. Sin esto, `?nombre=perfil.html` con
    `content-type: text/html` deja HTML —y por tanto JavaScript— alojado en el
@@ -83,6 +92,11 @@ export async function guardarImagen(entorno, peticion) {
   const url = new URL(peticion.url);
   const nombre = nombreSeguro(url.searchParams.get('nombre'));
   if (!nombre) return { estado: 400, cuerpo: { error: 'falta el nombre del archivo' } };
+  if (nombre.length > TOPE_NOMBRE) {
+    return { estado: 400, cuerpo: {
+      error: `el nombre del archivo es demasiado largo (máximo ${TOPE_NOMBRE} caracteres, y llegaron ${nombre.length})`
+    } };
+  }
 
   const tipo = tipoDeImagen(nombre, peticion.headers.get('content-type'));
   if (!tipo) {
