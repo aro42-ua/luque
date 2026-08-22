@@ -3,7 +3,7 @@
    ruta que no pasa por Access, esta es la unica linea de defensa que queda.
    La especificacion lo pide expresamente. */
 
-const MARGEN_RELOJ = 60;   // segundos de tolerancia entre relojes
+const MARGEN_ANTICIPACION = 60;   // segundos de colchon: caduca antes de su exp real
 
 /* Los mensajes que nacen aquí están escritos para enseñarse: dicen en
    castellano por qué no se pudo establecer la identidad, y el panel los
@@ -47,12 +47,13 @@ export function reclamacionesValidas(reclamaciones, aud, equipo, ahora) {
     problemas.push('el token no lo emitió nuestro equipo');
   }
 
-  /* El margen resta, no suma: un token que expira dentro de los próximos
-     MARGEN_RELOJ segundos ya se trata como caducado. Si sumara, un token
-     recién caducado quedaría "dentro del margen" y se aceptaría — justo el
-     fallo que esta comprobación existe para evitar. Ante la duda, más
-     estricto, no más laxo. */
-  if (!reclamaciones.exp || reclamaciones.exp - MARGEN_RELOJ < ahora) {
+  /* No es tolerancia entre relojes, es anticipación: un token al que le
+     quedan menos de MARGEN_ANTICIPACION segundos ya se trata como caducado,
+     aunque su `exp` real todavía no haya pasado. La resta hace que sea así
+     — si sumara, sería lo contrario: un token recién caducado quedaría
+     "dentro del margen" y se aceptaría, justo el fallo que esto existe para
+     evitar. Ante la duda, más estricto, no más laxo. */
+  if (!reclamaciones.exp || reclamaciones.exp - MARGEN_ANTICIPACION < ahora) {
     problemas.push('el token ha caducado');
   }
 
