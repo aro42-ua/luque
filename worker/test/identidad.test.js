@@ -36,8 +36,26 @@ test('rechaza un emisor que no es nuestro equipo', () => {
 });
 
 test('acepta un token correcto', () => {
-  const r = { aud: ['nuestro'], iss: 'https://eq.cloudflareaccess.com', exp: AHORA + 60, email: 'a@x.com' };
+  const r = { aud: ['nuestro'], iss: 'https://eq.cloudflareaccess.com', exp: AHORA + 3600, email: 'a@x.com' };
   assert.deepEqual(reclamacionesValidas(r, 'nuestro', 'eq', AHORA), []);
+});
+
+/* La frontera es a proposito: con exp = AHORA + 60 y un margen de anticipacion
+   de 60 segundos, exp - margen == ahora, y la comprobacion es `< ahora` (no
+   `<=`), asi que justo en el borde el token TODAVIA se acepta. Un segundo
+   menos de vida y ya no: exp = AHORA + 59 cae del lado caducado. Se deja
+   escrito para que el comportamiento elegido en la frontera no cambie sin
+   querer al tocar la comprobacion. */
+test('en la frontera exacta del margen el token se acepta, un segundo antes no', () => {
+  const base = { aud: ['nuestro'], iss: 'https://eq.cloudflareaccess.com', email: 'a@x.com' };
+  assert.deepEqual(
+    reclamacionesValidas({ ...base, exp: AHORA + 60 }, 'nuestro', 'eq', AHORA), [],
+    'exp - margen == ahora: todavia no ha caducado'
+  );
+  assert.ok(
+    reclamacionesValidas({ ...base, exp: AHORA + 59 }, 'nuestro', 'eq', AHORA).length > 0,
+    'un segundo menos de vida y ya cae del lado caducado'
+  );
 });
 
 /* Lo que sigue prueba `identificar`, que en la Tarea 3 se dejó sin prueba por
