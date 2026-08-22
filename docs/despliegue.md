@@ -26,20 +26,26 @@ respuestas generadas por código de Worker, no afecta **hoy**: no hay código, e
 un sitio estático puro.
 
 > **Aviso: esa salvedad deja de no afectar en cuanto este Worker tenga código.**
-> El Paso 4 de la Tarea 6 del plan del bloque 3a le da a **este mismo Worker**
-> un `main` con un `fetch()` que sirve `/contenido.json` y `/img/*` desde R2 y
-> delega el resto en `entorno.ASSETS.fetch(peticion)`. El día que eso se
-> despliegue, `_redirects` puede dejar de aplicarse sin ningún error ni aviso, y
-> lo que se reabre en silencio es exactamente lo que el bloque 1 cerró:
-> `/docs/estado-conocido.md`, que dice en texto plano que las tipografías son
-> versiones Trial sin licencia, `/.claude/launch.json` con rutas `C:/Users/...`
-> y `/worker/*` con el código del servidor.
+> Ese código todavía no existe: el plan del bloque 3a ya terminó de escribirse
+> y su Tarea 6, Paso 4 ("Anota lo aprendido") es documentación, no código —
+> **no** es el paso que describía una versión anterior de este aviso, y no
+> hay todavía ningún plan del bloque 3b ni 3c que lo escriba. El riesgo es
+> real igualmente: en cuanto **este mismo Worker** (el que sirve los recursos
+> estáticos) gane un `main` con un `fetch()` propio — por ejemplo, para servir
+> `/contenido.json` y `/img/*` desde R2 delegando el resto en
+> `entorno.ASSETS.fetch(peticion)` — `_redirects` puede dejar de aplicarse sin
+> ningún error ni aviso, y lo que se reabre en silencio es exactamente lo que
+> el bloque 1 cerró: `/docs/estado-conocido.md`, que dice en texto plano que
+> las tipografías son versiones Trial sin licencia, `/.claude/launch.json` con
+> rutas `C:/Users/...`, y `/worker/*` con el código del servidor, que cerró
+> este mismo bloque 3a.
 >
-> **Quien despliegue ese paso tiene que comprobar, después de desplegar, que
-> `GET /docs/estado-conocido.md`, `GET /.claude/launch.json` y
-> `GET /worker/wrangler.toml` siguen devolviendo 302.** Si devuelven el
-> contenido, el enrutado por código se ha comido `_redirects` y hay que cerrar
-> esas rutas dentro del propio `fetch()` antes de dejarlo puesto.
+> **Quien escriba ese `fetch()` —en el bloque que sea— tiene que comprobar,
+> después de desplegar, que `GET /docs/estado-conocido.md`,
+> `GET /.claude/launch.json` y `GET /worker/wrangler.toml` siguen devolviendo
+> 302.** Si devuelven el contenido, el enrutado por código se ha comido
+> `_redirects` y hay que cerrar esas rutas dentro del propio `fetch()` antes de
+> dejarlo puesto. No des por hecho que un plan ya lo cubre: compruébalo aquí.
 
 **Quien vea esto y piense en "arreglarlo" volviendo a Pages: no hay proyecto
 de Pages que recuperar.** La cuenta no tiene ninguno, y crear uno nuevo va
