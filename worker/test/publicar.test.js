@@ -202,7 +202,7 @@ test('un borrador guardado con la versión como cadena se puede publicar', async
   const r = await worker.fetch(peticionPublicar('?version=3'), entorno);
   assert.equal(r.status, 200, 'no puede quedar impublicable para siempre');
   assert.deepEqual(await r.json(), { version: 3 });
-  assert.equal(entorno.ALMACEN.leido('contenido.json').version, 3,
+  assert.strictEqual(entorno.ALMACEN.leido('contenido.json').version, 3,
     'lo publicado lleva un número, no la cadena');
 });
 

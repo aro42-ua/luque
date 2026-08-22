@@ -153,7 +153,7 @@ test('la versión como cadena se guarda igual y no da un conflicto falso', async
   );
   assert.equal(r.status, 200);
   assert.deepEqual(await r.json(), { version: 1 });
-  assert.equal(escrito[0].version, 1, 'lo guardado es un número, no una cadena');
+  assert.strictEqual(escrito[0].version, 1, 'lo guardado es un número, no una cadena');
 });
 
 test('una versión que no es un número da 400 y no 409', async (t) => {

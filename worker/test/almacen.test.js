@@ -36,10 +36,10 @@ test('el conflicto dice las dos versiones, para poder avisar bien', () => {
    guardarse, dejaba el borrador impublicable para siempre. */
 
 test('una version escrita como cadena de digitos se lee como numero', () => {
-  assert.equal(comoVersion('3'), 3);
-  assert.equal(comoVersion(' 3 '), 3);
-  assert.equal(comoVersion('0'), 0);
-  assert.equal(comoVersion(7), 7);
+  assert.strictEqual(comoVersion('3'), 3);
+  assert.strictEqual(comoVersion(' 3 '), 3);
+  assert.strictEqual(comoVersion('0'), 0);
+  assert.strictEqual(comoVersion(7), 7);
 });
 
 test('lo que no es una version no se hace pasar por una', () => {
