@@ -1,7 +1,9 @@
 /* Sólo enruta. Cada ruta la atiende su módulo, para que este archivo se pueda
    leer entero de un vistazo y no crezca con cada cosa que se añada. */
 import { identificar, FalloDeIdentidad } from './identidad.js';
-import { leerBorrador, guardarBorrador, ConflictoDeVersion } from './almacen.js';
+import {
+  leerBorrador, guardarBorrador, ConflictoDeVersion, VersionMalFormada
+} from './almacen.js';
 /* CATEGORIAS sale de `js/reglas-contenido.js`, que es lo que valida en los dos
    lados. Estuvo copiada aquí durante el bloque 3a. */
 import { publicar, guardarImagen, CATEGORIAS } from './publicar.js';
@@ -83,6 +85,10 @@ export default {
         /* 409 es exactamente esto: la petición es válida, pero choca con el
            estado actual. El panel lo distingue de un error de verdad. */
         if (e instanceof ConflictoDeVersion) return conflicto(e);
+        /* Y 400 cuando ni siquiera se puede saber si choca: una versión que no
+           es un número no es un conflicto, y llamarlo conflicto le decía al
+           panel que reintentara algo que no iba a colar nunca. */
+        if (e instanceof VersionMalFormada) return fallo(400, e.message, e);
         return fallo(500, 'no se pudo guardar el borrador', e);
       }
     }

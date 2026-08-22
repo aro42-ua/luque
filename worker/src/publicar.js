@@ -3,7 +3,9 @@
    Son las mismas reglas que usa la web; escribirlas otra vez aqui seria pedir
    que se separen. */
 import '../../js/reglas-contenido.js';
-import { LLAVE_BORRADOR, LLAVE_CONTENIDO, leerJson, ConflictoDeVersion } from './almacen.js';
+import {
+  LLAVE_BORRADOR, LLAVE_CONTENIDO, leerJson, ConflictoDeVersion, versionGuardada
+} from './almacen.js';
 
 const reglas = globalThis.ReglasContenido;
 
@@ -131,14 +133,20 @@ export async function publicar(entorno, categorias, versionEsperada) {
      el 200 le devolvería una versión que no es la que creía publicar.
      Se reutiliza ConflictoDeVersion para que el panel reciba exactamente la
      misma forma de respuesta que cuando choca al guardar. */
-  const guardada = borrador ? borrador.version : 0;
+  /* `versionGuardada` normaliza: un borrador con `version: "3"` se publica con
+     ?version=3 en vez de quedar atascado en un 409 que dice dos números
+     iguales. Ver el comentario de `comoVersion` en almacen.js. */
+  const guardada = versionGuardada(borrador);
   if (versionEsperada !== guardada) throw new ConflictoDeVersion(guardada, versionEsperada);
 
   const problemas = problemasDelBorrador(borrador, categorias);
   if (problemas.length) return { problemas };
 
-  await entorno.ALMACEN.put(LLAVE_CONTENIDO, JSON.stringify(borrador, null, 2), {
+  /* Se publica la versión ya normalizada, para que un `"3"` no se propague de
+     borrador.json a contenido.json y de ahí a la web pública. */
+  const aPublicar = { ...borrador, version: guardada };
+  await entorno.ALMACEN.put(LLAVE_CONTENIDO, JSON.stringify(aPublicar, null, 2), {
     httpMetadata: { contentType: 'application/json' }
   });
-  return { version: borrador.version };
+  return { version: guardada };
 }

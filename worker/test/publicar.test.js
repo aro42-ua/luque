@@ -190,6 +190,22 @@ test('POST /api/publicar con un borrador válido da 200 y publica', async () => 
   assert.deepEqual(entorno.ALMACEN.leido('contenido.json'), b);
 });
 
+/* C-3: el callejón sin salida. `?version=` siempre llega como Number, así que
+   un borrador guardado con `version: "3"` no se podía publicar nunca más —el
+   409 decía «va por la versión 3 y tú traes la 3»— y arreglarlo pedía editar
+   R2 a mano. Se normaliza al leer, y el `"3"` no se propaga a contenido.json. */
+test('un borrador guardado con la versión como cadena se puede publicar', async () => {
+  const b = { version: '3', proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
+  const entorno = { ...entornoBase, ...almacenFalso(b) };
+
+  const r = await worker.fetch(peticionPublicar('?version=3'), entorno);
+  assert.equal(r.status, 200, 'no puede quedar impublicable para siempre');
+  assert.deepEqual(await r.json(), { version: 3 });
+  assert.equal(entorno.ALMACEN.leido('contenido.json').version, 3,
+    'lo publicado lleva un número, no la cadena');
+});
+
 test('POST /api/publicar sin decir la versión da 400', async () => {
   const b = { version: 5, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };

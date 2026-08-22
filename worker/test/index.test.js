@@ -136,6 +136,48 @@ test('si el almacén falla al escribir, PUT da 500 en castellano', async (t) => 
   assert.match(registro.join(' '), /connection reset/, 'el detalle queda en el registro');
 });
 
+/* C-3 visto desde la puerta. Un `<input>` del panel manda `"3"` y no `3`: eso
+   daba un 409 que enseñaba dos números iguales, y si el `"3"` llegaba a
+   guardarse el borrador quedaba impublicable para siempre. Ahora se normaliza
+   lo que se puede leer como versión, y lo que no se rechaza con 400 —no con
+   409— porque un 409 le dice al panel que reintente. */
+test('la versión como cadena se guarda igual y no da un conflicto falso', async () => {
+  const escrito = [];
+  const entorno = entornoCon({
+    async get() { return null; },
+    async put(llave, texto) { escrito.push(JSON.parse(texto)); }
+  });
+
+  const r = await worker.fetch(
+    peticionBorrador('PUT', JSON.stringify({ version: '0', proyectos: [] })), entorno
+  );
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { version: 1 });
+  assert.equal(escrito[0].version, 1, 'lo guardado es un número, no una cadena');
+});
+
+test('una versión que no es un número da 400 y no 409', async (t) => {
+  const registro = silenciarRegistro(t);
+
+  for (const cuerpo of ['{"version":"tres","proyectos":[]}', '{"version":3.5}',
+                        '{"proyectos":[]}', 'null', '0', '[]', '"hola"']) {
+    const escrito = [];
+    const entorno = entornoCon({
+      async get() { return null; },
+      async put(llave, texto) { escrito.push(texto); }
+    });
+
+    const r = await worker.fetch(peticionBorrador('PUT', cuerpo), entorno);
+    assert.equal(r.status, 400, `«${cuerpo}» no es un conflicto, es una petición mal hecha`);
+
+    const { error } = await r.json();
+    assert.match(error, /borrador|versión/, 'el mensaje tiene que explicar qué falta');
+    assert.doesNotMatch(error, /cambió mientras editabas/);
+    assert.deepEqual(escrito, [], 'un cuerpo que no se entiende no puede escribir nada');
+  }
+  assert.ok(registro.length > 0, 'el detalle queda en el registro');
+});
+
 /* El 409 se comprueba aquí porque el catch que lo distingue se acaba de
    reestructurar: si un día cae en el 500 genérico, el panel dejaría de poder
    avisar del choque y esta prueba es la que lo nota. */
