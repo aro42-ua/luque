@@ -3,9 +3,37 @@
 La web está publicada en `https://luque.angelrubioortiz2005.workers.dev`. Dos
 piezas: un repositorio privado en GitHub, `aro42-ua/luque`, que guarda el
 código, y un **Worker de Cloudflare con recursos estáticos** — no un proyecto
-de Pages — que sirve el sitio. No hay integración automática entre el
-repositorio y Cloudflare: el despliegue es un comando de `wrangler` que hay
-que ejecutar a mano cada vez.
+de Pages — que sirve el sitio. El despliegue es un comando de `wrangler` que
+hay que ejecutar a mano cada vez.
+
+## Aviso: hubo una integración automática, y desplegó lo que no debía
+
+Hasta el 2026-08-24 este documento afirmaba que «no hay integración automática
+entre el repositorio y Cloudflare». **Era falso**, y conviene dejar escrito cómo
+se descubrió, porque la creencia equivocada es lo que dejó pasar el problema.
+
+Cloudflare tenía activado **Workers Builds** sobre este repositorio: en cada
+empujón a GitHub construía y desplegaba el Worker del sitio. Al subir la rama
+del bloque 3a se vio el efecto — la web pública pasó a servir código de una rama
+**sin fusionar y sin revisar por nadie**. Se confirmó pidiendo un archivo que
+sólo existía en esa rama, `js/reglas-contenido.js`: respondió `200` desde el
+dominio público.
+
+Se descubrió por un efecto colateral, no por el problema en sí: el bloque 3a
+añade dos `wrangler.toml` —`worker/` y `worker/estatico/`— pero **ninguno en la
+raíz**, que es donde Workers Builds ejecutaba `npx wrangler versions upload`. El
+build empezó a fallar con `Missing entry-point to Worker script or to assets
+directory`, y al investigar ese fallo apareció lo de verdad importante.
+
+**Decisión del estudio: desconectar Workers Builds** y quedarse con el
+despliegue manual que describe este documento. El motivo no es técnico sino de
+control: publicar tiene que ser un gesto deliberado. Con `git archive` se decide
+exactamente qué sale —el paso siguiente explica por qué eso importa— y ninguna
+rama a medias llega al escaparate del estudio por el simple hecho de empujarla.
+
+Si algún día se quiere volver a la publicación automática, dos condiciones: que
+sólo despliegue desde `main`, y que las demás ramas no puedan tocar producción
+ni siquiera con una versión de vista previa.
 
 ## Por qué es un Worker y no Cloudflare Pages
 
