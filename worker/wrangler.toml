@@ -2,6 +2,21 @@ name = "luque-api"
 main = "src/index.js"
 compatibility_date = "2026-08-19"
 
+# workers.dev y las Preview URLs quedan apagados: cada una es un nombre de host
+# mas que Access no cubre. El Worker rechaza igual por su cuenta, pero no hay
+# motivo para dejar puertas de servicio abiertas.
+# Ojo con el orden: en TOML, todo lo que va tras [[routes]] pertenece a esa
+# tabla, asi que los ajustes globales tienen que ir por encima.
+workers_dev = false
+preview_urls = false
+
+# La API vive bajo el mismo dominio que la web, no en un subdominio aparte: asi
+# el panel y la API comparten origen y no hace falta CORS. Cloudflare Access se
+# pone delante de esta misma ruta.
+[[routes]]
+pattern = "lidialuque.com/api/*"
+zone_name = "lidialuque.com"
+
 [[r2_buckets]]
 binding = "ALMACEN"
 bucket_name = "luque-contenido"
