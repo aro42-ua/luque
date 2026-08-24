@@ -10,6 +10,17 @@ describe('Datos.establecer', function () {
              tipo: 'video', poster: 'p.jpg', vimeo: null };
   }
 
+  /* La lista de categorías estuvo copiada en datos.js y en el Worker. Ahora la
+     custodia reglas-contenido.js, que es el archivo que usan los dos lados: si
+     divergieran, el Worker rechazaría con 422 contenido que el navegador da por
+     bueno. Se comprueba la identidad y no el contenido, porque dos copias con
+     el mismo contenido es exactamente el estado que esto viene a impedir. */
+  prueba('CATEGORIAS es la lista de ReglasContenido, no una copia', function () {
+    cierto(Datos.CATEGORIAS === ReglasContenido.CATEGORIAS,
+           'Datos.CATEGORIAS tiene que ser la misma lista que usa el Worker');
+    igual(Datos.CATEGORIAS, ['foto-stills', 'editorial', 'videoclip', 'cortometraje']);
+  });
+
   prueba('puebla PROYECTOS con lo que se le pasa', function () {
     Datos.establecer([proyectoDeFotos('a'), proyectoDeFotos('b')]);
     igual(Datos.PROYECTOS.length, 2);

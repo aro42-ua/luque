@@ -8,7 +8,7 @@ from auditar_rutas import auditar
 
 FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures-auditoria')
 
-COMPROBACIONES = 6
+COMPROBACIONES = 9
 
 
 def main():
@@ -39,9 +39,27 @@ def main():
     if 'mailto:' in texto or 'tel:' in texto:
         fallos.append('reporto como problema un mailto: o un tel:')
 
-    # 6) No inventa problemas: exactamente tres
-    if len(problemas) != 3:
-        fallos.append('esperaba 3 problemas y encontro %d: %s' % (len(problemas), problemas))
+    # 6) Detecta una url(...) de CSS que apunta a un archivo que no existe.
+    #    Hasta el bloque 3a NINGUNA fixture ejercitaba el patron de url(...):
+    #    se podia romper entero y esta prueba seguia en verde. Se anadio al
+    #    arreglar el falso positivo de base64url(.
+    if 'fondo-que-no-existe.png' not in texto:
+        fallos.append('no detecto la url(...) de CSS que apunta a un archivo inexistente')
+
+    # 7) Una url(...) valida NO es un problema
+    if 'estilos.css -> Recurso.svg' in texto:
+        fallos.append('reporto como problema la url(...) valida a Recurso.svg')
+
+    # 8) El patron de url(...) no puede casar DENTRO de un identificador. Es el
+    #    falso positivo que dejo el auditor en rojo al terminar el bloque 3a:
+    #    base64url('...') se reportaba como una ruta que no existe.
+    for inventado in ('esto-no-es-una-ruta', 'tampoco-es-una-ruta', 'ni-esto'):
+        if inventado in texto:
+            fallos.append('confundi una llamada a funcion con una ruta: %s' % inventado)
+
+    # 9) No inventa problemas: exactamente cuatro
+    if len(problemas) != 4:
+        fallos.append('esperaba 4 problemas y encontro %d: %s' % (len(problemas), problemas))
 
     if fallos:
         print('FALLA')

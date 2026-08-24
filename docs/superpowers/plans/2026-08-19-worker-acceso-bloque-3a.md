@@ -767,7 +767,9 @@ git commit -m "Guardar el borrador en R2 rechazando los guardados que chocan"
 **Interfaces:**
 - Produce:
   - `POST /api/imagen?nombre=…` → `{ url }`, guarda el cuerpo en R2
-  - `POST /api/publicar` → `{ version }` o `{ problemas: [...] }` con estado 422
+  - `POST /api/publicar?version=<n>` → `{ version }` (200) o `{ problemas: [...] }`
+    (422). `?version` es obligatoria: sin ella, o si no son dígitos, da 400 —no
+    422— porque ni siquiera se puede saber si choca con lo guardado.
 
 - [ ] **Paso 1: La prueba que falla**
 
@@ -926,7 +928,8 @@ Desde el navegador del estudio, con sesión de Access iniciada:
 | `GET /api/borrador` | `200` con `{version: 0, proyectos: []}` la primera vez |
 | `PUT /api/borrador` con `version: 0` | `200 {"version":1}` |
 | `PUT /api/borrador` otra vez con `version: 0` | **`409`** y el mensaje del conflicto |
-| `POST /api/publicar` con el borrador vacío | **`422`** y `problemas` |
+| `POST /api/publicar?version=1` con el borrador vacío | **`422`** y `problemas` |
+| `POST /api/publicar` sin `?version` | **`400`**, no 422: `?version` es obligatoria (ver Tarea 5, Interfaces) |
 
 - [ ] **Paso 3: Comprueba lo que NO debe funcionar** — criterio de aceptación 5
 
