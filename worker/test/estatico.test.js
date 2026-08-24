@@ -51,6 +51,25 @@ test('contenido.json presente en R2 se sirve desde ahí, con su tipo', async () 
   assert.deepEqual(assets.pedidas, [], 'no hace falta caer a los estáticos si R2 ya tiene el objeto');
 });
 
+/* _headers cierra el sitio entero a los buscadores con X-Robots-Tag, pero esa
+   regla no se aplica a lo que responde código de Worker -- es la misma
+   salvedad que explica por qué _redirects podría dejar de aplicarse--, así
+   que sin fijarla aquí a mano, contenido.json e img/* perderían el cierre a
+   buscadores en cuanto se sirvieran desde R2. Verificado por mutación:
+   quitando la cabecera del código, esta prueba cae. */
+test('lo servido desde R2 sigue cerrado a buscadores', async () => {
+  const almacen = almacenFalso({
+    'contenido.json': { cuerpo: '{}', tipo: 'application/json' },
+    'img/a.jpg': { cuerpo: 'x', tipo: 'image/jpeg' }
+  });
+
+  const rContenido = await worker.fetch(new Request('https://x/contenido.json'), entornoCon(almacen, assetsFalso()));
+  const rImagen = await worker.fetch(new Request('https://x/img/a.jpg'), entornoCon(almacen, assetsFalso()));
+
+  assert.equal(rContenido.headers.get('x-robots-tag'), 'noindex');
+  assert.equal(rImagen.headers.get('x-robots-tag'), 'noindex');
+});
+
 /* El porqué de la caída: en R2 todavía no hay ningún contenido.json publicado
    el día que este Worker se despliegue -- nadie ha pulsado "publicar"
    todavía --, y sin esta caída la web se quedaría en el estado vacío hasta la

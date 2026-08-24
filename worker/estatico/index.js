@@ -37,7 +37,15 @@ export default {
       if (objeto) {
         return new Response(objeto.body, {
           headers: {
-            'content-type': objeto.httpMetadata?.contentType || 'application/octet-stream'
+            'content-type': objeto.httpMetadata?.contentType || 'application/octet-stream',
+            /* `_headers` fija esta misma cabecera para el resto del sitio,
+               pero NO se aplica a lo que responde código de Worker —es la
+               salvedad de Cloudflare que explica docs/despliegue.md—, así que
+               sin repetirla aquí estas dos rutas perderían el cierre a
+               buscadores en cuanto empezaran a servirse desde R2. Comprobado
+               con wrangler dev: sin esta línea, `X-Robots-Tag` desaparecía de
+               /contenido.json justo después de la primera publicación. */
+            'x-robots-tag': 'noindex'
           }
         });
       }
