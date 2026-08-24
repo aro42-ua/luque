@@ -486,7 +486,11 @@ export function reclamacionesValidas(reclamaciones, aud, equipo, ahora) {
     problemas.push('el token no lo emitió nuestro equipo');
   }
 
-  if (!reclamaciones.exp || reclamaciones.exp + MARGEN_RELOJ < ahora) {
+  /* El margen resta, no suma: un token que expira dentro de los próximos
+     MARGEN_RELOJ segundos ya se trata como caducado. Sumando, se aceptarían
+     tokens muertos hasta un minuto — en el extremo que da permiso de
+     escritura, el margen tiene que equivocarse hacia rechazar. */
+  if (!reclamaciones.exp || reclamaciones.exp - MARGEN_RELOJ < ahora) {
     problemas.push('el token ha caducado');
   }
 
@@ -707,22 +711,42 @@ import { leerBorrador, guardarBorrador, ConflictoDeVersion } from './almacen.js'
 
 // dentro de fetch(), tras la comprobación de identidad:
     if (ruta === '/api/borrador' && peticion.method === 'GET') {
-      return Response.json(await leerBorrador(entorno));
+      try {
+        return Response.json(await leerBorrador(entorno));
+      } catch (e) {
+        console.error('No se pudo leer el borrador:', e);
+        return Response.json({ error: 'No se pudo leer el borrador' }, { status: 500 });
+      }
     }
 
     if (ruta === '/api/borrador' && peticion.method === 'PUT') {
+      let datos;
       try {
-        return Response.json(await guardarBorrador(entorno, await peticion.json()));
+        datos = await peticion.json();
+      } catch (e) {
+        console.error('Cuerpo de PUT ilegible:', e);
+        return Response.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 });
+      }
+      try {
+        return Response.json(await guardarBorrador(entorno, datos));
       } catch (e) {
         /* 409 es exactamente esto: la peticion es valida, pero choca con el
            estado actual. El panel lo distingue de un error de verdad. */
         if (e instanceof ConflictoDeVersion) {
           return Response.json({ error: e.message, guardada: e.guardada }, { status: 409 });
         }
-        throw e;
+        /* Nada de `throw e`: sin un catch global, la excepcion sale cruda y en
+           ingles al cliente, que es justo lo que la Tarea 3 vino a cerrar. */
+        console.error('No se pudo guardar el borrador:', e);
+        return Response.json({ error: 'No se pudo guardar el borrador' }, { status: 500 });
       }
     }
 ```
+
+**Lo que sale al cliente es siempre nuestro y en castellano.** El detalle interno
+va a `console.error` y se queda en el registro. Un `throw` sin capturar aquí no
+da un 500 con mensaje propio: da una excepción del Worker con el texto en inglés
+de la plataforma.
 
 - [ ] **Paso 6: Commit**
 
@@ -846,19 +870,32 @@ const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
     if (ruta === '/api/imagen' && peticion.method === 'POST') {
       const nombre = nombreSeguro(new URL(peticion.url).searchParams.get('nombre'));
       if (!nombre) return Response.json({ error: 'falta el nombre del archivo' }, { status: 400 });
-      await entorno.ALMACEN.put(`img/${nombre}`, peticion.body, {
-        httpMetadata: { contentType: peticion.headers.get('content-type') || 'image/jpeg' }
-      });
+      try {
+        await entorno.ALMACEN.put(`img/${nombre}`, peticion.body, {
+          httpMetadata: { contentType: peticion.headers.get('content-type') || 'image/jpeg' }
+        });
+      } catch (e) {
+        return fallo(500, 'no se pudo guardar la imagen', e);
+      }
       return Response.json({ url: `/img/${nombre}` });
     }
 
     if (ruta === '/api/publicar' && peticion.method === 'POST') {
-      const resultado = await publicar(entorno, CATEGORIAS);
-      /* 422 y no 400: la peticion esta bien formada, lo que no se sostiene es
-         el contenido que se quiere publicar. */
-      return Response.json(resultado, { status: resultado.problemas ? 422 : 200 });
+      try {
+        const resultado = await publicar(entorno, CATEGORIAS);
+        /* 422 y no 400: la peticion esta bien formada, lo que no se sostiene es
+           el contenido que se quiere publicar. */
+        return Response.json(resultado, { status: resultado.problemas ? 422 : 200 });
+      } catch (e) {
+        return fallo(500, 'no se pudo publicar', e);
+      }
     }
 ```
+
+**Usa el ayudante `fallo(estado, mensaje, e)` que ya dejó la Tarea 4**, que registra el
+detalle en `console.error` y devuelve sólo mensaje propio. Sin `catch`, un fallo
+de R2 sale al cliente como excepción del Worker con el texto de la plataforma en
+inglés — el mismo defecto que las Tareas 3 y 4 tuvieron que cerrar.
 
 - [ ] **Paso 6: Commit**
 
@@ -910,14 +947,71 @@ Esto es lo que de verdad importa de esta tarea:
 3. **Un token de otra aplicación no vale.** Si el estudio tiene otra aplicación
    en Access, prueba con su cookie. Esperado: 403 por el `aud`.
 
-- [ ] **Paso 4: Anota lo aprendido**
+- [ ] **Paso 4: Conectar lo que se publica con lo que se lee**
+
+**Sin este paso, publicar no cambia nada de lo que ve un visitante.** Lo detectó
+la revisión de la Tarea 5 y es un hueco de este plan, no de su implementación:
+
+- `publicar()` escribe la llave `contenido.json` **dentro del bucket de R2**.
+- La web pública son recursos estáticos, y `js/contenido.js` pide
+  `contenido.json` por **ruta relativa**: lee el archivo versionado en el
+  repositorio, no el de R2.
+- `POST /api/imagen` devuelve URLs `/img/<nombre>` y **nadie sirve `/img/*`**.
+
+**La decisión: el Worker de los recursos estáticos gana un *binding* de R2 y
+sirve exactamente dos rutas desde él**, dejando pasar todo lo demás a los
+archivos estáticos:
+
+```js
+export default {
+  async fetch(peticion, entorno) {
+    const ruta = new URL(peticion.url).pathname;
+
+    /* Sólo estas dos cosas salen de R2. Todo lo demás son archivos estáticos.
+       Que la lista sea explícita es lo que impide que borrador.json quede
+       legible: no está enrutado, así que no hay URL que lo alcance. */
+    if (ruta === '/contenido.json' || ruta.startsWith('/img/')) {
+      const objeto = await entorno.ALMACEN.get(ruta.slice(1));
+      if (!objeto) return new Response('No existe', { status: 404 });
+      return new Response(objeto.body, {
+        headers: { 'content-type': objeto.httpMetadata?.contentType || 'application/octet-stream' }
+      });
+    }
+
+    return entorno.ASSETS.fetch(peticion);
+  }
+};
+```
+
+**Por qué así y no con un dominio público apuntando al bucket.** La otra opción
+era exponer R2 en su propio dominio. Se descarta por dos motivos concretos:
+
+1. **`borrador.json` vive en el mismo bucket.** Un dominio apuntado al bucket lo
+   dejaría legible por cualquiera que adivine el nombre — el trabajo sin
+   publicar del estudio, expuesto. Con la lista explícita de arriba, no hay ruta
+   que llegue a él.
+2. **Mismo origen.** `contenido.json` desde otro dominio obliga a CORS y a
+   cambiar `RUTA` en `js/contenido.js`. Así la web sigue pidiendo
+   `contenido.json` relativo y no se entera de nada.
+
+Y una restricción que la Tarea 5 ya impuso sobre ésta: **la forma `/img/<nombre>`
+está comprometida**, porque esas URLs se escriben dentro de `contenido.json` y
+se quedan ahí. O se sirve exactamente esa ruta desde el mismo origen, o todo lo
+ya publicado apunta a la nada.
+
+Comprueba, con el estudio delante:
+- `GET /contenido.json` en la web pública devuelve lo que acaba de publicarse.
+- `GET /img/<algo-subido>` devuelve la imagen.
+- `GET /borrador.json` devuelve **404**. Si devuelve el borrador, para.
+
+- [ ] **Paso 5: Anota lo aprendido**
 
 En `docs/despliegue.md`, la sección del Worker de la API: cómo se despliega, qué
 secretos necesita y qué devuelve cada ruta. Y **las cifras reales de las capas
 gratuitas** que hayas confirmado, con su fecha — la especificación pide no dar
 por buenas las de agosto de 2026.
 
-- [ ] **Paso 5: Commit**
+- [ ] **Paso 6: Commit**
 
 ```bash
 git add docs/despliegue.md
