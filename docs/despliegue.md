@@ -185,6 +185,19 @@ estático de prueba en el directorio de recursos:
   `fetch()` de este Worker: la resuelve el enrutador de recursos estáticos
   directamente, como si el Worker no existiera.
 
+**La misma salvedad se comió el cierre a buscadores, y se cerró también.**
+`_headers` fija `X-Robots-Tag: noindex` para todo el sitio con la regla `/*`
+(ver la sección de más abajo), pero esa regla tampoco se aplica a respuestas
+generadas por código de Worker. Verificado con `wrangler dev`: antes de
+corregirlo, `X-Robots-Tag` desaparecía de `/contenido.json` justo después de
+la primera publicación —el sitio entero sigue cerrado a buscadores por dos
+mecanismos independientes (ver "Cerrada a los buscadores" más abajo), y esto
+habría roto uno de los dos para estas dos rutas sin ningún aviso—. Ahora
+`worker/estatico/index.js` fija la cabecera a mano en las respuestas que
+sirve desde R2, y la prueba `lo servido desde R2 sigue cerrado a buscadores`
+(`worker/test/estatico.test.js`) lo cierra para que no se pueda perder otra
+vez sin que algo se ponga en rojo.
+
 ## `_headers`: las reglas que casan se combinan, no se sustituyen
 
 Un hecho de la documentación de Cloudflare que conviene tener escrito, porque
