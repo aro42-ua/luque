@@ -21,31 +21,40 @@ ahí; por eso el panel no mostraba ninguna URL de Pages y ninguna dirección
 Antes de desplegar así se comprobó en la documentación de Cloudflare que los
 Workers con recursos estáticos soportan `_headers` y `_redirects` de forma
 nativa, colocándolos en el directorio de recursos — la misma mecánica que
-Pages. La salvedad que documenta Cloudflare, que esos archivos no se aplican a
-respuestas generadas por código de Worker, no afecta **hoy**: no hay código, es
-un sitio estático puro.
+Pages. La salvedad que documenta Cloudflare es que esos archivos no se aplican
+a respuestas generadas por código de Worker.
 
-> **Aviso: esa salvedad deja de no afectar en cuanto este Worker tenga código.**
-> Ese código todavía no existe: el plan del bloque 3a ya terminó de escribirse
-> y su Tarea 6, Paso 4 ("Anota lo aprendido") es documentación, no código —
-> **no** es el paso que describía una versión anterior de este aviso, y no
-> hay todavía ningún plan del bloque 3b ni 3c que lo escriba. El riesgo es
-> real igualmente: en cuanto **este mismo Worker** (el que sirve los recursos
-> estáticos) gane un `main` con un `fetch()` propio — por ejemplo, para servir
-> `/contenido.json` y `/img/*` desde R2 delegando el resto en
-> `entorno.ASSETS.fetch(peticion)` — `_redirects` puede dejar de aplicarse sin
-> ningún error ni aviso, y lo que se reabre en silencio es exactamente lo que
-> el bloque 1 cerró: `/docs/estado-conocido.md`, que dice en texto plano que
-> las tipografías son versiones Trial sin licencia, `/.claude/launch.json` con
-> rutas `C:/Users/...`, y `/worker/*` con el código del servidor, que cerró
-> este mismo bloque 3a.
+> **Esa salvedad ya no es hipotética: este Worker tiene código desde la Tarea
+> 6, Paso 4 del bloque 3a.** `worker/estatico/index.js` le da un `fetch()`
+> propio a este mismo Worker de recursos estáticos, para servir
+> `/contenido.json` y `/img/*` desde R2 — es lo que publica el panel — y
+> delegar todo lo demás en `entorno.ASSETS.fetch(peticion)`.
 >
-> **Quien escriba ese `fetch()` —en el bloque que sea— tiene que comprobar,
-> después de desplegar, que `GET /docs/estado-conocido.md`,
-> `GET /.claude/launch.json` y `GET /worker/wrangler.toml` siguen devolviendo
-> 302.** Si devuelven el contenido, el enrutado por código se ha comido
-> `_redirects` y hay que cerrar esas rutas dentro del propio `fetch()` antes de
-> dejarlo puesto. No des por hecho que un plan ya lo cubre: compruébalo aquí.
+> **La salvedad de Cloudflare no llegó a morder, y no por suerte: por
+> `run_worker_first` acotado a esas dos rutas.** `worker/estatico/wrangler.toml`
+> fija `run_worker_first = ["/contenido.json", "/img/*"]`. Sin esto, Cloudflare
+> serviría cualquier archivo estático que exista ANTES de invocar el Worker —y
+> `contenido.json` existe como archivo estático, es el que trae el
+> repositorio—, así que el código de este Worker no se llegaría a ejecutar
+> nunca para esa ruta. Con `run_worker_first` acotado, **para cualquier otra
+> ruta el Worker no se invoca en absoluto**: la petición la resuelve el
+> enrutador de recursos estáticos exactamente como si este `fetch()` no
+> existiera, `_redirects` incluido.
+>
+> **Verificado con `wrangler dev` en local** (no contra el servidor real: la
+> rama no se ha desplegado todavía) con un directorio de recursos que incluía
+> `_redirects` y archivos de prueba bajo `docs/`, `.claude/` y `worker/`:
+> `GET /docs/estado-conocido.md`, `GET /.claude/launch.json` y
+> `GET /worker/wrangler.toml` siguen devolviendo **302**. Y el propio
+> `/contenido.json` responde el archivo estático del repositorio mientras R2
+> no tiene nada publicado, y lo que hay en R2 en cuanto se publica una vez —
+> las dos mitades de la Tarea 6, Paso 4 comprobadas end-to-end en local, sin
+> tocar la cuenta de Cloudflare.
+>
+> **Quien despliegue esto por primera vez tiene que repetir esa misma
+> comprobación contra el servidor real**, no darla por buena porque pasó en
+> local: local y producción comparten el motor (workerd), pero no está de más
+> confirmarlo donde importa.
 
 **Quien vea esto y piense en "arreglarlo" volviendo a Pages: no hay proyecto
 de Pages que recuperar.** La cuenta no tiene ninguno, y crear uno nuevo va
@@ -88,8 +97,93 @@ repositorio: lo que se exporta y se sube **es** el sitio.
 4. **Desplegar:**
 
    ```
-   wrangler deploy --name luque --assets <directorio-temporal> --compatibility-date 2026-08-18
+   wrangler deploy --config worker/estatico/wrangler.toml --assets <directorio-temporal>
    ```
+
+   Antes del bloque 3a esto era un Worker de recursos estáticos puro: sin
+   `--config`, el nombre y la fecha de compatibilidad iban sueltos como flags
+   (`--name luque --compatibility-date 2026-08-18`). Ahora hace falta
+   `--config` porque el Worker tiene código y un *binding* de R2 —ver la
+   sección del Worker de recursos estáticos, más abajo—, y **`wrangler deploy`
+   no tiene una opción de línea de comandos para adjuntar un *binding* de R2**
+   (comprobado con `wrangler deploy --help`: no existe `--r2` ni equivalente).
+   El nombre (`luque`) y la fecha de compatibilidad viven ahora dentro de
+   `worker/estatico/wrangler.toml`, así que no hace falta repetirlos en el
+   comando. El directorio de recursos estáticos **sigue** pasando por
+   `--assets` en el propio comando, y no en el archivo de configuración: es un
+   directorio temporal que cambia en cada despliegue, y fijarlo en el archivo
+   versionado ataría el despliegue a una ruta local de quien lo ejecutó la
+   última vez.
+
+## El Worker de recursos estáticos ya tiene código: qué sirve desde R2
+
+`worker/estatico/index.js` (con su configuración en
+`worker/estatico/wrangler.toml`) es el `fetch()` de **este mismo Worker**, el
+que responde en `luque.angelrubioortiz2005.workers.dev`. No confundir con
+`worker/src/index.js`, que es el Worker de la API (`luque-api`) — son dos
+Workers, dos despliegues, dos archivos de configuración, y sólo comparten el
+bucket de R2.
+
+**El hueco que cierra.** `POST /api/publicar` (Tarea 5) escribe
+`contenido.json` dentro del bucket de R2, y `POST /api/imagen` guarda las
+fotos bajo `img/` en ese mismo bucket. Pero `js/contenido.js` pide
+`contenido.json` por ruta relativa a los archivos estáticos: sin este paso,
+publicar no cambiaba nada de lo que veía un visitante, y nadie servía
+`/img/*`. Lo encontró la revisión final de la Tarea 5 del bloque 3a, y quedó
+escrito como una decisión razonada en el propio plan antes de implementarse.
+
+**Qué sale de R2, y sólo eso:**
+
+| Ruta | Si el objeto está en R2 | Si no está |
+|---|---|---|
+| `GET /contenido.json` | se sirve desde R2, con su `content-type` | **cae al archivo estático del repositorio** — ver más abajo |
+| `GET /img/<nombre>` | se sirve desde R2, con su `content-type` | 404 propio, sin llegar a `ASSETS.fetch()` |
+| cualquier otra ruta | — | va directa a `ASSETS.fetch()`; el Worker no la mira |
+
+La lista es explícita a propósito: `borrador.json` vive en el mismo bucket
+que `contenido.json`, y un enrutado genérico —"lo que exista en R2 con ese
+nombre de ruta, se sirve"— lo dejaría legible por cualquiera que adivinara la
+URL. Al no estar en la lista, no hay código que lo alcance: cae directo a
+`ASSETS.fetch()`, donde tampoco existe, y responde el 404 de siempre.
+
+**La caída de `/contenido.json` a los estáticos, y por qué hace falta.** El
+código de referencia del plan (Tarea 6, Paso 4) servía `/contenido.json`
+**sin** esa caída: si R2 no tenía el objeto, devolvía 404 directamente. Eso
+habría roto la web en el momento mismo de desplegar, porque **en R2 no hay
+ningún `contenido.json` todavía** — nadie ha pulsado "publicar" — y la web se
+habría quedado en un estado vacío hasta la primera publicación del estudio.
+Con la caída, la transición es invisible: la web sigue sirviendo el
+`contenido.json` versionado en el repositorio exactamente como hasta ahora, y
+en cuanto el estudio publique por primera vez, R2 empieza a mandar sin volver
+a desplegar nada. `/img/*` no tiene caída ni falta que le hace: no existe
+ningún archivo estático equivalente —las imágenes las sube el panel
+directamente a R2—, así que si el objeto no está ahí no está en ningún sitio.
+
+**`run_worker_first` no es un detalle de rendimiento, es lo que hace que esto
+funcione.** Por omisión, Cloudflare sirve un archivo estático que exista
+*antes* de invocar el Worker — y `contenido.json` **sí** existe como archivo
+estático, es el que trae el repositorio. Sin acotar `run_worker_first` a
+`["/contenido.json", "/img/*"]` en `worker/estatico/wrangler.toml`, toda
+petición a `/contenido.json` se habría resuelto contra el archivo del
+repositorio directamente, y el código de este Worker no se habría llegado a
+ejecutar nunca para esa ruta, publicara lo que publicara el estudio.
+
+**Verificado con `wrangler dev` en local** (no contra el servidor real: la
+rama no se ha desplegado todavía), con R2 emulado y un `contenido.json`
+estático de prueba en el directorio de recursos:
+- Sin nada publicado en R2: `GET /contenido.json` devuelve el archivo del
+  repositorio.
+- Tras `wrangler r2 object put luque-contenido/contenido.json --local ...`:
+  la misma ruta devuelve el contenido de R2, con `content-type:
+  application/json`.
+- `GET /img/<nombre>` publicado en R2 devuelve sus bytes exactos con su
+  `content-type`; sin publicar, 404.
+- `GET /borrador.json` devuelve 404 **aunque el objeto exista en R2** —se
+  subió a propósito para la prueba—: la ruta no está en la lista, así que ni
+  se le pregunta a R2 por ella.
+- Una ruta ajena a las dos (`/estilo.css` en la prueba) nunca invoca el
+  `fetch()` de este Worker: la resuelve el enrutador de recursos estáticos
+  directamente, como si el Worker no existiera.
 
 ## `_headers`: las reglas que casan se combinan, no se sustituyen
 
@@ -267,6 +361,15 @@ no Claude:
   tiene las credenciales de la cuenta.
 
 ## Verificado en producción
+
+**Todo lo de esta sección se comprobó ANTES de que este Worker tuviera
+código** — antes de la Tarea 6, Paso 4 del bloque 3a. Sigue siendo cierto para
+lo que prueba: el comportamiento de los recursos estáticos puros. Pero no
+cubre nada de lo nuevo — `/contenido.json` y `/img/*` desde R2, la caída de
+vuelta, `run_worker_first` — que sólo se ha verificado con `wrangler dev` en
+**local** (sección de arriba), no contra el servidor real. **Quien despliegue
+esta rama tiene que repetir ahí las comprobaciones de esa sección** antes de
+dar el paso por bueno.
 
 Comprobado contra `https://luque.angelrubioortiz2005.workers.dev` después de
 desplegar:
