@@ -54,36 +54,18 @@ export function nombreSeguro(nombre) {
    no explicaba qué había pasado. */
 export const TOPE_NOMBRE = 200;
 
-/* Lista blanca de formatos, y el tipo que se guarda lo decide la extensión,
-   nunca lo que declara quien sube. Sin esto, `?nombre=perfil.html` con
-   `content-type: text/html` deja HTML —y por tanto JavaScript— alojado en el
-   bucket, que es el dominio desde el que la Tarea 6 va a servir img/. */
-const TIPOS_POR_EXTENSION = {
-  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
-  webp: 'image/webp', avif: 'image/avif', gif: 'image/gif'
-};
-
-/* `image/jpg` no existe en el registro de tipos, pero lo mandan bastantes
-   herramientas: se acepta como sinónimo para no dar un 415 desconcertante. */
-const SINONIMOS = { 'image/jpg': 'image/jpeg' };
+/* La lista blanca de formatos vive en `tipos-imagen.js` desde la revisión de
+   la Tarea 6: la usan esta ruta (para decidir qué entra al bucket) y el
+   Worker de los recursos estáticos (para decidir con qué tipo sale), y
+   escrita dos veces serían dos listas que se separan. Se reexporta para no
+   tocar a quien ya la importaba de aquí. */
+export { tipoDeImagen } from './tipos-imagen.js';
+import { tipoDeImagen } from './tipos-imagen.js';
 
 /* El panel sube imágenes ya redimensionadas —la mayor ronda los 750 KB—, así
    que 5 MB dejan margen de sobra y ponen un techo muy por debajo de los
    100 MB que el Worker aceptaría por defecto. */
 export const TOPE_IMAGEN = 5 * 1024 * 1024;
-
-export function tipoDeImagen(nombre, tipoDeclarado) {
-  const punto = String(nombre || '').lastIndexOf('.');
-  const extension = punto === -1 ? '' : String(nombre).slice(punto + 1).toLowerCase();
-  const esperado = TIPOS_POR_EXTENSION[extension];
-  if (!esperado) return null;
-
-  /* El content-type puede faltar (lo suple la extensión); lo que no puede es
-     contradecirla, porque entonces uno de los dos miente y no sabemos cuál. */
-  const bruto = String(tipoDeclarado || '').split(';')[0].trim().toLowerCase();
-  if (!bruto) return esperado;
-  return (SINONIMOS[bruto] || bruto) === esperado ? esperado : null;
-}
 
 /* Devuelve `{ estado, cuerpo }` en vez de una Response para que index.js siga
    siendo sólo el enrutador. Los fallos de R2 salen como excepción y los
