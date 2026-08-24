@@ -1,0 +1,37 @@
+# Configuración del Worker de recursos estáticos ("luque"), no de la API
+# ("luque-api", en worker/wrangler.toml). Dos Workers, dos configuraciones:
+# comparten cuenta y bucket, no despliegue.
+#
+# `wrangler deploy` no tiene una opción de línea de comandos para adjuntar un
+# bucket de R2 (comprobado con `wrangler deploy --help`: no existe `--r2` ni
+# equivalente), así que el binding sólo puede venir de un archivo de
+# configuración. El directorio de recursos estáticos SÍ sigue pasando por
+# `--assets` en el propio comando: es un directorio temporal que cambia en
+# cada despliegue (ver docs/despliegue.md), y no tiene sentido fijarlo aquí.
+name = "luque"
+main = "index.js"
+compatibility_date = "2026-08-18"
+
+# El `binding` de los estáticos NO sale del flag `--assets`: comprobado leyendo
+# el propio wrangler (validateAssetsOptions en wrangler-dist/cli.js), la línea
+# de comandos sólo aporta el directorio, nunca el nombre del binding. Sin este
+# bloque, `entorno.ASSETS` llega `undefined` y `ASSETS.fetch()` revienta en
+# cuanto una petición no sale de R2 -- lo comprobó un `wrangler deploy --dry-run`
+# local: la tabla de bindings sólo mostraba ALMACEN hasta añadir esto.
+#
+# `run_worker_first` es imprescindible, y no un detalle de rendimiento: por
+# omisión (false), Cloudflare sirve un archivo estático que exista ANTES de
+# invocar el Worker, y `contenido.json` SÍ existe como archivo estático -- es
+# el que trae el repositorio --. Sin esto, toda petición a /contenido.json se
+# resolvería contra el archivo del repositorio directamente y el código de
+# este Worker no se llegaría a ejecutar nunca para esa ruta, aunque R2 ya
+# tuviera contenido publicado. Sólo se fuerza el Worker para las dos rutas que
+# le importan; el resto lo sigue resolviendo el enrutador de estáticos por su
+# cuenta, sin pasar por fetch() -- verificado con `wrangler dev` en local.
+[assets]
+binding = "ASSETS"
+run_worker_first = ["/contenido.json", "/img/*"]
+
+[[r2_buckets]]
+binding = "ALMACEN"
+bucket_name = "luque-contenido"
