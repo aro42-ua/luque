@@ -144,6 +144,21 @@ Lo que ese arnés **no** puede ver, por diseño: nada que se mueva. Las
 transiciones, el vuelo del visor, la recomposición del filtrado y el paneo con
 inercia solo se pueden juzgar mirándolos en un navegador de verdad.
 
+Tampoco puede ver lo que habla con la red. `panel/js/borrador.js` necesita que
+`fetch` esté sustituido, y eso el arnés del navegador no lo hace, así que su
+prueba va aparte y sí necesita Node:
+
+```
+node tests/prueba-borrador.js
+```
+
+Son 15 escenarios y 41 comprobaciones sobre los cuatro finales de un guardado
+—guardado, conflicto, petición mal formada y red caída—, sobre que el callback
+de quien llama se invoque una sola vez aunque lance, y sobre que ningún mensaje
+en inglés del motor llegue a la pantalla. Se le puede pasar otro archivo como
+argumento para comprobar que las propias pruebas caen cuando el código está
+roto; el porqué de todo esto está explicado en la cabecera del archivo.
+
 ## Estructura
 
 El código está repartido en módulos de una responsabilidad cada uno, ninguno por
