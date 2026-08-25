@@ -1,0 +1,211 @@
+/* ============================================================
+   PANEL — hoja propia, no importa css/luque.css.
+   La hoja de la galería trae reglas de lienzo espacial (cursor
+   personalizado, esquinas volando, paneo) que aquí estorban: el
+   panel comparte la tipografía y los colores de LUQUE!, pero se
+   comporta como una herramienta convencional —cursor del sistema,
+   anillos de foco normales, sin posicionamiento absoluto—.
+============================================================ */
+
+/* ============================================================
+   TIPOGRAFÍA — mismos archivos que la web pública, un nivel más
+   abajo (panel/css/ en vez de css/).
+============================================================ */
+@font-face{
+  font-family:'ABC Favorit';
+  src:url('../../ABCFavorit-Regular-Trial.otf') format('opentype');
+  font-weight:400;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:'ABC Favorit';
+  src:url('../../ABCFavorit-Bold-Trial.otf') format('opentype');
+  font-weight:700;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:'ABC Favorit';
+  src:url('../../ABCFavorit-BoldItalic-Trial.otf') format('opentype');
+  font-weight:700;
+  font-style:italic;
+  font-display:swap;
+}
+
+/* ============================================================
+   TOKENS — copiados de css/luque.css, no toda la hoja.
+============================================================ */
+:root{
+  --yellow:#FFFF00;
+  --black:#0a0a0a;
+  --grey-dark:#1c1c1c;
+  --grey-mid:#3a3a3a;
+  --ff: 'ABC Favorit', 'Montserrat', Helvetica, Arial, sans-serif;
+  --kerning: -0.03em;
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+
+body{
+  background:var(--yellow);
+  color:var(--black);
+  font-family:var(--ff);
+  letter-spacing:var(--kerning);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+
+/* Anillos de foco convencionales: nada de ocultar el contorno por
+   defecto como hace la galería con su cursor propio. Aquí el foco
+   del teclado es el único camino, así que tiene que verse siempre. */
+:focus-visible{
+  outline: 3px solid var(--black);
+  outline-offset: 2px;
+}
+
+a{ color:inherit; }
+
+/* ============================================================
+   ESTRUCTURA
+============================================================ */
+.panel{
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+h1{
+  font-weight:700;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  letter-spacing:var(--kerning);
+  margin-bottom: 1rem;
+}
+
+/* ============================================================
+   AVISO — role="status" + aria-live="polite" en el HTML. La
+   reserva de altura evita que la página salte cuando aparece.
+============================================================ */
+.aviso{
+  min-height: 1.5em;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  border-left: 4px solid var(--black);
+  padding-left: 0.75rem;
+}
+.aviso:empty{ border-left-color: transparent; }
+
+/* ============================================================
+   LISTA DE PROYECTOS
+============================================================ */
+.lista{
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.fila{
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--black);
+  color: var(--yellow);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+}
+
+.fila-titulo{
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.fila-boton{
+  flex: 0 0 auto;
+  border: 2px solid var(--yellow);
+  background: transparent;
+  color: var(--yellow);
+  font-family: var(--ff);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.fila-boton:hover:not(:disabled){
+  background: var(--yellow);
+  color: var(--black);
+}
+
+.fila-boton:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.fila-borrar{
+  border-color: var(--grey-mid);
+}
+.fila-borrar:hover:not(:disabled){
+  background: var(--grey-mid);
+  color: var(--yellow);
+}
+
+/* ============================================================
+   FORMULARIO — crear proyecto
+============================================================ */
+.nuevo{
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 24rem;
+  margin-bottom: 2rem;
+}
+
+.nuevo label{
+  font-weight: 700;
+  margin-top: 0.5rem;
+}
+
+.nuevo input,
+.nuevo select{
+  font-family: var(--ff);
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--black);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--black);
+}
+
+.nuevo button,
+#guardar{
+  align-self: flex-start;
+  margin-top: 0.75rem;
+  font-family: var(--ff);
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.6rem 1.25rem;
+  border: 2px solid var(--black);
+  border-radius: 4px;
+  background: var(--black);
+  color: var(--yellow);
+  cursor: pointer;
+}
+
+.nuevo button:hover,
+#guardar:hover{
+  background: var(--yellow);
+  color: var(--black);
+}
+
+/* ============================================================
+   MOVIMIENTO REDUCIDO
+============================================================ */
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; }
+}

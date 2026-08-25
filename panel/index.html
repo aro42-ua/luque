@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel — LUQUE!</title>
+<link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+  <main class="panel">
+    <h1>Proyectos</h1>
+
+    <p id="aviso" role="status" aria-live="polite" class="aviso"></p>
+
+    <ol id="lista" class="lista"></ol>
+
+    <form id="nuevo" class="nuevo">
+      <label for="titulo">Título del proyecto nuevo</label>
+      <input id="titulo" name="titulo" type="text" autocomplete="off" required>
+
+      <label for="categoria">Categoría</label>
+      <select id="categoria" name="categoria"></select>
+
+      <button type="submit">Crear</button>
+    </form>
+
+    <button id="guardar" type="button">Guardar</button>
+  </main>
+
+  <!-- Orden importante: panel.js lee window.ReglasContenido.CATEGORIAS al
+       arrancar, así que reglas-contenido.js y el resto de módulos que produce
+       este bloque tienen que existir antes de que panel.js se ejecute. Se
+       carga desde la web pública (../js/) y no se copia aquí: es el mismo
+       archivo que comparten la galería y el Worker, y duplicarlo reabriría el
+       agujero que cerró el bloque 3a. -->
+  <script src="../js/reglas-contenido.js"></script>
+  <script src="js/identificador.js"></script>
+  <script src="js/orden.js"></script>
+  <script src="js/borrador.js"></script>
+  <script src="js/lista.js"></script>
+  <script src="js/panel.js"></script>
+</body>
+</html>
