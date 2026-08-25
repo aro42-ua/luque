@@ -19,6 +19,10 @@ window.Lista = (function () {
     subir.className = 'fila-boton';
     subir.textContent = '↑';
     subir.setAttribute('aria-label', 'Subir ' + p.titulo);
+    /* data-accion identifica el botón tras un repintado: panel.js lo usa para
+       devolver el foco al mismo botón de la misma fila una vez que el <ol>
+       entero se ha reconstruido y los nodos anteriores ya no existen. */
+    subir.dataset.accion = 'subir';
     subir.disabled = indice === 0;
     subir.addEventListener('click', function () { alMover(indice, indice - 1); });
 
@@ -27,6 +31,7 @@ window.Lista = (function () {
     bajar.className = 'fila-boton';
     bajar.textContent = '↓';
     bajar.setAttribute('aria-label', 'Bajar ' + p.titulo);
+    bajar.dataset.accion = 'bajar';
     bajar.disabled = indice === total - 1;
     bajar.addEventListener('click', function () { alMover(indice, indice + 1); });
 
@@ -35,6 +40,7 @@ window.Lista = (function () {
     borrar.className = 'fila-boton fila-borrar';
     borrar.textContent = 'Borrar';
     borrar.setAttribute('aria-label', 'Borrar ' + p.titulo);
+    borrar.dataset.accion = 'borrar';
     borrar.addEventListener('click', function () { alBorrar(p.id, p.titulo); });
 
     li.appendChild(nombre);

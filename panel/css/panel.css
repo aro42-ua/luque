@@ -155,6 +155,15 @@ h1{
   color: var(--yellow);
 }
 
+/* El anillo de foco global es negro sobre amarillo/blanco, que es donde vive
+   casi toda la pantalla. Pero .fila tiene fondo negro (arriba), y un
+   contorno negro sobre negro no se ve —contraste 1:1—, justo en los botones
+   que reordenan y borran. Dentro de la fila el contorno pasa a amarillo,
+   que sobre negro da el mismo contraste alto que el negro da sobre amarillo. */
+.fila :focus-visible{
+  outline-color: var(--yellow);
+}
+
 /* ============================================================
    FORMULARIO — crear proyecto
 ============================================================ */
