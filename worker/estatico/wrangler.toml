@@ -12,6 +12,37 @@ name = "luque"
 main = "index.js"
 compatibility_date = "2026-08-18"
 
+# APAGAR workers.dev NO ES OPCIONAL, y no es por limpieza.
+#
+# Este mismo Worker sirve ahora /panel, que es superficie de ESCRITURA sobre el
+# contenido del estudio. Cloudflare Access sólo puede ponerse delante de un
+# nombre de host de una zona propia -- lidialuque.com -- y NO de workers.dev,
+# que es un dominio de Cloudflare. Con workers.dev encendido, el panel seguiría
+# alcanzable en luque.angelrubioortiz2005.workers.dev/panel SIN NADA DELANTE:
+# un agujero exacto en lo único que da permiso de escritura.
+#
+# Las Preview URLs se apagan por lo mismo: cada versión desplegada estrena su
+# propio nombre de host, y ninguno estaría cubierto por la política de Access.
+#
+# Ojo al orden: en TOML todo lo que va tras una cabecera de tabla pertenece a
+# esa tabla, así que estos ajustes globales tienen que ir POR ENCIMA de
+# [[routes]] y [assets]. Puestos debajo, wrangler los rechaza.
+workers_dev = false
+preview_urls = false
+
+# El sitio se muda al dominio propio. La API vive en lidialuque.com/api/*, que
+# es una ruta más específica y por tanto gana sobre ésta: los dos Workers
+# conviven en el mismo dominio y comparten origen, que es lo que evita el CORS
+# entre el panel y su API.
+#
+# Mudar de dominio NO es anunciar la web: el robots.txt y la cabecera
+# X-Robots-Tag: noindex del bloque 1 siguen puestos y no se tocan aquí. Se
+# quitan los dos a la vez el día que entren los trabajos reales y las
+# tipografías con licencia.
+[[routes]]
+pattern = "lidialuque.com/*"
+zone_name = "lidialuque.com"
+
 # El `binding` de los estáticos NO sale del flag `--assets`: comprobado leyendo
 # el propio wrangler (validateAssetsOptions en wrangler-dist/cli.js), la línea
 # de comandos sólo aporta el directorio, nunca el nombre del binding. Sin este
