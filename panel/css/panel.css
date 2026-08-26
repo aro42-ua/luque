@@ -114,7 +114,27 @@ h1{
   color: var(--yellow);
   padding: 0.75rem 1rem;
   border-radius: 4px;
+  cursor: grab;
+  box-shadow: 0 0 0 0 transparent;      /* base para la marca de inserción de abajo */
+  transition: box-shadow 0.1s ease;
 }
+
+.fila:active{ cursor: grabbing; }
+
+/* La fila que se está arrastrando: se difumina para que quede claro que se ha
+   levantado, sin ocultarla —perderla de vista rompería la referencia visual
+   de qué se está moviendo—. */
+.fila--arrastrando{ opacity: 0.4; }
+
+/* ============================================================
+   MARCA DE INSERCIÓN — arrastrar y soltar (Tarea 5, atajo de ratón).
+   Un box-shadow no ocupa espacio en el flujo, así que no desplaza a las
+   filas vecinas: aparece en el hueco entre ellas y ya. La transición de
+   arriba la suaviza, y la regla de `prefers-reduced-motion` del final de
+   este archivo la anula: con movimiento reducido, sólo aparece.
+============================================================ */
+.fila--marca-antes{ box-shadow: 0 -4px 0 0 var(--black); }
+.fila--marca-despues{ box-shadow: 0 4px 0 0 var(--black); }
 
 .fila-titulo{
   flex: 1 1 auto;
