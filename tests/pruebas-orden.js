@@ -43,3 +43,34 @@ describe('Orden.mover', function () {
     igual(Orden.mover([], 0, 1), []);
   });
 });
+
+describe('Reordenar es componer', function () {
+  /* El orden de la lista ES la composición: js/composicion.js reparte las
+     ranuras por índice. Si alguien cambiara Orden.mover, la galería se
+     recompondría sin que ninguna prueba de las dos piezas por separado se
+     enterara — cada una seguiría siendo correcta por su cuenta. */
+  function ranuraDe(lista, id) {
+    var ranuras = window.Composicion.disponer(lista.length, 'amplio');
+    return ranuras[lista.indexOf(id)];
+  }
+
+  prueba('mover un proyecto le cambia la ranura, y le da la del que ocupaba su sitio', function () {
+    var antes = ['a', 'b', 'c', 'd'];
+    var despues = window.Orden.mover(antes, 0, 3);
+    igual(despues, ['b', 'c', 'd', 'a']);
+
+    /* 'a' tenía la primera ranura y pasa a tener la cuarta: la misma que antes
+       ocupaba 'd'. Son ranuras distintas —si no, mover no significaría nada—. */
+    igual(ranuraDe(despues, 'a'), ranuraDe(antes, 'd'));
+    cierto(ranuraDe(antes, 'a').x !== ranuraDe(despues, 'a').x ||
+           ranuraDe(antes, 'a').y !== ranuraDe(despues, 'a').y,
+           'si la ranura no cambia, reordenar no recompone nada');
+  });
+
+  prueba('lo que no se mueve conserva su ranura', function () {
+    var antes = ['a', 'b', 'c', 'd'];
+    var despues = window.Orden.mover(antes, 2, 3);   // sólo se cruzan c y d
+    igual(ranuraDe(despues, 'a'), ranuraDe(antes, 'a'));
+    igual(ranuraDe(despues, 'b'), ranuraDe(antes, 'b'));
+  });
+});
