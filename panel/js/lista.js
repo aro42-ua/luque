@@ -198,5 +198,13 @@ window.Lista = (function () {
     });
   }
 
-  return { pintar: pintar, ETIQUETAS: ETIQUETAS };
+  /* `pintar` y `ETIQUETAS` son lo que usa el panel. Las tres de abajo se
+     exponen sólo para poder probarlas: son las piezas sin DOM de este archivo
+     y son justo donde vive la aritmética que puede corromper el orden en
+     silencio —`Orden.mover` no se queja de un índice que no es un número, así
+     que un `calcularHasta` mal calculado recolocaría la galería sin dar
+     ningún error visible—. Se prueban en `tests/pruebas-lista.js`. */
+  return { pintar: pintar, ETIQUETAS: ETIQUETAS,
+           indiceValido: indiceValido, calcularHasta: calcularHasta,
+           dentroDeLaCaja: dentroDeLaCaja };
 })();

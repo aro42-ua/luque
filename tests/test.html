@@ -26,6 +26,10 @@
 <script src="../js/hero.js"></script>
 <script src="../panel/js/identificador.js"></script>
 <script src="../panel/js/orden.js"></script>
+<!-- lista.js no toca el DOM al cargarse: sólo define window.Lista. Se carga
+     por sus tres funciones sin DOM (indiceValido, calcularHasta,
+     dentroDeLaCaja); `pintar` necesita el panel entero y no se ejercita. -->
+<script src="../panel/js/lista.js"></script>
 <script src="pruebas-arnes.js"></script>
 <script src="pruebas-datos.js"></script>
 <script src="pruebas-contenido.js"></script>
@@ -35,6 +39,7 @@
 <script src="pruebas-hero.js"></script>
 <script src="pruebas-identificador.js"></script>
 <script src="pruebas-orden.js"></script>
+<script src="pruebas-lista.js"></script>
 <script src="pruebas-contenido-real.js"></script>
 <script>window.Arnes.resumen();</script>
 </body>
