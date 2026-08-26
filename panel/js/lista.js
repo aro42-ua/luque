@@ -39,6 +39,49 @@ window.Lista = (function () {
     return y < caja.top + caja.height / 2;
   }
 
+  /* Recibe el rectángulo ya medido y no el elemento: así es una función de tres
+     valores llanos, sin DOM, y se puede comprobar con un objeto a mano. */
+  function dentroDeLaCaja(caja, x, y) {
+    return x >= caja.left && x <= caja.right && y >= caja.top && y <= caja.bottom;
+  }
+
+  /* `dragleave` burbujea, así que salir de un hijo hacia otro hijo de la misma
+     fila —del <span> del título a un <button>, o de una fila a la de al lado—
+     también llega al contenedor. Si se borrara la marca en cada uno de esos
+     avisos, parpadearía durante todo el arrastre. Por eso no se mira DE dónde
+     se sale sino A dónde se va: `relatedTarget` es el elemento al que se
+     entra, y mientras siga dentro del <ol> no se ha salido de la lista.
+
+     `relatedTarget` es `null` en varios casos reales —al salir de la ventana,
+     y en algún navegador sin más—, y ahí `contains(null)` daría `false` y
+     borraría la marca de más. La segunda comprobación, por coordenadas,
+     cubre eso: si el puntero sigue sobre el rectángulo del <ol>, no se ha
+     ido a ninguna parte. Salir de la ventana suele dar (0,0), que cae fuera
+     y borra la marca, que es justo lo que se quiere. */
+  function sigueDentroDeLaLista(contenedor, e) {
+    if (e.relatedTarget) return contenedor.contains(e.relatedTarget);
+    return dentroDeLaCaja(contenedor.getBoundingClientRect(), e.clientX, e.clientY);
+  }
+
+  /* El `dragleave` va aquí, en el <ol>, y no en cada <li>: sólo el contenedor
+     ve el gesto de abandonar la lista entera. Puesto por fila, un puntero que
+     se va al formulario de abajo dispara el `dragleave` de la última fila que
+     pisó, pero ninguna fila sabe si el puntero ha aterrizado en otra fila o
+     fuera de todo, que es la diferencia que importa.
+
+     Se engancha una sola vez aunque `pintar` se llame muchas: el <ol> no lo
+     crea `pintar` —viene del HTML y sobrevive al `innerHTML = ''`—, así que
+     sin esta marca cada repintado apilaría un oyente más sobre el mismo
+     nodo. */
+  function vigilarSalidaDeLaLista(contenedor) {
+    if (contenedor.dataset.vigilado === 'si') return;
+    contenedor.dataset.vigilado = 'si';
+    contenedor.addEventListener('dragleave', function (e) {
+      if (sigueDentroDeLaLista(contenedor, e)) return;
+      desmarcar();
+    });
+  }
+
   /* Traduce «fila origen» + «fila destino, antes o después de ella» al mismo
      índice final que ya entiende Orden.mover —el que ocupará la fila movida en
      la lista resultante—, que es exactamente lo que sus pruebas comprueban.
@@ -144,6 +187,7 @@ window.Lista = (function () {
   }
 
   function pintar(contenedor, proyectos, alMover, alBorrar) {
+    vigilarSalidaDeLaLista(contenedor);
     contenedor.innerHTML = '';
     // Los nodos viejos desaparecen con el innerHTML de arriba: ninguna
     // referencia a un arrastre o una marca de la fila anterior debe sobrevivir.
