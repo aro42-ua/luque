@@ -27,7 +27,11 @@ describe('Identificador.problema', function () {
   var CATS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
 
   prueba('un id nuevo y libre no da problema', function () {
-    igual(Identificador.problema('bruma', ['arena'], CATS), null);
+    /* Igual que en pruebas-datos.js: «no hay problema» es null exacto, y se
+       comprueba por identidad. Con `igual` a secas —antes del `replacer` de
+       arnes.js— esta línea habría pasado también con un NaN o un Infinity. */
+    cierto(Identificador.problema('bruma', ['arena'], CATS) === null,
+           'un id libre y nuevo no da problema: null exacto');
   });
 
   prueba('avisa si está vacío', function () {

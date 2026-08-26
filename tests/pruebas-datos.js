@@ -49,6 +49,11 @@ describe('Datos.establecer', function () {
     Datos.establecer([proyectoDeFotos('unico')]);
     igual(Datos.porId('unico').id, 'unico');
     igual(Datos.porCategoria('editorial').length, 1);
-    igual(Datos.porId('no-existe'), null);
+    /* Identidad estricta y no `igual`: «no hay proyecto» es un contrato de
+       identidad, no de cómo se serializa. `igual` ya distingue el NaN del
+       null desde que arnes.js lleva su `replacer`, así que aquí valdría; se
+       deja en `===` porque es lo que la función promete, literalmente. */
+    cierto(Datos.porId('no-existe') === null,
+           'porId de un id que no existe tiene que dar null exacto');
   });
 });
