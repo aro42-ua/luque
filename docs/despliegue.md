@@ -473,8 +473,34 @@ puros. Pero no cubre lo nuevo, y conviene separar qué está y qué no:
   la misma aplicación de Access, un tercer correo rechazado, tokens falsificados
   devueltos con 403, y el conflicto de versión reproducido con dos sesiones.
 
-**Quien vuelva a desplegar tiene que repetir las comprobaciones de la lista de
-abajo contra `https://lidialuque.com`,** que se hicieron contra la URL vieja.
+### Repetido contra `https://lidialuque.com` al fusionar el bloque 3b (2026-08-27)
+
+Tras `wrangler deploy` de `main` ya fusionada (versión
+`59bbaf63-d822-428e-9695-52ea411b84e6`), comprobado con `curl` contra el dominio
+real:
+
+- `/` → **200**, `Content-Type: text/html`, `Cache-Control: no-cache`,
+  `x-robots-tag: noindex`.
+- `/robots.txt` → **200**. Mudar de dominio no ha anunciado la web.
+- `/docs/estado-conocido.md`, `/.claude/launch.json` y
+  `/worker/estatico/wrangler.toml` → **302** a la portada. El último importa
+  más que los otros dos: es el archivo que lleva el nombre del bucket de R2.
+- `/panel` **y también `/panel/css/panel.css`** → **302** a
+  `ffffffstudio.cloudflareaccess.com`. Que el CSS redirija igual que el HTML es
+  la comprobación que hace falta: significa que Access cubre el subárbol entero
+  y no sólo la página.
+- `/api/borrador` → **302** al mismo Access. Los dos Workers conviven en el
+  dominio con la misma sesión, que es lo que evita el CORS entre panel y API.
+- `luque.angelrubioortiz2005.workers.dev/panel` → **404**. Sigue apagado.
+- `/contenido.json` → **200**, `application/json`, con `noindex`.
+- `/tests/test` → **200**.
+
+**Lo que sigue sin repetirse contra el dominio nuevo**, porque necesita un
+navegador o una lista de recursos que `curl` no recorre solo: que las 99 pruebas
+del arnés pasen servidas desde Cloudflare, las cabeceras de caché y los tipos
+MIME de CSS, JS y tipografías, y los 21 recursos locales de la portada.
+
+### Comprobaciones anteriores, contra la URL vieja
 
 Comprobado contra `https://luque.angelrubioortiz2005.workers.dev` después de
 desplegar — **la URL que sirvió esta comprobación está retirada hoy**:
