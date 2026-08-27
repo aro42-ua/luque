@@ -212,9 +212,14 @@ h1{
 }
 
 /* Mismo tratamiento que .fila-boton:disabled: sin esto, un campo o un botón
-   deshabilitados por activarControles(false) se ven idénticos a cuando
-   funcionan, y quien usa el ratón pulsa sin que pase nada —el caso real es
-   justo después de un conflicto de guardado, cuando más falta hace verlo. */
+   deshabilitados se ven idénticos a cuando funcionan, y quien usa el ratón
+   pulsa sin que pase nada. Estos cuatro controles los apaga a la vez
+   `activarControles(false)` (panel.js:134), en el arranque antes de que llegue
+   el borrador y —porque nadie los vuelve a encender— también si esa carga
+   falla. Aparte de eso, `#guardar` se apaga él solo tras un conflicto de
+   guardado (panel.js:113), que es el momento en que más falta hace verlo: el
+   aviso dice que «Guardar» se ha desactivado, y hasta ahora el botón no lo
+   parecía. */
 .nuevo input:disabled,
 .nuevo select:disabled{
   opacity: 0.35;

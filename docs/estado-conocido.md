@@ -145,26 +145,24 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 `tests/test.html` se abre con doble clic y ejecuta 99 comprobaciones sobre la
 lógica pura: el enrutado, la validación de datos, el cálculo de la composición
 filtrada, la máquina de estado del visor, el salto del hero y —desde el bloque
-3b— el identificador, el reordenado y el pintado de la lista del panel. No hace
-falta Node ni servidor.
+3b— el identificador que se saca del título, el reordenado de la lista, y de
+`lista.js` sus tres piezas que no tocan el DOM: la validación del índice de una
+fila, el cálculo del destino al soltar y la caja del `<ol>`. No hace falta Node
+ni servidor.
 
-`tests/prueba-borrador.js` se ejecuta aparte, con `node tests/prueba-borrador.js`:
-52 comprobaciones sobre la capa que habla con la API, con `fetch` sustituido. Va
-en Node y no en el arnés del navegador porque necesita cargar un archivo pensado
-para el navegador dentro de un `vm` con su propio `fetch` falso, y eso el arnés
-no sabe hacerlo.
-
-Lo que esos arneses **no** pueden ver, por diseño: nada que se mueva. Las
+Lo que ese arnés **no** puede ver, por diseño: nada que se mueva. Las
 transiciones, el vuelo del visor, la recomposición del filtrado y el paneo con
 inercia solo se pueden juzgar mirándolos en un navegador de verdad.
 
-**`panel/js/panel.js` no tiene ninguna prueba automática**, y es el archivo que
-cose todo lo demás: el estado, el repintado y la devolución del foco. Está
-diferido a propósito al bloque 3c, cuando exista la segunda pantalla del panel y
-el arnés de DOM que haga falta pueda diseñarse una sola vez para las dos. Hasta
-entonces, cualquier cambio en ese archivo hay que mirarlo en un navegador.
+**Dos archivos del panel no tienen prueba automática, y son los dos que tocan el
+DOM.** `Lista.pintar` construye las filas y engancha el arrastrar y soltar;
+`panel/js/panel.js` entero cose lo demás: el estado, el repintado y la
+devolución del foco. Los dos están diferidos a propósito al bloque 3c, cuando
+exista la segunda pantalla del panel y el arnés de DOM que haga falta pueda
+diseñarse una sola vez para las dos. Hasta entonces, cualquier cambio ahí hay
+que mirarlo en un navegador — y son justo la parte más frágil del bloque.
 
-Tampoco puede ver lo que habla con la red. `panel/js/borrador.js` necesita que
+El arnés del navegador tampoco puede ver lo que habla con la red. `panel/js/borrador.js` necesita que
 `fetch` esté sustituido, y eso el arnés del navegador no lo hace, así que su
 prueba va aparte y sí necesita Node:
 

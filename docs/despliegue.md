@@ -93,8 +93,8 @@ a respuestas generadas por código de Worker.
 >
 > **Verificado con `wrangler dev` en local** (no contra el servidor real: al
 > escribirse esto la rama todavía no se había desplegado) con un directorio de
-> recursos que incluía
-> `_redirects` y archivos de prueba bajo `docs/`, `.claude/` y `worker/`:
+> recursos que incluía `_redirects` y archivos de prueba bajo `docs/`,
+> `.claude/` y `worker/`:
 > `GET /docs/estado-conocido.md`, `GET /.claude/launch.json` y
 > `GET /worker/wrangler.toml` siguen devolviendo **302**. Y el propio
 > `/contenido.json` responde el archivo estático del repositorio mientras R2
@@ -222,8 +222,7 @@ ejecutar nunca para esa ruta, publicara lo que publicara el estudio.
 
 **Verificado con `wrangler dev` en local** (no contra el servidor real: al
 escribirse esto la rama todavía no se había desplegado), con R2 emulado y un
-`contenido.json`
-estático de prueba en el directorio de recursos:
+`contenido.json` estático de prueba en el directorio de recursos:
 - Sin nada publicado en R2: `GET /contenido.json` devuelve el archivo del
   repositorio.
 - Tras `wrangler r2 object put luque-contenido/contenido.json --local ...`:
@@ -300,8 +299,8 @@ archivo exista: la documentación de Cloudflare dice que las reglas se aplican
 *sin importar si un recurso casa con la petición*, así que el
 redireccionamiento gana al archivo real. **Verificado contra el servidor real:**
 `/docs/*` y `/.claude/*` devuelven 302 y sirven la portada, no el markdown ni el
-JSON. `/worker/*` se añadió en el bloque 3a y **está sin verificar contra el
-servidor**, porque la rama todavía no se ha desplegado.
+JSON. `/worker/*` se añadió en el bloque 3a y quedó verificado en la Tarea 7 del
+bloque 3b, ya contra `lidialuque.com`: también devuelve 302.
 
 **`/worker/*` es la lección que conviene no repetir.** El bloque 3a añadió un
 directorio de primer nivel entero —el código del Worker de la API, sus pruebas
@@ -464,12 +463,18 @@ secreto del Worker de la API— sigue valiendo sin tocarlo.
 código** — antes de la Tarea 6, Paso 4 del bloque 3a — **y antes de que el
 sitio se mudara a `lidialuque.com`** — antes de la Tarea 7 del bloque 3b. Sigue
 siendo cierto para lo que prueba: el comportamiento de los recursos estáticos
-puros. Pero no cubre nada de lo nuevo — `/contenido.json` y `/img/*` desde R2,
-la caída de vuelta, `run_worker_first`, ni el dominio propio con Access
-delante — que sólo se ha verificado con `wrangler dev` en **local** (sección
-de arriba) o no se ha verificado en absoluto contra el servidor real. **Quien
-despliegue esta rama tiene que repetir ahí las comprobaciones de esa sección,
-contra `https://lidialuque.com`,** antes de dar el paso por bueno.
+puros. Pero no cubre lo nuevo, y conviene separar qué está y qué no:
+
+- **`/contenido.json` y `/img/*` desde R2, la caída de vuelta al archivo
+  estático y `run_worker_first`: sólo verificados con `wrangler dev` en
+  local** (sección de arriba), nunca contra el servidor real.
+- **El dominio propio con Access delante sí está verificado en producción**,
+  en la Tarea 7 del bloque 3b: `lidialuque.com/panel` y `/api/*` cubiertos por
+  la misma aplicación de Access, un tercer correo rechazado, tokens falsificados
+  devueltos con 403, y el conflicto de versión reproducido con dos sesiones.
+
+**Quien vuelva a desplegar tiene que repetir las comprobaciones de la lista de
+abajo contra `https://lidialuque.com`,** que se hicieron contra la URL vieja.
 
 Comprobado contra `https://luque.angelrubioortiz2005.workers.dev` después de
 desplegar — **la URL que sirvió esta comprobación está retirada hoy**:
@@ -484,8 +489,9 @@ de este documento), así que estos puntos hay que volver a comprobarlos contra
   `31536000, immutable` más `nosniff` en las tipografías.
 - Tipos MIME correctos: `font/otf` en las tipografías, `text/css`,
   `text/javascript`, `image/svg+xml`.
-- Las 51 pruebas del arnés (`tests/test.html`) pasan con el código servido
-  desde Cloudflare.
+- Las 51 pruebas que tenía entonces el arnés (`tests/test.html`) pasaban con el
+  código servido desde Cloudflare. Hoy son 99: el bloque 3b añadió las del
+  panel, y esta comprobación está pendiente de repetirse.
 - Los 21 recursos locales que referencian `index.html` y `css/luque.css`
   devuelven los 21 un 200: nada roto por el despliegue.
 
