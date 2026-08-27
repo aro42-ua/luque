@@ -882,19 +882,47 @@ git archive main | tar -x -C <directorio-temporal>
 wrangler deploy --config worker/estatico/wrangler.toml --assets <directorio-temporal>
 ```
 
-- [ ] **Paso 4: El estudio añade Access sobre `/panel`**
+- [ ] **Paso 4: El estudio añade `/panel` a la aplicación de Access QUE YA EXISTE**
 
-En Zero Trust → Access → Applications → *Add an application* → Self-hosted:
+> **CORREGIDO, y corregido rompiéndolo.** Este paso decía «*Add an
+> application*»: crear una aplicación **nueva** para `/panel`, junto a la que ya
+> cubre `/api`. Eso se hizo, y **rompió el panel**.
+>
+> Dos aplicaciones de Access sobre el mismo dominio **se pisan la cookie de
+> sesión**: `CF_Authorization` es una sola por host. Al entrar en el panel,
+> Access la reemitía para la aplicación del panel, y con ella la sesión de la
+> API quedaba invalidada. El panel cargaba, y su primera llamada a `/api/borrador`
+> se iba contra Access, que redirigía a `ffffffstudio.cloudflareaccess.com` —otro
+> origen—; el navegador bloqueaba la redirección por CORS y el panel enseñaba
+> «no se ha podido contactar con el servidor». Un fallo de configuración
+> disfrazado de problema de red.
+>
+> El plan también razonaba mal el porqué: decía que el AUD distinto «da igual,
+> el panel no verifica tokens». La primera mitad es cierta y la segunda es la
+> trampa: el panel no verifica tokens, pero **llama a la API, que sí**. Con dos
+> aplicaciones, el token que trae la cookie lleva el AUD del panel y el Worker
+> de la API lo rechaza, porque `ACCESS_AUD` es el suyo.
+
+En Zero Trust → Access → Applications → **la aplicación que ya cubre la API** →
+*Edit* → pestaña de dominios, y se **añade una segunda ruta al mismo
+`Application`**:
 
 | Campo | Valor |
 |---|---|
 | Domain | `lidialuque.com` |
-| Path | `panel` |
-| Policy | Allow → Emails → **los dos correos** |
+| Path | `api` *(la que ya estaba)* |
+| Domain | `lidialuque.com` |
+| Path | `panel` *(la que se añade)* |
+| Policy | la que ya existe: Allow → Emails → **los dos correos** |
 
-**El AUD de esta aplicación es distinto del de la API.** Da igual: el panel no
-verifica tokens, sólo necesita que Access lo tape. Los secretos del Worker de la
-API **no se tocan**.
+Así hay **una sola aplicación, un solo AUD y una sola cookie** para las dos
+rutas. `ACCESS_AUD`, el secreto del Worker de la API, **sigue valiendo tal cual
+y no se toca**.
+
+**Si Access no dejara añadir una segunda ruta a la misma aplicación**, la
+alternativa correcta es una sola aplicación cuyo path las cubra a las dos, no
+dos aplicaciones. Lo que no vale, en ningún caso, es dos aplicaciones sobre
+`lidialuque.com`.
 
 - [ ] **Paso 5: Comprueba lo que NO debe funcionar**
 
@@ -908,15 +936,24 @@ Esto es lo que de verdad importa de la tarea:
 | `lidialuque.com/` | la web pública, como siempre |
 | `lidialuque.com/robots.txt` | sigue con `Disallow: /` |
 | Cabecera `X-Robots-Tag` en la portada | sigue diciendo `noindex` |
+| **Entrar en `/panel` y que cargue la lista** | **el panel pinta los proyectos, no un aviso de error** |
 
-Las dos últimas filas no son adorno: **mudar de dominio no es anunciar la web**,
-y el cierre a buscadores tiene que sobrevivir a la mudanza.
+Las dos filas del `robots` no son adorno: **mudar de dominio no es anunciar la
+web**, y el cierre a buscadores tiene que sobrevivir a la mudanza.
+
+Y la última fila es la que caza el fallo del Paso 4: si hay dos aplicaciones de
+Access en vez de una, entrar en el panel invalida la sesión de la API y la
+pantalla enseña «No se ha podido cargar el contenido: no se ha podido contactar
+con el servidor…». **Ese mensaje, aquí, no significa que la red falle:
+significa que Access está mal configurado.** Que el panel cargue no basta —hay
+que ver la lista.
 
 - [ ] **Paso 6: Documenta y commitea**
 
 En `docs/despliegue.md`: que el sitio vive ahora en `lidialuque.com`, que
-`workers.dev` está apagado **y por qué**, y que hay una segunda aplicación de
-Access sobre `/panel`.
+`workers.dev` está apagado **y por qué**, y que `/panel` y `/api` los cubre
+**una sola aplicación de Access** —con el porqué del Paso 4: dos aplicaciones
+sobre el mismo dominio se pisan la cookie de sesión—.
 
 ```bash
 git add worker/estatico/wrangler.toml _redirects docs/despliegue.md

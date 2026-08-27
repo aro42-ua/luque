@@ -152,12 +152,14 @@ prueba va aparte y sí necesita Node:
 node tests/prueba-borrador.js
 ```
 
-Son 15 escenarios y 41 comprobaciones sobre los cuatro finales de un guardado
+Son 15 escenarios y 52 comprobaciones sobre los cuatro finales de un guardado
 —guardado, conflicto, petición mal formada y red caída—, sobre que el callback
-de quien llama se invoque una sola vez aunque lance, y sobre que ningún mensaje
-en inglés del motor llegue a la pantalla. Se le puede pasar otro archivo como
-argumento para comprobar que las propias pruebas caen cuando el código está
-roto; el porqué de todo esto está explicado en la cabecera del archivo.
+de quien llama se invoque una sola vez aunque lance, sobre que ningún mensaje
+en inglés del motor llegue a la pantalla, y sobre que el aviso de «no se ha
+podido contactar con el servidor» nombre también la sesión caducada, que desde
+el navegador es indistinguible de la red caída. Se le puede pasar otro archivo
+como argumento para comprobar que las propias pruebas caen cuando el código
+está roto; el porqué de todo esto está explicado en la cabecera del archivo.
 
 ## Estructura
 

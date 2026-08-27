@@ -48,6 +48,14 @@
  *   I3  `cargar` tiraba el `{error}` en castellano que el Worker sí manda y
  *       ponía el número del estado a secas.
  *
+ *   R4  El aviso de «no se ha podido contactar con el servidor» nombraba una
+ *       sola causa. En producción salió cuando lo que fallaba era la SESIÓN, y
+ *       mandó a mirar el wifi a quien sólo tenía que volver a entrar. Los dos
+ *       casos son indistinguibles desde aquí —lo explica `borrador.js`—, así
+ *       que el mensaje nombra los dos y da primero la acción que arregla el
+ *       frecuente. Y la acción NO es la misma en las dos funciones: a quien no
+ *       pudo guardar no se le puede mandar recargar, que le borraría lo suyo.
+ *
  * Cada comprobación de aquí CAE si se revierte su arreglo. Eso no se afirma: se
  * comprueba, y cualquiera lo puede repetir, porque se le puede pasar OTRO
  * archivo como argumento:
@@ -55,11 +63,11 @@
  *     git show 0976b1d:panel/js/borrador.js > /tmp/viejo.js
  *     node tests/prueba-borrador.js /tmp/viejo.js
  *
- * Contra aquella versión pasan 14 comprobaciones y caen 27. Una prueba que pasa
+ * Contra aquella versión pasan 17 comprobaciones y caen 35. Una prueba que pasa
  * con el código roto no es una prueba, y ésta es la forma de asegurarse de que
  * éstas no lo son.
  *
- * Con una salvedad que conviene saber, porque es la única de las 41 que NO cae
+ * Con una salvedad que conviene saber, porque es la única de las 52 que NO cae
  * al revertir: C1d. Volver al `.catch()` colgando no la rompe, porque el
  * `.catch()` sólo dispara dos veces cuando lo que lanza es el manejador de
  * ÉXITO; en la rama de error ya llamaba una sola vez. C1d se queda porque
@@ -186,6 +194,16 @@ function anotarError(texto) {
   return texto;
 }
 
+/* «Aparece `a`, aparece `b`, y `b` va después». Con `indexOf` a secas esto se
+   escribiría `texto.indexOf(b) > texto.indexOf(a)`, que da un PASA falso
+   cuando `a` no está: -1 es menor que cualquier posición. Exigir que los dos
+   aparezcan es lo que hace que la comprobación signifique algo. */
+function vaDespuesDe(texto, a, b) {
+  var i = texto.indexOf(a);
+  var j = texto.indexOf(b);
+  return i !== -1 && j !== -1 && j > i;
+}
+
 // =============================================================================
 // C1 — `alTerminar` se llama UNA sola vez, incluso si el callback lanza
 // =============================================================================
@@ -267,9 +285,14 @@ escenario('C2a  cargar: la sesión de Access caducó y llega HTML', 'C2', functi
     comprobar('datos es null', recibido.datos === null, recibido.datos);
     comprobar('el mensaje no trae inglés ni detalle del motor',
       !FUGAS.test(recibido.error), recibido.error);
-    comprobar('el mensaje dice que la sesión pudo caducar y que vuelva a entrar',
-      /sesi.n pudo haber caducado/.test(recibido.error)
-        && /iniciar sesi.n/.test(recibido.error), recibido.error);
+    /* Aquí SÍ se sabe qué pasó —llegó la página de inicio de sesión—, así que
+       el mensaje no tiene por qué dudar ni sacar a pasear la conexión. */
+    comprobar('dice que la sesión ha caducado, sin dudar',
+      /la sesi.n ha caducado/.test(recibido.error), recibido.error);
+    comprobar('manda recargar, que al cargar no cuesta nada',
+      /[Rr]ecarga la p.gina/.test(recibido.error), recibido.error);
+    comprobar('no marea con la conexión cuando la causa se conoce',
+      !/revisa la conexi.n/.test(recibido.error), recibido.error);
     comprobar('el DOCTYPE queda en console.error, que es donde sirve',
       m.registro.length === 1 && /DOCTYPE/.test(m.registro[0]), m.registro);
   });
@@ -284,17 +307,34 @@ escenario('C2b  guardar: la sesión de Access caducó y llega HTML', 'C2', funct
   return reposar().then(function () {
     console.log('    error   : ' + recibido.error);
     comprobar('el mensaje no trae inglés', !FUGAS.test(recibido.error), recibido.error);
-    comprobar('dice lo de la sesión', /sesi.n pudo haber caducado/.test(recibido.error),
-      recibido.error);
+    comprobar('dice que la sesión ha caducado, sin dudar',
+      /la sesi.n ha caducado/.test(recibido.error), recibido.error);
     comprobar('promete que no se ha perdido lo escrito',
       /Lo que has escrito sigue aqu/.test(recibido.error), recibido.error);
+    /* La que más importa de este escenario: a quien no ha podido GUARDAR no se
+       le puede mandar recargar. Recargar borraría justo lo que no se guardó. */
+    comprobar('NO manda recargar: lo perdería todo',
+      !/[Rr]ecarga la p.gina/.test(recibido.error), recibido.error);
+    comprobar('le da la salida buena: otra pestaña y repetir',
+      /otra pesta.a/.test(recibido.error) && /sin recargar/.test(recibido.error),
+      recibido.error);
     comprobar('el detalle queda en el registro',
       m.registro.length === 1 && /DOCTYPE/.test(m.registro[0]), m.registro);
   });
 });
 
-escenario('C2c  guardar: la red está caída', 'C2', function () {
-  var m = montar(function () { return Promise.reject(new TypeError('Failed to fetch')); });
+/* Los dos escenarios que siguen mandan el MISMO error, y ése es justo el
+   asunto. Cuando la sesión de Access caduca, Access redirige a
+   `ffffffstudio.cloudflareaccess.com` —otro origen—, el navegador bloquea la
+   redirección por falta de CORS, y lo que llega es un `TypeError` idéntico al
+   de un cable desenchufado. Se vio en producción: el aviso decía «no se ha
+   podido contactar con el servidor» y mandó a mirar el wifi a quien sólo tenía
+   que volver a entrar. Como no se pueden separar, el mensaje nombra las dos
+   causas y pone primero la acción que arregla la frecuente. */
+var TYPEERROR_DE_ACCESS_O_DE_LA_RED = new TypeError('Failed to fetch');
+
+escenario('C2c  guardar: Access redirigió fuera, o se cayó la red', 'C2', function () {
+  var m = montar(function () { return Promise.reject(TYPEERROR_DE_ACCESS_O_DE_LA_RED); });
   var recibido = null;
   m.B.guardar({ version: 1, proyectos: [] }, function (r, e) {
     recibido = { resultado: r, error: anotarError(e) };
@@ -305,21 +345,42 @@ escenario('C2c  guardar: la red está caída', 'C2', function () {
     comprobar('el mensaje no trae inglés', !FUGAS.test(recibido.error), recibido.error);
     comprobar('dice que no se ha podido contactar con el servidor',
       /no se ha podido contactar con el servidor/.test(recibido.error), recibido.error);
+    /* Las dos causas, porque no se pueden distinguir. Nombrar sólo la conexión
+       fue exactamente el fallo que se vio en producción. */
+    comprobar('nombra también la sesión, no sólo la conexión',
+      /[Pp]uede que la sesi.n haya caducado/.test(recibido.error), recibido.error);
+    comprobar('menciona la conexión, pero la última',
+      vaDespuesDe(recibido.error, 'sesión haya caducado', 'revisa la conexi'),
+      recibido.error);
     comprobar('promete que no se ha perdido lo escrito',
       /Lo que has escrito sigue aqu/.test(recibido.error), recibido.error);
+    comprobar('NO manda recargar: lo perdería todo',
+      !/[Rr]ecarga la p.gina/.test(recibido.error), recibido.error);
+    comprobar('le da la salida buena: otra pestaña y repetir',
+      /otra pesta.a/.test(recibido.error) && /sin recargar/.test(recibido.error),
+      recibido.error);
     comprobar('«Failed to fetch» sólo en el registro',
       m.registro.length === 1 && /Failed to fetch/.test(m.registro[0]), m.registro);
   });
 });
 
-escenario('C2d  cargar: la red está caída', 'C2', function () {
-  var m = montar(function () { return Promise.reject(new TypeError('Failed to fetch')); });
+/* El caso exacto que se vio en producción: el panel arrancó sin sesión válida
+   para la API y el aviso hablaba sólo de la conexión. */
+escenario('C2d  cargar: Access redirigió fuera, o se cayó la red', 'C2', function () {
+  var m = montar(function () { return Promise.reject(TYPEERROR_DE_ACCESS_O_DE_LA_RED); });
   var recibido = null;
   m.B.cargar(function (d, e) { recibido = { datos: d, error: anotarError(e) }; });
   return reposar().then(function () {
     console.log('    error   : ' + recibido.error);
     comprobar('el mensaje no trae inglés', !FUGAS.test(recibido.error), recibido.error);
     comprobar('datos es null', recibido.datos === null, recibido.datos);
+    comprobar('nombra también la sesión, no sólo la conexión',
+      /[Pp]uede que la sesi.n haya caducado/.test(recibido.error), recibido.error);
+    comprobar('da la acción que arregla lo frecuente: recargar',
+      /[Rr]ecarga la p.gina para volver a entrar/.test(recibido.error), recibido.error);
+    comprobar('menciona la conexión, pero la última',
+      vaDespuesDe(recibido.error, 'recarga la página', 'revisa la conexi'),
+      recibido.error);
   });
 });
 

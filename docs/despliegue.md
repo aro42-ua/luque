@@ -400,6 +400,35 @@ no Claude:
 - **`wrangler login`**, descrito en el paso 2 de más arriba. Abre el navegador
   para autenticar la sesión de despliegue; por eso lo tiene que hacer quien
   tiene las credenciales de la cuenta.
+- **Configurar Cloudflare Access**, desde el panel de Zero Trust y con la sesión
+  del estudio. Aquí hay una regla que se aprendió rompiéndola, y va justo debajo.
+
+## Access: UNA sola aplicación para `/api` y `/panel`
+
+**`lidialuque.com` tiene que estar cubierto por una única aplicación de Access,
+con las dos rutas dentro.** No dos aplicaciones, una por ruta.
+
+Se probó con dos —una para la API y otra para el panel— y **rompió el panel**.
+El motivo: `CF_Authorization` es **una sola cookie por host**. Al entrar en
+`/panel`, Access la reemitía para la aplicación del panel, con **el AUD del
+panel**; con eso la sesión de la API quedaba invalidada, y la primera llamada
+del panel a `/api/borrador` se iba contra Access en vez de contra el Worker.
+
+Lo que se ve cuando pasa, y por qué despista:
+
+> «No se ha podido cargar el contenido: no se ha podido contactar con el
+> servidor…»
+
+**Ese aviso, en el panel, no significa que la red falle.** Significa casi
+siempre que Access está mal configurado. Access redirige a
+`ffffffstudio.cloudflareaccess.com`, que es otro origen; el navegador bloquea
+esa redirección porque no lleva CORS, y `fetch` sólo llega a ver un `TypeError`
+idéntico al de un cable desenchufado. El panel no puede distinguirlos —por eso
+su mensaje nombra las dos causas—, pero quien despliega sí: **si el panel carga
+y la lista no, mira Access antes que el wifi.**
+
+Con una sola aplicación hay un solo AUD y una sola cookie, y `ACCESS_AUD` —el
+secreto del Worker de la API— sigue valiendo sin tocarlo.
 
 ## Verificado en producción
 

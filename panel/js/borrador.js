@@ -12,16 +12,55 @@ window.Borrador = (function () {
      diagnosticar. Es el mismo reparto que hace `fallo()` en el Worker
      (worker/src/index.js): mensaje nuestro fuera, detalle ajeno al registro. */
 
+  /* ATENCIÓN antes de tocar este mensaje: la sesión caducada y la red caída son
+     INDISTINGUIBLES aquí, y no por dejadez.
+
+     Cuando la sesión de Access ha caducado, Access no contesta: **redirige a
+     `ffffffstudio.cloudflareaccess.com`, que es otro origen**, y el navegador
+     bloquea esa redirección porque no lleva CORS. Lo que llega a este `catch`
+     es un `TypeError` idéntico, carácter por carácter, al de un cable
+     desenchufado. El navegador no da con qué separarlos.
+
+     Se vio en producción: el panel arrancó sin sesión válida y este aviso decía
+     «no se ha podido contactar con el servidor», a secas. Mandó a mirar el wifi
+     a quien sólo tenía que volver a entrar. Por eso el mensaje **nombra las dos
+     causas y pone primero la acción que arregla la frecuente**. Decir una sola
+     cosa con seguridad falsa es peor que decir dos con la verdad. */
   var SIN_RED = 'no se ha podido contactar con el servidor';
-  /* El caso más probable de todos: alguien deja el panel abierto, la sesión de
-     Access caduca, y al volver el servidor contesta la página de inicio de
-     sesión, que es HTML y no JSON. Decir «Unexpected token '<'» sería esconder
-     lo único que le sirve a quien lo lee: que vuelva a entrar. */
-  var SESION = 'la sesión pudo haber caducado: vuelve a iniciar sesión y repítelo';
+
+  /* Éste sí es seguro: si llega un cuerpo que no es JSON, es la página de
+     inicio de sesión. Ocurre cuando Access contesta en nuestro propio origen en
+     vez de redirigir fuera. Pasa menos que lo de arriba, pero cuando pasa se
+     sabe qué es, y entonces el mensaje no tiene por qué dudar. */
+  var SESION = 'la sesión ha caducado';
+
+  /* El consejo va aparte de la causa porque **no es el mismo en las dos
+     funciones**, y confundirlos haría daño: a quien no ha podido CARGAR se le
+     dice que recargue, que es gratis; a quien no ha podido GUARDAR, recargar le
+     borraría justo lo que no llegó a guardarse. A ése se le manda a otra
+     pestaña y se le promete, en la misma frase, que lo suyo sigue ahí. */
+  var CONSEJOS_CARGAR = {
+    sesion: ' Recarga la página para volver a entrar.',
+    red: ' Puede que la sesión haya caducado: recarga la página para volver a'
+       + ' entrar. Si al recargar sigue igual, revisa la conexión.',
+    servidor: ''
+  };
+  var CONSEJOS_GUARDAR = {
+    sesion: ' Lo que has escrito sigue aquí: vuelve a entrar en otra pestaña y'
+          + ' repite el guardado, sin recargar ésta.',
+    red: ' Puede que la sesión haya caducado. Lo que has escrito sigue aquí:'
+       + ' vuelve a entrar en otra pestaña y repite el guardado, sin recargar'
+       + ' ésta. Si aun así sigue igual, revisa la conexión.',
+    servidor: ' Lo que has escrito sigue aquí.'
+  };
 
   /* Excepción con el mensaje ya redactado por nosotros. Se distingue de
-     cualquier otra, que sale con mensaje propio y detalle sólo en el registro. */
-  function Legible(mensaje) { this.mensaje = mensaje; }
+     cualquier otra, que sale con mensaje propio y detalle sólo en el registro.
+     El `tipo` es lo que elige el consejo. */
+  function Legible(mensaje, tipo) {
+    this.mensaje = mensaje;
+    this.tipo = tipo;
+  }
 
   function registrar(que, detalle) {
     console.error('Borrador: ' + que + (detalle ? ': ' + detalle : ''));
@@ -42,7 +81,7 @@ window.Borrador = (function () {
       } catch (e) {
         registrar('el servidor respondió ' + r.status + ' con algo que no es JSON',
           String(texto).slice(0, 200));
-        throw new Legible(SESION);
+        throw new Legible(SESION, 'sesion');
       }
     });
   }
@@ -52,14 +91,23 @@ window.Borrador = (function () {
      del estado sería perder la única frase que explica qué pasó. */
   function delServidor(metodo, res) {
     registrar(metodo + ' respondió ' + res.estado, res.cuerpo.error);
-    return new Legible(res.cuerpo.error || 'el servidor respondió ' + res.estado);
+    return new Legible(
+      res.cuerpo.error || 'el servidor respondió ' + res.estado, 'servidor');
   }
 
+  /* Devuelve la causa ya redactada y el tipo, que es lo que luego elige el
+     consejo. Quien llama compone: prefijo + causa + consejo. */
   function motivo(e) {
-    if (e instanceof Legible) return frase(e.mensaje);
-    /* Ni llegó, o se cortó a mitad. Lo único que hay que saber fuera. */
+    if (e instanceof Legible) return { texto: frase(e.mensaje), tipo: e.tipo };
+    /* Ni llegó, o se cortó a mitad, o Access redirigió fuera de nuestro origen
+       y el navegador lo cortó. Los tres caen aquí y son el mismo TypeError. */
     registrar('la petición no llegó a completarse', e && e.message);
-    return frase(SIN_RED);
+    return { texto: frase(SIN_RED), tipo: 'red' };
+  }
+
+  function componer(prefijo, consejos, e) {
+    var causa = motivo(e);
+    return prefijo + causa.texto + (consejos[causa.tipo] || '');
   }
 
   function cargar(alTerminar) {
@@ -77,7 +125,8 @@ window.Borrador = (function () {
            inventado —dos llamadas, la segunda mintiendo—, y se buscaba en la
            red durante horas un bug que estaba en la pantalla. */
         function (e) {
-          alTerminar(null, 'No se ha podido cargar el contenido: ' + motivo(e));
+          alTerminar(null,
+            componer('No se ha podido cargar el contenido: ', CONSEJOS_CARGAR, e));
         }
       );
   }
@@ -107,12 +156,12 @@ window.Borrador = (function () {
       })
       .then(
         function (resultado) { alTerminar(resultado, null); },
-        /* Igual que en `cargar`, y aquí importa el doble: la cola promete que
-           lo escrito sigue estando, que es lo primero que necesita saber quien
-           acaba de ver fallar un guardado. */
+        /* Igual que en `cargar`, y aquí importa el doble: todos los consejos de
+           guardar prometen que lo escrito sigue estando, que es lo primero que
+           necesita saber quien acaba de ver fallar un guardado. */
         function (e) {
-          alTerminar(null, 'No se ha podido guardar: ' + motivo(e)
-            + ' Lo que has escrito sigue aquí.');
+          alTerminar(null,
+            componer('No se ha podido guardar: ', CONSEJOS_GUARDAR, e));
         }
       );
   }
