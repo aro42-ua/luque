@@ -62,16 +62,23 @@ solape ni el determinismo se ven afectados.
 
 ## Desplegada
 
-**La web está publicada en `https://luque.angelrubioortiz2005.workers.dev`.**
-No es un proyecto de Cloudflare Pages —la cuenta no tiene ninguno—, sino un
-Worker de Cloudflare con recursos estáticos, desplegado con `wrangler`. El
-motivo del cambio de plan y el procedimiento completo están en
-`docs/despliegue.md`.
+**La web está publicada en `https://lidialuque.com`.** No es un proyecto de
+Cloudflare Pages —la cuenta no tiene ninguno—, sino un Worker de Cloudflare
+con recursos estáticos, desplegado con `wrangler`. El motivo del cambio de
+plan y el procedimiento completo están en `docs/despliegue.md`.
+
+**`workers.dev` está apagado a propósito, y no hay que volver a encenderlo.**
+Antes de la Tarea 7 del bloque 3b la web respondía también en
+`luque.angelrubioortiz2005.workers.dev`; esa dirección ya no contesta porque,
+desde que este Worker sirve `/panel` —la única superficie de escritura del
+sitio—, dejarla encendida lo dejaría alcanzable sin que Cloudflare Access
+pueda ponerse delante (Access sólo cubre nombres de host de una zona propia,
+no `workers.dev`). El razonamiento completo está en `docs/despliegue.md`.
 
 Sigue **cerrada a los buscadores** por `robots.txt` y por la cabecera
-`X-Robots-Tag: noindex`, y sin dominio propio, mientras el contenido siga
-siendo de relleno y las tipografías sigan siendo Trial. Las fotos, como ya se
-dice arriba, siguen siendo de picsum.
+`X-Robots-Tag: noindex`, mientras el contenido siga siendo de relleno y las
+tipografías sigan siendo Trial. Las fotos, como ya se dice arriba, siguen
+siendo de picsum.
 
 **Las tres tipografías son versiones Trial y su licencia probablemente no
 cubre el uso público.** `ABCFavorit-Regular-Trial.otf`,

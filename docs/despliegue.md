@@ -1,10 +1,32 @@
 # Cómo se despliega
 
-La web está publicada en `https://luque.angelrubioortiz2005.workers.dev`. Dos
-piezas: un repositorio privado en GitHub, `aro42-ua/luque`, que guarda el
-código, y un **Worker de Cloudflare con recursos estáticos** — no un proyecto
-de Pages — que sirve el sitio. El despliegue es un comando de `wrangler` que
-hay que ejecutar a mano cada vez.
+La web está publicada en `https://lidialuque.com`. Dos piezas: un repositorio
+privado en GitHub, `aro42-ua/luque`, que guarda el código, y un **Worker de
+Cloudflare con recursos estáticos** — no un proyecto de Pages — que sirve el
+sitio. El despliegue es un comando de `wrangler` que hay que ejecutar a mano
+cada vez.
+
+## `workers.dev` está apagado a propósito, y no hay que volver a encenderlo
+
+El Worker se sigue llamando `luque` en Cloudflare, y hasta la Tarea 7 del
+bloque 3b también respondía en `https://luque.angelrubioortiz2005.workers.dev`.
+Esa dirección **ya no contesta**: `worker/estatico/wrangler.toml` fija
+`workers_dev = false` y `preview_urls = false`, a propósito.
+
+El motivo no es limpieza, es seguridad. Este mismo Worker sirve ahora `/panel`,
+la única superficie de **escritura** del sitio. Cloudflare Access sólo puede
+ponerse delante de un nombre de host de una zona propia —`lidialuque.com`— y
+**no** de `workers.dev`, que es un dominio de Cloudflare. Con `workers.dev`
+encendido, `/panel` seguiría alcanzable en
+`luque.angelrubioortiz2005.workers.dev/panel` sin Access delante: un agujero
+exacto en lo único que da permiso de escritura sobre el contenido del estudio.
+Las Preview URLs se apagaron por lo mismo: cada versión desplegada estrena su
+propio nombre de host, y ninguno estaría cubierto por la política de Access.
+
+**Si alguna vez compruebas la URL vieja y ves que no responde, ese es el
+comportamiento correcto — no un despliegue roto.** El arreglo no es volver a
+encender `workers.dev`: sería reabrir el agujero que la Tarea 7 de este bloque
+existe para cerrar. El sitio vive en `lidialuque.com`.
 
 ## Aviso: hubo una integración automática, y desplegó lo que no debía
 
@@ -147,7 +169,8 @@ repositorio: lo que se exporta y se sube **es** el sitio.
 
 `worker/estatico/index.js` (con su configuración en
 `worker/estatico/wrangler.toml`) es el `fetch()` de **este mismo Worker**, el
-que responde en `luque.angelrubioortiz2005.workers.dev`. No confundir con
+que responde en `lidialuque.com` (`workers.dev` está apagado a propósito — ver
+el aviso al principio de este documento). No confundir con
 `worker/src/index.js`, que es el Worker de la API (`luque-api`) — son dos
 Workers, dos despliegues, dos archivos de configuración, y sólo comparten el
 bucket de R2.
@@ -263,7 +286,7 @@ cabeceras fijan.
 
 El árbol que exporta `git archive` es exactamente lo versionado, así que
 **se sube todo lo versionado**, no sólo lo que enlaza `index.html`. Sin hacer
-nada, `https://luque.angelrubioortiz2005.workers.dev/docs/estado-conocido.md`
+nada, `https://lidialuque.com/docs/estado-conocido.md`
 devolvería 200 a cualquiera — y ese archivo dice en texto plano que las
 tipografías son versiones Trial sin licencia para uso público, a pocos clics
 de los propios `.otf` descargables. `/.claude/launch.json` filtra además rutas
@@ -302,11 +325,14 @@ navegadores y sería doloroso de revertir.
 sensible: son el arnés y sus pruebas, el mismo código que ya es público en el
 repositorio del sitio. A cambio, dejarlo accesible permite la verificación más
 valiosa del despliegue: abrir la ruta de pruebas en la URL real y comprobar que
-las 51 comprobaciones pasan **servidas desde Cloudflare**, con sus rutas, sus
+las comprobaciones pasan **servidas desde Cloudflare**, con sus rutas, sus
 tipos MIME y sus mayúsculas de verdad, y no sólo con doble clic en local. Es
 justo lo que ninguna prueba en la máquina de desarrollo puede demostrar.
-**Verificado:** las 51 pasan servidas desde
-`https://luque.angelrubioortiz2005.workers.dev`.
+**Verificado (antes de la Tarea 7 del bloque 3b, contra la URL de
+`workers.dev` que hoy está apagada):** las 51 pasaban servidas desde
+`https://luque.angelrubioortiz2005.workers.dev`. Falta repetir esta misma
+comprobación contra `https://lidialuque.com/tests/test` — ver «Verificado en
+producción» más abajo.
 
 Al pedir `/tests/test.html` (con la extensión) el servidor responde 307 hacia
 `/tests/test`, sin ella. Es la normalización de extensiones que hacen los
@@ -433,16 +459,21 @@ secreto del Worker de la API— sigue valiendo sin tocarlo.
 ## Verificado en producción
 
 **Todo lo de esta sección se comprobó ANTES de que este Worker tuviera
-código** — antes de la Tarea 6, Paso 4 del bloque 3a. Sigue siendo cierto para
-lo que prueba: el comportamiento de los recursos estáticos puros. Pero no
-cubre nada de lo nuevo — `/contenido.json` y `/img/*` desde R2, la caída de
-vuelta, `run_worker_first` — que sólo se ha verificado con `wrangler dev` en
-**local** (sección de arriba), no contra el servidor real. **Quien despliegue
-esta rama tiene que repetir ahí las comprobaciones de esa sección** antes de
-dar el paso por bueno.
+código** — antes de la Tarea 6, Paso 4 del bloque 3a — **y antes de que el
+sitio se mudara a `lidialuque.com`** — antes de la Tarea 7 del bloque 3b. Sigue
+siendo cierto para lo que prueba: el comportamiento de los recursos estáticos
+puros. Pero no cubre nada de lo nuevo — `/contenido.json` y `/img/*` desde R2,
+la caída de vuelta, `run_worker_first`, ni el dominio propio con Access
+delante — que sólo se ha verificado con `wrangler dev` en **local** (sección
+de arriba) o no se ha verificado en absoluto contra el servidor real. **Quien
+despliegue esta rama tiene que repetir ahí las comprobaciones de esa sección,
+contra `https://lidialuque.com`,** antes de dar el paso por bueno.
 
 Comprobado contra `https://luque.angelrubioortiz2005.workers.dev` después de
-desplegar:
+desplegar — **la URL que sirvió esta comprobación está retirada hoy**:
+`workers.dev` se apagó en la Tarea 7 del bloque 3b (ver el aviso al principio
+de este documento), así que estos puntos hay que volver a comprobarlos contra
+`https://lidialuque.com`:
 
 - `/docs/*` y `/.claude/*` devuelven 302 y sirven la portada, no el markdown
   ni los archivos de configuración.
@@ -468,6 +499,7 @@ herramientas de red del navegador puede bajarse el archivo.
 Esto no lo resuelve un desplegar: hay que comprar la licencia web en Dinamo o
 sustituir la tipografía, y hacerlo **antes de anunciar la web**. Mientras no
 esté resuelto, el sitio se despliega cerrado a los buscadores
-(`robots.txt` y la cabecera `X-Robots-Tag: noindex`) y sin dominio propio. Es
-deuda conocida, no un descuido, y queda anotada también en
-`docs/estado-conocido.md`.
+(`robots.txt` y la cabecera `X-Robots-Tag: noindex`). Desde la Tarea 7 del
+bloque 3b el sitio sí tiene dominio propio (`lidialuque.com`) — el cierre a
+buscadores no depende de eso, es deuda conocida aparte, no un descuido, y
+queda anotada también en `docs/estado-conocido.md`.
