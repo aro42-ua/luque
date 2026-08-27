@@ -211,6 +211,16 @@ h1{
   color: var(--black);
 }
 
+/* Mismo tratamiento que .fila-boton:disabled: sin esto, un campo o un botón
+   deshabilitados por activarControles(false) se ven idénticos a cuando
+   funcionan, y quien usa el ratón pulsa sin que pase nada —el caso real es
+   justo después de un conflicto de guardado, cuando más falta hace verlo. */
+.nuevo input:disabled,
+.nuevo select:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .nuevo button,
 #guardar{
   align-self: flex-start;
@@ -226,10 +236,16 @@ h1{
   cursor: pointer;
 }
 
-.nuevo button:hover,
-#guardar:hover{
+.nuevo button:hover:not(:disabled),
+#guardar:hover:not(:disabled){
   background: var(--yellow);
   color: var(--black);
+}
+
+.nuevo button:disabled,
+#guardar:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* ============================================================
