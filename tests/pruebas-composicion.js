@@ -16,9 +16,34 @@ describe('Composicion.disponer', function () {
     igual(pocos[2], muchos[2]);
   });
 
-  prueba('el modo amplio da un lienzo de 240vw y el compacto de 100vw', function () {
-    igual(Composicion.tamano(12, 'amplio').ancho, 240);
+  prueba('el modo amplio da un lienzo de 120vw y el compacto de 100vw', function () {
+    igual(Composicion.tamano(12, 'amplio').ancho, 120);
     igual(Composicion.tamano(12, 'compacto').ancho, 100);
+  });
+
+  /* El compacto es el único que puede quedarse por debajo del ancho de la
+     pantalla, y ahí el paneo no lo centra: lo pega a la izquierda y deja media
+     pantalla vacía (`minX = Math.min(0, stageW - canvasW)` en
+     galeria-paneo.js). No es una preferencia estética: es la razón por la que
+     ese modo tiene 4 columnas y no 2. Si alguien vuelve a bajarlas, que falle
+     aquí y no en la pantalla de alguien. */
+  prueba('el lienzo compacto nunca es más estrecho que la pantalla', function () {
+    for (var n = 1; n <= 40; n++) {
+      cierto(Composicion.tamano(n, 'compacto').ancho >= 100,
+             'con ' + n + ' proyectos el lienzo compacto se queda en '
+             + Composicion.tamano(n, 'compacto').ancho + 'vw');
+    }
+  });
+
+  /* Lo que se pidió: las fotos a la mitad. Se comprueba sobre la caja más
+     grande del ciclo, que es la que no cabía entera bajo la barra. */
+  prueba('la caja más grande del amplio cabe holgada en una pantalla', function () {
+    var mayor = 0;
+    Composicion.disponer(12, 'amplio').forEach(function (r) {
+      if (r.w > mayor) mayor = r.w;
+    });
+    igual(mayor, 18.6);
+    cierto(mayor * 1.25 < 25, 'de alto tiene que quedarse muy por debajo de un alto de pantalla');
   });
 
   prueba('el lienzo crece con el número de proyectos', function () {

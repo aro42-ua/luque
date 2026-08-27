@@ -608,8 +608,14 @@
      pero si se abrió con el ratón el anillo sería solo ruido visual. */
   .proj.sin-anillo:focus-visible{ outline:none; }
 
+  /* Contenedor de consulta para que .tag pueda medirse contra la caja y no
+     contra la pantalla: la caja cambia de tamaño con el modo (amplio o
+     filtrado) y con el ancho de la ventana, y una etiqueta en px no se entera.
+     `inline-size` es la variante segura aquí: el alto de .proj-inner viene del
+     padre (100% de un .proj con aspect-ratio), nunca del contenido. */
   .proj-inner{
     position:relative;
+    container-type:inline-size;
     width:100%; height:100%;
     overflow:hidden;
     border-radius:4px;
@@ -625,16 +631,30 @@
   }
   .proj:hover img{ transform:scale(1.07); }
 
+  /* La etiqueta iba en px fijos. Mientras las cajas medían 37vw no se notaba;
+     al partirlas por la mitad, «CORTOMETRAJE» pasó a ocupar el 78% del ancho
+     de su foto en un portátil, y a desbordarla del todo en un móvil —donde ya
+     rozaba el borde antes de tocar nada—. Ahora se mide contra la caja:
+       - cqw la ata al ancho de .proj-inner, así que encoge con la foto.
+       - El clamp le pone suelo y techo: nunca más grande que antes, y nunca
+         tan pequeña que no se lea.
+       - Los márgenes y el relleno van en em, luego siguen a la fuente.
+       - El max-width con recorte es el cinturón: pase lo que pase con las
+         categorías que meta el estudio, la etiqueta no se sale de la foto. */
   .proj .tag{
-    position:absolute; left:14px; bottom:14px;
+    position:absolute; left:1.2em; bottom:1.2em;
+    max-width:calc(100% - 2.4em);
     color:var(--yellow);
     font-weight:700;
-    font-size:0.72rem;
+    font-size:clamp(0.44rem, 4.6cqw, 0.72rem);
     text-transform:uppercase;
     letter-spacing:0.12em;
     background:rgba(0,0,0,0.55);
-    padding:4px 10px;
+    padding:0.35em 0.85em;
     border-radius:20px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
 
   /* ============================================================
