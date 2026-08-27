@@ -1,0 +1,261 @@
+/* ============================================================
+   PANEL — hoja propia, no importa css/luque.css.
+   La hoja de la galería trae reglas de lienzo espacial (cursor
+   personalizado, esquinas volando, paneo) que aquí estorban: el
+   panel comparte la tipografía y los colores de LUQUE!, pero se
+   comporta como una herramienta convencional —cursor del sistema,
+   anillos de foco normales, sin posicionamiento absoluto—.
+============================================================ */
+
+/* ============================================================
+   TIPOGRAFÍA — mismos archivos que la web pública, un nivel más
+   abajo (panel/css/ en vez de css/).
+============================================================ */
+@font-face{
+  font-family:'ABC Favorit';
+  src:url('../../ABCFavorit-Regular-Trial.otf') format('opentype');
+  font-weight:400;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:'ABC Favorit';
+  src:url('../../ABCFavorit-Bold-Trial.otf') format('opentype');
+  font-weight:700;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:'ABC Favorit';
+  src:url('../../ABCFavorit-BoldItalic-Trial.otf') format('opentype');
+  font-weight:700;
+  font-style:italic;
+  font-display:swap;
+}
+
+/* ============================================================
+   TOKENS — copiados de css/luque.css, no toda la hoja.
+============================================================ */
+:root{
+  --yellow:#FFFF00;
+  --black:#0a0a0a;
+  --grey-dark:#1c1c1c;
+  --grey-mid:#3a3a3a;
+  --ff: 'ABC Favorit', 'Montserrat', Helvetica, Arial, sans-serif;
+  --kerning: -0.03em;
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+
+body{
+  background:var(--yellow);
+  color:var(--black);
+  font-family:var(--ff);
+  letter-spacing:var(--kerning);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+
+/* Anillos de foco convencionales: nada de ocultar el contorno por
+   defecto como hace la galería con su cursor propio. Aquí el foco
+   del teclado es el único camino, así que tiene que verse siempre. */
+:focus-visible{
+  outline: 3px solid var(--black);
+  outline-offset: 2px;
+}
+
+a{ color:inherit; }
+
+/* ============================================================
+   ESTRUCTURA
+============================================================ */
+.panel{
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+h1{
+  font-weight:700;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  letter-spacing:var(--kerning);
+  margin-bottom: 1rem;
+}
+
+/* ============================================================
+   AVISO — role="status" + aria-live="polite" en el HTML. La
+   reserva de altura evita que la página salte cuando aparece.
+============================================================ */
+.aviso{
+  min-height: 1.5em;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  border-left: 4px solid var(--black);
+  padding-left: 0.75rem;
+}
+.aviso:empty{ border-left-color: transparent; }
+
+/* ============================================================
+   LISTA DE PROYECTOS
+============================================================ */
+.lista{
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.fila{
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--black);
+  color: var(--yellow);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  cursor: grab;
+  box-shadow: 0 0 0 0 transparent;      /* base para la marca de inserción de abajo */
+  transition: box-shadow 0.1s ease;
+}
+
+.fila:active{ cursor: grabbing; }
+
+/* La fila que se está arrastrando: se difumina para que quede claro que se ha
+   levantado, sin ocultarla —perderla de vista rompería la referencia visual
+   de qué se está moviendo—. */
+.fila--arrastrando{ opacity: 0.4; }
+
+/* ============================================================
+   MARCA DE INSERCIÓN — arrastrar y soltar (Tarea 5, atajo de ratón).
+   Un box-shadow no ocupa espacio en el flujo, así que no desplaza a las
+   filas vecinas: aparece en el hueco entre ellas y ya. La transición de
+   arriba la suaviza, y la regla de `prefers-reduced-motion` del final de
+   este archivo la anula: con movimiento reducido, sólo aparece.
+============================================================ */
+.fila--marca-antes{ box-shadow: 0 -4px 0 0 var(--black); }
+.fila--marca-despues{ box-shadow: 0 4px 0 0 var(--black); }
+
+.fila-titulo{
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.fila-boton{
+  flex: 0 0 auto;
+  border: 2px solid var(--yellow);
+  background: transparent;
+  color: var(--yellow);
+  font-family: var(--ff);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.fila-boton:hover:not(:disabled){
+  background: var(--yellow);
+  color: var(--black);
+}
+
+.fila-boton:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.fila-borrar{
+  border-color: var(--grey-mid);
+}
+.fila-borrar:hover:not(:disabled){
+  background: var(--grey-mid);
+  color: var(--yellow);
+}
+
+/* El anillo de foco global es negro sobre amarillo/blanco, que es donde vive
+   casi toda la pantalla. Pero .fila tiene fondo negro (arriba), y un
+   contorno negro sobre negro no se ve —contraste 1:1—, justo en los botones
+   que reordenan y borran. Dentro de la fila el contorno pasa a amarillo,
+   que sobre negro da el mismo contraste alto que el negro da sobre amarillo. */
+.fila :focus-visible{
+  outline-color: var(--yellow);
+}
+
+/* ============================================================
+   FORMULARIO — crear proyecto
+============================================================ */
+.nuevo{
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 24rem;
+  margin-bottom: 2rem;
+}
+
+.nuevo label{
+  font-weight: 700;
+  margin-top: 0.5rem;
+}
+
+.nuevo input,
+.nuevo select{
+  font-family: var(--ff);
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--black);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--black);
+}
+
+/* Mismo tratamiento que .fila-boton:disabled: sin esto, un campo o un botón
+   deshabilitados se ven idénticos a cuando funcionan, y quien usa el ratón
+   pulsa sin que pase nada. Estos cuatro controles los apaga a la vez
+   `activarControles(false)` (panel.js:134), en el arranque antes de que llegue
+   el borrador y —porque nadie los vuelve a encender— también si esa carga
+   falla. Aparte de eso, `#guardar` se apaga él solo tras un conflicto de
+   guardado (panel.js:113), que es el momento en que más falta hace verlo: el
+   aviso dice que «Guardar» se ha desactivado, y hasta ahora el botón no lo
+   parecía. */
+.nuevo input:disabled,
+.nuevo select:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.nuevo button,
+#guardar{
+  align-self: flex-start;
+  margin-top: 0.75rem;
+  font-family: var(--ff);
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.6rem 1.25rem;
+  border: 2px solid var(--black);
+  border-radius: 4px;
+  background: var(--black);
+  color: var(--yellow);
+  cursor: pointer;
+}
+
+.nuevo button:hover:not(:disabled),
+#guardar:hover:not(:disabled){
+  background: var(--yellow);
+  color: var(--black);
+}
+
+.nuevo button:disabled,
+#guardar:disabled{
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   MOVIMIENTO REDUCIDO
+============================================================ */
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; }
+}

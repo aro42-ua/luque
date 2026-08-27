@@ -541,6 +541,10 @@ window.Lista = (function () {
     subir.type = 'button';
     subir.textContent = '↑';
     subir.setAttribute('aria-label', 'Subir ' + p.titulo);
+    /* data-accion identifica el botón después de un repintado: quien pinta
+       destruye y reconstruye el <ol> entero (ver más abajo, «REPINTAR NO
+       PUEDE TIRAR EL FOCO»), así que hace falta un enganche que sobreviva. */
+    subir.dataset.accion = 'subir';
     subir.disabled = indice === 0;
     subir.addEventListener('click', function () { alMover(indice, indice - 1); });
 
@@ -548,6 +552,7 @@ window.Lista = (function () {
     bajar.type = 'button';
     bajar.textContent = '↓';
     bajar.setAttribute('aria-label', 'Bajar ' + p.titulo);
+    bajar.dataset.accion = 'bajar';
     bajar.disabled = indice === total - 1;
     bajar.addEventListener('click', function () { alMover(indice, indice + 1); });
 
@@ -555,6 +560,7 @@ window.Lista = (function () {
     borrar.type = 'button';
     borrar.textContent = 'Borrar';
     borrar.setAttribute('aria-label', 'Borrar ' + p.titulo);
+    borrar.dataset.accion = 'borrar';
     borrar.addEventListener('click', function () { alBorrar(p.id, p.titulo); });
 
     li.appendChild(nombre);
@@ -579,6 +585,45 @@ window.Lista = (function () {
 
 Aquí vive la lista de trabajo, el aviso, y las tres acciones. **Borrar pide
 confirmación**: es destructivo y no hay deshacer hasta que se recargue.
+
+> **Corregido tras revisión de la Tarea 4 (2026-08-26).** La primera versión
+> de este paso —la que sigue abajo, en el bloque de código— tenía dos
+> defectos que la implementación transcribió tal cual porque estaban en el
+> propio pliego, no inventados por quien lo escribió:
+>
+> 1. **`repintar()` destruye y reconstruye el `<ol>` entero** (vía
+>    `Lista.pintar`, que hace `contenedor.innerHTML = ''`) y no hay ni un
+>    `.focus()` en todo el módulo. El botón que tenía el foco desaparece del
+>    DOM y el foco cae a `<body>`: con teclado, mover un proyecto tres
+>    posiciones exige tabular la página entera tres veces. Rompe el criterio
+>    de aceptación 6 (operable de principio a fin sin ratón).
+> 2. **`crear()` y `guardar()` asumen `trabajo` ya poblado** (`trabajo.proyectos.map(...)`),
+>    pero `trabajo` es `null` hasta que resuelve `Borrador.cargar`, y el
+>    formulario y «Guardar» están activos desde el primer pintado. El
+>    disparador más probable no es una red lenta: es la sesión de Access
+>    caducada de un día para otro (documentada en `borrador.js` como el caso
+>    más frecuente en producción). Alguien pulsa «Crear» antes de que llegue
+>    el aviso y sólo pasa una excepción en la consola.
+>
+> Además, ya en la implementación (no en el pliego) apareció un tercer
+> problema del mismo bloque: en el conflicto de guardado, `trabajo.version`
+> nunca se actualiza a la versión que devuelve el servidor, así que volver a
+> pulsar «Guardar» sin recargar repite el mismo 409 en bucle; y el aviso
+> —«Recarga la página para no perder **su** trabajo»— es ambiguo hasta el
+> punto de poder leerse como «tu trabajo», que es **falso**: recargar borra
+> lo local, no lo protege.
+>
+> El bloque de código de abajo se deja **como quedó implementado en su día**,
+> con los tres defectos, a propósito: es el que se ejecutó y el que hay que
+> leer para entender qué se corrigió y por qué. La versión corregida —con
+> retorno de foco tras mover/borrar, controles deshabilitados hasta que hay
+> `trabajo`, y «Guardar» deshabilitado tras un conflicto en vez de dejar un
+> bucle— vive en `panel/js/panel.js` a partir del commit que cierra esa
+> revisión, y el detalle de cada decisión está en
+> `.superpowers/sdd/2026-08-25-panel-lista-bloque-3b/tarea-4-correcciones.md`.
+> **Si vuelves a partir de este pliego para otra pantalla del panel, no
+> copies `repintar`, `crear`, `guardar` ni `init` tal cual: copia la versión
+> corregida.**
 
 ```js
 (function () {
@@ -664,6 +709,18 @@ Comparte las variables de color y la tipografía con `css/luque.css` —cópiala
 no importes la hoja entera: la galería trae reglas de lienzo espacial que aquí
 estorban—. Y respeta `prefers-reduced-motion` en cualquier transición.
 
+> **Corregido tras revisión de la Tarea 4 (2026-08-26).** Un `:focus-visible`
+> global en negro (`outline: 3px solid var(--black)`) se pensó para un fondo
+> claro, pero `.fila` tiene fondo negro: el contorno queda negro sobre negro,
+> contraste 1:1, justo en los botones de reordenar y borrar que son el camino
+> principal sin ratón. La regla que lo soluciona es de ámbito, no de
+> sustitución global —`.fila :focus-visible { outline-color: var(--yellow); }`—
+> porque el resto de la pantalla (fondo amarillo, campos blancos) sigue
+> viéndose bien con el contorno negro por defecto. Verificado con la fórmula
+> de contraste relativo de WCAG: negro `#0a0a0a` sobre amarillo `#FFFF00` o
+> blanco `#fff` da ≈18–20:1; amarillo sobre negro da el mismo ≈18:1. Los dos
+> superan de sobra el mínimo de 3:1 para componentes de interfaz.
+
 - [ ] **Paso 5: Comprueba**
 
 ```bash
@@ -673,7 +730,9 @@ python tests/auditar_rutas.py
 
 Pide al controlador, con sesión de Access: crear un proyecto, reordenarlo con
 los botones, borrarlo, guardar, y **recargar para confirmar que lo guardado
-persiste**. Y que todo eso se puede hacer **sólo con el teclado**.
+persiste**. Y que todo eso se puede hacer **sólo con el teclado** —incluido
+comprobar que, tras subir o bajar una fila, o tras borrarla, el foco no cae a
+`<body>` y el siguiente `Tab` sigue teniendo sentido—.
 
 - [ ] **Paso 6: Commit**
 
@@ -823,19 +882,47 @@ git archive main | tar -x -C <directorio-temporal>
 wrangler deploy --config worker/estatico/wrangler.toml --assets <directorio-temporal>
 ```
 
-- [ ] **Paso 4: El estudio añade Access sobre `/panel`**
+- [ ] **Paso 4: El estudio añade `/panel` a la aplicación de Access QUE YA EXISTE**
 
-En Zero Trust → Access → Applications → *Add an application* → Self-hosted:
+> **CORREGIDO, y corregido rompiéndolo.** Este paso decía «*Add an
+> application*»: crear una aplicación **nueva** para `/panel`, junto a la que ya
+> cubre `/api`. Eso se hizo, y **rompió el panel**.
+>
+> Dos aplicaciones de Access sobre el mismo dominio **se pisan la cookie de
+> sesión**: `CF_Authorization` es una sola por host. Al entrar en el panel,
+> Access la reemitía para la aplicación del panel, y con ella la sesión de la
+> API quedaba invalidada. El panel cargaba, y su primera llamada a `/api/borrador`
+> se iba contra Access, que redirigía a `ffffffstudio.cloudflareaccess.com` —otro
+> origen—; el navegador bloqueaba la redirección por CORS y el panel enseñaba
+> «no se ha podido contactar con el servidor». Un fallo de configuración
+> disfrazado de problema de red.
+>
+> El plan también razonaba mal el porqué: decía que el AUD distinto «da igual,
+> el panel no verifica tokens». La primera mitad es cierta y la segunda es la
+> trampa: el panel no verifica tokens, pero **llama a la API, que sí**. Con dos
+> aplicaciones, el token que trae la cookie lleva el AUD del panel y el Worker
+> de la API lo rechaza, porque `ACCESS_AUD` es el suyo.
+
+En Zero Trust → Access → Applications → **la aplicación que ya cubre la API** →
+*Edit* → pestaña de dominios, y se **añade una segunda ruta al mismo
+`Application`**:
 
 | Campo | Valor |
 |---|---|
 | Domain | `lidialuque.com` |
-| Path | `panel` |
-| Policy | Allow → Emails → **los dos correos** |
+| Path | `api` *(la que ya estaba)* |
+| Domain | `lidialuque.com` |
+| Path | `panel` *(la que se añade)* |
+| Policy | la que ya existe: Allow → Emails → **los dos correos** |
 
-**El AUD de esta aplicación es distinto del de la API.** Da igual: el panel no
-verifica tokens, sólo necesita que Access lo tape. Los secretos del Worker de la
-API **no se tocan**.
+Así hay **una sola aplicación, un solo AUD y una sola cookie** para las dos
+rutas. `ACCESS_AUD`, el secreto del Worker de la API, **sigue valiendo tal cual
+y no se toca**.
+
+**Si Access no dejara añadir una segunda ruta a la misma aplicación**, la
+alternativa correcta es una sola aplicación cuyo path las cubra a las dos, no
+dos aplicaciones. Lo que no vale, en ningún caso, es dos aplicaciones sobre
+`lidialuque.com`.
 
 - [ ] **Paso 5: Comprueba lo que NO debe funcionar**
 
@@ -849,15 +936,24 @@ Esto es lo que de verdad importa de la tarea:
 | `lidialuque.com/` | la web pública, como siempre |
 | `lidialuque.com/robots.txt` | sigue con `Disallow: /` |
 | Cabecera `X-Robots-Tag` en la portada | sigue diciendo `noindex` |
+| **Entrar en `/panel` y que cargue la lista** | **el panel pinta los proyectos, no un aviso de error** |
 
-Las dos últimas filas no son adorno: **mudar de dominio no es anunciar la web**,
-y el cierre a buscadores tiene que sobrevivir a la mudanza.
+Las dos filas del `robots` no son adorno: **mudar de dominio no es anunciar la
+web**, y el cierre a buscadores tiene que sobrevivir a la mudanza.
+
+Y la última fila es la que caza el fallo del Paso 4: si hay dos aplicaciones de
+Access en vez de una, entrar en el panel invalida la sesión de la API y la
+pantalla enseña «No se ha podido cargar el contenido: no se ha podido contactar
+con el servidor…». **Ese mensaje, aquí, no significa que la red falle:
+significa que Access está mal configurado.** Que el panel cargue no basta —hay
+que ver la lista.
 
 - [ ] **Paso 6: Documenta y commitea**
 
 En `docs/despliegue.md`: que el sitio vive ahora en `lidialuque.com`, que
-`workers.dev` está apagado **y por qué**, y que hay una segunda aplicación de
-Access sobre `/panel`.
+`workers.dev` está apagado **y por qué**, y que `/panel` y `/api` los cubre
+**una sola aplicación de Access** —con el porqué del Paso 4: dos aplicaciones
+sobre el mismo dominio se pisan la cookie de sesión—.
 
 ```bash
 git add worker/estatico/wrangler.toml _redirects docs/despliegue.md

@@ -62,16 +62,23 @@ solape ni el determinismo se ven afectados.
 
 ## Desplegada
 
-**La web está publicada en `https://luque.angelrubioortiz2005.workers.dev`.**
-No es un proyecto de Cloudflare Pages —la cuenta no tiene ninguno—, sino un
-Worker de Cloudflare con recursos estáticos, desplegado con `wrangler`. El
-motivo del cambio de plan y el procedimiento completo están en
-`docs/despliegue.md`.
+**La web está publicada en `https://lidialuque.com`.** No es un proyecto de
+Cloudflare Pages —la cuenta no tiene ninguno—, sino un Worker de Cloudflare
+con recursos estáticos, desplegado con `wrangler`. El motivo del cambio de
+plan y el procedimiento completo están en `docs/despliegue.md`.
+
+**`workers.dev` está apagado a propósito, y no hay que volver a encenderlo.**
+Antes de la Tarea 7 del bloque 3b la web respondía también en
+`luque.angelrubioortiz2005.workers.dev`; esa dirección ya no contesta porque,
+desde que este Worker sirve `/panel` —la única superficie de escritura del
+sitio—, dejarla encendida lo dejaría alcanzable sin que Cloudflare Access
+pueda ponerse delante (Access sólo cubre nombres de host de una zona propia,
+no `workers.dev`). El razonamiento completo está en `docs/despliegue.md`.
 
 Sigue **cerrada a los buscadores** por `robots.txt` y por la cabecera
-`X-Robots-Tag: noindex`, y sin dominio propio, mientras el contenido siga
-siendo de relleno y las tipografías sigan siendo Trial. Las fotos, como ya se
-dice arriba, siguen siendo de picsum.
+`X-Robots-Tag: noindex`, mientras el contenido siga siendo de relleno y las
+tipografías sigan siendo Trial. Las fotos, como ya se dice arriba, siguen
+siendo de picsum.
 
 **Las tres tipografías son versiones Trial y su licencia probablemente no
 cubre el uso público.** `ABCFavorit-Regular-Trial.otf`,
@@ -135,14 +142,42 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 ## Cómo se prueba
 
-`tests/test.html` se abre con doble clic y ejecuta 53 comprobaciones sobre la
+`tests/test.html` se abre con doble clic y ejecuta 99 comprobaciones sobre la
 lógica pura: el enrutado, la validación de datos, el cálculo de la composición
-filtrada, la máquina de estado del visor y el salto del hero. No hace falta Node
+filtrada, la máquina de estado del visor, el salto del hero y —desde el bloque
+3b— el identificador que se saca del título, el reordenado de la lista, y de
+`lista.js` sus tres piezas que no tocan el DOM: la validación del índice de una
+fila, el cálculo del destino al soltar y la caja del `<ol>`. No hace falta Node
 ni servidor.
 
 Lo que ese arnés **no** puede ver, por diseño: nada que se mueva. Las
 transiciones, el vuelo del visor, la recomposición del filtrado y el paneo con
 inercia solo se pueden juzgar mirándolos en un navegador de verdad.
+
+**Dos archivos del panel no tienen prueba automática, y son los dos que tocan el
+DOM.** `Lista.pintar` construye las filas y engancha el arrastrar y soltar;
+`panel/js/panel.js` entero cose lo demás: el estado, el repintado y la
+devolución del foco. Los dos están diferidos a propósito al bloque 3c, cuando
+exista la segunda pantalla del panel y el arnés de DOM que haga falta pueda
+diseñarse una sola vez para las dos. Hasta entonces, cualquier cambio ahí hay
+que mirarlo en un navegador — y son justo la parte más frágil del bloque.
+
+El arnés del navegador tampoco puede ver lo que habla con la red. `panel/js/borrador.js` necesita que
+`fetch` esté sustituido, y eso el arnés del navegador no lo hace, así que su
+prueba va aparte y sí necesita Node:
+
+```
+node tests/prueba-borrador.js
+```
+
+Son 15 escenarios y 52 comprobaciones sobre los cuatro finales de un guardado
+—guardado, conflicto, petición mal formada y red caída—, sobre que el callback
+de quien llama se invoque una sola vez aunque lance, sobre que ningún mensaje
+en inglés del motor llegue a la pantalla, y sobre que el aviso de «no se ha
+podido contactar con el servidor» nombre también la sesión caducada, que desde
+el navegador es indistinguible de la red caída. Se le puede pasar otro archivo
+como argumento para comprobar que las propias pruebas caen cuando el código
+está roto; el porqué de todo esto está explicado en la cabecera del archivo.
 
 ## Estructura
 
