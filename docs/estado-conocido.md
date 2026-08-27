@@ -142,14 +142,27 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 ## Cómo se prueba
 
-`tests/test.html` se abre con doble clic y ejecuta 53 comprobaciones sobre la
+`tests/test.html` se abre con doble clic y ejecuta 99 comprobaciones sobre la
 lógica pura: el enrutado, la validación de datos, el cálculo de la composición
-filtrada, la máquina de estado del visor y el salto del hero. No hace falta Node
-ni servidor.
+filtrada, la máquina de estado del visor, el salto del hero y —desde el bloque
+3b— el identificador, el reordenado y el pintado de la lista del panel. No hace
+falta Node ni servidor.
 
-Lo que ese arnés **no** puede ver, por diseño: nada que se mueva. Las
+`tests/prueba-borrador.js` se ejecuta aparte, con `node tests/prueba-borrador.js`:
+52 comprobaciones sobre la capa que habla con la API, con `fetch` sustituido. Va
+en Node y no en el arnés del navegador porque necesita cargar un archivo pensado
+para el navegador dentro de un `vm` con su propio `fetch` falso, y eso el arnés
+no sabe hacerlo.
+
+Lo que esos arneses **no** pueden ver, por diseño: nada que se mueva. Las
 transiciones, el vuelo del visor, la recomposición del filtrado y el paneo con
 inercia solo se pueden juzgar mirándolos en un navegador de verdad.
+
+**`panel/js/panel.js` no tiene ninguna prueba automática**, y es el archivo que
+cose todo lo demás: el estado, el repintado y la devolución del foco. Está
+diferido a propósito al bloque 3c, cuando exista la segunda pantalla del panel y
+el arnés de DOM que haga falta pueda diseñarse una sola vez para las dos. Hasta
+entonces, cualquier cambio en ese archivo hay que mirarlo en un navegador.
 
 Tampoco puede ver lo que habla con la red. `panel/js/borrador.js` necesita que
 `fetch` esté sustituido, y eso el arnés del navegador no lo hace, así que su

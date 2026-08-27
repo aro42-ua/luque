@@ -91,8 +91,9 @@ a respuestas generadas por código de Worker.
 > enrutador de recursos estáticos exactamente como si este `fetch()` no
 > existiera, `_redirects` incluido.
 >
-> **Verificado con `wrangler dev` en local** (no contra el servidor real: la
-> rama no se ha desplegado todavía) con un directorio de recursos que incluía
+> **Verificado con `wrangler dev` en local** (no contra el servidor real: al
+> escribirse esto la rama todavía no se había desplegado) con un directorio de
+> recursos que incluía
 > `_redirects` y archivos de prueba bajo `docs/`, `.claude/` y `worker/`:
 > `GET /docs/estado-conocido.md`, `GET /.claude/launch.json` y
 > `GET /worker/wrangler.toml` siguen devolviendo **302**. Y el propio
@@ -219,8 +220,9 @@ petición a `/contenido.json` se habría resuelto contra el archivo del
 repositorio directamente, y el código de este Worker no se habría llegado a
 ejecutar nunca para esa ruta, publicara lo que publicara el estudio.
 
-**Verificado con `wrangler dev` en local** (no contra el servidor real: la
-rama no se ha desplegado todavía), con R2 emulado y un `contenido.json`
+**Verificado con `wrangler dev` en local** (no contra el servidor real: al
+escribirse esto la rama todavía no se había desplegado), con R2 emulado y un
+`contenido.json`
 estático de prueba en el directorio de recursos:
 - Sin nada publicado en R2: `GET /contenido.json` devuelve el archivo del
   repositorio.
