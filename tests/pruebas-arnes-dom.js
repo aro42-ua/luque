@@ -70,9 +70,10 @@ describeAsync('ArnesDom.conDocumento', function () {
 
   var HTML = '<main><ol id="lista"></ol><button id="b">x</button></main>';
 
-  /* La que más importa: los globales tienen que estar puestos ANTES de que
-     corra el primer script, porque panel.js llama a Borrador.cargar() en su
-     propia carga. Si se inyectaran después, panel.js habría reventado ya. */
+  /* Sin scripts: esto sólo comprueba que los globales llegan a la ventana del
+     iframe. Que lleguen ANTES de que corra el primer script se prueba más
+     abajo, con una fijación de verdad; con `scripts: []` la cadena se resuelve
+     sin ejecutar nada por medio y el orden no se ejercita. */
   return ArnesDom.conDocumento({
     html: HTML,
     globales: { Testigo: { visto: false } },
@@ -89,6 +90,28 @@ describeAsync('ArnesDom.conDocumento', function () {
 
     prueba('el documento del iframe no es el de las pruebas', function () {
       cierto(d !== document, 'si fueran el mismo, no habría aislamiento ninguno');
+    });
+
+  }).then(function () {
+
+    /* La que más importa, y la única que ejercita el orden: la fijación lee
+       `Testigo` durante su propia carga, igual que panel.js llama a
+       Borrador.cargar() en la suya. Si los globales se inyectaran después de
+       cargar los scripts, la fijación no encontraría nada que marcar y esto se
+       pondría en rojo. */
+    return ArnesDom.conDocumento({
+      html: HTML,
+      globales: { Testigo: { visto: false } },
+      scripts: ['fijaciones/lee-global-al-cargar.js']
+    }, function (w) {
+
+      prueba('los globales están puestos ANTES de que corra el primer script', function () {
+        cierto(!w.fijacionSeEjecutoSinGlobal,
+          'la fijación corrió sin Testigo: los globales se inyectaron tarde');
+        cierto(w.Testigo.visto === true,
+          'la fijación no llegó a marcar Testigo durante su carga');
+      });
+
     });
 
   }).then(function () {
