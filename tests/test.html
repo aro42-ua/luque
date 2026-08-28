@@ -29,7 +29,8 @@
 <script src="../panel/js/orden.js"></script>
 <!-- lista.js no toca el DOM al cargarse: sólo define window.Lista. Se carga
      por sus tres funciones sin DOM (indiceValido, calcularHasta,
-     dentroDeLaCaja); `pintar` necesita el panel entero y no se ejercita. -->
+     dentroDeLaCaja) y también por `pintar`, que sí construye nodos: el arnés
+     de DOM le da un <ol> propio, así que no hace falta el panel entero. -->
 <script src="../panel/js/lista.js"></script>
 <script src="pruebas-arnes.js"></script>
 <script src="pruebas-arnes-dom.js"></script>

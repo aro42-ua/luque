@@ -118,11 +118,62 @@ describe('Lista.pintar', function () {
     igual(html, '');
   });
 
-  prueba('las filas se pueden arrastrar', function () {
-    var arrastrable = ArnesDom.conElemento('<ol></ol>', function (ol) {
-      pintarEn(proyectos())(ol);
-      return ol.querySelector('li.fila').draggable;
+  /* Los eventos de arrastre sintéticos no traen `dataTransfer`, y tanto
+     `dragstart` como `drop` lo tocan. Se le pone uno de mentira que sólo tiene
+     lo que el código usa. El `clientY` va en el constructor y no asignado
+     después: en un evento ya construido es de sólo lectura, y la asignación se
+     perdería sin dar error, dejando el cálculo de la mitad siempre en 0. */
+  function arrastrar(li, tipo, y) {
+    var e = new MouseEvent(tipo, { bubbles: true, cancelable: true, clientY: y || 0 });
+    e.dataTransfer = { effectAllowed: '', dropEffect: '',
+                       setData: function () {}, getData: function () { return ''; } };
+    li.dispatchEvent(e);
+    return e;
+  }
+
+  /* Un punto en la mitad de arriba o en la de abajo de la fila, medido sobre su
+     caja de verdad. Es la razón de que el arnés cuelgue el contenedor del
+     documento: sobre un nodo suelto getBoundingClientRect() daría todo ceros y
+     las dos mitades saldrían en el mismo sitio. */
+  function mitad(li, arriba) {
+    var caja = li.getBoundingClientRect();
+    return caja.top + caja.height * (arriba ? 0.25 : 0.75);
+  }
+
+  /* El camino que corrompe el orden en silencio. `calcularHasta` ya está
+     probado como función pura en pruebas-lista.js, pero hasta aquí nadie
+     comprobaba que `drop` la llame bien: con los oyentes desenganchados, las
+     filas seguirían teniendo draggable=true y arrastrar no movería nada. */
+  prueba('soltar una fila sobre otra pide moverla al hueco que dice el ratón', function () {
+    var movimientos = ArnesDom.conElemento('<ol></ol>', function (ol) {
+      var vistos = [];
+      pintarEn(proyectos(), function (desde, hasta) { vistos.push([desde, hasta]); })(ol);
+      var f = ol.querySelectorAll('li.fila');
+      cierto(f[0].draggable, 'sin draggable el navegador no empezaría el arrastre');
+
+      // La primera a la mitad de abajo de la última: se va al final.
+      arrastrar(f[0], 'dragstart');
+      arrastrar(f[2], 'drop', mitad(f[2], false));
+
+      // La primera a la mitad de arriba de la última: queda justo antes de ella.
+      arrastrar(f[0], 'dragstart');
+      arrastrar(f[2], 'drop', mitad(f[2], true));
+      return vistos;
     });
-    cierto(arrastrable);
+    igual(movimientos, [[0, 2], [0, 1]]);
+  });
+
+  /* Soltar donde ya estaba no es un movimiento de cero: `Orden.mover` con esos
+     índices sí reordenaría, y el panel guardaría un cambio que nadie pidió. */
+  prueba('soltar una fila sobre sí misma no pide ningún movimiento', function () {
+    var movimientos = ArnesDom.conElemento('<ol></ol>', function (ol) {
+      var vistos = [];
+      pintarEn(proyectos(), function (desde, hasta) { vistos.push([desde, hasta]); })(ol);
+      var f = ol.querySelectorAll('li.fila');
+      arrastrar(f[1], 'dragstart');
+      arrastrar(f[1], 'drop', mitad(f[1], false));
+      return vistos;
+    });
+    igual(movimientos, []);
   });
 });
