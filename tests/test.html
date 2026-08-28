@@ -44,6 +44,15 @@
 <script src="pruebas-orden.js"></script>
 <script src="pruebas-lista.js"></script>
 <script src="pruebas-lista-pintar.js"></script>
+<!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
+     cuatro dependencias delante (reglas-contenido, identificador, orden,
+     lista): cinco scripts encadenados por conDocumento. Que UN script se
+     cargue y ejecute dentro del iframe bajo file:// está comprobado (ver
+     pruebas-arnes-dom.js); que la CADENA de panel.js haga lo mismo entera no
+     se ha podido comprobar con las herramientas de esta tarea — no es un
+     fallo conocido, es una comprobación pendiente. Si al abrir esto con
+     doble clic la sección "panel.js" no pinta nada, es la primera sospechosa. -->
+<script src="pruebas-panel.js"></script>
 <script src="pruebas-contenido-real.js"></script>
 <script>window.Arnes.resumen();</script>
 </body>

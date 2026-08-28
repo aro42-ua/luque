@@ -142,25 +142,99 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 ## Cómo se prueba
 
-`tests/test.html` se abre con doble clic y ejecuta 99 comprobaciones sobre la
-lógica pura: el enrutado, la validación de datos, el cálculo de la composición
-filtrada, la máquina de estado del visor, el salto del hero y —desde el bloque
-3b— el identificador que se saca del título, el reordenado de la lista, y de
-`lista.js` sus tres piezas que no tocan el DOM: la validación del índice de una
-fila, el cálculo del destino al soltar y la caja del `<ol>`. No hace falta Node
-ni servidor.
+`tests/test.html` ejecuta **150 comprobaciones**: la lógica pura (el enrutado,
+la validación de datos, el cálculo de la composición filtrada, la máquina de
+estado del visor, el salto del hero, el identificador que se saca del título,
+el reordenado de la lista) y, desde el bloque 4a, el panel entero — lo que
+antes quedaba fuera por tocar el DOM.
 
-Lo que ese arnés **no** puede ver, por diseño: nada que se mueva. Las
+**Hay dos arneses.** `tests/arnes.js` es el de siempre, para funciones puras.
+`tests/arnes-dom.js` es el segundo, con dos niveles:
+
+- `ArnesDom.conElemento(html, fn)` — mete `html` en un `<div>` fuera de
+  pantalla (conectado al documento, no suelto: `focus()` y las medidas sólo
+  funcionan así) y pasa su primer elemento a `fn`. Lo usa `Lista.pintar`
+  (`tests/pruebas-lista-pintar.js`), que recibe su contenedor como parámetro y
+  no necesita más.
+- `ArnesDom.conDocumento(opciones, fn)` — para lo que no expone nada y se
+  ejecuta al cargarse, como `panel/js/panel.js`: una IIFE que llama a `init()`
+  en su última línea. Escribe `opciones.html` en un iframe, pone
+  `opciones.globales` en su `window` **antes** de cargar ningún script —
+  `panel.js` llama a `Borrador.cargar()` durante su propia carga, así que un
+  doble puesto después llegaría tarde—, carga `opciones.scripts` en orden
+  esperando a cada uno y llama a `fn(ventana, documento)`. Lo usa
+  `tests/pruebas-panel.js`, que carga el panel entero con `Borrador` y
+  `confirm` doblados y con `Lista`, `Orden`, `Identificador` y
+  `ReglasContenido` de verdad — probar el panel contra dobles de sus propias
+  piezas comprobaría el doble, no el panel.
+
+Ese segundo nivel es asíncrono (carga scripts de verdad), así que
+`tests/pruebas-panel.js` y `tests/pruebas-arnes-dom.js` usan `describeAsync` en
+vez de `describe`; el recuento final espera a que todas las secciones
+asíncronas terminen. Ninguno de los dos necesita Node.
+
+**Lo que cubre `tests/pruebas-panel.js` (21 comprobaciones):** que arranca con
+los controles deshabilitados antes de que llegue el borrador y se queda así si
+la carga falla; que pinta una fila por proyecto y activa los controles cuando
+llega; crear (con éxito, y rechazando un identificador repetido, con el
+mensaje exacto); borrar (confirmado y cancelado); guardar (con su versión, el
+aviso de éxito, y que se queda con la versión que devuelve el servidor) y el
+conflicto (que desactiva "Guardar" y explica por qué). Y la que más faltaba:
+que tras mover una fila el foco vuelve al mismo botón de la misma fila y no a
+`<body>` — `Lista.pintar` reconstruye el `<ol>` entero, así que el nodo que
+tenía el foco ya no existe —, con su borde: si ese botón queda deshabilitado
+por llegar al extremo, el foco va al otro botón de la misma fila.
+
+**Lo que sigue sin cubrirse, y por qué:**
+
+- El arrastrar y soltar de verdad (`dragstart`/`dragover`/`drop` con
+  coordenadas de ratón) necesita eventos de arrastre reales del navegador, que
+  ningún arnés de esta rama dispara. `calcularHasta`, la aritmética que
+  traduce ese gesto a un índice, sí está probada — sin DOM, con números a
+  mano —, pero el camino que la llama desde un `drop` real no.
+- La guarda que evita apilar un oyente de `dragleave` en cada repintado
+  (`vigilarSalidaDeLaLista`).
+- El reinicio del estado de arrastre (`origenArrastre`, `filaMarcada`) en cada
+  `pintar`.
+- El `aria-label` de "bajar" en cada fila.
+- El fallback de categoría desconocida en `Lista.pintar` (cuando una fila trae
+  una categoría que no está en `ETIQUETAS`).
+
+No hace falta cubrirlos para que el bloque cumpla su propósito, pero tampoco
+hay que fingir que lo están.
+
+**`file://` — un nivel comprobado, el otro no.** Que un script real se cargue
+y ejecute dentro del iframe de `ArnesDom.conDocumento` bajo `file://` está
+comprobado. Que la cadena completa de `panel.js` —cinco scripts encadenados—
+haga lo mismo entera **no se ha podido comprobar** con las herramientas
+disponibles para esta tarea: la navegación a `file://` quedó bloqueada en el
+navegador usado para verificar. No es un fallo conocido, es una comprobación
+pendiente — hay un aviso al lado de `<script src="pruebas-panel.js">` en
+`tests/test.html` para quien lo descubra abriendo el archivo con doble clic.
+Si esa sección no pinta nada, arranca un servidor y prueba por ahí:
+
+```
+python -m http.server 8000
+```
+
+y abre `http://localhost:8000/tests/test.html`.
+
+**Un par de comprobaciones del propio arnés parpadean en rojo alguna vez, sin
+motivo de `panel.js`.** `tests/pruebas-arnes-dom.js` comprueba que
+`ArnesDom.conDocumento` no deja ningún iframe suyo en el documento al
+terminar, contando `.arnes-dom-caja` en todo el documento. Esa cuenta es
+global, no de su propia sección: si otra sección `describeAsync` —como
+`pruebas-panel.js`, que abre diez iframes seguidos— tiene uno abierto en el
+instante exacto en que se hace la cuenta, sale en rojo sin que el panel tenga
+ningún defecto. Ocurre porque `pruebas-panel.js` es la primera sección, aparte
+de las pruebas del propio arnés, que usa `conDocumento`: antes nunca había
+nadie más con quien coincidir. Queda anotado para quien toque
+`tests/arnes-dom.js` o `tests/pruebas-arnes-dom.js`: esa comprobación debería
+mirar sólo lo que ella misma creó, no todo el documento.
+
+Lo que ningún arnés puede ver, por diseño: nada que se mueva. Las
 transiciones, el vuelo del visor, la recomposición del filtrado y el paneo con
 inercia solo se pueden juzgar mirándolos en un navegador de verdad.
-
-**Dos archivos del panel no tienen prueba automática, y son los dos que tocan el
-DOM.** `Lista.pintar` construye las filas y engancha el arrastrar y soltar;
-`panel/js/panel.js` entero cose lo demás: el estado, el repintado y la
-devolución del foco. Los dos están diferidos a propósito al bloque 3c, cuando
-exista la segunda pantalla del panel y el arnés de DOM que haga falta pueda
-diseñarse una sola vez para las dos. Hasta entonces, cualquier cambio ahí hay
-que mirarlo en un navegador — y son justo la parte más frágil del bloque.
 
 El arnés del navegador tampoco puede ver lo que habla con la red. `panel/js/borrador.js` necesita que
 `fetch` esté sustituido, y eso el arnés del navegador no lo hace, así que su
