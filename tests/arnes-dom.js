@@ -36,5 +36,61 @@ window.ArnesDom = (function () {
     }
   }
 
-  return { conElemento: conElemento };
+  /* El iframe se escribe a mano, así que no tiene una URL propia desde la que
+     resolver los `src` relativos. Se le da la carpeta de test.html, que sirve
+     igual servida por http que abierta con doble clic. */
+  function carpetaDeLasPruebas() {
+    return new URL('.', location.href).href;
+  }
+
+  function unScript(d, src) {
+    return new Promise(function (ok, mal) {
+      var s = d.createElement('script');
+      s.src = src;
+      s.onload = function () { ok(); };
+      s.onerror = function () {
+        mal(new Error('El arnés no pudo cargar «' + src + '». Si has abierto '
+          + 'test.html con doble clic, esta sección necesita un servidor: '
+          + 'arráncalo con «python -m http.server» y abre /tests/test.html.'));
+      };
+      d.body.appendChild(s);
+    });
+  }
+
+  function conDocumento(opciones, fn) {
+    var c = caja();
+    var marco = document.createElement('iframe');
+    marco.style.cssText = 'width:600px;height:400px;border:0';
+    c.appendChild(marco);
+
+    var d = marco.contentDocument;
+    var w = marco.contentWindow;
+
+    d.open();
+    d.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
+      + '<base href="' + carpetaDeLasPruebas() + '"></head><body>'
+      + (opciones.html || '') + '</body></html>');
+    d.close();
+
+    /* Antes de cargar un solo script: panel.js llama a Borrador.cargar() en su
+       propia carga, así que un doble inyectado después llegaría tarde. */
+    var globales = opciones.globales || {};
+    Object.keys(globales).forEach(function (k) { w[k] = globales[k]; });
+
+    function limpiar() { if (c.parentNode) c.parentNode.removeChild(c); }
+
+    var cadena = (opciones.scripts || []).reduce(function (antes, src) {
+      return antes.then(function () { return unScript(d, src); });
+    }, Promise.resolve());
+
+    /* La forma de dos argumentos y no .catch(): así el fallo de `fn` no se
+       confunde con el fallo de la limpieza, y el error original se relanza tal
+       cual en vez de envolverse. */
+    return cadena
+      .then(function () { return fn(w, d); })
+      .then(function (r) { limpiar(); return r; },
+            function (e) { limpiar(); throw e; });
+  }
+
+  return { conElemento: conElemento, conDocumento: conDocumento };
 })();

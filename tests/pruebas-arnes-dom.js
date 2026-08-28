@@ -57,3 +57,75 @@ describe('ArnesDom.conElemento', function () {
     igual(ArnesDom.conElemento('<ol></ol>', function () { return 42; }), 42);
   });
 });
+
+/* describeAsync porque cargar scripts en un iframe es asíncrono. Ya existe en
+   arnes.js: pinta el titular cuando llega el dato y el recuento final espera a
+   que todas las secciones asíncronas terminen. */
+describeAsync('ArnesDom.conDocumento', function () {
+
+  var HTML = '<main><ol id="lista"></ol><button id="b">x</button></main>';
+
+  /* La que más importa: los globales tienen que estar puestos ANTES de que
+     corra el primer script, porque panel.js llama a Borrador.cargar() en su
+     propia carga. Si se inyectaran después, panel.js habría reventado ya. */
+  return ArnesDom.conDocumento({
+    html: HTML,
+    globales: { Testigo: { visto: false } },
+    scripts: []
+  }, function (w, d) {
+
+    prueba('el html llega al documento del iframe', function () {
+      cierto(d.getElementById('lista') !== null);
+    });
+
+    prueba('los globales están puestos en la ventana del iframe', function () {
+      cierto(w.Testigo && w.Testigo.visto === false);
+    });
+
+    prueba('el documento del iframe no es el de las pruebas', function () {
+      cierto(d !== document, 'si fueran el mismo, no habría aislamiento ninguno');
+    });
+
+  }).then(function () {
+
+    return ArnesDom.conDocumento({
+      html: HTML,
+      globales: { Marca: 1 },
+      scripts: []
+    }, function () { return true; });
+
+  }).then(function () {
+
+    prueba('quita el iframe al terminar', function () {
+      igual(document.querySelectorAll('.arnes-dom-caja').length, 0);
+    });
+
+    prueba('no contamina la ventana de las pruebas', function () {
+      igual(typeof window.Testigo, 'undefined');
+      igual(typeof window.Marca, 'undefined');
+    });
+
+    /* Si un script no carga, el error tiene que decir qué hacer. El caso real
+       es abrir test.html con doble clic: bajo file:// puede que el navegador
+       no deje al iframe cargar scripts, y sin este mensaje el fallo parecería
+       un error del código que se está probando. */
+    return ArnesDom.conDocumento({
+      html: HTML, globales: {}, scripts: ['no-existe-a-proposito.js']
+    }, function () { return 'no debería llegar aquí'; })
+      .then(function (r) {
+        prueba('un script que no carga es un error', function () {
+          cierto(false, 'tenía que haber fallado y devolvió ' + r);
+        });
+      }, function (e) {
+        prueba('un script que no carga da un error que nombra el archivo', function () {
+          cierto(e.message.indexOf('no-existe-a-proposito.js') !== -1, e.message);
+        });
+        prueba('y sugiere el servidor, que es la causa probable', function () {
+          cierto(e.message.toLowerCase().indexOf('servidor') !== -1, e.message);
+        });
+        prueba('y limpia el iframe aunque haya fallado', function () {
+          igual(document.querySelectorAll('.arnes-dom-caja').length, 0);
+        });
+      });
+  });
+});
