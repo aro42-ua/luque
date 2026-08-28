@@ -440,7 +440,13 @@ Y cambia el `return` final por:
 - [ ] **Step 4: Ver que pasan**
 
 Recarga con Ctrl+Shift+R.
-Esperado: **115 pasan, 0 fallan** (106 + 9 nuevas).
+Esperado: **114 pasan, 0 fallan** (106 + 8 nuevas).
+
+El archivo contiene **nueve** llamadas a `prueba(`, pero sólo ocho se ejecutan:
+la novena —`'un script que no carga es un error'`— vive en la rama de éxito de
+una promesa que tiene que fracasar, así que sólo corre si `conDocumento` deja
+pasar un script inexistente. Si ves 115, no es que sobre una prueba: es que el
+manejo del error no funciona.
 
 - [ ] **Step 5: Comprobar el caso de `file://`**
 
@@ -659,7 +665,7 @@ el fallo descrito en el mensaje.
 
 - [ ] **Step 4: Ver que pasan**
 
-Esperado: **126 pasan, 0 fallan** (115 + 11).
+Esperado: **125 pasan, 0 fallan** (114 + 11).
 
 - [ ] **Step 5: Comprobar que no son de mentira**
 
@@ -993,7 +999,7 @@ Es cobertura de código en producción: lo esperable es que pasen sin tocar
 `panel.js`. **Si alguna falla de verdad, es un defecto encontrado**: párate,
 dilo, y arréglalo en un commit aparte con el fallo descrito.
 
-Esperado al terminar: **~146 pasan, 0 fallan**. Anota el número exacto: hace falta
+Esperado al terminar: **146 pasan, 0 fallan** (125 + 21). Anota el número exacto: hace falta
 para la documentación del paso siguiente.
 
 - [ ] **Step 4: Comprobar que no son de mentira**
