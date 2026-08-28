@@ -41,15 +41,20 @@ describe('ArnesDom.conElemento', function () {
   });
 
   /* La limpieza en `finally` es lo que impide que una prueba que falla deje
-     basura en el documento y contamine a las siguientes. */
+     basura en el documento y contamine a las siguientes. Se comprueba el
+     mensaje del error, no sólo que "algo" se lanzó: un try/catch que atrapa
+     cualquier error pasaría igual con ArnesDom sin definir, porque el
+     ReferenceError también cae en el catch y el nodo cuya ausencia se mide
+     nunca llegó a crearse. */
   prueba('quita el contenedor aunque fn lance', function () {
-    var hubo = false;
+    var capturado = null;
     try {
       ArnesDom.conElemento('<ol class="rastro2"></ol>', function () {
         throw new Error('a propósito');
       });
-    } catch (e) { hubo = true; }
-    cierto(hubo, 'el error tiene que propagarse, no tragarse');
+    } catch (e) { capturado = e; }
+    cierto(capturado !== null, 'el error tiene que propagarse, no tragarse');
+    igual(capturado.message, 'a propósito');
     igual(document.querySelectorAll('.rastro2').length, 0);
   });
 
