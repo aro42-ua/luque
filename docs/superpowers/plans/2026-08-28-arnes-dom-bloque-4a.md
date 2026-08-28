@@ -232,7 +232,7 @@ Recarga `tests/test.html` con **Ctrl+Shift+R** (el servidor de pruebas de Python
 no manda `Cache-Control` y Chrome se inventa una frescura propia; sin el recargado
 duro verás el archivo viejo).
 
-Esperado: **106 pasan, 0 fallan** (99 de antes + 7 nuevas).
+Esperado: **108 pasan, 0 fallan** (101 de antes + 7 nuevas).
 
 - [ ] **Step 5: Comprobar que las pruebas no son de mentira**
 
@@ -243,7 +243,7 @@ recarga, y anota cuántas se ponen en rojo.
 Esperado: al menos **3 rojas** (conectado al documento, medidas reales, enfocar).
 Si sólo se pone una en rojo, las pruebas no cubren lo que dicen cubrir.
 
-**Deshaz el cambio** y confirma que vuelven a pasar las 106.
+**Deshaz el cambio** y confirma que vuelven a pasar las 108.
 
 - [ ] **Step 6: Commit**
 
@@ -440,12 +440,12 @@ Y cambia el `return` final por:
 - [ ] **Step 4: Ver que pasan**
 
 Recarga con Ctrl+Shift+R.
-Esperado: **114 pasan, 0 fallan** (106 + 8 nuevas).
+Esperado: **116 pasan, 0 fallan** (108 + 8 nuevas).
 
 El archivo contiene **nueve** llamadas a `prueba(`, pero sólo ocho se ejecutan:
 la novena —`'un script que no carga es un error'`— vive en la rama de éxito de
 una promesa que tiene que fracasar, así que sólo corre si `conDocumento` deja
-pasar un script inexistente. Si ves 115, no es que sobre una prueba: es que el
+pasar un script inexistente. Si ves 117, no es que sobre una prueba: es que el
 manejo del error no funciona.
 
 - [ ] **Step 5: Comprobar el caso de `file://`**
@@ -665,7 +665,7 @@ el fallo descrito en el mensaje.
 
 - [ ] **Step 4: Ver que pasan**
 
-Esperado: **125 pasan, 0 fallan** (114 + 11).
+Esperado: **127 pasan, 0 fallan** (116 + 11).
 
 - [ ] **Step 5: Comprobar que no son de mentira**
 
@@ -677,7 +677,7 @@ y anota cuántas se ponen en rojo:
 3. En `fila()`, cambia `nombre.textContent = p.titulo + ' · ' + (ETIQUETAS[p.categoria] || p.categoria);` por `nombre.textContent = p.titulo;`
 
 Esperado: cada rotura pone en rojo **al menos una** prueba, y ninguna las pone
-todas en verde. **Deshaz las tres** y confirma las 126.
+todas en verde. **Deshaz las tres** y confirma las 127.
 
 - [ ] **Step 6: Commit**
 
@@ -999,7 +999,7 @@ Es cobertura de código en producción: lo esperable es que pasen sin tocar
 `panel.js`. **Si alguna falla de verdad, es un defecto encontrado**: párate,
 dilo, y arréglalo en un commit aparte con el fallo descrito.
 
-Esperado al terminar: **146 pasan, 0 fallan** (125 + 21). Anota el número exacto: hace falta
+Esperado al terminar: **148 pasan, 0 fallan** (127 + 21). Anota el número exacto: hace falta
 para la documentación del paso siguiente.
 
 - [ ] **Step 4: Comprobar que no son de mentira**
