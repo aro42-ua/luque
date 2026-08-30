@@ -142,7 +142,7 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **150 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **151 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista) y, desde el bloque 4a, el panel entero — lo que
@@ -187,16 +187,16 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
 
 **Lo que sigue sin cubrirse, y por qué:**
 
-- El arrastrar y soltar de verdad (`dragstart`/`dragover`/`drop` con
-  coordenadas de ratón) necesita eventos de arrastre reales del navegador, que
-  ningún arnés de esta rama dispara. `calcularHasta`, la aritmética que
-  traduce ese gesto a un índice, sí está probada — sin DOM, con números a
-  mano —, pero el camino que la llama desde un `drop` real no.
+- El camino que llama a `calcularHasta` desde un `drop` real sí está probado
+  (`tests/pruebas-lista-pintar.js`, disparando `dragstart`+`drop` con
+  `clientY` sobre la caja medida de la fila). Lo que ningún arnés de esta
+  rama dispara es `dragover`, así que `marcar` — la marca visual de dónde
+  caería la fila mientras se arrastra, antes de soltar — no se ejercita
+  nunca.
 - La guarda que evita apilar un oyente de `dragleave` en cada repintado
   (`vigilarSalidaDeLaLista`).
 - El reinicio del estado de arrastre (`origenArrastre`, `filaMarcada`) en cada
   `pintar`.
-- El `aria-label` de "bajar" en cada fila.
 - El fallback de categoría desconocida en `Lista.pintar` (cuando una fila trae
   una categoría que no está en `ETIQUETAS`).
 
@@ -218,19 +218,6 @@ python -m http.server 8000
 ```
 
 y abre `http://localhost:8000/tests/test.html`.
-
-**Un par de comprobaciones del propio arnés parpadean en rojo alguna vez, sin
-motivo de `panel.js`.** `tests/pruebas-arnes-dom.js` comprueba que
-`ArnesDom.conDocumento` no deja ningún iframe suyo en el documento al
-terminar, contando `.arnes-dom-caja` en todo el documento. Esa cuenta es
-global, no de su propia sección: si otra sección `describeAsync` —como
-`pruebas-panel.js`, que abre diez iframes seguidos— tiene uno abierto en el
-instante exacto en que se hace la cuenta, sale en rojo sin que el panel tenga
-ningún defecto. Ocurre porque `pruebas-panel.js` es la primera sección, aparte
-de las pruebas del propio arnés, que usa `conDocumento`: antes nunca había
-nadie más con quien coincidir. Queda anotado para quien toque
-`tests/arnes-dom.js` o `tests/pruebas-arnes-dom.js`: esa comprobación debería
-mirar sólo lo que ella misma creó, no todo el documento.
 
 Lo que ningún arnés puede ver, por diseño: nada que se mueva. Las
 transiciones, el vuelo del visor, la recomposición del filtrado y el paneo con
