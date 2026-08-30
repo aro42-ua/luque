@@ -23,16 +23,42 @@ window.ArnesDom = (function () {
     return c;
   }
 
+  function esThenable(v) {
+    return v && (typeof v === 'object' || typeof v === 'function') && typeof v.then === 'function';
+  }
+
   function conElemento(html, fn) {
     var c = caja();
     c.innerHTML = html;
     /* finally y no un remove() al final: si fn lanza, el contenedor tiene que
        desaparecer igual. Si no, una prueba en rojo deja basura en el documento
-       y las siguientes empiezan sucias, que es peor que el fallo original. */
+       y las siguientes empiezan sucias, que es peor que el fallo original.
+
+       El removeChild va con guarda, no a pelo: si fn ya movió o quitó el
+       contenedor, un removeChild sin comprobar lanzaría un TypeError que
+       taparía el error de verdad que venía de fn. */
     try {
-      return fn(c.firstElementChild, c);
+      var r = fn(c.firstElementChild, c);
+      /* Se lanza si fn devuelve un thenable, en vez de esperarlo. Un
+         finally limpia en cuanto fn RETORNA: si fn devolviera una promesa,
+         el nodo ya estaría desconectado cuando esa promesa resolviera, y
+         getBoundingClientRect()/focus() dejarían de funcionar sobre
+         él —los dos fallos exactos que este arnés existe para impedir—, en
+         silencio, porque la promesa "resuelve bien" aunque mida sobre un
+         nodo muerto. Se elige lanzar y no esperar (que es lo que hace
+         conDocumento) para que conElemento siga siendo el nivel barato:
+         síncrono y sin coste de promesa, que es su razón de existir frente
+         al nivel caro. El precio es que quien lo use mal con async se lleva
+         un error claro en vez de un arreglo automático que además dejaría a
+         quien llama sin saber si tiene que encadenar un .then() o no. */
+      if (esThenable(r)) {
+        throw new Error('conElemento es síncrono; fn no puede devolver una '
+          + 'promesa. Si necesitas esperar, usa conDocumento o resuélvela '
+          + 'dentro de fn antes de devolver.');
+      }
+      return r;
     } finally {
-      c.parentNode.removeChild(c);
+      if (c.parentNode) c.parentNode.removeChild(c);
     }
   }
 
@@ -63,21 +89,35 @@ window.ArnesDom = (function () {
     marco.style.cssText = 'width:600px;height:400px;border:0';
     c.appendChild(marco);
 
+    function limpiar() { if (c.parentNode) c.parentNode.removeChild(c); }
+
     var d = marco.contentDocument;
     var w = marco.contentWindow;
 
-    d.open();
-    d.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
-      + '<base href="' + carpetaDeLasPruebas() + '"></head><body>'
-      + (opciones.html || '') + '</body></html>');
-    d.close();
+    /* Este prólogo es síncrono, y antes vivía fuera de todo try: si
+       marco.contentDocument saliera null —un iframe con sandbox, o algún
+       navegador bajo file://—, d.open() lanzaría de forma síncrona, la caja
+       se quedaría colgada en el documento y conDocumento incumpliría su
+       propio contrato de devolver SIEMPRE una promesa. Quien lo llame fuera
+       de un .then() se llevaría una excepción que ninguna sección
+       describeAsync captura, y eso se ve como pruebas que sencillamente no
+       aparecen. Ahora el prólogo también rechaza, y limpia la caja que ya se
+       había creado. */
+    try {
+      d.open();
+      d.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
+        + '<base href="' + carpetaDeLasPruebas() + '"></head><body>'
+        + (opciones.html || '') + '</body></html>');
+      d.close();
 
-    /* Antes de cargar un solo script: panel.js llama a Borrador.cargar() en su
-       propia carga, así que un doble inyectado después llegaría tarde. */
-    var globales = opciones.globales || {};
-    Object.keys(globales).forEach(function (k) { w[k] = globales[k]; });
-
-    function limpiar() { if (c.parentNode) c.parentNode.removeChild(c); }
+      /* Antes de cargar un solo script: panel.js llama a Borrador.cargar() en
+         su propia carga, así que un doble inyectado después llegaría tarde. */
+      var globales = opciones.globales || {};
+      Object.keys(globales).forEach(function (k) { w[k] = globales[k]; });
+    } catch (e) {
+      limpiar();
+      return Promise.reject(e);
+    }
 
     var cadena = (opciones.scripts || []).reduce(function (antes, src) {
       return antes.then(function () { return unScript(d, src); });

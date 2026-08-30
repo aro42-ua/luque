@@ -61,6 +61,25 @@ describe('ArnesDom.conElemento', function () {
   prueba('devuelve lo que devuelve fn', function () {
     igual(ArnesDom.conElemento('<ol></ol>', function () { return 42; }), 42);
   });
+
+  /* conElemento limpia el contenedor en cuanto fn RETORNA. Si fn devolviera
+     una promesa, el nodo ya estaría desconectado cuando esa promesa
+     resolviera, y getBoundingClientRect()/focus() dejarían de funcionar
+     sobre él en silencio —los dos fallos exactos que este arnés existe para
+     impedir—. Se elige lanzar en vez de esperar, para que conElemento siga
+     siendo el nivel barato y síncrono; ver el comentario de arnes-dom.js. */
+  prueba('lanza si fn devuelve una promesa, en vez de dejarla resolver sobre un nodo ya desconectado', function () {
+    var capturado = null;
+    try {
+      ArnesDom.conElemento('<ol class="rastro3"></ol>', function () {
+        return new Promise(function (ok) { ok(1); });
+      });
+    } catch (e) { capturado = e; }
+    cierto(capturado !== null, 'conElemento tiene que rechazar una fn que devuelve una promesa');
+    cierto(capturado.message.indexOf('conDocumento') !== -1,
+           'el mensaje tiene que decir qué usar en su lugar: ' + capturado.message);
+    igual(document.querySelectorAll('.rastro3').length, 0);
+  });
 });
 
 /* describeAsync porque cargar scripts en un iframe es asíncrono. Ya existe en
