@@ -80,15 +80,28 @@ describeAsync('panel.js', function () {
 
   return conPanel(borradorFalso({ diferido: true }), function (w, d) {
 
+    /* Los cuatro controles que toca `activarControles`, no sólo tres: al
+       botón de crear (`#nuevo button[type="submit"]`) le faltaba comprobación
+       y quedaba fuera de esta lista. */
     prueba('arranca con los controles deshabilitados, antes de que llegue el borrador', function () {
       igual([d.getElementById('titulo').disabled,
              d.getElementById('categoria').disabled,
-             d.getElementById('guardar').disabled], [true, true, true]);
+             d.querySelector('#nuevo button[type="submit"]').disabled,
+             d.getElementById('guardar').disabled], [true, true, true, true]);
     });
 
+    /* No basta con el número de opciones: rellenarlo con el número correcto
+       de opciones equivocadas pasaría igual. Se compara también el `value`
+       de cada opción (las CATEGORIAS, en orden) y el texto visible (lo que da
+       Lista.ETIQUETAS, ver panel.js:136-141). */
     prueba('el desplegable se llena con las categorías de ReglasContenido', function () {
-      igual(d.getElementById('categoria').options.length,
-            w.ReglasContenido.CATEGORIAS.length);
+      var opciones = d.getElementById('categoria').options;
+      igual([].map.call(opciones, function (o) { return o.value; }),
+            w.ReglasContenido.CATEGORIAS);
+      igual([].map.call(opciones, function (o) { return o.textContent; }),
+            w.ReglasContenido.CATEGORIAS.map(function (c) {
+              return w.Lista.ETIQUETAS[c] || c;
+            }));
     });
 
   }).then(function () {
@@ -104,8 +117,13 @@ describeAsync('panel.js', function () {
         /* El caso real: la sesión de Access caducó de un día para otro. Si los
            controles se quedaran activos, la primera pulsación reventaría contra
            un `trabajo` que sigue siendo null. */
+        /* El nombre es plural: los cuatro controles que toca
+           `activarControles` (panel.js:14-19), no sólo Guardar. */
         prueba('y los controles se quedan apagados', function () {
-          igual(d.getElementById('guardar').disabled, true);
+          igual([d.getElementById('titulo').disabled,
+                 d.getElementById('categoria').disabled,
+                 d.querySelector('#nuevo button[type="submit"]').disabled,
+                 d.getElementById('guardar').disabled], [true, true, true, true]);
         });
       });
 
@@ -117,9 +135,13 @@ describeAsync('panel.js', function () {
       prueba('pinta una fila por proyecto', function () {
         igual(d.querySelectorAll('#lista li.fila').length, 2);
       });
+      /* Mismos cuatro controles que arriba: el nombre promete «los
+         controles», no sólo título y guardar. */
       prueba('y activa los controles', function () {
         igual([d.getElementById('titulo').disabled,
-               d.getElementById('guardar').disabled], [false, false]);
+               d.getElementById('categoria').disabled,
+               d.querySelector('#nuevo button[type="submit"]').disabled,
+               d.getElementById('guardar').disabled], [false, false, false, false]);
       });
     });
 
@@ -170,8 +192,13 @@ describeAsync('panel.js', function () {
 
     return conPanel(borradorFalso({ datos: dosProyectos() }), function (w, d) {
       d.querySelector('#lista li.fila [data-accion="borrar"]').click();
+      /* No basta con el recuento: si panel.js borrara por índice, o siempre
+         la última, en vez de por `id`, el recuento pasaría igual de 2 a 1 y
+         esto seguiría en verde. Se comprueba también cuál queda. */
       prueba('borrar quita la fila cuando se confirma', function () {
-        igual(d.querySelectorAll('#lista li.fila').length, 1);
+        var filas = d.querySelectorAll('#lista li.fila');
+        igual(filas.length, 1);
+        igual(filas[0].dataset.id, 'arena');
       });
     });
 
