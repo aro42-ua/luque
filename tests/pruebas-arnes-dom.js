@@ -116,17 +116,33 @@ describeAsync('ArnesDom.conDocumento', function () {
 
   }).then(function () {
 
+    /* «quita el iframe al terminar» comprobaba antes un recuento global de
+       `.arnes-dom-caja` en todo el documento. Desde que pruebas-panel.js abre
+       diez iframes propios de forma asíncrona, esa cuenta ve basura ajena —el
+       iframe de otra sección, que sigue abierto en ese instante— y sale en
+       rojo por turnos, entre 0 y 2 fallos según el orden de ejecución.
+
+       Se captura el nodo exacto que crea ESTA llamada —`w.frameElement` es el
+       <iframe> y su padre es la «caja» que `conDocumento` añade al
+       documento— y se comprueba que ESE nodo, no «ningún nodo en la
+       página», desapareció. Es más estricta, no menos: identifica el nodo en
+       vez de confiar en un recuento agregado que otra sección puede alterar. */
+    var laCaja;
     return ArnesDom.conDocumento({
       html: HTML,
       globales: { Marca: 1 },
       scripts: []
-    }, function () { return true; });
+    }, function (w) {
+      laCaja = w.frameElement.parentNode;
+      return true;
+    }).then(function (r) {
+      prueba('quita el iframe al terminar', function () {
+        cierto(!document.contains(laCaja), 'la caja de este iframe seguía en el documento');
+      });
+      return r;
+    });
 
   }).then(function () {
-
-    prueba('quita el iframe al terminar', function () {
-      igual(document.querySelectorAll('.arnes-dom-caja').length, 0);
-    });
 
     prueba('no contamina la ventana de las pruebas', function () {
       igual(typeof window.Testigo, 'undefined');
@@ -137,9 +153,24 @@ describeAsync('ArnesDom.conDocumento', function () {
        es abrir test.html con doble clic: bajo file:// puede que el navegador
        no deje al iframe cargar scripts, y sin este mensaje el fallo parecería
        un error del código que se está probando. */
-    return ArnesDom.conDocumento({
+
+    /* Aquí `fn` nunca llega a ejecutarse —el script falla antes de que se
+       llame—, así que no hay manera de capturar la caja desde dentro como
+       arriba. `conDocumento` crea la caja y el <iframe> de forma síncrona, al
+       principio, antes de cualquier operación asíncrona (ver
+       tests/arnes-dom.js): capturar el nodo justo después de llamar, en el
+       mismo turno de JS y sin ningún `await`/`.then` de por medio, es seguro
+       aunque otras secciones tengan iframes propios abiertos a la vez —nada
+       puede colarse entre estas dos líneas—. */
+    var antesDeLlamar = document.querySelectorAll('.arnes-dom-caja').length;
+    var promesaError = ArnesDom.conDocumento({
       html: HTML, globales: {}, scripts: ['no-existe-a-proposito.js']
-    }, function () { return 'no debería llegar aquí'; })
+    }, function () { return 'no debería llegar aquí'; });
+    var todasTrasLlamar = document.querySelectorAll('.arnes-dom-caja');
+    var cajaDelError = todasTrasLlamar.length === antesDeLlamar + 1
+      ? todasTrasLlamar[todasTrasLlamar.length - 1] : null;
+
+    return promesaError
       .then(function (r) {
         prueba('un script que no carga es un error', function () {
           cierto(false, 'tenía que haber fallado y devolvió ' + r);
@@ -152,7 +183,8 @@ describeAsync('ArnesDom.conDocumento', function () {
           cierto(e.message.toLowerCase().indexOf('servidor') !== -1, e.message);
         });
         prueba('y limpia el iframe aunque haya fallado', function () {
-          igual(document.querySelectorAll('.arnes-dom-caja').length, 0);
+          cierto(cajaDelError !== null, 'no se pudo identificar la caja de esta llamada');
+          cierto(!document.contains(cajaDelError), 'la caja de este iframe seguía en el documento');
         });
       });
   });
