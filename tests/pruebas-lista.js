@@ -1,5 +1,6 @@
 /* Las tres piezas sin DOM de `panel/js/lista.js`. `pintar` no se prueba aquí:
-   necesita el <ol> del panel, y este arnés no lo tiene.
+   necesita el <ol> del panel. Se prueba en `tests/pruebas-lista-pintar.js`,
+   con `ArnesDom.conElemento`.
 
    Por qué existen estas pruebas. `Orden.mover` NO se queja de un índice que no
    sea un número: `Math.max(0, NaN)` da `NaN` y `splice(NaN, …)` lo trata como

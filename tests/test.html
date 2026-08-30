@@ -17,6 +17,7 @@
 <div id="salida"></div>
 
 <script src="arnes.js"></script>
+<script src="arnes-dom.js"></script>
 <script src="../js/reglas-contenido.js"></script>
 <script src="../js/datos.js"></script>
 <script src="../js/contenido.js"></script>
@@ -28,9 +29,11 @@
 <script src="../panel/js/orden.js"></script>
 <!-- lista.js no toca el DOM al cargarse: sólo define window.Lista. Se carga
      por sus tres funciones sin DOM (indiceValido, calcularHasta,
-     dentroDeLaCaja); `pintar` necesita el panel entero y no se ejercita. -->
+     dentroDeLaCaja) y también por `pintar`, que sí construye nodos: el arnés
+     de DOM le da un <ol> propio, así que no hace falta el panel entero. -->
 <script src="../panel/js/lista.js"></script>
 <script src="pruebas-arnes.js"></script>
+<script src="pruebas-arnes-dom.js"></script>
 <script src="pruebas-datos.js"></script>
 <script src="pruebas-contenido.js"></script>
 <script src="pruebas-router.js"></script>
@@ -40,6 +43,16 @@
 <script src="pruebas-identificador.js"></script>
 <script src="pruebas-orden.js"></script>
 <script src="pruebas-lista.js"></script>
+<script src="pruebas-lista-pintar.js"></script>
+<!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
+     cuatro dependencias delante (reglas-contenido, identificador, orden,
+     lista): cinco scripts encadenados por conDocumento. Que UN script se
+     cargue y ejecute dentro del iframe bajo file:// está comprobado (ver
+     pruebas-arnes-dom.js); que la CADENA de panel.js haga lo mismo entera no
+     se ha podido comprobar con las herramientas de esta tarea — no es un
+     fallo conocido, es una comprobación pendiente. Si al abrir esto con
+     doble clic la sección "panel.js" no pinta nada, es la primera sospechosa. -->
+<script src="pruebas-panel.js"></script>
 <script src="pruebas-contenido-real.js"></script>
 <script>window.Arnes.resumen();</script>
 </body>
