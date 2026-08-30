@@ -76,9 +76,10 @@ describe('Lista.pintar', function () {
       pintarEn(proyectos())(ol);
       var f = ol.querySelector('li.fila');
       return [f.querySelector('[data-accion="subir"]').getAttribute('aria-label'),
+              f.querySelector('[data-accion="bajar"]').getAttribute('aria-label'),
               f.querySelector('[data-accion="borrar"]').getAttribute('aria-label')];
     });
-    igual(etiquetas, ['Subir Niebla', 'Borrar Niebla']);
+    igual(etiquetas, ['Subir Niebla', 'Bajar Niebla', 'Borrar Niebla']);
   });
 
   prueba('pulsar bajar pide mover de su índice al siguiente', function () {
