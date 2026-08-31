@@ -142,14 +142,15 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **151 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **198 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
-el reordenado de la lista) y, desde el bloque 4a, el panel entero — lo que
-antes quedaba fuera por tocar el DOM.
+el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
+quedaba fuera por tocar el DOM — y desde el bloque 4b la capa impura de
+`Router.ir`, que hasta entonces no tenía ninguna prueba.
 
 **Hay dos arneses.** `tests/arnes.js` es el de siempre, para funciones puras.
-`tests/arnes-dom.js` es el segundo, con dos niveles:
+`tests/arnes-dom.js` es el segundo, con tres niveles:
 
 - `ArnesDom.conElemento(html, fn)` — mete `html` en un `<div>` fuera de
   pantalla (conectado al documento, no suelto: `focus()` y las medidas sólo
@@ -167,11 +168,23 @@ antes quedaba fuera por tocar el DOM.
   `confirm` doblados y con `Lista`, `Orden`, `Identificador` y
   `ReglasContenido` de verdad — probar el panel contra dobles de sus propias
   piezas comprobaría el doble, no el panel.
+- `ArnesDom.conPagina(opciones, fn)` — el tercero, del bloque 4b, para el
+  código que mira la URL. `conDocumento` no sirve ahí: escribe el documento con
+  `document.write`, y `document.open()` navega a `about:blank`, lo que borra el
+  fragmento y además hace que `history.replaceState` lance. `conPagina` carga un
+  archivo de verdad (`tests/fijaciones/pagina-vacia.html`) con el hash puesto en
+  el `src` **antes** de insertar el iframe: así el documento tiene URL propia, el
+  hash llega, `replaceState` funciona y la primera carga no añade ninguna entrada
+  al historial. Lo usa `tests/pruebas-router-ir.js`.
 
-Ese segundo nivel es asíncrono (carga scripts de verdad), así que
-`tests/pruebas-panel.js` y `tests/pruebas-arnes-dom.js` usan `describeAsync` en
-vez de `describe`; el recuento final espera a que todas las secciones
-asíncronas terminen. Ninguno de los dos necesita Node.
+  **Las dos hermanas conviven a propósito**; no las unifiques sin revalidar las
+  21 pruebas del panel, que dependen del camino de `conDocumento`.
+
+Los niveles segundo y tercero son asíncronos (cargan scripts de verdad), así que
+`tests/pruebas-panel.js`, `tests/pruebas-arnes-dom.js` y
+`tests/pruebas-router-ir.js` usan `describeAsync` en vez de `describe`; el
+recuento final espera a que todas las secciones asíncronas terminen. Ninguno
+necesita Node.
 
 **Lo que cubre `tests/pruebas-panel.js` (21 comprobaciones):** que arranca con
 los controles deshabilitados antes de que llegue el borrador y se queda así si
@@ -199,6 +212,45 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   `pintar`.
 - El fallback de categoría desconocida en `Lista.pintar` (cuando una fila trae
   una categoría que no está en `ETIQUETAS`).
+- **`galeria.js`, `visor.js` y `hero.js` siguen sin una sola prueba.** Los tres
+  llaman a `Router.ir` y leen `Router.rutaActual`, así que cualquier cambio en el
+  router los afecta y ninguna prueba lo diría. En el bloque 4b se comprobaron a
+  mano, una vez, con esta lista de seis, corriendo cada una en el código nuevo y
+  en `c3dd54d` —el estado anterior al bloque— para comparar en vez de fiarse de
+  la memoria:
+
+  1. Filtrar por categoría (`js/galeria.js:196-197`): pulsar «editorial» deja la
+     URL en `#/editorial` y la categoría activa; pulsarla otra vez vuelve a todos
+     y deja la URL desnuda. **Idéntico en los dos.**
+  2. Abrir un proyecto (`js/visor.js:41`): pulsar la tarjeta de *bruma* deja la
+     URL en `#/bruma` y abre el visor. **Idéntico.**
+  3. Cerrar el visor con una categoría activa (`js/visor.js:129-130`): vuelve a
+     `#/editorial`, no a todos. **Idéntico.**
+  4. El hero (`js/hero.js:33`): recargar con `#/bruma` salta la portada y abre el
+     proyecto en `01 / 08`. **Idéntico.**
+  5. El botón «atrás» dos veces: deshace el proyecto y luego el filtro, y no
+     añade entradas al deshacer. **Idéntico, entrada por entrada.**
+  6. `#/bruma/3`: **la única diferencia, y es la que el bloque existe para
+     producir.** Antes la ruta no se entendía y caía a la portada general, con
+     hero incluido; ahora abre *bruma* por su portada (`01 / 08`), sin error ni
+     pantalla en blanco. Esa URL no la genera ninguna parte de la interfaz: sólo
+     se llega a ella escribiéndola.
+
+  Si algún día alguien repite esta comprobación, que repita **esta** lista y no
+  una parecida.
+- **El escritorio no lee el campo `pieza`.** `parsearRuta` sí lo analiza y lo
+  transporta —`#/bruma/3` da `{tipo:'proyecto', valor:'bruma', pieza:3}`—, pero
+  ningún consumidor de escritorio lo mira, así que la URL abre el proyecto por su
+  portada. Es deliberado: la spec dice que el escritorio «podrá aprovecharlo» más
+  adelante, y hacerlo en el bloque 4b habría cambiado comportamiento ya
+  publicado.
+- **La suite añade 1 entrada al historial del navegador por corrida** (medido:
+  11 → 12 → 13 en tres corridas seguidas). Viene de la única prueba que navega de
+  verdad —la de empujar, en `tests/pruebas-router-ir.js`— y no se puede evitar
+  sin dejar de cubrir ese camino: el historial de un iframe *es* el de la página
+  que lo contiene, y quitar el iframe no devuelve la entrada. Chrome tope el
+  `history.length` en unas 50 por pestaña, así que no crece sin límite, pero sí
+  ensucia el botón «atrás» de quien corre la suite muchas veces.
 
 No hace falta cubrirlos para que el bloque cumpla su propósito, pero tampoco
 hay que fingir que lo están.
