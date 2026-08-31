@@ -43,6 +43,25 @@ window.Composicion = (function () {
     compacto: { columnas: 2, anchoCelda: 50 }
   };
 
+  /* Aire alrededor de toda la composición, en vw. Sin él, las fotos de los
+     bordes quedaban pegadas al borde del lienzo, y una foto pegada al borde
+     sólo está entera en UNA posición exacta del paneo: había que clavar el
+     ratón en el píxel justo. Con margen, esa foto tiene un rango de posiciones
+     válidas, no un punto.
+
+     8 y no más, y el número está medido, no elegido a ojo. La holgura —qué
+     porcentaje de posiciones del ratón muestran entera la foto más difícil— no
+     crece indefinidamente con el margen, porque el margen agranda el lienzo y
+     eso agranda el recorrido del paneo. Con el STRENGTH=2 de
+     galeria-paneo.js sale así:
+
+         margen:    0     4     6     8    10    12    15    20    25  (vw)
+         holgura: 8,7  11,6  12,7  13,3  12,9  12,4  11,7  10,6   9,7  (%)
+
+     8vw es el máximo. A partir de ahí se paga lienzo sin ganar comodidad.
+     Si alguien cambia STRENGTH, este óptimo se mueve: vuelve a medirlo. */
+  var MARGEN = 8;
+
   /* El alto de celda no se elige a ojo: se calcula para que la caja más alta
      que puede caer en una celda quepa dentro con su sesgo incluido. Así el no
      solape es una propiedad de la construcción y no algo que haya que vigilar
@@ -70,18 +89,23 @@ window.Composicion = (function () {
       var columna = i % c.columnas;
       var fila = Math.floor(i / c.columnas);
       salida.push({
-        x: columna * c.anchoCelda + c.anchoCelda * SESGO_X[v],
-        y: fila    * c.altoCelda  + c.altoCelda  * SESGO_Y[v],
+        x: MARGEN + columna * c.anchoCelda + c.anchoCelda * SESGO_X[v],
+        y: MARGEN + fila    * c.altoCelda  + c.altoCelda  * SESGO_Y[v],
         w: c.anchoCelda * ANCHOS[v]
       });
     }
     return salida;
   }
 
+  /* El lienzo es la rejilla MÁS el margen por los dos lados de cada eje. Las
+     dos mitades del margen tienen que moverse juntas —aquí y en `disponer`—:
+     si sólo crece el lienzo, el aire se va todo al lado derecho y abajo; si
+     sólo se desplazan las cajas, se salen por ese mismo lado. */
   function tamano(cantidad, modo) {
     var c = config(modo);
     var filas = Math.max(1, Math.ceil(cantidad / c.columnas));
-    return { ancho: c.columnas * c.anchoCelda, alto: filas * c.altoCelda };
+    return { ancho: c.columnas * c.anchoCelda + 2 * MARGEN,
+             alto:  filas      * c.altoCelda  + 2 * MARGEN };
   }
 
   return { disponer: disponer, tamano: tamano };

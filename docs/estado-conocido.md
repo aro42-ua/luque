@@ -141,14 +141,14 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **198 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **199 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
 quedaba fuera por tocar el DOM — y desde el bloque 4b la capa impura de
 `Router.ir`, que hasta entonces no tenía ninguna prueba.
 
-Si las cuentas con `grep -c "prueba("` te van a salir **200**, no 198: dos de
+Si las cuentas con `grep -c "prueba("` te van a salir **201**, no 199: dos de
 esas llamadas viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos
 cargas que están diseñadas para fallar. Nunca se ejecutan; están ahí para que la
 sección se ponga en rojo si algún día la carga deja de fallar. El número que
