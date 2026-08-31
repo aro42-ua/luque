@@ -1,13 +1,22 @@
 window.Router = (function () {
   var suscriptores = [];
 
+  /* Deja un fragmento en su forma canónica, sin almohadilla, sin barra inicial
+     y sin espacios alrededor. El mismo sitio puede llegar escrito de varias
+     formas —'#/bruma', '#bruma', 'bruma', con espacios de más— según quién
+     construya el enlace, así que todo el router lo compara ya normalizado:
+     tanto al leer la ruta como al decidir si ya se está donde se quiere ir. */
+  function normalizar(fragmento) {
+    return String(fragmento == null ? '' : fragmento).replace(/^#/, '').replace(/^\//, '').trim();
+  }
+
   /* La ruta tiene como mucho dos tramos: `#/bruma/3`. El primero dice qué se
      abre; el segundo, dónde se está dentro de eso. `piezasPorId` mapea cada
      proyecto que existe con cuántas piezas tiene, y sus claves son la lista de
      proyectos válidos: separarlas en dos parámetros dejaba abierta la puerta a
      llamar con uno y sin el otro. */
   function parsearRuta(fragmento, categorias, piezasPorId) {
-    var limpio = String(fragmento == null ? '' : fragmento).replace(/^#/, '').replace(/^\//, '').trim();
+    var limpio = normalizar(fragmento);
     if (!limpio) return { tipo: 'todos', valor: null, pieza: null };
 
     var tramos = limpio.split('/');
@@ -51,14 +60,6 @@ window.Router = (function () {
     var h = '#/' + destino.valor;
     if (destino.tipo === 'proyecto' && destino.pieza != null) h += '/' + destino.pieza;
     return h;
-  }
-
-  /* Normaliza un fragmento para poder compararlo: el hash real puede llegar
-     como '#/bruma', '#bruma' o 'bruma' según quién lo escriba. Sin esto,
-     «¿ya estoy donde quiero ir?» daría que no y se empujaría una entrada de
-     más cada vez. */
-  function normalizar(hash) {
-    return String(hash == null ? '' : hash).replace(/^#/, '').replace(/^\//, '').trim();
   }
 
   /* Decide qué hacer con el historial al ir a `destino` estando en
