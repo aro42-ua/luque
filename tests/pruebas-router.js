@@ -116,3 +116,85 @@ describe('parsearRuta', function () {
     igual(r('#/toString/1'), { tipo: 'todos', valor: null, pieza: null });
   });
 });
+
+describe('decidir', function () {
+  function d(hashActual, tipo, valor, pieza) {
+    return Router.decidir(hashActual, { tipo: tipo, valor: valor, pieza: pieza });
+  }
+
+  // ---- El hash que se construye ------------------------------------
+
+  prueba('la portada general no tiene hash', function () {
+    igual(d('#/bruma', 'todos', null, null).hash, '');
+  });
+
+  prueba('una categoría es un solo tramo', function () {
+    igual(d('', 'categoria', 'editorial', null).hash, '#/editorial');
+  });
+
+  prueba('un proyecto sin pieza es un solo tramo', function () {
+    igual(d('', 'proyecto', 'bruma', null).hash, '#/bruma');
+  });
+
+  prueba('un proyecto con pieza lleva el número en el segundo tramo', function () {
+    igual(d('', 'proyecto', 'bruma', 3).hash, '#/bruma/3');
+  });
+
+  prueba('la ficha va en el segundo tramo como palabra', function () {
+    igual(d('', 'proyecto', 'bruma', 'ficha').hash, '#/bruma/ficha');
+  });
+
+  // ---- Qué se hace con el historial --------------------------------
+
+  /* La regla que existe este bloque para traer: si cada deslizamiento empujara
+     una entrada, salir de un proyecto de ocho fotos exigiría ocho «atrás». */
+  prueba('cambiar de foto dentro del mismo proyecto reemplaza', function () {
+    igual(d('#/bruma/3', 'proyecto', 'bruma', 4).accion, 'reemplazar');
+  });
+
+  prueba('y también al abrir la ficha del proyecto en el que ya estás', function () {
+    igual(d('#/bruma/3', 'proyecto', 'bruma', 'ficha').accion, 'reemplazar');
+  });
+
+  prueba('y al volver de la ficha a una foto', function () {
+    igual(d('#/bruma/ficha', 'proyecto', 'bruma', 2).accion, 'reemplazar');
+  });
+
+  /* En cambio cambiar de proyecto sí empuja: es el salto que quien mira espera
+     poder deshacer con «atrás». */
+  prueba('cambiar de proyecto empuja', function () {
+    igual(d('#/bruma/3', 'proyecto', 'humo', null).accion, 'empujar');
+  });
+
+  prueba('entrar en un proyecto desde la portada empuja', function () {
+    igual(d('', 'proyecto', 'bruma', null).accion, 'empujar');
+  });
+
+  prueba('filtrar por categoría empuja', function () {
+    igual(d('', 'categoria', 'editorial', null).accion, 'empujar');
+  });
+
+  /* Esto no es nuevo: es lo que hace hoy js/router.js:23, y se prueba aquí
+     porque hasta ahora no lo cubría nada. */
+  prueba('volver a la portada general reemplaza, como hoy', function () {
+    igual(d('#/bruma', 'todos', null, null).accion, 'reemplazar');
+  });
+
+  /* Tampoco es nuevo: js/router.js:27-28. Sin esta rama, pulsar la categoría
+     en la que ya estás no avisaría a nadie y la galería se quedaría quieta. */
+  prueba('ir a donde ya estás no toca el historial, sólo avisa', function () {
+    igual(d('#/bruma/3', 'proyecto', 'bruma', 3).accion, 'avisar');
+    igual(d('#/editorial', 'categoria', 'editorial', null).accion, 'avisar');
+  });
+
+  prueba('y estar ya en la portada general también sólo avisa', function () {
+    igual(d('', 'todos', null, null).accion, 'avisar');
+  });
+
+  /* El hash de verdad puede venir sin barra o con espacios; comparar en crudo
+     haría que «ya estoy aquí» fallara y se empujara una entrada de más. */
+  prueba('comparar dónde estás no depende de cómo esté escrito el hash', function () {
+    igual(d('#bruma', 'proyecto', 'bruma', null).accion, 'avisar');
+    igual(d('bruma', 'proyecto', 'bruma', null).accion, 'avisar');
+  });
+});

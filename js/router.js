@@ -44,6 +44,51 @@ window.Router = (function () {
     return n;
   }
 
+  /* Construye el fragmento que le corresponde a un destino. La portada general
+     no tiene fragmento: se va a la URL desnuda. */
+  function hashDe(destino) {
+    if (destino.tipo === 'todos') return '';
+    var h = '#/' + destino.valor;
+    if (destino.tipo === 'proyecto' && destino.pieza != null) h += '/' + destino.pieza;
+    return h;
+  }
+
+  /* Normaliza un fragmento para poder compararlo: el hash real puede llegar
+     como '#/bruma', '#bruma' o 'bruma' según quién lo escriba. Sin esto,
+     «¿ya estoy donde quiero ir?» daría que no y se empujaría una entrada de
+     más cada vez. */
+  function normalizar(hash) {
+    return String(hash == null ? '' : hash).replace(/^#/, '').replace(/^\//, '').trim();
+  }
+
+  /* Decide qué hacer con el historial al ir a `destino` estando en
+     `hashActual`. Es puro a propósito: la regla de empujar-o-reemplazar es lo
+     que hace que salir de un proyecto de ocho fotos cueste un «atrás» y no
+     ocho, y probarla navegando de verdad ensuciaría el historial del navegador
+     de quien corre las pruebas — el historial de un iframe es el de su padre. */
+  function decidir(hashActual, destino) {
+    var hash = hashDe(destino);
+
+    if (normalizar(hashActual) === normalizar(hash)) {
+      return { accion: 'avisar', hash: hash };
+    }
+
+    /* Moverse dentro del mismo proyecto —otra foto, o la ficha— reemplaza. */
+    var actual = normalizar(hashActual).split('/');
+    if (destino.tipo === 'proyecto' && actual[0] === destino.valor) {
+      return { accion: 'reemplazar', hash: hash };
+    }
+
+    /* La portada general reemplaza, que es lo que ya hacía el router antes de
+       este bloque. Se conserva a propósito: cambiarlo sería tocar el
+       escritorio publicado, y este bloque no hace eso. */
+    if (destino.tipo === 'todos') {
+      return { accion: 'reemplazar', hash: hash };
+    }
+
+    return { accion: 'empujar', hash: hash };
+  }
+
   function piezasPorId() {
     var mapa = {};
     window.Datos.PROYECTOS.forEach(function (p) {
@@ -82,6 +127,7 @@ window.Router = (function () {
 
   return {
     parsearRuta: parsearRuta,
+    decidir: decidir,
     rutaActual: rutaActual,
     ir: ir,
     alCambiar: alCambiar,
