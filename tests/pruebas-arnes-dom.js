@@ -208,3 +208,70 @@ describeAsync('ArnesDom.conDocumento', function () {
       });
   });
 });
+
+describeAsync('ArnesDom.conPagina', function () {
+
+  var laCaja;
+
+  return ArnesDom.conPagina({
+    pagina: 'fijaciones/pagina-vacia.html',
+    hash: '#/bruma/3',
+    scripts: ['../../js/reglas-contenido.js']
+  }, function (w, d) {
+
+    /* Sin esto no se puede probar nada que mire la URL, que es la razón de que
+       esta función exista. */
+    prueba('el fragmento llega al iframe', function () {
+      igual(w.location.hash, '#/bruma/3');
+    });
+
+    /* Y sin URL propia, `replaceState` lanza: es la diferencia entre cargar un
+       archivo de verdad y escribir sobre about:blank. */
+    prueba('y el documento tiene URL propia, así que replaceState no lanza', function () {
+      w.history.replaceState(null, '', w.location.pathname + '#/bruma/4');
+      igual(w.location.hash, '#/bruma/4');
+    });
+
+    prueba('los scripts se cargan de verdad dentro del iframe', function () {
+      igual(typeof w.ReglasContenido, 'object');
+    });
+
+    laCaja = w.frameElement.parentNode;   // el <iframe> vive dentro de la caja
+    return true;
+  }).then(function () {
+    /* Se comprueba que desapareció ESE nodo, no que no queda ninguno en la
+       página. Un recuento global (`querySelectorAll('.arnes-dom-caja').length`)
+       ve los iframes de otras secciones asíncronas y sale en rojo por turnos:
+       exactamente la carrera que hubo que arreglar en el bloque 4a. */
+    prueba('y quita del documento la caja que creó, no «alguna caja»', function () {
+      cierto(!document.contains(laCaja), 'la caja de conPagina se quedó en el documento');
+    });
+  }).then(function () {
+
+    /* El fallo real de abrir test.html con doble clic: bajo file:// el
+       documento del iframe queda de otro origen y `contentDocument` sale null.
+       Se reproduce con una data: URL, que tiene origen opaco y da el mismo
+       null —y, como el caso de file://, emite `load` y no `error`, así que
+       `onerror` ni se entera—. Aquí no se piden scripts a propósito, que es el
+       caso más silencioso: sin la guarda no salta ningún TypeError, sino que
+       `fn` corre con el documento a null y la sección devuelve un resultado
+       cualquiera como si todo hubiera ido bien. Comprobado quitando la guarda:
+       esta prueba cae con «tenía que haber fallado y devolvió …». */
+    return ArnesDom.conPagina({
+      pagina: 'data:text/html,<p>origen opaco a proposito</p>'
+    }, function () {
+      return 'no debería llegar aquí';
+    }).then(function (r) {
+      prueba('un documento que no se puede leer es un error, no un TypeError opaco', function () {
+        cierto(false, 'tenía que haber fallado y devolvió ' + r);
+      });
+    }, function (e) {
+      prueba('un documento que no se puede leer es un error, no un TypeError opaco', function () {
+        cierto(e.message.indexOf('data:text/html') !== -1,
+               'el error tiene que nombrar la página: ' + e.message);
+        cierto(e.message.toLowerCase().indexOf('servidor') !== -1,
+               'y sugerir el servidor, que es la causa probable: ' + e.message);
+      });
+    });
+  });
+});

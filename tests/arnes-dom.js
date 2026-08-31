@@ -2,12 +2,18 @@
    funciones puras; éste da el terreno donde ejercitar código que construye
    nodos, mueve el foco y mide cajas.
 
-   Dos niveles porque son dos problemas distintos:
+   Tres niveles porque son tres problemas distintos:
      - `conElemento`, para lo que recibe su contenedor como parámetro
        —`Lista.pintar(contenedor, …)`—, que se prueba con un nodo y ya está.
      - `conDocumento`, para lo que no expone nada y se ejecuta al cargarse
        —`panel/js/panel.js` es una IIFE que llama a init() en su última línea—,
-       que hay que cargar dentro de un iframe con sus dependencias ya puestas. */
+       que hay que cargar dentro de un iframe con sus dependencias ya puestas.
+     - `conPagina`, para lo que mira la URL —`Router.ir` lee `location.hash` y
+       llama a `history`—, que necesita un documento con URL propia y no el
+       about:blank que deja `document.write`.
+
+   Los dos últimos son hermanos y conviven a propósito; el porqué está junto a
+   `conPagina`, más abajo. No los unifiques sin leerlo. */
 window.ArnesDom = (function () {
 
   /* El contenedor va DENTRO del documento, no suelto: focus() no hace nada
@@ -132,5 +138,101 @@ window.ArnesDom = (function () {
             function (e) { limpiar(); throw e; });
   }
 
-  return { conElemento: conElemento, conDocumento: conDocumento };
+  /* Hermana de `conDocumento` para cuando el código bajo prueba mira la URL.
+     `conDocumento` escribe el documento con `d.write`, y eso no sirve aquí por
+     dos motivos comprobados: `document.open()` navega a about:blank y borra el
+     fragmento, y sobre un documento about:blank `history.replaceState` lanza
+     («cannot be created in a document with origin ... and URL about:blank»).
+     Cargando un archivo de verdad, el documento tiene URL propia: el hash
+     llega, replaceState funciona, y la primera carga del iframe no añade
+     ninguna entrada al historial.
+
+     Las dos conviven a propósito. No las unifiques sin revalidar las 21
+     pruebas de panel.js, que dependen del camino de `conDocumento`.
+
+     Las rutas de `scripts` son relativas a `opciones.pagina`, no a
+     test.html: `conDocumento` resuelve los `src` con un `<base>` propio, pero
+     aquí el documento del iframe tiene su URL de verdad —la de la página
+     cargada—, así que los scripts se resuelven contra ELLA. Desde
+     'fijaciones/pagina-vacia.html', 'js/router.js' es '../../js/router.js'. */
+  function conPagina(opciones, fn) {
+    var c = caja();
+    var marco = document.createElement('iframe');
+
+    function limpiar() { if (c.parentNode) c.parentNode.removeChild(c); }
+
+    /* El mismo blindaje que su hermana, y por el mismo motivo: este prólogo es
+       síncrono y la caja ya está en el documento. Si `opciones` no trae
+       `pagina`, leerla lanza aquí mismo, la caja se queda colgada y `conPagina`
+       incumple su contrato de devolver SIEMPRE una promesa —quien lo llame
+       fuera de un `.then()` se lleva una excepción que ninguna sección
+       `describeAsync` captura, y eso no se ve como pruebas en rojo, sino como
+       pruebas que sencillamente no aparecen—. */
+    try {
+      /* Las mismas medidas que le da `conDocumento`, y por el mismo motivo: sin
+         ellas se queda en los 300x150 por defecto del navegador, y la primera
+         prueba que quiera medir algo dentro mediría contra un tamaño que nadie
+         eligió. */
+      marco.style.cssText = 'width:600px;height:400px;border:0';
+      marco.src = opciones.pagina + (opciones.hash || '');  // el hash, ANTES de insertar
+      c.appendChild(marco);
+    } catch (e) {
+      limpiar();
+      return Promise.reject(e);
+    }
+
+    /* Lo que este nivel NO cubre: si la página del iframe no llega a emitir ni
+       `load` ni `error` —un servidor que acepta la conexión y se queda
+       colgado—, esta promesa no se asienta nunca, el `Promise.all` de
+       `arnes.js` tampoco, y la suite no llega a imprimir su recuento final. No
+       se ve como un fallo, se ve como una página que no termina de cargar. Si
+       algún día pasa, el sospechoso es éste. */
+    return new Promise(function (resolver, rechazar) {
+      /* `onerror` casi nunca salta: un iframe cuya página da 404 carga la
+         página de error del navegador y emite `load`, no `error`. Se deja
+         porque no cuesta nada y cubre los pocos casos que sí lo emiten, pero
+         el camino de fallo de verdad es la guarda de abajo. */
+      marco.onload = function () { resolver(); };
+      marco.onerror = function () {
+        rechazar(new Error('No se pudo cargar «' + opciones.pagina + '». '
+          + 'Si has abierto test.html con doble clic, arráncalo con un servidor: '
+          + 'python -m http.server'));
+      };
+    }).then(function () {
+      /* El fallo real que se ve al abrir test.html con doble clic: bajo
+         file:// el documento del iframe es de otro origen y `contentDocument`
+         sale null. Sin esta guarda hay dos finales, los dos malos: si se
+         piden scripts, un TypeError opaco desde `d.createElement` unas líneas
+         más abajo; y si no se piden, algo peor —`fn` se ejecuta igual, con el
+         documento y la ventana a null, y la sección da resultados sin sentido
+         en vez de un fallo—. Ninguno de los dos nombra la página ni sugiere el
+         servidor, que es justo lo que hace falta saber. */
+      if (!marco.contentDocument) {
+        throw new Error('No se pudo leer el documento de «' + opciones.pagina + '». '
+          + 'Si has abierto test.html con doble clic, arráncalo con un servidor: '
+          + 'python -m http.server');
+      }
+      var d = marco.contentDocument, w = marco.contentWindow;
+      var pendientes = (opciones.scripts || []).slice();
+
+      function siguiente() {
+        if (!pendientes.length) return Promise.resolve(fn(w, d));
+        var ruta = pendientes.shift();
+        return new Promise(function (res, rech) {
+          var s = d.createElement('script');
+          s.src = ruta;
+          s.onload = function () { res(); };
+          s.onerror = function () {
+            rech(new Error('No se pudo cargar «' + ruta + '» dentro del iframe. '
+              + 'Arranca un servidor: python -m http.server'));
+          };
+          d.head.appendChild(s);
+        }).then(siguiente);
+      }
+      return siguiente();
+    }).then(function (r) { limpiar(); return r; },
+            function (e) { limpiar(); throw e; });
+  }
+
+  return { conElemento: conElemento, conDocumento: conDocumento, conPagina: conPagina };
 })();
