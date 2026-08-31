@@ -197,4 +197,16 @@ describe('decidir', function () {
     igual(d('#bruma', 'proyecto', 'bruma', null).accion, 'avisar');
     igual(d('bruma', 'proyecto', 'bruma', null).accion, 'avisar');
   });
+
+  /* El `.trim()` de `normalizar` es la única guarda de este caso: `parsearRuta`
+     se salva sola porque vuelve a recortar en `tramos[0].trim()`, pero `decidir`
+     compara la cadena entera. Sin el recorte, estar ya en «bruma» se leería como
+     un sitio distinto y se empujaría una entrada de historial de más.
+     Ojo con dónde caen los espacios: `normalizar` quita la almohadilla ANTES de
+     recortar, así que un espacio por delante de ella la deja intacta y
+     '  #/bruma' no llega a compararse igual. Es el orden, no un descuido. */
+  prueba('ni de que traiga espacios de sobra', function () {
+    igual(d('#/bruma ', 'proyecto', 'bruma', null).accion, 'avisar');
+    igual(d('  bruma', 'proyecto', 'bruma', null).accion, 'avisar');
+  });
 });
