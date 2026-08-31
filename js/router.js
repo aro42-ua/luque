@@ -1,20 +1,59 @@
 window.Router = (function () {
   var suscriptores = [];
 
-  function parsearRuta(fragmento, categorias, ids) {
+  /* La ruta tiene como mucho dos tramos: `#/bruma/3`. El primero dice qué se
+     abre; el segundo, dónde se está dentro de eso. `piezasPorId` mapea cada
+     proyecto que existe con cuántas piezas tiene, y sus claves son la lista de
+     proyectos válidos: separarlas en dos parámetros dejaba abierta la puerta a
+     llamar con uno y sin el otro. */
+  function parsearRuta(fragmento, categorias, piezasPorId) {
     var limpio = String(fragmento == null ? '' : fragmento).replace(/^#/, '').replace(/^\//, '').trim();
-    if (!limpio) return { tipo: 'todos', valor: null };
-    if (categorias.indexOf(limpio) !== -1) return { tipo: 'categoria', valor: limpio };
-    if (ids.indexOf(limpio) !== -1) return { tipo: 'proyecto', valor: limpio };
-    return { tipo: 'todos', valor: null };
+    if (!limpio) return { tipo: 'todos', valor: null, pieza: null };
+
+    var tramos = limpio.split('/');
+    var cabeza = tramos[0].trim();
+
+    if (categorias.indexOf(cabeza) !== -1) {
+      /* Una categoría no tiene piezas. Si el enlace trae un segundo tramo se
+         ignora, en vez de tirar la ruta entera: conserva lo que sí traía bien. */
+      return { tipo: 'categoria', valor: cabeza, pieza: null };
+    }
+
+    /* `hasOwnProperty` y no `in`: sin esto, `#/constructor` y `#/toString`
+       pasarían por proyectos, porque esas claves están en el prototipo de
+       cualquier objeto. */
+    if (Object.prototype.hasOwnProperty.call(piezasPorId, cabeza)) {
+      return { tipo: 'proyecto', valor: cabeza,
+               pieza: parsearPieza(tramos, piezasPorId[cabeza]) };
+    }
+
+    return { tipo: 'todos', valor: null, pieza: null };
   }
 
-  function idsProyecto() {
-    return window.Datos.PROYECTOS.map(function (p) { return p.id; });
+  /* Devuelve el número de pieza (desde 1), la cadena 'ficha', o null si el
+     tramo no se entiende o se sale de rango. Null significa «este proyecto,
+     por su portada»: el fallo menos destructivo, porque conserva el proyecto
+     que el enlace sí acertó. */
+  function parsearPieza(tramos, cuantasPiezas) {
+    if (tramos.length !== 2) return null;      // ni un solo tramo, ni tres
+    var cola = tramos[1].trim();
+    if (cola === 'ficha') return 'ficha';      // vale incluso con cero piezas
+    if (!/^[0-9]+$/.test(cola)) return null;   // descarta '', '-2', '2.5', 'abc'
+    var n = Number(cola);
+    if (n < 1 || n > cuantasPiezas) return null;
+    return n;
+  }
+
+  function piezasPorId() {
+    var mapa = {};
+    window.Datos.PROYECTOS.forEach(function (p) {
+      mapa[p.id] = (p.piezas && p.piezas.length) || 0;
+    });
+    return mapa;
   }
 
   function rutaActual() {
-    return parsearRuta(location.hash, window.Datos.CATEGORIAS, idsProyecto());
+    return parsearRuta(location.hash, window.Datos.CATEGORIAS, piezasPorId());
   }
 
   function ir(tipo, valor) {
