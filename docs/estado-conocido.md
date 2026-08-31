@@ -139,6 +139,39 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 - El paneo con ratón sigue interpolando aunque el sistema pida movimiento
   reducido; el centrado por teclado sí lo respeta.
 
+## Sin resolver: la barra tapa fotos, y la regla evidente es la contraria
+
+Está pedido que la barra de categorías «desaparezca al subir el cursor, para
+que no moleste a la vista de las imágenes». **Medido, esa regla haría lo
+contrario de lo que busca**, así que se aparcó sin implementar en vez de
+implementarla mal.
+
+Cuánto de cada foto tapa la barra según dónde esté el cursor, a 1440x900:
+
+| cursor | fotos tapadas |
+|---|---|
+| arriba (fy 0 – 0,2) | **nada** |
+| centro (0,3 – 0,5)  | `arena` 34%, `vidrio` 30% |
+| abajo (0,6 – 1,0)   | `oleaje` 35%, `reflejo` 27% |
+
+El motivo es que el paneo va invertido: al subir el cursor el lienzo baja y se
+ve la parte de ARRIBA del lienzo, que es donde están los 8vw de margen de
+`composicion.js`. Por eso arriba no estorba. Al bajar el cursor las fotos suben
+y se meten bajo la barra, que es `position:fixed`.
+
+En pantallas estrechas la holgura de arriba se encoge, porque el margen va en
+vw y la barra en píxeles: a 1280x720 el margen son 102px y la barra llega a
+112, así que roza `arena` un 1%. Sigue sin ser comparable al 38% del centro.
+
+Las tres salidas que se plantearon, para no volver a razonarlas desde cero:
+mostrar la barra **sólo** con el cursor arriba (encaja con lo medido y la deja
+alcanzable, porque para usarla subes el cursor); hacerlo literal como se pidió;
+o esconderla siempre y devolverla sólo al filo superior, que es lo que menos
+estorba pero lo que peor deja la descubribilidad de las categorías.
+
+Falta decidir cuál. Antes de decidir, conviene mirarlo en la pantalla de quien
+lo pidió: puede que ahí se vea distinto de lo que sale medido aquí.
+
 ## Cómo se prueba
 
 `tests/test.html` ejecuta **199 comprobaciones**: la lógica pura (el enrutado,
