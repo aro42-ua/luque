@@ -104,6 +104,10 @@ describe('parsearRuta', function () {
     igual(r('#/editorial/3'), { tipo: 'categoria', valor: 'editorial', pieza: null });
   });
 
+  prueba('un proyecto que no existe cae en todos, aunque traiga segundo tramo', function () {
+    igual(r('#/inventado/3'), { tipo: 'todos', valor: null, pieza: null });
+  });
+
   /* Sin `hasOwnProperty`, las claves del prototipo se tomarían por proyectos.
      Esta prueba muere si alguien cambia la comprobación por `in` o por un
      acceso directo al mapa. */
