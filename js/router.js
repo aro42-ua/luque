@@ -113,6 +113,17 @@ window.Router = (function () {
     var plan = decidir(location.hash, {
       tipo: tipo,
       valor: valor,
+      /* NO lo cambies por `pieza || null`, que es la simplificación evidente:
+         con `||`, la pieza `0` se convertiría en `null` y el destino perdería
+         el tramo. Hoy `0` no es una pieza válida —se cuenta desde 1—, así que
+         la suite entera pasa igual con `||` y nadie se enteraría; pero esa
+         coerción es justo la que sobrevive a un cambio de criterio y falla dos
+         bloques después. El escritorio llama a `ir` con dos argumentos
+         (js/galeria.js:196-197, js/visor.js:41,129-130), y esta línea normaliza
+         ese `undefined` a `null` para que el destino que ve `decidir` sea
+         siempre canónico. Comprobado: `hashDe` toleraría el `undefined` tal
+         cual, porque `undefined != null` es false y el tramo no se añade
+         igualmente; no es esa la razón de la línea, la razón es el `||`. */
       pieza: pieza === undefined ? null : pieza
     });
 

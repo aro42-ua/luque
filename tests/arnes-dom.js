@@ -152,12 +152,21 @@ window.ArnesDom = (function () {
   function conPagina(opciones, fn) {
     var c = caja();
     var marco = document.createElement('iframe');
+    /* Las mismas medidas que le da `conDocumento`, y por el mismo motivo: sin
+       ellas se queda en los 300x150 por defecto del navegador, y la primera
+       prueba que quiera medir algo dentro mediría contra un tamaño que nadie
+       eligió. */
+    marco.style.cssText = 'width:600px;height:400px;border:0';
     marco.src = opciones.pagina + (opciones.hash || '');   // el hash, ANTES de insertar
     c.appendChild(marco);
 
     function limpiar() { if (c.parentNode) c.parentNode.removeChild(c); }
 
     return new Promise(function (resolver, rechazar) {
+      /* `onerror` casi nunca salta: un iframe cuya página da 404 carga la
+         página de error del navegador y emite `load`, no `error`. Se deja
+         porque no cuesta nada y cubre los pocos casos que sí lo emiten, pero
+         el camino de fallo de verdad es la guarda de abajo. */
       marco.onload = function () { resolver(); };
       marco.onerror = function () {
         rechazar(new Error('No se pudo cargar «' + opciones.pagina + '». '
@@ -165,6 +174,19 @@ window.ArnesDom = (function () {
           + 'python -m http.server'));
       };
     }).then(function () {
+      /* El fallo real que se ve al abrir test.html con doble clic: bajo
+         file:// el documento del iframe es de otro origen y `contentDocument`
+         sale null. Sin esta guarda hay dos finales, los dos malos: si se
+         piden scripts, un TypeError opaco desde `d.createElement` unas líneas
+         más abajo; y si no se piden, algo peor —`fn` se ejecuta igual, con el
+         documento y la ventana a null, y la sección da resultados sin sentido
+         en vez de un fallo—. Ninguno de los dos nombra la página ni sugiere el
+         servidor, que es justo lo que hace falta saber. */
+      if (!marco.contentDocument) {
+        throw new Error('No se pudo leer el documento de «' + opciones.pagina + '». '
+          + 'Si has abierto test.html con doble clic, arráncalo con un servidor: '
+          + 'python -m http.server');
+      }
       var d = marco.contentDocument, w = marco.contentWindow;
       var pendientes = (opciones.scripts || []).slice();
 

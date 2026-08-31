@@ -29,10 +29,13 @@ describeAsync('Router.ir', function () {
       scripts: MODULOS
     }, function (w, d) {
       w.Datos.establecer(PROYECTOS.map(function (p) { return p; }));
-      /* `init()` ANTES de suscribirse, y el orden importa: es quien registra el
-         oyente de `hashchange`, sin el cual el camino de empujar —que asigna
-         `location.hash`— no avisaría a nadie. Se llama antes porque `init`
-         avisa nada más arrancar, y así ese primer aviso no ensucia la cuenta. */
+      /* `init()` ANTES de suscribirse, y el orden importa por dos motivos.
+         Uno: es quien registra el oyente de `hashchange`, sin el cual el
+         camino de empujar —que asigna `location.hash`— no avisaría a nadie.
+         Dos, la consecuencia concreta de hacerlo al revés: `init` avisa nada
+         más arrancar, así que si nos suscribiéramos primero ese aviso de
+         arranque entraría en `avisos` y TODAS las cuentas de `avisos.length`
+         de este archivo valdrían uno más. */
       w.Router.init();
       w.Router.alCambiar(function (ruta) { avisos.push(ruta); });
       return fn(w, w.history.length, avisos);
@@ -138,6 +141,14 @@ describeAsync('Router.ir', function () {
        su padre, y quitar el iframe no la devuelve. Por eso hay UN escenario de
        empujar y no tres, con las tres comprobaciones colgando de él.
 
+       Medido: una corrida completa de la suite añade exactamente 1 entrada.
+       No crece sin límite —Chrome topa `history.length` en unas 50 entradas
+       por pestaña— pero sí ensucia el botón «atrás» de quien la corre. Y ojo
+       al llegar a ese tope: `largoInicial + 1` deja de cumplirse cuando el
+       historial ya no puede crecer, así que si esta prueba empieza a fallar
+       sola tras muchas recargas seguidas, no has roto nada — abre una pestaña
+       nueva y vuelve a correrla.
+
        Se hace con `ir('categoria', 'editorial')` —dos argumentos— porque así
        cubre de paso que llamarla como la llama el escritorio hoy
        (js/galeria.js:196-197, js/visor.js:41,129-130) no inventa una pieza. Si
@@ -155,10 +166,17 @@ describeAsync('Router.ir', function () {
           igual(w.location.hash, '#/editorial');
         });
 
+        /* La tercera aserción mira la URL y NO `avisos[0].pieza`, que es lo que
+           parecía natural y no comprueba nada: la rama de categoría de
+           `parsearRuta` devuelve `pieza: null` codificado a mano, sin mirar el
+           segundo tramo, así que con «#/editorial/undefined» el aviso seguiría
+           llevando `pieza: null` y la prueba pasaría con la pieza inventada
+           puesta. Lo que puede romperse de verdad es la URL. */
         prueba('y llamarla con dos argumentos no inventa una pieza', function () {
           igual(avisos.length, 1);
           igual(avisos[0].tipo, 'categoria');
-          igual(avisos[0].pieza, null);
+          cierto(w.location.hash.indexOf('undefined') === -1,
+                 'se coló una pieza inventada en la URL: ' + w.location.hash);
         });
       });
     });
