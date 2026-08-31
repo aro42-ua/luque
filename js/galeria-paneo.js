@@ -54,7 +54,20 @@ window.GaleriaPaneo = (function () {
     loop();
 
     if (isFinePointer){
-      const STRENGTH = 0.9; // 0-1, cuánto "empuja" el cursor el lienzo
+      /* 1 y no 0,9, y no es una preferencia estética. El recorrido que este
+         cálculo alcanza es [minX/2 - |minX|/2·S, minX/2 + |minX|/2·S], o sea
+         [(1-S)/2·... ] —con S=0,9 sale [0,95·minX, 0,05·minX]—: una banda
+         muerta del 5% de |minX| en CADA borde a la que el ratón no llegaba
+         nunca. A 1440x900 eran 14px por los lados y 28px arriba y abajo, y ahí
+         caían tres fotos —arena, salitre y raíz— que no se podían ver enteras.
+
+         Se notaba en que con el tabulador sí se veían: `centrarEn` usa el
+         recorrido completo [minX, 0]. Esa asimetría entre ratón y teclado era
+         la pista.
+
+         Subirlo no es lo mismo que agrandar el lienzo: la banda muerta era un
+         PORCENTAJE de |minX|, así que un lienzo mayor la habría agrandado. */
+      const STRENGTH = 1; // 0-1, cuánto "empuja" el cursor el lienzo
 
       stage.addEventListener('mousemove', (e) => {
         if (congelado) return;
