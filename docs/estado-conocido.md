@@ -136,7 +136,6 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 - Con ocho o más piezas y una ventana muy estrecha (375 px), la tira de miniaturas
   se envuelve y solapa unos 20 px con la foto.
 - El indicador de carga se dibuja por encima de la interfaz y de las esquinas.
-- `router.js` calcula una variable que no se usa en la rama de «todos».
 - El paneo con ratón sigue interpolando aunque el sistema pida movimiento
   reducido; el centrado por teclado sí lo respeta.
 
@@ -218,12 +217,31 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   `pintar`.
 - El fallback de categoría desconocida en `Lista.pintar` (cuando una fila trae
   una categoría que no está en `ETIQUETAS`).
-- **`galeria.js`, `visor.js` y `hero.js` siguen sin una sola prueba.** Los tres
-  llaman a `Router.ir` y leen `Router.rutaActual`, así que cualquier cambio en el
-  router los afecta y ninguna prueba lo diría. En el bloque 4b se comprobaron a
-  mano, una vez, con esta lista de seis, corriendo cada una en el código nuevo y
-  en `c3dd54d` —el estado anterior al bloque— para comparar en vez de fiarse de
-  la memoria:
+- **`js/router.js:127`, la normalización `pieza === undefined ? null : pieza`,
+  no la protege ninguna prueba**, y se decidió a sabiendas no escribirle una.
+  Cambiarla por `pieza || null` deja la suite entera en verde, porque la única
+  entrada que distinguiría las dos formas es la pieza `0`, y `0` no es una pieza
+  válida: se cuentan desde 1, igual que el contador `02 / 08`. Escribir una
+  prueba con `0` obligaría a afirmar que `#/bruma/0` es una URL correcta, que es
+  precisamente lo que no queremos. Así que la línea la defiende su comentario y
+  nada más, y queda anotado aquí para que quien la «simplifique» sepa que la
+  suite no le va a avisar. Si algún bloque futuro admite la pieza `0`, esto pasa
+  de nota a fallo.
+- **Nadie prueba que `galeria.js` y `visor.js` sigan hablando bien con el
+  router.** Los dos llaman a `Router.ir` —`galeria.js:196,197,213`,
+  `visor.js:41,129,130`— y se suscriben con `Router.alCambiar`, y de eso no hay
+  ni una comprobación: los dos archivos están enteros sin cobertura.
+
+  `hero.js` es el caso distinto, y conviene no confundirlo. Toca al router en un
+  solo sitio, `js/hero.js:33`, y es **el único archivo del sitio que llama a
+  `Router.rutaActual`**. Lo que hace con lo que recibe —`Hero.debeSaltarse`— sí
+  está cubierto, con 5 comprobaciones en `tests/pruebas-hero.js`. Lo que no
+  cubre nadie es el empalme: que `rutaActual()` le siga entregando un objeto con
+  la forma que `debeSaltarse` espera.
+
+  Por eso, en el bloque 4b se comprobaron a mano, una vez, con esta lista de
+  seis, corriendo cada una en el código nuevo y en `c3dd54d` —el estado anterior
+  al bloque— para comparar en vez de fiarse de la memoria:
 
   1. Filtrar por categoría (`js/galeria.js:196-197`): pulsar «editorial» deja la
      URL en `#/editorial` y la categoría activa; pulsarla otra vez vuelve a todos

@@ -2,12 +2,18 @@
    funciones puras; éste da el terreno donde ejercitar código que construye
    nodos, mueve el foco y mide cajas.
 
-   Dos niveles porque son dos problemas distintos:
+   Tres niveles porque son tres problemas distintos:
      - `conElemento`, para lo que recibe su contenedor como parámetro
        —`Lista.pintar(contenedor, …)`—, que se prueba con un nodo y ya está.
      - `conDocumento`, para lo que no expone nada y se ejecuta al cargarse
        —`panel/js/panel.js` es una IIFE que llama a init() en su última línea—,
-       que hay que cargar dentro de un iframe con sus dependencias ya puestas. */
+       que hay que cargar dentro de un iframe con sus dependencias ya puestas.
+     - `conPagina`, para lo que mira la URL —`Router.ir` lee `location.hash` y
+       llama a `history`—, que necesita un documento con URL propia y no el
+       about:blank que deja `document.write`.
+
+   Los dos últimos son hermanos y conviven a propósito; el porqué está junto a
+   `conPagina`, más abajo. No los unifiques sin leerlo. */
 window.ArnesDom = (function () {
 
   /* El contenedor va DENTRO del documento, no suelto: focus() no hace nada
@@ -152,16 +158,35 @@ window.ArnesDom = (function () {
   function conPagina(opciones, fn) {
     var c = caja();
     var marco = document.createElement('iframe');
-    /* Las mismas medidas que le da `conDocumento`, y por el mismo motivo: sin
-       ellas se queda en los 300x150 por defecto del navegador, y la primera
-       prueba que quiera medir algo dentro mediría contra un tamaño que nadie
-       eligió. */
-    marco.style.cssText = 'width:600px;height:400px;border:0';
-    marco.src = opciones.pagina + (opciones.hash || '');   // el hash, ANTES de insertar
-    c.appendChild(marco);
 
     function limpiar() { if (c.parentNode) c.parentNode.removeChild(c); }
 
+    /* El mismo blindaje que su hermana, y por el mismo motivo: este prólogo es
+       síncrono y la caja ya está en el documento. Si `opciones` no trae
+       `pagina`, leerla lanza aquí mismo, la caja se queda colgada y `conPagina`
+       incumple su contrato de devolver SIEMPRE una promesa —quien lo llame
+       fuera de un `.then()` se lleva una excepción que ninguna sección
+       `describeAsync` captura, y eso no se ve como pruebas en rojo, sino como
+       pruebas que sencillamente no aparecen—. */
+    try {
+      /* Las mismas medidas que le da `conDocumento`, y por el mismo motivo: sin
+         ellas se queda en los 300x150 por defecto del navegador, y la primera
+         prueba que quiera medir algo dentro mediría contra un tamaño que nadie
+         eligió. */
+      marco.style.cssText = 'width:600px;height:400px;border:0';
+      marco.src = opciones.pagina + (opciones.hash || '');  // el hash, ANTES de insertar
+      c.appendChild(marco);
+    } catch (e) {
+      limpiar();
+      return Promise.reject(e);
+    }
+
+    /* Lo que este nivel NO cubre: si la página del iframe no llega a emitir ni
+       `load` ni `error` —un servidor que acepta la conexión y se queda
+       colgado—, esta promesa no se asienta nunca, el `Promise.all` de
+       `arnes.js` tampoco, y la suite no llega a imprimir su recuento final. No
+       se ve como un fallo, se ve como una página que no termina de cargar. Si
+       algún día pasa, el sospechoso es éste. */
     return new Promise(function (resolver, rechazar) {
       /* `onerror` casi nunca salta: un iframe cuya página da 404 carga la
          página de error del navegador y emite `load`, no `error`. Se deja
