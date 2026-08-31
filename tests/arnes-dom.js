@@ -132,5 +132,60 @@ window.ArnesDom = (function () {
             function (e) { limpiar(); throw e; });
   }
 
-  return { conElemento: conElemento, conDocumento: conDocumento };
+  /* Hermana de `conDocumento` para cuando el código bajo prueba mira la URL.
+     `conDocumento` escribe el documento con `d.write`, y eso no sirve aquí por
+     dos motivos comprobados: `document.open()` navega a about:blank y borra el
+     fragmento, y sobre un documento about:blank `history.replaceState` lanza
+     («cannot be created in a document with origin ... and URL about:blank»).
+     Cargando un archivo de verdad, el documento tiene URL propia: el hash
+     llega, replaceState funciona, y la primera carga del iframe no añade
+     ninguna entrada al historial.
+
+     Las dos conviven a propósito. No las unifiques sin revalidar las 21
+     pruebas de panel.js, que dependen del camino de `conDocumento`.
+
+     Las rutas de `scripts` son relativas a `opciones.pagina`, no a
+     test.html: `conDocumento` resuelve los `src` con un `<base>` propio, pero
+     aquí el documento del iframe tiene su URL de verdad —la de la página
+     cargada—, así que los scripts se resuelven contra ELLA. Desde
+     'fijaciones/pagina-vacia.html', 'js/router.js' es '../../js/router.js'. */
+  function conPagina(opciones, fn) {
+    var c = caja();
+    var marco = document.createElement('iframe');
+    marco.src = opciones.pagina + (opciones.hash || '');   // el hash, ANTES de insertar
+    c.appendChild(marco);
+
+    function limpiar() { if (c.parentNode) c.parentNode.removeChild(c); }
+
+    return new Promise(function (resolver, rechazar) {
+      marco.onload = function () { resolver(); };
+      marco.onerror = function () {
+        rechazar(new Error('No se pudo cargar «' + opciones.pagina + '». '
+          + 'Si has abierto test.html con doble clic, arráncalo con un servidor: '
+          + 'python -m http.server'));
+      };
+    }).then(function () {
+      var d = marco.contentDocument, w = marco.contentWindow;
+      var pendientes = (opciones.scripts || []).slice();
+
+      function siguiente() {
+        if (!pendientes.length) return Promise.resolve(fn(w, d));
+        var ruta = pendientes.shift();
+        return new Promise(function (res, rech) {
+          var s = d.createElement('script');
+          s.src = ruta;
+          s.onload = function () { res(); };
+          s.onerror = function () {
+            rech(new Error('No se pudo cargar «' + ruta + '» dentro del iframe. '
+              + 'Arranca un servidor: python -m http.server'));
+          };
+          d.head.appendChild(s);
+        }).then(siguiente);
+      }
+      return siguiente();
+    }).then(function (r) { limpiar(); return r; },
+            function (e) { limpiar(); throw e; });
+  }
+
+  return { conElemento: conElemento, conDocumento: conDocumento, conPagina: conPagina };
 })();

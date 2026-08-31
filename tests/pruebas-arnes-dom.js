@@ -208,3 +208,43 @@ describeAsync('ArnesDom.conDocumento', function () {
       });
   });
 });
+
+describeAsync('ArnesDom.conPagina', function () {
+
+  var laCaja;
+
+  return ArnesDom.conPagina({
+    pagina: 'fijaciones/pagina-vacia.html',
+    hash: '#/bruma/3',
+    scripts: ['../../js/reglas-contenido.js']
+  }, function (w, d) {
+
+    /* Sin esto no se puede probar nada que mire la URL, que es la razón de que
+       esta función exista. */
+    prueba('el fragmento llega al iframe', function () {
+      igual(w.location.hash, '#/bruma/3');
+    });
+
+    /* Y sin URL propia, `replaceState` lanza: es la diferencia entre cargar un
+       archivo de verdad y escribir sobre about:blank. */
+    prueba('y el documento tiene URL propia, así que replaceState no lanza', function () {
+      w.history.replaceState(null, '', w.location.pathname + '#/bruma/4');
+      igual(w.location.hash, '#/bruma/4');
+    });
+
+    prueba('los scripts se cargan de verdad dentro del iframe', function () {
+      igual(typeof w.ReglasContenido, 'object');
+    });
+
+    laCaja = w.frameElement.parentNode;   // el <iframe> vive dentro de la caja
+    return true;
+  }).then(function () {
+    /* Se comprueba que desapareció ESE nodo, no que no queda ninguno en la
+       página. Un recuento global (`querySelectorAll('.arnes-dom-caja').length`)
+       ve los iframes de otras secciones asíncronas y sale en rojo por turnos:
+       exactamente la carrera que hubo que arreglar en el bloque 4a. */
+    prueba('y quita del documento la caja que creó, no «alguna caja»', function () {
+      cierto(!document.contains(laCaja), 'la caja de conPagina se quedó en el documento');
+    });
+  });
+});
