@@ -102,16 +102,28 @@ window.Router = (function () {
     return parsearRuta(location.hash, window.Datos.CATEGORIAS, piezasPorId());
   }
 
-  function ir(tipo, valor) {
-    var destino = (tipo === 'todos') ? ' ' : '#/' + valor;
-    if (tipo === 'todos') {
-      history.replaceState(null, '', location.pathname + location.search);
-      avisar();
-    } else if (location.hash !== destino) {
-      location.hash = destino;
-    } else {
-      avisar();
+  /* La capa impura, y a propósito nada más que eso: la decisión está en
+     `decidir`, que es pura y está cubierta. Aquí sólo se aplica.
+
+     Los dos caminos avisan de forma distinta y no es un descuido:
+     `location.hash = ...` dispara `hashchange`, que ya está suscrito en `init`
+     y llama a `avisar` solo —de forma asíncrona—. `history.replaceState` no
+     dispara nada, así que ahí hay que avisar a mano. */
+  function ir(tipo, valor, pieza) {
+    var plan = decidir(location.hash, {
+      tipo: tipo,
+      valor: valor,
+      pieza: pieza === undefined ? null : pieza
+    });
+
+    if (plan.accion === 'empujar') {
+      location.hash = plan.hash;
+      return;
     }
+    if (plan.accion === 'reemplazar') {
+      history.replaceState(null, '', location.pathname + location.search + plan.hash);
+    }
+    avisar();
   }
 
   function avisar() {
