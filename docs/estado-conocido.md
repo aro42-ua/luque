@@ -149,6 +149,12 @@ el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
 quedaba fuera por tocar el DOM — y desde el bloque 4b la capa impura de
 `Router.ir`, que hasta entonces no tenía ninguna prueba.
 
+Si las cuentas con `grep -c "prueba("` te van a salir **200**, no 198: dos de
+esas llamadas viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos
+cargas que están diseñadas para fallar. Nunca se ejecutan; están ahí para que la
+sección se ponga en rojo si algún día la carga deja de fallar. El número que
+cuenta es el que imprime la suite al pie.
+
 **Hay dos arneses.** `tests/arnes.js` es el de siempre, para funciones puras.
 `tests/arnes-dom.js` es el segundo, con tres niveles:
 
