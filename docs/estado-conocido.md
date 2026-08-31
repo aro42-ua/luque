@@ -219,9 +219,11 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   una categoría que no está en `ETIQUETAS`).
 - **`js/router.js:127`, la normalización `pieza === undefined ? null : pieza`,
   no la protege ninguna prueba**, y se decidió a sabiendas no escribirle una.
-  Cambiarla por `pieza || null` deja la suite entera en verde, porque la única
-  entrada que distinguiría las dos formas es la pieza `0`, y `0` no es una pieza
-  válida: se cuentan desde 1, igual que el contador `02 / 08`. Escribir una
+  Cambiarla por `pieza || null` deja la suite entera en verde, porque para
+  distinguir las dos formas hay que pasarle un valor *falsy* —`0`, `''`,
+  `false`, `NaN`— y de todos ellos el único que un llamador razonable escribiría
+  es `0`, que además no es una pieza válida: se cuentan desde 1, igual que el
+  contador `02 / 08`. Ninguna prueba pasa ninguno de los cuatro. Escribir una
   prueba con `0` obligaría a afirmar que `#/bruma/0` es una URL correcta, que es
   precisamente lo que no queremos. Así que la línea la defiende su comentario y
   nada más, y queda anotado aquí para que quien la «simplifique» sepa que la
