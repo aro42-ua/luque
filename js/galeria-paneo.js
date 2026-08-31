@@ -54,20 +54,38 @@ window.GaleriaPaneo = (function () {
     loop();
 
     if (isFinePointer){
-      /* 1 y no 0,9, y no es una preferencia estética. El recorrido que este
-         cálculo alcanza es [minX/2 - |minX|/2·S, minX/2 + |minX|/2·S], o sea
-         [(1-S)/2·... ] —con S=0,9 sale [0,95·minX, 0,05·minX]—: una banda
-         muerta del 5% de |minX| en CADA borde a la que el ratón no llegaba
-         nunca. A 1440x900 eran 14px por los lados y 28px arriba y abajo, y ahí
-         caían tres fotos —arena, salitre y raíz— que no se podían ver enteras.
+      /* Este número decide cuánta pantalla hay que recorrer para llegar al
+         tope del paneo. El recorrido que alcanza es
+         [minX/2 - |minX|/2·S, minX/2 + |minX|/2·S], recortado a [minX, 0].
 
-         Se notaba en que con el tabulador sí se veían: `centrarEn` usa el
-         recorrido completo [minX, 0]. Esa asimetría entre ratón y teclado era
-         la pista.
+         Valía 0,9, y con eso NO llegaba al tope: el recorrido salía
+         [0,95·minX, 0,05·minX], una banda muerta del 5% de |minX| en cada
+         borde. A 1440x900 eran 14px por los lados y 28px arriba y abajo, y
+         dentro caían tres fotos —arena, salitre y raíz— que no había forma de
+         ver enteras con el ratón. Se notaba en que con el tabulador sí: la
+         asimetría entre ratón y teclado era la pista, porque `centrarEn` usa
+         [minX, 0] entero.
 
-         Subirlo no es lo mismo que agrandar el lienzo: la banda muerta era un
-         PORCENTAJE de |minX|, así que un lienzo mayor la habría agrandado. */
-      const STRENGTH = 1; // 0-1, cuánto "empuja" el cursor el lienzo
+         Con S=1 el tope se alcanza, pero SÓLO en el borde exacto de la
+         pantalla. Y eso no basta: una foto pegada al borde del lienzo está
+         entera en una única posición del paneo, así que había que clavar el
+         ratón en el píxel justo. Medido sobre las doce fotos, la más difícil
+         estaba entera en el 0,8% de las posiciones del ratón.
+
+         Con S>1 el cálculo satura ANTES de llegar al borde —en la fracción
+         (1 ± 1/S)/2—, así que el tope se alcanza desde una banda ancha en vez
+         de desde una línea. Con S=2 satura en 0,25 y 0,75: el cuarto exterior
+         de cada lado ya vale, y esa foto pasa del 0,8% al 8,7%. Once veces más
+         fácil.
+
+         Lo que se paga: el cuarto exterior de cada lado deja de mover nada, y
+         en la mitad central el lienzo va al doble de velocidad. Subir más lo
+         hace más fácil todavía (S=3 da 13,2%) pero también más brusco, porque
+         cada vez queda menos pantalla haciendo todo el recorrido.
+
+         Lo que NO arregla esto es agrandar el lienzo: la banda muerta del 0,9
+         era un PORCENTAJE de |minX|, así que un lienzo mayor la agrandaba. */
+      const STRENGTH = 2;
 
       stage.addEventListener('mousemove', (e) => {
         if (congelado) return;
