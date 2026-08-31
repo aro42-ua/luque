@@ -856,22 +856,22 @@ describeAsync('ArnesDom.conPagina', function () {
       igual(typeof w.ReglasContenido, 'object');
     });
 
+    laCaja = w.frameElement.parentNode;   // el <iframe> vive dentro de la caja
     return true;
   }).then(function () {
-    prueba('y quita el iframe al terminar', function () {
-      igual(document.querySelectorAll('.arnes-dom-caja').length, 0);
+    /* Se comprueba que desapareció ESE nodo, no que no queda ninguno en la
+       página. Un recuento global (`querySelectorAll('.arnes-dom-caja').length`)
+       ve los iframes de otras secciones asíncronas y sale en rojo por turnos:
+       exactamente la carrera que hubo que arreglar en el bloque 4a. */
+    prueba('y quita del documento la caja que creó, no «alguna caja»', function () {
+      cierto(!document.contains(laCaja), 'la caja de conPagina se quedó en el documento');
     });
   });
 });
 ```
 
-**Ojo con esa última.** En el bloque anterior, dos comprobaciones escritas
-exactamente así —contando `.arnes-dom-caja` en todo el documento— dieron rojo
-intermitente en cuanto convivieron con otra sección asíncrona, y hubo que
-arreglarlas. **Mira cómo quedaron** (`tests/pruebas-arnes-dom.js`, la sección de
-`conDocumento`) y escribe la tuya igual: comprobando **ese** nodo, no un
-recuento global. Si la copias tal cual como está aquí arriba, estarás
-reintroduciendo un defecto que ya se arregló.
+Declara `var laCaja;` antes del `return ArnesDom.conPagina(`, como hace la
+sección de `conDocumento` en ese mismo archivo.
 
 - [ ] **Paso 2: Escribe las pruebas de `ir`, antes de tocarlo**
 
@@ -909,6 +909,11 @@ describeAsync('Router.ir', function () {
       scripts: MODULOS
     }, function (w, d) {
       w.Datos.establecer(PROYECTOS.map(function (p) { return p; }));
+      /* `init()` ANTES de suscribirse, y el orden importa: es quien registra el
+         oyente de `hashchange`, sin el cual el camino de empujar —que asigna
+         `location.hash`— no avisaría a nadie. Se llama antes porque `init`
+         avisa nada más arrancar, y así ese primer aviso no ensucia la cuenta. */
+      w.Router.init();
       w.Router.alCambiar(function (ruta) { avisos.push(ruta); });
       return fn(w, w.history.length, avisos);
     });
