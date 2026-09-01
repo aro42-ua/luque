@@ -210,9 +210,13 @@ bloque 4c):**
   en 14 en vez de 10, las dos siguen pasando. **Lo que impide mover esos
   números sin querer es otra prueba distinta**, «los tres números están
   expuestos y son los que dice el plan», que los clava con literales
-  (`igual(MovilGestos.UMBRAL, 24)`): en las dos mutaciones anteriores es la
-  única que se pone en rojo. Si algún día parece redundante al lado de las de
-  borde y alguien la borra, la protección se va con ella. Además: que un
+  (`igual(MovilGestos.UMBRAL, 24)`). Avisa en las dos mutaciones, y en la de
+  `UMBRAL` es la única que lo hace: corriendo las 22 a mano, `UMBRAL` de 24 a
+  30 deja en rojo sólo ésa, mientras que `TOQUE` de 10 a 14 deja dos —también
+  «el radio del toque es un círculo, no un cuadrado», que usa el punto literal
+  `(208, 308)`, de hipotenusa 11,31, y con `TOQUE` en 14 pasa a caer dentro
+  del radio—. Si algún día la de los literales parece redundante al lado de
+  las de borde y alguien la borra, para `UMBRAL` no queda nada. Además: que un
   segundo dedo a mitad de arrastre cancele el deslizamiento en curso y lo
   convierta en pellizco, y que soltar sin haber presionado no invente una
   intención.
@@ -222,14 +226,14 @@ bloque 4c):**
   por encima claro) y se adapta sola, y otra aparte, «el umbral está en la
   mitad, y eso queda fijado aquí», que lo clava con literales
   (`igual(Brillo.UMBRAL, 0.5)`, más `0.6` y `0.4` a pelo). Comprobado mutando
-  el módulo: con `UMBRAL` en 0,8 la de borde sigue pasando y sólo la de
-  literales se pone en rojo — que es justo lo que su propio comentario en
-  `tests/pruebas-brillo.js` ya avisaba. Y el camino de degradación: que una
-  medición que lanza (el caso real de hoy, un lienzo manchado) o que devuelve
-  un número inservible caiga siempre a `'halo'` sin propagar la excepción, que
-  ese fallo quede registrado con el mensaje original y con qué se hizo en su
-  lugar, y que si el propio registro también lanza, la decisión no se vea
-  arrastrada.
+  el módulo y corriendo las dieciséis a mano: con `UMBRAL` en 0,8 la de borde
+  sigue pasando y la de literales es la única de las dieciséis que se pone en
+  rojo — que es justo lo que su propio comentario en `tests/pruebas-brillo.js`
+  ya avisaba. Y el camino de degradación: que una medición que lanza (el caso
+  real de hoy, un lienzo manchado) o que devuelve un número inservible caiga a
+  `'halo'` sin propagar la excepción, que ese fallo quede registrado con el
+  mensaje original y con qué se hizo en su lugar, y que si el propio registro
+  también lanza, la decisión no se vea arrastrada.
 
 **Hay dos arneses.** `tests/arnes.js` es el de siempre, para funciones puras.
 `tests/arnes-dom.js` es el segundo, con tres niveles:
@@ -354,15 +358,17 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   que lo contiene, y quitar el iframe no devuelve la entrada. Chrome tope el
   `history.length` en unas 50 por pestaña, así que no crece sin límite, pero sí
   ensucia el botón «atrás» de quien corre la suite muchas veces.
-- **El camino automático del brillo no se puede verificar todavía, y hasta que
-  se verifique el sitio usará siempre el halo.** Medir la luminancia de verdad
-  obliga a dibujar la foto en un `<canvas>` y leer el píxel con
-  `getImageData`, y las fotos de relleno de hoy vienen de picsum, un origen sin
-  `Access-Control-Allow-Origin`: el lienzo queda manchado y `getImageData`
-  lanza una excepción de seguridad. Lo que sí comprueban las pruebas de
-  `brillo.js` —nueve de las dieciséis— es **la caída**: que ante esa excepción
-  (o ante un número que no sirve) `decidir` devuelve `'halo'` y el fallo queda
-  registrado. Lo que
+- **El camino automático del brillo no se puede verificar todavía, y con las
+  fotos de hoy lo que saldrá cuando se cablee es el halo.** Medir la
+  luminancia de verdad obliga a dibujar la foto en un `<canvas>` y leer el
+  píxel con `getImageData`, y las fotos de relleno de hoy vienen de picsum, un
+  origen sin `Access-Control-Allow-Origin`: el lienzo queda manchado y
+  `getImageData` lanza una excepción de seguridad, que es justo el caso que
+  `decidir` resuelve devolviendo `'halo'`. (Hoy no se ve ni halo ni nada,
+  porque nadie llama al módulo todavía — ver la entrada siguiente.) Lo que sí
+  comprueban las pruebas de `brillo.js` —nueve de las dieciséis— es **la
+  caída**: que ante esa excepción (o ante un número que no sirve) `decidir`
+  devuelve `'halo'` y el fallo queda registrado. Lo que
   **no** comprueba ninguna es que, con fotos propias servidas desde
   `lidialuque.com`, la medición dé un número correcto — eso hoy no se puede
   ejercitar sin las fotos reales. Es la contramedida que la spec pide por
@@ -371,16 +377,21 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   nadie note que la medición nunca llegó a funcionar.
 - **Los tres módulos del bloque 4c no los llama nadie todavía.**
   `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` sólo se cargan desde
-  `tests/test.html`; ni `index.html` ni ningún otro archivo de `js/` o
-  `panel/js/` los menciona (comprobado con `grep`). Es deliberado: este bloque
+  `tests/test.html`. Comprobado con un `grep` de los tres nombres de archivo y
+  de los tres globales (`MovilRecorrido`, `MovilGestos`, `Brillo`) sobre el
+  repositorio entero: fuera de los propios módulos, sus pruebas, `test.html` y
+  esta documentación no aparecen en ningún sitio. Es deliberado: este bloque
   construye lo puro y el que sigue lo cablea a la pantalla. Mientras tanto el
   móvil sigue viendo exactamente lo mismo que antes, y una suite en verde aquí
   no dice nada sobre lo que se ve en un teléfono.
 - **Que girar el móvil no mueva la posición está probado sólo a medias.** Lo
   que `movil-recorrido.js` garantiza es la mitad genérica: la prueba «un gesto
-  que no se reconoce no mueve nada» (`tests/pruebas-movil-recorrido.js`)
-  comprueba que sólo las cuatro direcciones conocidas cambian el estado, así
-  que un evento de giro, que no es ninguna de las cuatro, lo deja intacto. Lo
+  que no se reconoce no mueve nada» (`tests/pruebas-movil-recorrido.js`) le
+  pasa a `mover` dos gestos que no son ninguna de las cuatro direcciones
+  —`'diagonal'` y la cadena vacía— y comprueba que devuelve el estado intacto.
+  No son todos los valores posibles, pero el código no tiene más ramas: lo que
+  no cae en las cuatro direcciones sale por el `return estado` del final, así
+  que un evento de giro tampoco movería la posición. Lo
   que ninguna prueba comprueba —porque todavía no existe quien lo haga— es que
   quien repinte tras el giro vuelva a *leer* ese estado en vez de
   reconstruirlo desde cero: eso es del bloque que pinta, y hasta entonces el
@@ -398,10 +409,14 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   umbral, no el tacto: que el número sea el correcto para un dedo de verdad no
   lo puede decir ninguna prueba escrita.
 - **`js/movil-recorrido.js:65`, la rama `estado.proyecto === null` de
-  `aRuta`, no la ejercita ninguna prueba.** Las tres llamadas a `aRuta` en
-  `tests/pruebas-movil-recorrido.js` pasan siempre un estado con `proyecto`
-  puesto (`en('bruma', 3)`, `en('reflejo', null)`); ninguna llama a `aRuta(null)`
-  ni a `aRuta({proyecto: null, ...})`. Es código de producción sin cobertura, no
+  `aRuta`, no la ejercita ninguna prueba.** `aRuta` se llama desde cuatro
+  sitios de `tests/pruebas-movil-recorrido.js` (líneas 147, 149, 160 y 192),
+  que son ocho llamadas contando el bucle de cinco estados de la ida y vuelta,
+  y las ocho pasan un estado con `proyecto` puesto; en `en('reflejo', null)` el
+  `null` es la *pieza*, no el proyecto. Ninguna llama a `aRuta(null)` ni a
+  `aRuta({proyecto: null, ...})`. Comprobado instrumentando la rama sobre una
+  copia del módulo y reproduciendo las ocho llamadas: se entra en ella cero
+  veces. Es código de producción sin cobertura, no
   una prueba mentirosa: la rama existe para cuando `MovilRecorrido.inicial([])`
   devuelve `en(null, null)` con una lista de proyectos vacía, un caso que hoy no
   se llega a probar en `aRuta` aunque sí en `inicial`.
