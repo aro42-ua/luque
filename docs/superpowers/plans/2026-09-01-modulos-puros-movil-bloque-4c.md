@@ -432,7 +432,7 @@ describe('MovilRecorrido', function () {
 });
 ```
 
-Son **26 llamadas a `prueba(`**. Cuéntalas tú: si te sale otro número, el que
+Son **30 llamadas a `prueba(`**. Cuéntalas tú: si te sale otro número, el que
 manda es el tuyo, y dilo en el informe.
 
 - [ ] **Paso 2: Engancha las pruebas a la suite y compruébalas en rojo**
@@ -442,7 +442,7 @@ junto a los demás módulos de `js/` (después de `../js/visor-estado.js`) y
 `<script src="pruebas-movil-recorrido.js"></script>` junto a las demás pruebas
 (después de `pruebas-visor-estado.js`).
 
-Arranca el servidor, abre la suite. Esperado: **26 en rojo**, todas con
+Arranca el servidor, abre la suite. Esperado: **30 en rojo**, todas con
 `MovilRecorrido is not defined`. Si alguna sale verde antes de que el módulo
 exista, esa prueba no comprueba nada — dilo.
 
@@ -558,17 +558,17 @@ window.MovilRecorrido = (function () {
 })();
 ```
 
-- [ ] **Paso 4: Las 26 en verde, y la suite entera también**
+- [ ] **Paso 4: Las 30 en verde, y la suite entera también**
 
 Recarga con la caché limpia (`fetch(url, {cache:'reload'})` sobre los archivos
-que has tocado, y sólo entonces recarga). Esperado: **225 pasan, 0 fallan**
-(199 + 26). Comprueba el número; si no cuadra, cuenta antes de tocar nada.
+que has tocado, y sólo entonces recarga). Esperado: **229 pasan, 0 fallan**
+(199 + 30). Comprueba el número; si no cuadra, cuenta antes de tocar nada.
 
 - [ ] **Paso 5: Comprueba que las pruebas no son de mentira**
 
 **Lee el aviso sobre mutaciones de la cabecera de este plan antes de empezar.**
 Las de abajo son un punto de partida **sin verificar**, no una lista cerrada.
-El criterio es **por prueba**: cada una de las 26 tiene que morir ante alguna
+El criterio es **por prueba**: cada una de las 30 tiene que morir ante alguna
 mutación. Rompe el módulo a propósito, una mutación cada vez, y anota cuáles
 caen.
 
@@ -602,7 +602,7 @@ antes de escribirlo, con las mutaciones aplicadas una a una. Aun así, **no te
 fíes**: reprodúcelo. Si en tu ejecución alguna sobrevive, es que el código que
 has escrito no es el de aquí, y eso es información.
 
-Apunta en el informe qué mutación mató a qué pruebas, y **si alguna de las 26
+Apunta en el informe qué mutación mató a qué pruebas, y **si alguna de las 30
 sobrevive a todas**. Si sobrevive alguna, di si crees que es un mutante
 equivalente y por qué, o si la prueba está mal escrita. No la borres ni la
 maquilles.
