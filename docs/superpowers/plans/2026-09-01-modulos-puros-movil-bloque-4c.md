@@ -1292,13 +1292,20 @@ ejecutando módulo y pruebas en Node con cada mutación aplicada por separado.
 
 **Dos cosas que la verificación destapó, y que te ahorran el rato:**
 
-1. **La guarda de `avisar` y su `try` se tapan mutuamente.** Quitar sólo una de
-   las dos no mata ninguna prueba: sin la guarda, llamar a un `registrar` que
-   no existe lanza y el `try` se lo traga; sin el `try`, la guarda ya había
-   cortado antes. La mutación que sí mata es **quitar las dos a la vez** (la
-   número 10). No es un defecto: son dos defensas para dos fallos distintos —un
-   `registrar` ausente y un `registrar` que revienta— y cada prueba cubre el
-   suyo. Se deja anotado para que nadie borre una «porque no está cubierta».
+1. **De la guarda y el `try` de `avisar`, sólo la guarda es un mutante
+   equivalente — el `try` no.** Verificado por separado, no en conjunto:
+   quitar sólo la guarda no mata ninguna prueba (sin ella, llamar a un
+   `registrar` que no es una función lanza un `TypeError` y el `try` se lo
+   traga; el resultado —nada registrado— es idéntico). Pero quitar sólo el
+   `try` **sí mata una**: «si el registro falla, no se lleva por delante la
+   decisión». Ahí `registrar` **es** una función —sólo que lanza—, así que la
+   guarda (`typeof registrar !== 'function'`) no llega a actuar y la excepción
+   se propaga sin nada que la atrape. La mutación que mata las seis de golpe es
+   **quitar las dos a la vez** (la número 10): con la guarda sola quitada nadie
+   nota nada; con el `try` solo quitado ya cae una; combinadas, caen las seis
+   porque además de ese caso se suman los que sí dependían de la guarda para no
+   lanzar. Se deja anotado para que nadie borre el `try` «porque no está
+   cubierto» — si lo está, sólo que no por una mutación que lo aísla del todo.
 
 2. **`if (typeof medir !== 'function')` es un mutante equivalente.** Quitarlo no
    mata ninguna prueba, y está bien que no la mate: sin esa guarda, llamar a

@@ -70,8 +70,14 @@ describe('MovilGestos', function () {
     igual(gesto(p(200, 300), p(215, 300)), null);
   });
 
-  /* El borde exacto, en los dos lados. Sin esto, cambiar UMBRAL de 24 a 30
-     dejaría la suite en verde. */
+  /* El borde exacto, en los dos lados. Escrita contra `MovilGestos.UMBRAL` en
+     vivo, así que no fija el número 24 —eso lo hace «los tres números están
+     expuestos…», más abajo— sino la GEOMETRÍA relativa al umbral, sea cual
+     sea: que `dominante < UMBRAL` sea estricto. Sin esto, mutar esa
+     comparación a `<=` (el eje justo en el umbral deja de deslizar) no lo
+     detectaría nada. Comprobado: mutar `UMBRAL` de 24 a 30 deja esta prueba en
+     verde, porque se adapta sola; lo que sí la pone en rojo es mutar el propio
+     `<` de la comparación. */
   prueba('justo en el umbral hay deslizamiento, justo por debajo no', function () {
     igual(gesto(p(200, 300), p(200 + MovilGestos.UMBRAL, 300)), 'derecha');
     igual(gesto(p(200, 300), p(200 + MovilGestos.UMBRAL - 1, 300)), null);

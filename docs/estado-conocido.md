@@ -374,12 +374,16 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   obliga a dibujar la foto en un `<canvas>` y leer el píxel con
   `getImageData`, y si el lienzo está manchado eso lanza una excepción de
   seguridad, que es el caso que `decidir` resuelve devolviendo `'halo'`. Lo
-  que sí comprueban las pruebas de `brillo.js` —nueve de las dieciséis— es
+  que sí comprueban las pruebas de `brillo.js` —nueve de las dieciocho— es
   **la caída**: que ante esa excepción (o ante un número que no sirve)
   `decidir` devuelve `'halo'` y el fallo queda registrado. Lo que **no**
   comprueba ninguna es que la medición llegue a dar un número correcto sobre
-  una foto de verdad; las dieciséis reciben la medición como una función
-  sintética, así que ninguna toca un lienzo.
+  una foto de verdad. Y conviene ser exactos sobre cómo llega la medición en
+  las dieciocho: cinco (`tests/pruebas-brillo.js:10, 14, 19, 28, 34`) no
+  reciben ninguna medición — llaman a `Brillo.tratamiento` directamente, sin
+  pasar por `decidir` —, otra le pasa `null` y `undefined` como `medir`
+  (línea 89), y las doce restantes sí reciben la medición como una función
+  sintética. En ninguna de las dieciocho se toca un lienzo.
 
   **Cuidado con el motivo que se ha venido dando**, porque medido no se
   sostiene tal cual. Se ha escrito —en la cabecera de `js/brillo.js` y hasta

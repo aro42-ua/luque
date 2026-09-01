@@ -25,11 +25,13 @@ window.Brillo = (function () {
 
   /* `medir` se pasa como argumento y no se llama a un lienzo aquí dentro, y no
      es por elegancia: medir de verdad obliga a dibujar la foto en un lienzo y
-     leer el píxel, y con las fotos de relleno de hoy —servidas desde otro
-     origen, sin Access-Control-Allow-Origin— el lienzo queda manchado y
-     `getImageData` lanza. Recibiendo la medición como función, el camino de
-     degradación se puede ejercitar sin fotos reales, que es la única forma de
-     probarlo hasta que el estudio suba las suyas.
+     leer el píxel, y hoy eso mancha el lienzo. No es que picsum no mande
+     `Access-Control-Allow-Origin` —lo manda—: es que ningún `<img>` del sitio
+     pide la foto en modo CORS (falta el atributo `crossorigin`), así que el
+     navegador ni siquiera hace la petición con CORS y el lienzo queda
+     manchado igual. `getImageData` lanza. Recibiendo la medición como
+     función, el camino de degradación se puede ejercitar sin fotos reales,
+     que es la única forma de probarlo hasta que el estudio suba las suyas.
 
      Devuelve 'halo' ante cualquier duda: sin medición, con una medición que
      lanza, o con un número que no sirve. El halo es feo al lado de lo
