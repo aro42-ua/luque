@@ -462,6 +462,19 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   requisito de «que girar no mueva la posición»
   (`docs/superpowers/specs/2026-08-28-movil-design.md:302`) está cubierto sólo
   por su mitad.
+- **`movil-gestos.js` no tiene todavía lo que hace falta para un acercamiento
+  continuo.** Hoy sólo expone `presionar` y `soltar`: el pellizco llega como
+  una etiqueta (`'pellizco'`) al levantar el último dedo, un instante único,
+  no una distancia que crezca mientras los dos dedos se separan. La spec pide
+  «acercamiento **continuo**, no un salto fijo» (línea 120) hasta 2400px
+  (línea 57), y eso necesita la distancia entre los dos dedos **durante** el
+  movimiento —no sólo al final—, que hoy no se guarda en ningún sitio:
+  `presionar` no registra la posición del segundo dedo, y no existe ningún
+  `mover`/`arrastrar` que la vaya actualizando. Lo mismo le falta para seguir
+  el dedo durante un deslizamiento en curso, en vez de decidir la intención
+  sólo al soltar. No es un defecto de este bloque —construye lo puro, y lo
+  continuo es cosa de quien pinta—, pero es lo primero que se va a echar en
+  falta al empezar el bloque que cablea el móvil.
 - **Lo que ninguna prueba de este bloque puede decir, y que sólo puede juzgar
   el estudio en un móvil de verdad:** si los umbrales de gesto tienen el tacto
   correcto —si 24px (`MovilGestos.UMBRAL`) es el punto justo entre «no me
