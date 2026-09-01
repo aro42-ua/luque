@@ -1015,6 +1015,18 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   .visor.ficha-abierta .visor-escena{ transform:translateX(40px); opacity:0; }
 }
 
+/* ============================================================
+   EL INTERRUPTOR — ver js/movil.js
+   Aquí sólo se decide QUÉ se ve. El aspecto de la hoja va más
+   abajo, y lo escribe la Tarea 6 del bloque 4d.
+============================================================ */
+.hoja{ display:none; }
+
+body.es-movil .hoja{ display:block; }
+body.es-movil .gallery,
+body.es-movil .hero,
+body.es-movil .navbar{ display:none !important; }
+
 @media (prefers-reduced-motion: reduce){
   .visor{ transition:opacity 0.2s ease; }
   .visor.viajando .visor-esquina,

@@ -253,6 +253,27 @@
   </section>
 
   <!-- ============================================================
+       PORTADA MÓVIL — la hoja
+       Está siempre en el marcado y el CSS decide si se ve: el
+       interruptor de js/movil.js es el ancho, y construir las dos
+       portadas una sola vez evita reconstruir al girar el móvil,
+       que es lo que costaría la posición del recorrido.
+       Las imágenes son loading="lazy", así que en escritorio —donde
+       este bloque va con display:none— el navegador no las pide.
+  ============================================================ -->
+  <section class="hoja" id="hoja" aria-label="Trabajo seleccionado">
+    <div class="hoja-hero" id="hojaHero">
+      <img class="logo-mark" src="logo-luque.svg" alt="LUQUE!">
+      <div class="roles">
+        <span>Dirección de fotografía</span>
+        <span>Operadora de cámara</span>
+      </div>
+      <span class="hoja-pista" aria-hidden="true">Desliza hacia arriba</span>
+    </div>
+    <ol class="hoja-rejilla" id="hojaRejilla"></ol>
+  </section>
+
+  <!-- ============================================================
        VISOR DE PROYECTO
   ============================================================ -->
   <div class="visor" id="visor" role="dialog" aria-modal="true"
@@ -323,6 +344,9 @@
   <script src="js/visor-carga.js"></script>
   <script src="js/visor-chrome.js"></script>
   <script src="js/visor.js"></script>
+  <script src="js/movil-gestos.js"></script>
+  <script src="js/movil.js"></script>
+  <script src="js/movil-hoja.js"></script>
   <script>
   /* El contenido llega por red, así que la galería no puede construirse hasta
      que esté. El preloader ya está en pantalla desde el marcado, sin que nadie
@@ -340,15 +364,62 @@
     window.Galeria.init();
     window.Visor.init();
     window.Router.init();
+
     /* Fallar y no tener nada son cosas distintas y merecen frases distintas:
        una lista vacía es contenido legítimo de un estudio que aún no ha subido
        su trabajo, no un error que haya que confesar. */
-    if (error) window.Galeria.mostrarError(error);
-    else if (!proyectos.length) window.Galeria.mostrarError('Todavía no hay proyectos que enseñar.');
-    /* También en la rama de error: Contenido.cargar nunca lanza y siempre llama
-       aquí, así que un contenido.json caído da aviso y portada, no un preloader
-       colgado para siempre. */
-    window.Hero.init();
+    var aviso = null;
+    if (error) aviso = error;
+    else if (!proyectos.length) aviso = 'Todavía no hay proyectos que enseñar.';
+    if (aviso) {
+      window.Galeria.mostrarError(aviso);
+      /* El MISMO aviso, también en la portada móvil, y no uno nuevo.
+         `Galeria.mostrarError` escribe dentro de `#spatialStage`, que en móvil
+         va con display:none: sin esta copia el fallo sería invisible justo en
+         el dispositivo por el que entra más gente, y quien lo viera pensaría
+         que la culpa es de su conexión. */
+      var p = document.createElement('p');
+      p.className = 'galeria-vacia';
+      p.setAttribute('role', 'status');
+      p.textContent = aviso;
+      document.getElementById('hoja').appendChild(p);
+    }
+
+    /* La portada móvil se construye siempre, aunque estemos en escritorio: es
+       lo que permite cruzar el umbral de ancho sin reconstruir nada y sin
+       perder la posición. Sus imágenes son perezosas y el bloque va con
+       display:none en escritorio, así que el navegador no las pide. */
+    var rejilla = document.getElementById('hojaRejilla');
+    window.MovilHoja.pintar(rejilla, window.Datos.PROYECTOS, function (id) {
+      /* Hasta el bloque 4e el visor que se abre es el de escritorio. La URL ya
+         es la correcta, así que 4e lo sustituye sin tocar esta línea. */
+      window.Router.ir('proyecto', id);
+    });
+    window.Router.alCambiar(function (ruta) {
+      window.MovilHoja.filtrar(rejilla, ruta.tipo === 'categoria' ? ruta.valor : null);
+    });
+
+    window.Movil.init(window.matchMedia(window.Movil.CONSULTA), {
+      movil: function () { document.body.classList.add('es-movil'); },
+      escritorio: function () {
+        document.body.classList.remove('es-movil');
+        window.Galeria.remedir();
+      }
+    });
+
+    /* La puerta de entrada se elige UNA vez y no se vuelve a elegir. El hero
+       es una entrada por visita, no una sección: estrechar la ventana a mitad
+       de sesión cambia la portada, pero no reabre la puerta del otro lado. */
+    if (window.Movil.actual() === 'movil') {
+      window.Hero.init({ alCargar: function () {
+        window.MovilHoja.entrada(document.getElementById('hojaHero'),
+                                 document.getElementById('hoja'),
+                                 rejilla,
+                                 window.Router.rutaActual());
+      } });
+    } else {
+      window.Hero.init();
+    }
   });
   </script>
 
