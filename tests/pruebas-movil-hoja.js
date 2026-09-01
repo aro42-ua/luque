@@ -245,3 +245,155 @@ describe('MovilHoja — filtrar y la foto que falta', function () {
     }), 1);
   });
 });
+
+/* El hero fundido: la puerta de entrada de la portada móvil. */
+describe('MovilHoja — el hero fundido', function () {
+
+  var MARCO =
+    '<div>' +
+      '<div class="hoja-hero" id="h"></div>' +
+      '<ol class="hoja-rejilla" id="r"></ol>' +
+    '</div>';
+
+  function conElHero(ruta, fn) {
+    return ArnesDom.conElemento(MARCO, function (raiz) {
+      var hero = raiz.querySelector('#h');
+      var rejilla = raiz.querySelector('#r');
+      MovilHoja.entrada(hero, raiz, rejilla, ruta);
+      return fn(hero, raiz, rejilla);
+    });
+  }
+
+  function rutaPortada()  { return { tipo: 'todos', valor: null, pieza: null }; }
+  function rutaProyecto() { return { tipo: 'proyecto', valor: 'bruma', pieza: 3 }; }
+  function rutaCategoria(){ return { tipo: 'categoria', valor: 'editorial', pieza: null }; }
+
+  /* Un deslizamiento hacia arriba de verdad: 90px de recorrido vertical, muy
+     por encima de los 24 de MovilGestos.UMBRAL y sin componente horizontal que
+     lo convierta en diagonal. Los eventos se sintetizan porque un navegador de
+     escritorio no genera toques. */
+  function deslizarArriba(el) {
+    el.dispatchEvent(new PointerEvent('pointerdown',
+      { clientX: 100, clientY: 300, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointerup',
+      { clientX: 100, clientY: 210, bubbles: true }));
+  }
+
+  function deslizarAbajo(el) {
+    el.dispatchEvent(new PointerEvent('pointerdown',
+      { clientX: 100, clientY: 210, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointerup',
+      { clientX: 100, clientY: 300, bubbles: true }));
+  }
+
+  prueba('en la portada, el hero se queda', function () {
+    cierto(conElHero(rutaPortada(), function (hero) {
+      return !MovilHoja.heroIdo() && !hero.classList.contains('fuera');
+    }), 'con la ruta vacía el hero tiene que verse');
+  });
+
+  /* «Quien llegue por un enlace profundo no lo ve en absoluto»: el enlace
+     pedía un trabajo concreto y anteponerle una portada sería desobedecerlo. */
+  prueba('un enlace a un proyecto se salta el hero', function () {
+    cierto(conElHero(rutaProyecto(), function () {
+      return MovilHoja.heroIdo();
+    }), 'con #/bruma/3 el hero no puede aparecer');
+  });
+
+  prueba('un enlace a una categoría también se lo salta', function () {
+    cierto(conElHero(rutaCategoria(), function () {
+      return MovilHoja.heroIdo();
+    }), 'con #/editorial el hero no puede aparecer');
+  });
+
+  prueba('deslizar hacia arriba se lleva el hero', function () {
+    cierto(conElHero(rutaPortada(), function (hero) {
+      deslizarArriba(hero);
+      return MovilHoja.heroIdo() && hero.classList.contains('fuera');
+    }), 'el deslizamiento hacia arriba tiene que cerrar la puerta');
+  });
+
+  /* La spec dice «se va al deslizar hacia ARRIBA». Hacia abajo no es la
+     puerta: sin esta prueba, cualquier deslizamiento la abriría. */
+  prueba('deslizar hacia abajo no se lo lleva', function () {
+    cierto(conElHero(rutaPortada(), function (hero) {
+      deslizarAbajo(hero);
+      return !MovilHoja.heroIdo() && !hero.classList.contains('fuera');
+    }), 'hacia abajo no es el gesto');
+  });
+
+  /* Un toque tampoco: la spec dice «sin botón», y un toque que cerrara la
+     puerta convertiría toda la pantalla en un botón. */
+  prueba('un toque no se lo lleva', function () {
+    cierto(conElHero(rutaPortada(), function (hero) {
+      hero.dispatchEvent(new PointerEvent('pointerdown',
+        { clientX: 100, clientY: 300, bubbles: true }));
+      hero.dispatchEvent(new PointerEvent('pointerup',
+        { clientX: 102, clientY: 301, bubbles: true }));
+      return !MovilHoja.heroIdo();
+    }), 'un toque no es un deslizamiento');
+  });
+
+  /* El interruptor es el ancho: por aquí pasa un escritorio de 700px con
+     ratón y sin pantalla táctil. Sin la rueda se queda encerrado. */
+  prueba('la rueda hacia abajo se lo lleva', function () {
+    cierto(conElHero(rutaPortada(), function (hero) {
+      hero.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true }));
+      return MovilHoja.heroIdo();
+    }), 'sin la rueda, una ventana estrecha con ratón no puede entrar');
+  });
+
+  prueba('la rueda hacia arriba no se lo lleva', function () {
+    cierto(conElHero(rutaPortada(), function (hero) {
+      hero.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, bubbles: true }));
+      return !MovilHoja.heroIdo();
+    }), 'rodar hacia arriba no avanza');
+  });
+
+  /* Y sin el teclado se queda encerrado quien no usa ratón ni dedo. */
+  prueba('el teclado también abre la puerta', function () {
+    ['Enter', ' ', 'ArrowDown', 'PageDown', 'End'].forEach(function (tecla) {
+      cierto(conElHero(rutaPortada(), function () {
+        document.dispatchEvent(new KeyboardEvent('keydown',
+          { key: tecla, bubbles: true }));
+        return MovilHoja.heroIdo();
+      }), 'la tecla ' + tecla + ' tiene que abrir la puerta');
+    });
+  });
+
+  prueba('una tecla cualquiera no la abre', function () {
+    cierto(conElHero(rutaPortada(), function () {
+      document.dispatchEvent(new KeyboardEvent('keydown',
+        { key: 'a', bubbles: true }));
+      return !MovilHoja.heroIdo();
+    }), 'escribir una letra no es cruzar la puerta');
+  });
+
+  /* «Una puerta que se cruza dos veces deja de ser una puerta.» El nodo se
+     quita del documento, no se esconde: escondido seguiría en el tabulador. */
+  prueba('cruzada la puerta, el nodo se va del documento', function () {
+    cierto(conElHero(rutaPortada(), function (hero, raiz) {
+      deslizarArriba(hero);
+      MovilHoja.retirarYa();
+      return raiz.querySelector('.hoja-hero') === null;
+    }), 'el hero tiene que salir del documento, no quedarse escondido');
+  });
+
+  prueba('cruzarla dos veces no lanza', function () {
+    cierto(conElHero(rutaPortada(), function (hero) {
+      deslizarArriba(hero);
+      deslizarArriba(hero);
+      hero.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true }));
+      return MovilHoja.heroIdo();
+    }), 'el segundo gesto tiene que ser inofensivo');
+  });
+
+  /* Mientras el hero está delante, la rejilla no puede leerse por detrás. */
+  prueba('con el hero puesto, la rejilla queda oculta al lector', function () {
+    igual(conElHero(rutaPortada(), function (hero, raiz, rejilla) {
+      var antes = rejilla.getAttribute('aria-hidden');
+      deslizarArriba(hero);
+      return [antes, rejilla.getAttribute('aria-hidden')];
+    }), ['true', null]);
+  });
+});
