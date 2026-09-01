@@ -196,20 +196,40 @@ bloque 4c):**
   seguir deslizando hacia delante no salga al vacío, y en el primero, hacia
   atrás; que un gesto que no es ninguna de las cuatro direcciones deje el
   estado intacto; que `desdeRuta` y `aRuta` se deshagan la una a la otra sobre
-  cinco estados distintos (la ida y vuelta con el router no pierde nada); y que
-  ni `mover` ni `aRuta` modifiquen el estado ni el orden que reciben.
-- **`movil-gestos.js` (22 pruebas)** — la zona muerta exacta: 12px en diagonal
-  no es un deslizamiento, y el borde de `UMBRAL` (24) y `TOQUE` (10) están
-  comprobados en los dos lados, con números sueltos y no contra las constantes,
-  para que mover el umbral sin querer deje la suite en rojo; que un segundo
-  dedo a mitad de arrastre cancele el deslizamiento en curso y lo convierta en
-  pellizco; y que soltar sin haber presionado no invente una intención.
-- **`brillo.js` (16 pruebas)** — el umbral fijado en 0,5 con números sueltos en
-  los dos lados; y el camino de degradación: que una medición que lanza (el
-  caso real de hoy, un lienzo manchado) o que devuelve un número inservible
-  caiga siempre a `'halo'` sin propagar la excepción, que ese fallo quede
-  registrado con el mensaje original y con qué se hizo en su lugar, y que si el
-  propio registro también lanza, la decisión no se vea arrastrada.
+  cinco estados distintos (la ida y vuelta con el router no pierde nada); que
+  ni `mover` —en las cuatro direcciones— ni `aRuta` modifiquen el estado que
+  reciben; y, en una prueba aparte con su propia lista, que `inicial`, `mover`
+  y `desdeRuta` no modifiquen el orden.
+- **`movil-gestos.js` (22 pruebas)** — la zona muerta: 12px en diagonal no es
+  un deslizamiento. Dos pruebas de borde fijan la **geometría** alrededor de
+  cada número —justo en `UMBRAL` hay deslizamiento y un píxel por debajo no;
+  justo en `TOQUE` hay toque y un píxel por encima no—, pero conviene saber
+  qué protegen y qué no: están escritas contra `MovilGestos.UMBRAL` y
+  `MovilGestos.TOQUE` en vivo, así que se adaptan solas al valor que tengan.
+  Comprobado mutando el módulo: con `UMBRAL` en 30 en vez de 24, y con `TOQUE`
+  en 14 en vez de 10, las dos siguen pasando. **Lo que impide mover esos
+  números sin querer es otra prueba distinta**, «los tres números están
+  expuestos y son los que dice el plan», que los clava con literales
+  (`igual(MovilGestos.UMBRAL, 24)`): en las dos mutaciones anteriores es la
+  única que se pone en rojo. Si algún día parece redundante al lado de las de
+  borde y alguien la borra, la protección se va con ella. Además: que un
+  segundo dedo a mitad de arrastre cancele el deslizamiento en curso y lo
+  convierta en pellizco, y que soltar sin haber presionado no invente una
+  intención.
+- **`brillo.js` (16 pruebas)** — el umbral, con el mismo reparto de papeles que
+  en `movil-gestos.js` y por la misma razón: una prueba de borde escrita contra
+  `Brillo.UMBRAL` que fija la geometría (justo en el umbral es oscuro, justo
+  por encima claro) y se adapta sola, y otra aparte, «el umbral está en la
+  mitad, y eso queda fijado aquí», que lo clava con literales
+  (`igual(Brillo.UMBRAL, 0.5)`, más `0.6` y `0.4` a pelo). Comprobado mutando
+  el módulo: con `UMBRAL` en 0,8 la de borde sigue pasando y sólo la de
+  literales se pone en rojo — que es justo lo que su propio comentario en
+  `tests/pruebas-brillo.js` ya avisaba. Y el camino de degradación: que una
+  medición que lanza (el caso real de hoy, un lienzo manchado) o que devuelve
+  un número inservible caiga siempre a `'halo'` sin propagar la excepción, que
+  ese fallo quede registrado con el mensaje original y con qué se hizo en su
+  lugar, y que si el propio registro también lanza, la decisión no se vea
+  arrastrada.
 
 **Hay dos arneses.** `tests/arnes.js` es el de siempre, para funciones puras.
 `tests/arnes-dom.js` es el segundo, con tres niveles:
@@ -339,9 +359,10 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   obliga a dibujar la foto en un `<canvas>` y leer el píxel con
   `getImageData`, y las fotos de relleno de hoy vienen de picsum, un origen sin
   `Access-Control-Allow-Origin`: el lienzo queda manchado y `getImageData`
-  lanza una excepción de seguridad. Lo que las 16 pruebas de `brillo.js`
-  comprueban es **la caída**: que ante esa excepción (o ante un número que no
-  sirve) `decidir` devuelve `'halo'` y el fallo queda registrado. Lo que
+  lanza una excepción de seguridad. Lo que sí comprueban las pruebas de
+  `brillo.js` —nueve de las dieciséis— es **la caída**: que ante esa excepción
+  (o ante un número que no sirve) `decidir` devuelve `'halo'` y el fallo queda
+  registrado. Lo que
   **no** comprueba ninguna es que, con fotos propias servidas desde
   `lidialuque.com`, la medición dé un número correcto — eso hoy no se puede
   ejercitar sin las fotos reales. Es la contramedida que la spec pide por
