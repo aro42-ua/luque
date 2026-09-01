@@ -41,6 +41,14 @@ window.MovilHoja = (function () {
     img.loading = 'lazy';
     img.decoding = 'async';
 
+    /* Si la foto no llega, el marco se queda con su número: un hueco numerado
+       se lee como «falta esa», no como «la web está rota». La clase la usa el
+       CSS para esconder la imagen rota; el número sobrevive solo, porque
+       cuelga del botón y no de la imagen. */
+    img.addEventListener('error', function () {
+      celda.classList.add('sin-foto');
+    });
+
     /* El número cuelga del BOTÓN, al lado de la imagen y no dentro: es lo que
        hace que sobreviva a una foto que no carga. */
     var num = document.createElement('span');
@@ -65,10 +73,27 @@ window.MovilHoja = (function () {
     });
   }
 
+  /* Esconde en vez de repintar, y no es una optimización: los números salen
+     del índice en la lista completa, así que repintar sólo con los de la
+     categoría los renumeraría de 01 en adelante — justo lo que la spec
+     prohíbe cuando dice que el número identifica el trabajo y no su sitio.
+
+     `hidden` y no una clase: el atributo saca la celda del tabulador y del
+     lector de pantalla a la vez, que es lo que hace falta. La Tarea 6 añade
+     `.hoja-celda[hidden]{display:none}` porque la regla de rejilla que le da
+     `display` a la celda ganaría al `display:none` del navegador. */
+  function filtrar(contenedor, categoria) {
+    var celdas = contenedor.querySelectorAll('li.hoja-celda');
+    for (var i = 0; i < celdas.length; i++) {
+      celdas[i].hidden = !(categoria === null || celdas[i].dataset.cat === categoria);
+    }
+  }
+
   return {
     PROPORCIONES: PROPORCIONES,
     proporcion: proporcion,
     numero: numero,
+    filtrar: filtrar,
     pintar: pintar
   };
 })();
