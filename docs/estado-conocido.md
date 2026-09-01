@@ -403,14 +403,17 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   `crossorigin="anonymous"` para poder medir ya, sin esperar a las fotos del
   estudio. Requiere probarlo en un navegador de verdad, y hoy no hay nada que
   probar: **ninguna llamada a `getImageData` llega a ejecutarse en el sitio**
-  —el nombre sale dos veces, en `js/brillo.js:30` y en
-  `tests/pruebas-brillo.js:54`, y las dos son comentarios—, y al módulo no lo
+  —el nombre sale dos veces, en el comentario de cabecera de `decidir`
+  (`js/brillo.js`, sobre la línea 32) y en el de la prueba «un lienzo manchado
+  da el halo en vez de propagar la excepción» (`tests/pruebas-brillo.js`,
+  sobre la línea 71), y las dos son comentarios—, y al módulo no lo
   llama nadie (ver la entrada siguiente). La corrección de la cabecera de
   `js/brillo.js` queda para la ola que toque los `.js`.
 
   Nada de esto cambia la conclusión, que es la contramedida que la spec pide
-  por escrito (líneas 92-95 de
-  `docs/superpowers/specs/2026-08-28-movil-design.md`): el camino automático
+  por escrito (`docs/superpowers/specs/2026-08-28-movil-design.md`, sección
+  «Las esquinas se adaptan al brillo de la foto», el párrafo que empieza «El
+  riesgo de esto», sobre las líneas 98-101): el camino automático
   está sin verificar, y sin esta anotación el halo puede quedarse puesto meses
   en producción sin que nadie note que la medición nunca llegó a funcionar.
 - **A los tres módulos del bloque 4c no los carga ni los llama ningún código
@@ -460,15 +463,18 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   quien repinte tras el giro vuelva a *leer* ese estado en vez de
   reconstruirlo desde cero: eso es del bloque que pinta, y hasta entonces el
   requisito de «que girar no mueva la posición»
-  (`docs/superpowers/specs/2026-08-28-movil-design.md:302`) está cubierto sólo
-  por su mitad.
+  (`docs/superpowers/specs/2026-08-28-movil-design.md`, sección «Cómo se
+  prueba», en la viñeta de `movil-recorrido.js`, sobre la línea 308) está
+  cubierto sólo por su mitad.
 - **`movil-gestos.js` no tiene todavía lo que hace falta para un acercamiento
   continuo.** Hoy sólo expone `presionar` y `soltar`: el pellizco llega como
   una etiqueta (`'pellizco'`) al levantar el último dedo, un instante único,
   no una distancia que crezca mientras los dos dedos se separan. La spec pide
-  «acercamiento **continuo**, no un salto fijo» (línea 120) hasta 2400px
-  (línea 57), y eso necesita la distancia entre los dos dedos **durante** el
-  movimiento —no sólo al final—, que hoy no se guarda en ningún sitio:
+  «acercamiento **continuo**, no un salto fijo» en su sección «Ampliar es
+  pellizcar, no la lupa», sobre la línea 126, hasta los 2400px que da su
+  sección «Lo que se construye», sobre la línea 57; y eso necesita la
+  distancia entre los dos dedos **durante** el movimiento —no sólo al final—,
+  que hoy no se guarda en ningún sitio:
   `presionar` no registra la posición del segundo dedo, y no existe ningún
   `mover`/`arrastrar` que la vaya actualizando. Lo mismo le falta para seguir
   el dedo durante un deslizamiento en curso, en vez de decidir la intención
@@ -485,11 +491,14 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   diagonal NO es un deslizamiento»). Pero ese caso valida la geometría del
   umbral, no el tacto: que el número sea el correcto para un dedo de verdad no
   lo puede decir ninguna prueba escrita.
-- **`js/movil-recorrido.js:65`, la rama `estado.proyecto === null` de
-  `aRuta`, no la ejercita ninguna prueba.** `aRuta` no se nombra en ningún
-  otro archivo de `tests/`; dentro de
-  `tests/pruebas-movil-recorrido.js` se llama desde cuatro
-  sitios (líneas 147, 149, 160 y 192),
+- **La rama `estado.proyecto === null` de `aRuta`
+  (`js/movil-recorrido.js`, primera línea del cuerpo de `aRuta`, sobre la
+  línea 83) no la ejercita ninguna prueba.** `aRuta` no se nombra en ningún
+  otro archivo de `tests/`; dentro de `tests/pruebas-movil-recorrido.js` se
+  llama desde cuatro sitios —las dos llamadas de «aRuta devuelve la forma
+  exacta que entiende el router», la del bucle de «aRuta y desdeRuta se
+  deshacen la una a la otra» y la de «ninguna función modifica el estado que
+  recibe», sobre las líneas 165, 167, 178 y 210—,
   que son ocho llamadas contando el bucle de cinco estados de la ida y vuelta,
   y las ocho pasan un estado con `proyecto` puesto; en `en('reflejo', null)` el
   `null` es la *pieza*, no el proyecto. Ninguna llama a `aRuta(null)` ni a
