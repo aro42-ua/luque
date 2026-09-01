@@ -174,7 +174,7 @@ lo pidió: puede que ahí se vea distinto de lo que sale medido aquí.
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **267 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **271 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -182,16 +182,16 @@ quedaba fuera por tocar el DOM —, desde el bloque 4b la capa impura de
 `Router.ir`, que hasta entonces no tenía ninguna prueba, y desde el bloque 4c
 los tres módulos puros del móvil.
 
-Si las cuentas con `grep -c "prueba("` te van a salir **269**, no 267: dos de
+Si las cuentas con `grep -c "prueba("` te van a salir **273**, no 271: dos de
 esas llamadas viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos
 cargas que están diseñadas para fallar. Nunca se ejecutan; están ahí para que la
 sección se ponga en rojo si algún día la carga deja de fallar. El número que
 cuenta es el que imprime la suite al pie.
 
-**Lo que comprueba cada uno de los tres módulos del móvil (68 comprobaciones,
+**Lo que comprueba cada uno de los tres módulos del móvil (72 comprobaciones,
 bloque 4c):**
 
-- **`movil-recorrido.js` (30 pruebas)** — que en un proyecto de vídeo bajar
+- **`movil-recorrido.js` (32 pruebas)** — que en un proyecto de vídeo bajar
   llegue a la ficha en un solo gesto y no en dos; que en el último proyecto
   seguir deslizando hacia delante no salga al vacío, y en el primero, hacia
   atrás; que un gesto que no es ninguna de las cuatro direcciones deje el
@@ -199,7 +199,12 @@ bloque 4c):**
   cinco estados distintos (la ida y vuelta con el router no pierde nada); que
   ni `mover` —en las cuatro direcciones— ni `aRuta` modifiquen el estado que
   reciben; y, en una prueba aparte con su propia lista, que `inicial`, `mover`
-  y `desdeRuta` no modifiquen el orden.
+  y `desdeRuta` no modifiquen el orden. Dos pruebas de borde, añadidas en la
+  revisión final del bloque: `paradas(1)` —el proyecto de una sola foto que la
+  rejilla de pruebas nunca había ejercitado— da `[1, 'ficha']` y no
+  `[null, 'ficha']`; y con una rejilla cuyo primer proyecto es de vídeo,
+  `inicial` da su vídeo (`pieza: null`), no la pieza `1` que daría siempre en
+  la rejilla habitual, que empieza por un proyecto de fotos.
 - **`movil-gestos.js` (22 pruebas)** — la zona muerta: 12px en diagonal no es
   un deslizamiento. Dos pruebas de borde fijan la **geometría** alrededor de
   cada número —justo en `UMBRAL` hay deslizamiento y un píxel por debajo no;
@@ -220,20 +225,26 @@ bloque 4c):**
   segundo dedo a mitad de arrastre cancele el deslizamiento en curso y lo
   convierta en pellizco, y que soltar sin haber presionado no invente una
   intención.
-- **`brillo.js` (16 pruebas)** — el umbral, con el mismo reparto de papeles que
+- **`brillo.js` (18 pruebas)** — el umbral, con el mismo reparto de papeles que
   en `movil-gestos.js` y por la misma razón: una prueba de borde escrita contra
   `Brillo.UMBRAL` que fija la geometría (justo en el umbral es oscuro, justo
   por encima claro) y se adapta sola, y otra aparte, «el umbral está en la
   mitad, y eso queda fijado aquí», que lo clava con literales
   (`igual(Brillo.UMBRAL, 0.5)`, más `0.6` y `0.4` a pelo). Comprobado mutando
-  el módulo y corriendo las dieciséis a mano: con `UMBRAL` en 0,8 la de borde
-  sigue pasando y la de literales es la única de las dieciséis que se pone en
+  el módulo y corriendo las dieciocho a mano: con `UMBRAL` en 0,8 la de borde
+  sigue pasando y la de literales es la única de las dieciocho que se pone en
   rojo — que es justo lo que su propio comentario en `tests/pruebas-brillo.js`
   ya avisaba. Y el camino de degradación: que una medición que lanza (el caso
   real de hoy, un lienzo manchado) o que devuelve un número inservible caiga a
   `'halo'` sin propagar la excepción, que ese fallo quede registrado con el
   mensaje original y con qué se hizo en su lugar, y que si el propio registro
-  también lanza, la decisión no se vea arrastrada.
+  también lanza, la decisión no se vea arrastrada. Dos pruebas de borde,
+  añadidas en la revisión final del bloque: con una medición que da
+  exactamente `0` sale `'oscuro'` y con una que da exactamente `1` sale
+  `'claro'`, y en ninguno de los dos casos se registra nada — sin esto,
+  `v >= 0 -> v > 0` y `v <= 1 -> v < 1` en `utilizable` sobrevivían, y una foto
+  de negro puro habría disparado el halo con un aviso de fallo sobre una
+  medición perfectamente correcta.
 
 **Hay dos arneses.** `tests/arnes.js` es el de siempre, para funciones puras.
 `tests/arnes-dom.js` es el segundo, con tres niveles:

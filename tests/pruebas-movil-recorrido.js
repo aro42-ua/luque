@@ -30,10 +30,28 @@ describe('MovilRecorrido', function () {
     igual(MovilRecorrido.paradas(2)[0], 1);
   });
 
+  /* El borde exacto entre fotos y vídeo, sin fijar hasta ahora: la rejilla usa
+     6, 8, 0 y 0 piezas, y ninguna prueba de `paradas` pasaba 1. Con
+     `cuantasPiezas >= 1` mutado a `> 1` o a `>= 2`, `paradas(1)` da
+     `[null, 'ficha']` en vez de `[1, 'ficha']` — un proyecto de una sola foto
+     se trataría como vídeo. */
+  prueba('un proyecto de una sola foto tiene una parada, no ninguna', function () {
+    igual(MovilRecorrido.paradas(1), [1, 'ficha']);
+  });
+
   // ---- El estado inicial ------------------------------------------
 
   prueba('el estado inicial es el primer proyecto por su primera parada', function () {
     igual(MovilRecorrido.inicial(ORDEN), en('niebla', 1));
+  });
+
+  /* En la rejilla `ORDEN` de arriba el primer proyecto siempre es de fotos, así
+     que `paradas(orden[0].piezas)[0]` podría sustituirse por el literal `1`
+     sin que ninguna prueba lo note. Con un vídeo primero, el literal estaría
+     mal: la primera parada es `null`, no `1`. */
+  prueba('cuando el primero de la rejilla es un vídeo, el inicial es su vídeo', function () {
+    var conVideoPrimero = [{ id: 'reflejo', piezas: 0 }, { id: 'niebla', piezas: 6 }];
+    igual(MovilRecorrido.inicial(conVideoPrimero), en('reflejo', null));
   });
 
   prueba('sin proyectos, el estado inicial no inventa ninguno', function () {

@@ -49,6 +49,23 @@ describe('Brillo', function () {
     igual(avisos.length, 0);
   });
 
+  /* Los dos extremos exactos de `utilizable`, con literales y no con
+     `Brillo.UMBRAL`: 0 y 1 son válidos de verdad, no un rechazo disfrazado. Sin
+     esto, `v >= 0 -> v > 0` y `v <= 1 -> v < 1` en `utilizable` sobreviven: una
+     foto de negro puro (luminancia 0) caería al halo con un aviso registrado,
+     cuando la medición fue perfectamente correcta. */
+  prueba('una medición de 0 es un negro válido: oscuro, sin aviso', function () {
+    var avisos = [];
+    igual(Brillo.decidir(siempre(0), function (m) { avisos.push(m); }), 'oscuro');
+    igual(avisos.length, 0, 'una luminancia de 0 no es un fallo de medición');
+  });
+
+  prueba('una medición de 1 es un blanco válido: claro, sin aviso', function () {
+    var avisos = [];
+    igual(Brillo.decidir(siempre(1), function (m) { avisos.push(m); }), 'claro');
+    igual(avisos.length, 0, 'una luminancia de 1 no es un fallo de medición');
+  });
+
   // ---- La caída elegante, que es el camino que se usa HOY ----------
 
   /* El caso real de hoy: `getImageData` lanza una excepción de seguridad
