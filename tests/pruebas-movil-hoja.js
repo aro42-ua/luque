@@ -306,11 +306,25 @@ describe('MovilHoja — el hero fundido', function () {
     }), 'con #/editorial el hero no puede aparecer');
   });
 
+  /* El tercer valor fija que la retirada va DIFERIDA, y es lo único de la
+     suite que lo distingue: en el instante siguiente al gesto la puerta ya
+     está marcada como cruzada —`heroIdo()` y la clase `fuera`— pero el nodo
+     TODAVÍA está en el documento, esperando su `setTimeout(SALIDA_MS)`.
+
+     Sin esto, `cerrarPuerta` podría llamar a `quitarNodo()` en el acto y la
+     suite entera seguiría en verde: la prueba asíncrona sólo mira después de
+     esperar el fundido, así que no ve la diferencia. Y quitarlo en el acto es
+     justo el defecto que el diferido existe para evitar — el comentario de
+     `SALIDA_MS` lo dice: el nodo se iría «de golpe a mitad del fundido».
+
+     Se busca con `raiz.querySelector` y no en `document`: la caja del arnés
+     vive dentro del documento, pero lo que importa es este árbol. */
   prueba('deslizar hacia arriba se lleva el hero', function () {
-    cierto(conElHero(rutaPortada(), function (hero) {
+    igual(conElHero(rutaPortada(), function (hero, raiz) {
       deslizarArriba(hero);
-      return MovilHoja.heroIdo() && hero.classList.contains('fuera');
-    }), 'el deslizamiento hacia arriba tiene que cerrar la puerta');
+      return [MovilHoja.heroIdo(), hero.classList.contains('fuera'),
+              raiz.querySelector('.hoja-hero') !== null];
+    }), [true, true, true]);
   });
 
   /* La spec dice «se va al deslizar hacia ARRIBA». Hacia abajo no es la
