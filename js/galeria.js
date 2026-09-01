@@ -170,6 +170,17 @@ window.Galeria = (function () {
     window.GaleriaPaneo.medir();
   }
 
+  /* Volver a medir al cruzar el umbral de ancho. `medir()` sólo se llamaba al
+     activar la galería, así que un lienzo que cambia de tamaño con la ventana
+     se quedaba con las medidas de antes y el paneo apuntaba a un sitio que ya
+     no existía. El `requestAnimationFrame` no es adorno: el cruce llega con el
+     CSS ya aplicado pero antes de que el navegador haya recalculado las cajas,
+     y medir en ese instante mide lo viejo. */
+  function remedir() {
+    if (!stage || !canvas) return;
+    requestAnimationFrame(function () { window.GaleriaPaneo.medir(); });
+  }
+
   function init() {
     construir();
 
@@ -225,6 +236,7 @@ window.Galeria = (function () {
     descongelar: descongelar,
     centrarEn: centrarEn,
     activar: activar,
+    remedir: remedir,
     mostrarError: mostrarError
   };
 })();
