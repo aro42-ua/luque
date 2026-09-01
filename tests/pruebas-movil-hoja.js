@@ -232,6 +232,8 @@ describe('MovilHoja — filtrar y la foto que falta', function () {
     igual(pintada(function (ol) {
       var celda = ol.querySelector('li[data-id="oleaje"]');
       celda.querySelector('img').dispatchEvent(new Event('error'));
+      cierto(celda.classList.contains('sin-foto'),
+             'precondición: la celda tiene que quedar sin-foto');
       return celda.querySelector('.hoja-numero').textContent;
     }), '03');
   });

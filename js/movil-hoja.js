@@ -42,9 +42,10 @@ window.MovilHoja = (function () {
     img.decoding = 'async';
 
     /* Si la foto no llega, el marco se queda con su número: un hueco numerado
-       se lee como «falta esa», no como «la web está rota». La clase la usa el
-       CSS para esconder la imagen rota; el número sobrevive solo, porque
-       cuelga del botón y no de la imagen. */
+       se lee como «falta esa», no como «la web está rota». La clase la usará
+       el CSS de la Tarea 6 para esconder la imagen rota —hoy `.sin-foto` no
+       está todavía en css/luque.css—; el número sobrevive solo, porque cuelga
+       del botón y no de la imagen. */
     img.addEventListener('error', function () {
       celda.classList.add('sin-foto');
     });
