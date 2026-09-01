@@ -79,11 +79,17 @@ Negras sobre foto clara, amarillas sobre foto oscura, midiendo la luminancia al
 cargar.
 
 **Con el contenido actual esto no puede funcionar, y está comprobado.** Medir
-obliga a dibujar la foto en un lienzo y leer el píxel; `picsum.photos` no manda
-`Access-Control-Allow-Origin` (comprobado sobre la respuesta final, tras la
-redirección 302), así que el lienzo queda manchado y `getImageData` lanza una
-excepción de seguridad. Con las fotos reales del estudio servidas desde
-`lidialuque.com` vía R2 —mismo origen— funcionará.
+obliga a dibujar la foto en un lienzo y leer el píxel, y hoy eso mancha el
+lienzo. No es que `picsum.photos` no mande `Access-Control-Allow-Origin`: lo
+manda, en el 302 y en la respuesta final de `fastly.picsum.photos` —comprobado
+con `curl -s -o /dev/null -D - -H "Origin: https://lidialuque.com" -L
+"https://picsum.photos/seed/…"`, con `-L` para seguir la redirección y quedarse
+con las cabeceras de las dos respuestas—. Lo que mancha el lienzo es que ningún
+`<img>` del sitio pide la foto en modo CORS —falta el atributo
+`crossorigin`—, así que el navegador ni siquiera hace la petición con CORS y
+`getImageData` lanza una excepción de seguridad pase lo que pase con las
+cabeceras del servidor. Con las fotos reales del estudio servidas desde
+`lidialuque.com` vía R2 —mismo origen— funcionará sin necesitar `crossorigin`.
 
 Por eso **degrada en vez de romperse**: si el brillo no se puede medir, las
 esquinas llevan un halo oscuro tenue, legible sobre cualquier fondo. Feo al lado
