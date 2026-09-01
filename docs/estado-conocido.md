@@ -174,18 +174,42 @@ lo pidió: puede que ahí se vea distinto de lo que sale medido aquí.
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **199 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **267 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
-quedaba fuera por tocar el DOM — y desde el bloque 4b la capa impura de
-`Router.ir`, que hasta entonces no tenía ninguna prueba.
+quedaba fuera por tocar el DOM —, desde el bloque 4b la capa impura de
+`Router.ir`, que hasta entonces no tenía ninguna prueba, y desde el bloque 4c
+los tres módulos puros del móvil.
 
-Si las cuentas con `grep -c "prueba("` te van a salir **201**, no 199: dos de
+Si las cuentas con `grep -c "prueba("` te van a salir **269**, no 267: dos de
 esas llamadas viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos
 cargas que están diseñadas para fallar. Nunca se ejecutan; están ahí para que la
 sección se ponga en rojo si algún día la carga deja de fallar. El número que
 cuenta es el que imprime la suite al pie.
+
+**Lo que comprueba cada uno de los tres módulos del móvil (68 comprobaciones,
+bloque 4c):**
+
+- **`movil-recorrido.js` (30 pruebas)** — que en un proyecto de vídeo bajar
+  llegue a la ficha en un solo gesto y no en dos; que en el último proyecto
+  seguir deslizando hacia delante no salga al vacío, y en el primero, hacia
+  atrás; que un gesto que no es ninguna de las cuatro direcciones deje el
+  estado intacto; que `desdeRuta` y `aRuta` se deshagan la una a la otra sobre
+  cinco estados distintos (la ida y vuelta con el router no pierde nada); y que
+  ni `mover` ni `aRuta` modifiquen el estado ni el orden que reciben.
+- **`movil-gestos.js` (22 pruebas)** — la zona muerta exacta: 12px en diagonal
+  no es un deslizamiento, y el borde de `UMBRAL` (24) y `TOQUE` (10) están
+  comprobados en los dos lados, con números sueltos y no contra las constantes,
+  para que mover el umbral sin querer deje la suite en rojo; que un segundo
+  dedo a mitad de arrastre cancele el deslizamiento en curso y lo convierta en
+  pellizco; y que soltar sin haber presionado no invente una intención.
+- **`brillo.js` (16 pruebas)** — el umbral fijado en 0,5 con números sueltos en
+  los dos lados; y el camino de degradación: que una medición que lanza (el
+  caso real de hoy, un lienzo manchado) o que devuelve un número inservible
+  caiga siempre a `'halo'` sin propagar la excepción, que ese fallo quede
+  registrado con el mensaje original y con qué se hizo en su lugar, y que si el
+  propio registro también lanza, la decisión no se vea arrastrada.
 
 **Hay dos arneses.** `tests/arnes.js` es el de siempre, para funciones puras.
 `tests/arnes-dom.js` es el segundo, con tres niveles:
@@ -310,6 +334,56 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   que lo contiene, y quitar el iframe no devuelve la entrada. Chrome tope el
   `history.length` en unas 50 por pestaña, así que no crece sin límite, pero sí
   ensucia el botón «atrás» de quien corre la suite muchas veces.
+- **El camino automático del brillo no se puede verificar todavía, y hasta que
+  se verifique el sitio usará siempre el halo.** Medir la luminancia de verdad
+  obliga a dibujar la foto en un `<canvas>` y leer el píxel con
+  `getImageData`, y las fotos de relleno de hoy vienen de picsum, un origen sin
+  `Access-Control-Allow-Origin`: el lienzo queda manchado y `getImageData`
+  lanza una excepción de seguridad. Lo que las 16 pruebas de `brillo.js`
+  comprueban es **la caída**: que ante esa excepción (o ante un número que no
+  sirve) `decidir` devuelve `'halo'` y el fallo queda registrado. Lo que
+  **no** comprueba ninguna es que, con fotos propias servidas desde
+  `lidialuque.com`, la medición dé un número correcto — eso hoy no se puede
+  ejercitar sin las fotos reales. Es la contramedida que la spec pide por
+  escrito (líneas 92-95 de `docs/superpowers/specs/2026-08-28-movil-design.md`):
+  sin esta anotación, el halo puede quedarse puesto meses en producción sin que
+  nadie note que la medición nunca llegó a funcionar.
+- **Los tres módulos del bloque 4c no los llama nadie todavía.**
+  `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` sólo se cargan desde
+  `tests/test.html`; ni `index.html` ni ningún otro archivo de `js/` o
+  `panel/js/` los menciona (comprobado con `grep`). Es deliberado: este bloque
+  construye lo puro y el que sigue lo cablea a la pantalla. Mientras tanto el
+  móvil sigue viendo exactamente lo mismo que antes, y una suite en verde aquí
+  no dice nada sobre lo que se ve en un teléfono.
+- **Que girar el móvil no mueva la posición está probado sólo a medias.** Lo
+  que `movil-recorrido.js` garantiza es la mitad genérica: la prueba «un gesto
+  que no se reconoce no mueve nada» (`tests/pruebas-movil-recorrido.js`)
+  comprueba que sólo las cuatro direcciones conocidas cambian el estado, así
+  que un evento de giro, que no es ninguna de las cuatro, lo deja intacto. Lo
+  que ninguna prueba comprueba —porque todavía no existe quien lo haga— es que
+  quien repinte tras el giro vuelva a *leer* ese estado en vez de
+  reconstruirlo desde cero: eso es del bloque que pinta, y hasta entonces el
+  requisito de «que girar no mueva la posición»
+  (`docs/superpowers/specs/2026-08-28-movil-design.md:302`) está cubierto sólo
+  por su mitad.
+- **Lo que ninguna prueba de este bloque puede decir, y que sólo puede juzgar
+  el estudio en un móvil de verdad:** si los umbrales de gesto tienen el tacto
+  correcto —si 24px (`MovilGestos.UMBRAL`) es el punto justo entre «no me
+  responde» y «se me dispara solo»— y si el eje vertical se siente natural o
+  como que el teléfono se resiste. El caso que sí está fijado por una prueba es
+  el que la spec pone como ejemplo literal: 12px en diagonal no es un
+  deslizamiento (`tests/pruebas-movil-gestos.js`, «un arrastre de 12px en
+  diagonal NO es un deslizamiento»). Pero ese caso valida la geometría del
+  umbral, no el tacto: que el número sea el correcto para un dedo de verdad no
+  lo puede decir ninguna prueba escrita.
+- **`js/movil-recorrido.js:65`, la rama `estado.proyecto === null` de
+  `aRuta`, no la ejercita ninguna prueba.** Las tres llamadas a `aRuta` en
+  `tests/pruebas-movil-recorrido.js` pasan siempre un estado con `proyecto`
+  puesto (`en('bruma', 3)`, `en('reflejo', null)`); ninguna llama a `aRuta(null)`
+  ni a `aRuta({proyecto: null, ...})`. Es código de producción sin cobertura, no
+  una prueba mentirosa: la rama existe para cuando `MovilRecorrido.inicial([])`
+  devuelve `en(null, null)` con una lista de proyectos vacía, un caso que hoy no
+  se llega a probar en `aRuta` aunque sí en `inicial`.
 
 No hace falta cubrirlos para que el bloque cumpla su propósito, pero tampoco
 hay que fingir que lo están.
