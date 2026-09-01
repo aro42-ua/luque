@@ -997,12 +997,9 @@ describe('MovilHoja — el hero fundido', function () {
   /* La spec dice «se va al deslizar hacia ARRIBA». Hacia abajo no es la
      puerta: sin esta prueba, cualquier deslizamiento la abriría. */
   prueba('deslizar hacia abajo no se lo lleva', function () {
-    cierto(conElHero(rutaPortada(), function () {
-      return !MovilHoja.heroIdo();
-    }), 'preparación: el hero tiene que estar puesto');
     cierto(conElHero(rutaPortada(), function (hero) {
       deslizarAbajo(hero);
-      return !MovilHoja.heroIdo();
+      return !MovilHoja.heroIdo() && !hero.classList.contains('fuera');
     }), 'hacia abajo no es el gesto');
   });
 
@@ -1100,52 +1097,37 @@ Añade a `js/movil-hoja.js`, antes del `return`:
      hacia arriba, sin botón, y no vuelve.
      ---------------------------------------------------------------- */
 
-  var ido = false;
-  var heroEl = null;
-
   /* Cuánto tarda el fundido de salida. Tiene que casar con la transición que
      la Tarea 6 le pone a `.hoja-hero` en el CSS: si aquí fuera menos, el nodo
      desaparecería de golpe a mitad del fundido. */
   var SALIDA_MS = 380;
 
+  var ido = false;
+
+  /* Cuál de las llamadas a `entrada()` es la vigente. En producción sólo hay
+     una y esto sobra; en la suite hay trece en menos de 380ms, y sin este
+     número las de antes se pisarían con la de ahora. El porqué exacto está en
+     `cerrarPuerta`. */
+  var generacion = 0;
+
+  var retirarElHero = function () {};
+
   function heroIdo() { return ido; }
 
-  /* Quita el nodo del documento en el acto, sin esperar al fundido. Existe
-     para las pruebas, que no pueden esperar 380ms, y para que la retirada
-     tenga un solo sitio donde ocurre de verdad. */
-  function retirarYa() {
-    if (heroEl && heroEl.parentNode) heroEl.parentNode.removeChild(heroEl);
-    heroEl = null;
-  }
-
-  /* La puerta se cruza una vez. La guarda de arriba no es defensiva por
-     costumbre: un deslizamiento y una rueda pueden llegar del mismo gesto en
-     un portátil táctil, y sin ella el segundo intentaría quitar un nodo que ya
-     no tiene padre. */
-  function cerrarPuerta(hero, rejilla) {
-    if (ido) return;
-    ido = true;
-    hero.classList.add('fuera');
-    rejilla.removeAttribute('aria-hidden');
-    /* El nodo se QUITA, no se esconde: escondido seguiría siendo alcanzable
-       con el tabulador y un lector de pantalla lo leería por detrás de una
-       rejilla que ya está delante.
-
-       El temporizador se lleva SU hero en el cierre, y no lee `heroEl`. La
-       diferencia importa en la suite: trece pruebas llaman a `entrada()` en
-       menos de 380ms, así que hay temporizadores de pruebas anteriores vivos
-       mientras corre la siguiente, y leyendo `heroEl` cada uno retiraría el
-       hero de otra. Con el cierre, cada temporizador sólo puede tocar el nodo
-       que le corresponde. */
-    setTimeout(function () {
-      if (hero.parentNode) hero.parentNode.removeChild(hero);
-      if (heroEl === hero) heroEl = null;
-    }, SALIDA_MS);
-  }
+  /* Quita el nodo del documento en el acto, sin esperar al fundido: las
+     pruebas no pueden esperar 380ms. Lo que retira lo fija la última llamada a
+     `entrada()`. */
+  function retirarYa() { retirarElHero(); }
 
   function entrada(hero, hoja, rejilla, ruta) {
+    var mia = ++generacion;
+    var cerrada = false;
     ido = false;
-    heroEl = hero;
+
+    function quitarNodo() {
+      if (hero.parentNode) hero.parentNode.removeChild(hero);
+    }
+    retirarElHero = quitarNodo;
 
     /* Quien llega por un enlace a un trabajo concreto no quiere una portada:
        el enlace pedía ese trabajo y anteponerle una portada sería
@@ -1155,12 +1137,36 @@ Añade a `js/movil-hoja.js`, antes del `return`:
        `js/reglas-contenido.js`. */
     if (window.Hero.debeSaltarse(ruta)) {
       ido = true;
-      retirarYa();
+      quitarNodo();
       return;
     }
 
     hoja.classList.add('con-hero');
     rejilla.setAttribute('aria-hidden', 'true');
+
+    /* La puerta se cruza una vez.
+
+       `cerrada` es LOCAL y `ido` es del módulo, y la diferencia es lo que hace
+       que la suite no mienta. Cada llamada a `entrada()` deja vivo un oyente
+       de teclado en `document`, y en la suite hay trece llamadas seguidas. Con
+       una sola bandera compartida, el oyente de una prueba anterior atendería
+       la tecla de la prueba de ahora, pondría la bandera, y la prueba actual
+       vería «puerta cerrada» sin que su propio hero se hubiera movido: pasaría
+       en verde por el motivo equivocado. Con `cerrada` local, cada oyente sólo
+       puede cerrar SU puerta; y con `mia === generacion`, sólo la entrada
+       vigente toca lo que `heroIdo()` responde. */
+    function cerrarPuerta() {
+      if (cerrada) return;
+      cerrada = true;
+      document.removeEventListener('keydown', alTeclado);
+      if (mia === generacion) ido = true;
+      hero.classList.add('fuera');
+      rejilla.removeAttribute('aria-hidden');
+      /* El nodo se QUITA, no se esconde: escondido seguiría siendo alcanzable
+         con el tabulador y un lector de pantalla lo leería por detrás de una
+         rejilla que ya está delante. */
+      setTimeout(quitarNodo, SALIDA_MS);
+    }
 
     /* TRES FORMAS DE CRUZAR LA PUERTA, y las tres hacen falta.
        El interruptor es el ANCHO y no el dedo (js/movil.js): por esta portada
@@ -1179,24 +1185,25 @@ Añade a `js/movil-hoja.js`, antes del `return`:
       gesto = r.estado;
       /* 'arriba' en MovilGestos es el DEDO subiendo (`dy < 0`), que es
          literalmente lo que pide la spec: «se va al deslizar hacia arriba». */
-      if (r.intencion === 'arriba') cerrarPuerta(hero, rejilla);
+      if (r.intencion === 'arriba') cerrarPuerta();
     });
 
     /* 2. La rueda, para el ratón de una ventana estrecha. */
     hero.addEventListener('wheel', function (e) {
-      if (e.deltaY > 0) cerrarPuerta(hero, rejilla);
+      if (e.deltaY > 0) cerrarPuerta();
     }, { passive: true });
 
-    /* 3. El teclado, para quien no usa ni dedo ni ratón. Va en `document` y
-          no en el hero para no depender de que el hero tenga el foco: no es un
-          botón y no debe pedirlo. */
-    document.addEventListener('keydown', function (e) {
-      if (ido) return;
+    /* 3. El teclado, para quien no usa ni dedo ni ratón. Va en `document` y no
+          en el hero para no depender de que el hero tenga el foco: no es un
+          botón y no debe pedirlo. Se da de baja al cerrar, que es lo que
+          impide que se acumulen. */
+    function alTeclado(e) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' ||
           e.key === 'PageDown' || e.key === 'End') {
-        cerrarPuerta(hero, rejilla);
+        cerrarPuerta();
       }
-    });
+    }
+    document.addEventListener('keydown', alTeclado);
   }
 ```
 
@@ -1228,8 +1235,8 @@ añadir un `<script>` más.
 
 Sobre una copia, una mutación cada vez:
 
-1. `cerrarPuerta`: quita el `if (ido) return;` → tiene que caer «cruzarla dos
-   veces no lanza».
+1. `cerrarPuerta`: quita el `if (cerrada) return;` → tiene que caer «cruzarla
+   dos veces no lanza».
 2. `pointerup`: cambia `'arriba'` por `'abajo'` → tienen que caer «deslizar
    hacia arriba se lleva el hero» y «deslizar hacia abajo no se lo lleva».
 3. `wheel`: cambia `e.deltaY > 0` por `e.deltaY !== 0` → tiene que caer «la
@@ -1240,14 +1247,22 @@ Sobre una copia, una mutación cada vez:
    caer «cruzada la puerta, el nodo se va del documento».
 6. `keydown`: quita `'ArrowDown'` de la lista → tiene que caer «el teclado
    también abre la puerta».
+7. **La mutación que protege el aislamiento entre pruebas:** cambia
+   `if (cerrada) return;` por `if (ido) return;` y `if (mia === generacion) ido
+   = true;` por `ido = true;` —es decir, vuelve a una sola bandera compartida—
+   y comprueba si la suite sigue en verde. **Si sigue en verde, dilo en el
+   informe:** significa que las pruebas del teclado están pasando por el
+   trabajo de un oyente de una prueba anterior y no por el suyo propio, y hace
+   falta una prueba que distinga las dos cosas. El diseño con `cerrada` local
+   y `generacion` existe precisamente para eso; el comentario del código lo
+   explica.
 
-**Una advertencia sobre esta tarea en concreto:** las pruebas del teclado se
-suscriben a `document` y **no se dan de baja**, así que cada `entrada()` deja
-un oyente vivo. En las pruebas es inofensivo porque cada una comprueba su
-propio `heroIdo()` antes de que el siguiente oyente pueda hacer nada, pero si
-al ejecutar la suite ves comprobaciones que fallan **según el orden**, ese es el
-sospechoso. Si pasa, dilo en el informe con el síntoma exacto en vez de
-arreglarlo a ojo.
+**Sobre los oyentes de teclado:** cada `entrada()` suscribe uno a `document`, y
+`cerrarPuerta` lo da de baja. Los que quedan vivos son los de las pruebas donde
+la puerta **no** se cruza, y por eso cada oyente sólo puede cerrar su propia
+puerta. Si aun así ves comprobaciones que fallan **según el orden en que se
+ejecutan**, ese es el sospechoso: dilo en el informe con el síntoma exacto en
+vez de arreglarlo a ojo.
 
 - [ ] **Paso 7: commit**
 
