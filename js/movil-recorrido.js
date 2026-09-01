@@ -39,9 +39,17 @@ window.MovilRecorrido = (function () {
     return i === -1 ? null : paradas(orden[i].piezas);
   }
 
-  /* Recorta en vez de dar la vuelta, igual que `visor-estado.js:26-30`: al
-     llegar al final la serie se detiene, para que no se confunda dónde
-     termina. */
+  /* Recorta en vez de dar la vuelta, con el mismo propósito que
+     `visor-estado.js:26-30`: al llegar al final la serie se detiene, para que
+     no se confunda dónde termina. El mismo propósito, no el mismo código:
+     `visor-estado.js:28` hace `Math.max(0, total - 1)` para el límite
+     superior, y aquí es `largo - 1` a secas. Difieren sólo cuando `largo` es
+     0 —ahí `visor-estado` da 0 y esto daría -1—, y hoy es inofensivo porque
+     `recortar` nunca se llama aquí con un `largo` de 0: el eje vertical usa
+     `ps.length`, y `paradas()` nunca devuelve menos de 2 elementos; el eje
+     horizontal usa `orden.length`, y sólo se llega a esa rama cuando el
+     proyecto actual ya se encontró en `orden`, así que `orden.length` es como
+     mínimo 1. */
   function recortar(i, largo) {
     if (i < 0) return 0;
     if (i > largo - 1) return largo - 1;

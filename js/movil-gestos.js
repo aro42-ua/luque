@@ -45,6 +45,12 @@ window.MovilGestos = (function () {
     if (dominante < UMBRAL) return null;
     if (dominante < otro * DOMINIO) return null;
 
+    /* `>=` y no `>`, y es un mutante equivalente si alguien lo cambia: da
+       igual cuál de los dos se use, porque sólo se diferencian cuando
+       `ax === ay` exactamente —la diagonal perfecta—, y ese caso ya ha vuelto
+       `null` dos líneas arriba, en la regla de `DOMINIO` (`dominante < otro *
+       DOMINIO`, con `dominante === otro` cuando `ax === ay`). No hace falta
+       una prueba para esto: no hay comportamiento que fijar. */
     if (ax >= ay) return dx < 0 ? 'izquierda' : 'derecha';
     return dy < 0 ? 'arriba' : 'abajo';
   }
