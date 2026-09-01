@@ -377,18 +377,21 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   `https://picsum.photos/seed/luque11/200/250` con una cabecera `Origin`,
   responde `Access-Control-Allow-Origin: *`, tanto en el 302 como en la
   respuesta final de `fastly.picsum.photos`. Lo que de verdad mancharía el
-  lienzo hoy es otra cosa: **ningún `<img>` del sitio lleva el atributo
-  `crossorigin`** (comprobado, no aparece en ningún `.js` ni `.html`), y sin
-  él el navegador ni siquiera hace una petición con CORS, así que el lienzo se
-  mancha aunque el servidor lo hubiera permitido.
+  lienzo hoy es otra cosa: **ningún `<img>` del sitio pide la imagen en modo
+  CORS** —buscando `crossorigin` y `crossOrigin` en todos los `.js` y `.html`
+  del repositorio no sale ni una vez, ni como atributo del marcado ni como
+  propiedad puesta desde JavaScript—, y sin eso el navegador ni siquiera hace
+  la petición con CORS, así que el lienzo se mancha aunque el servidor lo
+  hubiera permitido.
 
   Lo que eso deja abierto, y **no** he comprobado: si bastaría con poner
   `crossorigin="anonymous"` para poder medir ya, sin esperar a las fotos del
   estudio. Requiere probarlo en un navegador de verdad, y hoy no hay nada que
-  probar porque no existe código que dibuje en un lienzo (`getImageData` no
-  aparece en ningún archivo del sitio) ni nadie llama al módulo — ver la
-  entrada siguiente. La corrección de la cabecera de `js/brillo.js` queda para
-  la ola que toque los `.js`.
+  probar: **ninguna llamada a `getImageData` llega a ejecutarse en el sitio**
+  —el nombre sale dos veces, en `js/brillo.js:30` y en
+  `tests/pruebas-brillo.js:54`, y las dos son comentarios—, y al módulo no lo
+  llama nadie (ver la entrada siguiente). La corrección de la cabecera de
+  `js/brillo.js` queda para la ola que toque los `.js`.
 
   Nada de esto cambia la conclusión, que es la contramedida que la spec pide
   por escrito (líneas 92-95 de
@@ -415,7 +418,9 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   No son todos los valores posibles, pero el código no tiene más ramas: lo que
   no cae en las cuatro direcciones sale por el `return estado` del final, así
   que un evento de giro tampoco movería la posición. Lo
-  que ninguna prueba comprueba —porque todavía no existe quien lo haga— es que
+  que ninguna prueba comprueba —porque todavía no existe el archivo que lo
+  haría: `js/movil-hoja.js`, `js/movil-visor.js` y `js/movil.js` no están en
+  el repositorio— es que
   quien repinte tras el giro vuelva a *leer* ese estado en vez de
   reconstruirlo desde cero: eso es del bloque que pinta, y hasta entonces el
   requisito de «que girar no mueva la posición»
