@@ -9,6 +9,7 @@ window.Hero = (function () {
   var SOSTEN_FASE_A = 900;    // ms que se sostiene el logo de fin de carga
   var arranque = 0;
   var saliendo = false;
+  var alTerminarLaCarga = null;
 
   function movimientoReducido() {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,6 +31,12 @@ window.Hero = (function () {
       setTimeout(function () {
         preloader.style.display = 'none';
         document.body.classList.add('preloader-done');
+        /* La portada móvil se queda con lo que pasa después. El preloader
+           sigue siendo de este módulo —sus 1200ms mínimos y su fundido viven
+           aquí y en ningún otro sitio—, pero quién entra por la puerta lo
+           decide quien arranca. Sin esto, el móvil tendría que copiar esos
+           tiempos, y una constante copiada es una constante que diverge. */
+        if (alTerminarLaCarga) { alTerminarLaCarga(); return; }
         if (debeSaltarse(window.Router.rutaActual())) rematarEntrada();
         else mostrarFaseA();
       }, 700);
@@ -98,7 +105,9 @@ window.Hero = (function () {
     }
   }
 
-  function init() {
+  function init(opciones) {
+    alTerminarLaCarga = (opciones && opciones.alCargar) || null;
+
     preloader  = document.getElementById('preloader');
     heroEl     = document.getElementById('hero');
     intro      = document.getElementById('heroIntro');
