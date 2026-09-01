@@ -241,7 +241,9 @@ de `pruebas-brillo.js`):
 Arranca `python -m http.server` desde la raíz del repositorio y abre
 `http://localhost:8000/tests/test.html`.
 Esperado: la sección «Movil — el interruptor» en rojo, con `Movil is not
-defined` o equivalente, y el recuento total por debajo de 271 pasadas.
+defined` o equivalente. En números: **las 271 pasadas se mantienen y aparecen
+11 nuevas en rojo**, para un total de 282 registradas. Las pasadas no bajan de
+271, porque ninguna prueba anterior depende de `Movil`.
 
 **Cuidado con la caché:** `python -m http.server` no manda `Cache-Control`.
 Si ves resultados que no cuadran con lo que acabas de escribir, recarga con
@@ -539,7 +541,10 @@ y después de la línea de `pruebas-movil.js`:
 
 Recarga con Ctrl+Shift+R.
 Esperado: la sección «MovilHoja — la rejilla» en rojo con `MovilHoja is not
-defined`, y el total por debajo de 282.
+defined`. En números: **las 282 pasadas se mantienen y aparecen 13 nuevas en
+rojo**, para un total de 295 registradas. Las pasadas no bajan de 282, porque
+ninguna prueba anterior depende de `MovilHoja`; si alguna baja, has roto algo
+que ya funcionaba y eso hay que mirarlo antes de seguir.
 
 - [ ] **Paso 3: escribir el módulo**
 
