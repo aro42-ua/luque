@@ -358,29 +358,52 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   que lo contiene, y quitar el iframe no devuelve la entrada. Chrome tope el
   `history.length` en unas 50 por pestaña, así que no crece sin límite, pero sí
   ensucia el botón «atrás» de quien corre la suite muchas veces.
-- **El camino automático del brillo no se puede verificar todavía, y con las
-  fotos de hoy lo que saldrá cuando se cablee es el halo.** Medir la
-  luminancia de verdad obliga a dibujar la foto en un `<canvas>` y leer el
-  píxel con `getImageData`, y las fotos de relleno de hoy vienen de picsum, un
-  origen sin `Access-Control-Allow-Origin`: el lienzo queda manchado y
-  `getImageData` lanza una excepción de seguridad, que es justo el caso que
-  `decidir` resuelve devolviendo `'halo'`. (Hoy no se ve ni halo ni nada,
-  porque nadie llama al módulo todavía — ver la entrada siguiente.) Lo que sí
-  comprueban las pruebas de `brillo.js` —nueve de las dieciséis— es **la
-  caída**: que ante esa excepción (o ante un número que no sirve) `decidir`
-  devuelve `'halo'` y el fallo queda registrado. Lo que
-  **no** comprueba ninguna es que, con fotos propias servidas desde
-  `lidialuque.com`, la medición dé un número correcto — eso hoy no se puede
-  ejercitar sin las fotos reales. Es la contramedida que la spec pide por
-  escrito (líneas 92-95 de `docs/superpowers/specs/2026-08-28-movil-design.md`):
-  sin esta anotación, el halo puede quedarse puesto meses en producción sin que
-  nadie note que la medición nunca llegó a funcionar.
-- **Los tres módulos del bloque 4c no los llama nadie todavía.**
-  `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` sólo se cargan desde
-  `tests/test.html`. Comprobado con un `grep` de los tres nombres de archivo y
-  de los tres globales (`MovilRecorrido`, `MovilGestos`, `Brillo`) sobre el
-  repositorio entero: fuera de los propios módulos, sus pruebas, `test.html` y
-  esta documentación no aparecen en ningún sitio. Es deliberado: este bloque
+- **El camino automático del brillo sigue sin verificarse, y nadie ha
+  comprobado todavía que llegue a funcionar.** Medir la luminancia de verdad
+  obliga a dibujar la foto en un `<canvas>` y leer el píxel con
+  `getImageData`, y si el lienzo está manchado eso lanza una excepción de
+  seguridad, que es el caso que `decidir` resuelve devolviendo `'halo'`. Lo
+  que sí comprueban las pruebas de `brillo.js` —nueve de las dieciséis— es
+  **la caída**: que ante esa excepción (o ante un número que no sirve)
+  `decidir` devuelve `'halo'` y el fallo queda registrado. Lo que **no**
+  comprueba ninguna es que la medición llegue a dar un número correcto sobre
+  una foto de verdad; las dieciséis reciben la medición como una función
+  sintética, así que ninguna toca un lienzo.
+
+  **Cuidado con el motivo que se ha venido dando**, porque medido no se
+  sostiene tal cual. Se ha escrito —en la cabecera de `js/brillo.js` y hasta
+  ahora también aquí— que las fotos de picsum vienen «sin
+  `Access-Control-Allow-Origin`». **Picsum sí lo manda**: pidiendo
+  `https://picsum.photos/seed/luque11/200/250` con una cabecera `Origin`,
+  responde `Access-Control-Allow-Origin: *`, tanto en el 302 como en la
+  respuesta final de `fastly.picsum.photos`. Lo que de verdad mancharía el
+  lienzo hoy es otra cosa: **ningún `<img>` del sitio lleva el atributo
+  `crossorigin`** (comprobado, no aparece en ningún `.js` ni `.html`), y sin
+  él el navegador ni siquiera hace una petición con CORS, así que el lienzo se
+  mancha aunque el servidor lo hubiera permitido.
+
+  Lo que eso deja abierto, y **no** he comprobado: si bastaría con poner
+  `crossorigin="anonymous"` para poder medir ya, sin esperar a las fotos del
+  estudio. Requiere probarlo en un navegador de verdad, y hoy no hay nada que
+  probar porque no existe código que dibuje en un lienzo (`getImageData` no
+  aparece en ningún archivo del sitio) ni nadie llama al módulo — ver la
+  entrada siguiente. La corrección de la cabecera de `js/brillo.js` queda para
+  la ola que toque los `.js`.
+
+  Nada de esto cambia la conclusión, que es la contramedida que la spec pide
+  por escrito (líneas 92-95 de
+  `docs/superpowers/specs/2026-08-28-movil-design.md`): el camino automático
+  está sin verificar, y sin esta anotación el halo puede quedarse puesto meses
+  en producción sin que nadie note que la medición nunca llegó a funcionar.
+- **A los tres módulos del bloque 4c no los carga ni los llama ningún código
+  todavía.** `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` se cargan
+  sólo desde `tests/test.html`: `index.html` no los nombra, y en `js/` y
+  `panel/js/` no hay una sola mención fuera de los propios tres archivos
+  (comprobado buscando los nombres de archivo y los globales
+  `MovilRecorrido`, `MovilGestos` y `Brillo` en todos los `.js` y `.html` del
+  repositorio; sólo salen ellos, sus tres archivos de pruebas y `test.html`).
+  La spec y los planes de los bloques anteriores sí los nombran, como es
+  normal, pero eso es prosa: no carga nada. Es deliberado: este bloque
   construye lo puro y el que sigue lo cablea a la pantalla. Mientras tanto el
   móvil sigue viendo exactamente lo mismo que antes, y una suite en verde aquí
   no dice nada sobre lo que se ve en un teléfono.
@@ -409,8 +432,10 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   umbral, no el tacto: que el número sea el correcto para un dedo de verdad no
   lo puede decir ninguna prueba escrita.
 - **`js/movil-recorrido.js:65`, la rama `estado.proyecto === null` de
-  `aRuta`, no la ejercita ninguna prueba.** `aRuta` se llama desde cuatro
-  sitios de `tests/pruebas-movil-recorrido.js` (líneas 147, 149, 160 y 192),
+  `aRuta`, no la ejercita ninguna prueba.** `aRuta` no se nombra en ningún
+  otro archivo de `tests/`; dentro de
+  `tests/pruebas-movil-recorrido.js` se llama desde cuatro
+  sitios (líneas 147, 149, 160 y 192),
   que son ocho llamadas contando el bucle de cinco estados de la ida y vuelta,
   y las ocho pasan un estado con `proyecto` puesto; en `en('reflejo', null)` el
   `null` es la *pieza*, no el proyecto. Ninguna llama a `aRuta(null)` ni a
