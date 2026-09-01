@@ -17,6 +17,16 @@ window.MovilRecorrido = (function () {
     return p;
   }
 
+  /* La forma de `orden`: un array de `{id, piezas}`, en el orden en que se ven
+     en la rejilla. Aquí `piezas` es un NÚMERO —cuántas piezas tiene el
+     proyecto—, el recuento que pide `paradas()`. NO es el array de piezas que
+     ese mismo nombre designa en `contenido.json`, en `Datos.PROYECTOS` y en lo
+     que consume `Router.piezasPorId` (`js/router.js:96`, `p.piezas.length`).
+     Quien construya `orden` a partir de esas fuentes tiene que convertir
+     —`piezas.length`, no `piezas`— porque este módulo no lo hace ni lo puede
+     comprobar: con un array en vez de un número, `array >= 1` da `NaN >= 1`,
+     `false`, y todo proyecto de fotos se trataría como vídeo sin que nada
+     avise. */
   function indiceDeProyecto(orden, id) {
     for (var i = 0; i < orden.length; i++) {
       if (orden[i].id === id) return i;

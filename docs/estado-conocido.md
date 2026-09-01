@@ -421,6 +421,27 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   construye lo puro y el que sigue lo cablea a la pantalla. Mientras tanto el
   móvil sigue viendo exactamente lo mismo que antes, y una suite en verde aquí
   no dice nada sobre lo que se ve en un teléfono.
+- **`MovilRecorrido.paradas` lee `piezas` como una cuenta, y en todo el resto
+  del repositorio `piezas` es un array.** En `contenido.json`, en
+  `Datos.PROYECTOS` y en lo que consume `Router.piezasPorId`
+  (`js/router.js:96`, que hace `p.piezas.length`), `piezas` es la lista de
+  piezas del proyecto. Dentro de `orden`, la lista `[{id, piezas}, …]` que
+  recibe `movil-recorrido.js`, `piezas` es cuántas tiene: el número que ya
+  espera `paradas()`. El contrato es correcto —está documentado en el propio
+  `js/movil-recorrido.js`, justo donde se define la forma de `orden`—, pero
+  nada obliga a quien cablee este módulo a convertir antes de pasar los datos.
+
+  **El fallo, si no se convierte, es silencioso.** Pasando objetos con la
+  forma real de `Datos.PROYECTOS` (`piezas` como array), `[objeto, objeto, …]
+  >= 1` es `NaN >= 1`, `false`: `paradas()` trata cualquier proyecto de fotos
+  como si fuera de vídeo. Los doce proyectos se convertirían en proyectos de
+  vídeo, `#/bruma/3` abriría el vídeo en vez de la pieza 3, y **la suite de
+  este bloque seguiría dando 271 (más las que se añadan) en verde**, porque
+  todas sus pruebas pasan ya el número correcto a mano. Es exactamente el tipo
+  de fallo que este proyecto vigila: pasa desapercibido y ninguna prueba se
+  entera. Quien construya el bloque que cablea `MovilRecorrido` a
+  `Datos.PROYECTOS` tiene que convertir explícitamente (`piezas.length`, no
+  `piezas`) al construir `orden`.
 - **Que girar el móvil no mueva la posición está probado sólo a medias.** Lo
   que `movil-recorrido.js` garantiza es la mitad genérica: la prueba «un gesto
   que no se reconoce no mueve nada» (`tests/pruebas-movil-recorrido.js`) le
