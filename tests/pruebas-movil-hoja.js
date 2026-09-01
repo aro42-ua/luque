@@ -369,14 +369,28 @@ describe('MovilHoja — el hero fundido', function () {
     }), 'escribir una letra no es cruzar la puerta');
   });
 
-  /* «Una puerta que se cruza dos veces deja de ser una puerta.» El nodo se
-     quita del documento, no se esconde: escondido seguiría en el tabulador. */
-  prueba('cruzada la puerta, el nodo se va del documento', function () {
-    cierto(conElHero(rutaPortada(), function (hero, raiz) {
-      deslizarArriba(hero);
-      MovilHoja.retirarYa();
-      return raiz.querySelector('.hoja-hero') === null;
-    }), 'el hero tiene que salir del documento, no quedarse escondido');
+  /* La prueba que separa el diseño bueno de una sola bandera compartida por
+     el módulo. `entrada()` deja vivo un oyente de teclado en `document`
+     mientras su puerta no se cruce, y aquí se dejan dos a propósito: la
+     entrada de fuera nunca cruza la suya, así que su oyente sigue escuchando
+     cuando la de dentro —la vigente— entra en escena, y por ser la primera
+     registrada atiende la tecla antes que ella.
+
+     Lo que se mira NO es `heroIdo()`: con las dos versiones acaba valiendo
+     `true`, y por eso el resto de pruebas de esta sección no distinguen una
+     de otra. Se mira el hero y la rejilla de la entrada VIGENTE. Con `cerrada`
+     local y `mia === generacion`, el oyente caduco cierra su propia puerta y
+     el vigente llega a cerrar la suya. Con una bandera compartida, el caduco
+     la pone y el vigente sale por la puerta de atrás sin tocar nada. */
+  prueba('la tecla cierra la puerta de ahora, no la de una entrada anterior', function () {
+    igual(conElHero(rutaPortada(), function () {
+      return conElHero(rutaPortada(), function (hero, raiz, rejilla) {
+        document.dispatchEvent(new KeyboardEvent('keydown',
+          { key: 'Enter', bubbles: true }));
+        return [MovilHoja.heroIdo(), hero.classList.contains('fuera'),
+                rejilla.getAttribute('aria-hidden')];
+      });
+    }), [true, true, null]);
   });
 
   prueba('cruzarla dos veces no lanza', function () {
@@ -388,12 +402,83 @@ describe('MovilHoja — el hero fundido', function () {
     }), 'el segundo gesto tiene que ser inofensivo');
   });
 
-  /* Mientras el hero está delante, la rejilla no puede leerse por detrás. */
+  /* Mientras el hero está delante, la rejilla no puede leerse por detrás, y la
+     hoja lleva `con-hero` para que el CSS de la Tarea 6 no la deje
+     desplazarse por detrás. Las dos marcas se ponen juntas al entrar y tienen
+     que irse juntas al cruzar: una que se quedara puesta con el hero ya ido
+     diría lo contrario de lo que pasa. */
   prueba('con el hero puesto, la rejilla queda oculta al lector', function () {
     igual(conElHero(rutaPortada(), function (hero, raiz, rejilla) {
-      var antes = rejilla.getAttribute('aria-hidden');
+      var antes = [rejilla.getAttribute('aria-hidden'),
+                   raiz.classList.contains('con-hero')];
       deslizarArriba(hero);
-      return [antes, rejilla.getAttribute('aria-hidden')];
-    }), ['true', null]);
+      return [antes, [rejilla.getAttribute('aria-hidden'),
+                      raiz.classList.contains('con-hero')]];
+    }), [['true', true], [null, false]]);
+  });
+});
+
+/* «Una puerta que se cruza dos veces deja de ser una puerta»: el nodo se quita
+   del documento, no se esconde, porque escondido seguiría siendo alcanzable
+   con el tabulador y un lector de pantalla lo leería por detrás de una rejilla
+   que ya está delante.
+
+   Va en `describeAsync` y con el contenedor montado a mano, no sobre
+   `ArnesDom.conElemento`: la retirada ocurre en un `setTimeout(SALIDA_MS)`
+   dentro de `cerrarPuerta`, y `conElemento` es síncrono a propósito —retira su
+   caja en cuanto `fn` retorna—, así que a los 380ms ya no habría documento que
+   mirar. Lo que se fija aquí es que CRUZAR la puerta acaba quitando el nodo;
+   antes esto se llamaba a mano por una puerta trasera de la API y la prueba
+   pasaba con el `setTimeout` borrado. */
+describeAsync('MovilHoja — el hero se va del documento al cruzar', function () {
+
+  /* Fuera de pantalla y NO con display:none, igual que `ArnesDom.caja`: el
+     nodo tiene que estar vivo dentro del documento para que quitarlo signifique
+     algo. */
+  function caja() {
+    var c = document.createElement('div');
+    c.setAttribute('aria-hidden', 'true');
+    c.style.cssText = 'position:absolute;left:-9999px;top:0;width:600px;height:400px';
+    document.body.appendChild(c);
+    return c;
+  }
+
+  /* Margen holgado sobre el fundido: lo que se comprueba es que el nodo acaba
+     yéndose, no cuándo exactamente. */
+  function esperar(ms) {
+    return new Promise(function (ok) { setTimeout(ok, ms); });
+  }
+
+  var raiz = caja();
+  raiz.innerHTML =
+    '<div class="hoja-hero" id="ha"></div>' +
+    '<ol class="hoja-rejilla" id="ra"></ol>';
+
+  var hero = raiz.querySelector('#ha');
+  var rejilla = raiz.querySelector('#ra');
+
+  MovilHoja.entrada(hero, raiz, rejilla, { tipo: 'todos', valor: null, pieza: null });
+
+  hero.dispatchEvent(new PointerEvent('pointerdown',
+    { clientX: 100, clientY: 300, bubbles: true }));
+  hero.dispatchEvent(new PointerEvent('pointerup',
+    { clientX: 100, clientY: 210, bubbles: true }));
+
+  /* La limpieza va en las dos ramas del `then`, no sólo en la buena: una
+     prueba en rojo que dejara la caja colgada ensuciaría el documento de las
+     siguientes. */
+  return esperar(MovilHoja.SALIDA_MS + 250).then(function () {
+    var sigue = raiz.querySelector('.hoja-hero') !== null;
+
+    prueba('cruzada la puerta, el nodo se va del documento', function () {
+      cierto(!sigue,
+        'el hero tiene que salir del documento, no quedarse escondido');
+    });
+  }).then(function (r) {
+    if (raiz.parentNode) raiz.parentNode.removeChild(raiz);
+    return r;
+  }, function (e) {
+    if (raiz.parentNode) raiz.parentNode.removeChild(raiz);
+    throw e;
   });
 });

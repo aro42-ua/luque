@@ -104,19 +104,11 @@ window.MovilHoja = (function () {
   var ido = false;
 
   /* Cuál de las llamadas a `entrada()` es la vigente. En producción sólo hay
-     una y esto sobra; en la suite hay trece en menos de 380ms, y sin este
-     número las de antes se pisarían con la de ahora. El porqué exacto está en
-     `cerrarPuerta`. */
+     una y esto sobra; en la suite hay muchas seguidas, y sin este número las
+     de antes pisarían a la de ahora. El porqué exacto está en `cerrarPuerta`. */
   var generacion = 0;
 
-  var retirarElHero = function () {};
-
   function heroIdo() { return ido; }
-
-  /* Quita el nodo del documento en el acto, sin esperar al fundido: las
-     pruebas no pueden esperar 380ms. Lo que retira lo fija la última llamada a
-     `entrada()`. */
-  function retirarYa() { retirarElHero(); }
 
   function entrada(hero, hoja, rejilla, ruta) {
     var mia = ++generacion;
@@ -126,7 +118,6 @@ window.MovilHoja = (function () {
     function quitarNodo() {
       if (hero.parentNode) hero.parentNode.removeChild(hero);
     }
-    retirarElHero = quitarNodo;
 
     /* Quien llega por un enlace a un trabajo concreto no quiere una portada:
        el enlace pedía ese trabajo y anteponerle una portada sería
@@ -145,21 +136,58 @@ window.MovilHoja = (function () {
 
     /* La puerta se cruza una vez.
 
-       `cerrada` es LOCAL y `ido` es del módulo, y la diferencia es lo que hace
-       que la suite no mienta. Cada llamada a `entrada()` deja vivo un oyente
-       de teclado en `document`, y en la suite hay trece llamadas seguidas. Con
-       una sola bandera compartida, el oyente de una prueba anterior atendería
-       la tecla de la prueba de ahora, pondría la bandera, y la prueba actual
-       vería «puerta cerrada» sin que su propio hero se hubiera movido: pasaría
-       en verde por el motivo equivocado. Con `cerrada` local, cada oyente sólo
-       puede cerrar SU puerta; y con `mia === generacion`, sólo la entrada
-       vigente toca lo que `heroIdo()` responde. */
+       `cerrada` es LOCAL y `ido` es del módulo, y la diferencia sostiene el
+       aislamiento entre pruebas. Cada llamada que NO se salta el hero suscribe
+       un oyente de teclado en `document`, y sólo se da de baja al cruzar la
+       puerta; las que salen por el `return` temprano del enlace profundo no
+       llegan a suscribir ninguno. En la suite hay 19 llamadas a `entrada()`, de
+       las que 17 suscriben oyente (contadas instrumentando `entrada` y
+       `addEventListener` sobre la suite entera; el conteo está en el informe de
+       la Tarea 4, no estimado a ojo).
+
+       El escenario que este diseño impide: con una sola bandera compartida por
+       el módulo, el oyente de una prueba anterior atendería la tecla de la
+       prueba de ahora, pondría la bandera, y la entrada vigente saldría por la
+       guarda sin que su propio hero se hubiera movido — la prueba pasaría en
+       verde por el motivo equivocado.
+
+       Ese fallo sólo aparece si se revierten LAS DOS piezas a la vez, y de las
+       dos quien manda es `mia === generacion`: es lo que impide que una entrada
+       caducada escriba en el estado del módulo, así que basta con él para que
+       ningún oyente viejo toque lo que `heroIdo()` responde. `cerrada` local es
+       la otra mitad: con ella cada oyente cierra sólo SU puerta, de modo que la
+       entrada vigente corre su `cerrarPuerta` entera y llega a mover su hero
+       aunque otro oyente se le haya adelantado.
+
+       Quien lo fija es la prueba «la tecla cierra la puerta de ahora, no la de
+       una entrada anterior», y mira el hero y la rejilla de la entrada vigente
+       y NO `heroIdo()`, que acaba valiendo `true` con las dos versiones. */
     function cerrarPuerta() {
+      /* Quitar esta guarda es un mutante equivalente, y no hay prueba que lo
+         cace a propósito. Llamar dos veces al cuerpo tiene siete efectos, y
+         seis son idempotentes por definición del API: `classList.add('fuera')`
+         y `classList.remove('con-hero')` operan sobre un conjunto,
+         `removeEventListener` de un oyente ya dado de baja y `removeAttribute`
+         de un atributo ausente son no-ops silenciosos, y `cerrada = true` e
+         `ido = true` reescriben `true` sobre `true`. El séptimo sólo programa
+         un `setTimeout(quitarNodo)` de más, que se desactiva solo con la guarda
+         de `parentNode` de `quitarNodo`. No queda nada observable que una
+         prueba pueda fijar sin falsificar `window.setTimeout`, que sería fijar
+         la implementación en vez del comportamiento.
+
+         La guarda se queda igualmente porque expresa la invariante «la puerta
+         se cruza una vez» para el próximo efecto que alguien añada aquí dentro,
+         que no tiene por qué ser idempotente. */
       if (cerrada) return;
       cerrada = true;
       document.removeEventListener('keydown', alTeclado);
       if (mia === generacion) ido = true;
       hero.classList.add('fuera');
+      /* Se quita al cruzar, y no sólo se pone al entrar: el CSS de la Tarea 6
+         le da el significado «mientras el hero está delante, la rejilla no se
+         desplaza por detrás», y dejarla puesta con el hero ya ido diría lo
+         contrario de lo que pasa. */
+      hoja.classList.remove('con-hero');
       rejilla.removeAttribute('aria-hidden');
       /* El nodo se QUITA, no se esconde: escondido seguiría siendo alcanzable
          con el tabulador y un lector de pantalla lo leería por detrás de una
@@ -207,12 +235,15 @@ window.MovilHoja = (function () {
 
   return {
     PROPORCIONES: PROPORCIONES,
+    /* Se exporta para que una prueba pueda esperar lo que dura el fundido sin
+       adivinarlo, y para que la Tarea 6 cuadre la transición del CSS con este
+       número en vez de con una copia suya. */
+    SALIDA_MS: SALIDA_MS,
     proporcion: proporcion,
     numero: numero,
     filtrar: filtrar,
     entrada: entrada,
     heroIdo: heroIdo,
-    retirarYa: retirarYa,
     pintar: pintar
   };
 })();
