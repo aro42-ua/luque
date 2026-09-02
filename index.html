@@ -363,6 +363,29 @@
     window.Datos.establecer(proyectos);
     window.Galeria.init();
     window.Visor.init();
+
+    /* La portada móvil se construye siempre, aunque estemos en escritorio: es
+       lo que permite cruzar el umbral de ancho sin reconstruir nada y sin
+       perder la posición. Sus imágenes son perezosas y el bloque va con
+       display:none en escritorio, así que el navegador no las pide.
+
+       Esto tiene que pintarse y suscribirse ANTES de `Router.init()`, no
+       después: `Router.init()` avisa a sus suscriptores de forma SÍNCRONA en
+       cuanto arranca (js/router.js:147-150), así que quien se suscribe
+       después de esa llamada se pierde el aviso de la ruta inicial. Es la
+       misma razón por la que `Galeria.init()` (arriba) ya se suscribe antes
+       de llegar aquí, y por la que su filtro de escritorio sí funciona en la
+       carga inicial. */
+    var rejilla = document.getElementById('hojaRejilla');
+    window.MovilHoja.pintar(rejilla, window.Datos.PROYECTOS, function (id) {
+      /* Hasta el bloque 4e el visor que se abre es el de escritorio. La URL ya
+         es la correcta, así que 4e lo sustituye sin tocar esta línea. */
+      window.Router.ir('proyecto', id);
+    });
+    window.Router.alCambiar(function (ruta) {
+      window.MovilHoja.filtrar(rejilla, ruta.tipo === 'categoria' ? ruta.valor : null);
+    });
+
     window.Router.init();
 
     /* Fallar y no tener nada son cosas distintas y merecen frases distintas:
@@ -384,20 +407,6 @@
       p.textContent = aviso;
       document.getElementById('hoja').appendChild(p);
     }
-
-    /* La portada móvil se construye siempre, aunque estemos en escritorio: es
-       lo que permite cruzar el umbral de ancho sin reconstruir nada y sin
-       perder la posición. Sus imágenes son perezosas y el bloque va con
-       display:none en escritorio, así que el navegador no las pide. */
-    var rejilla = document.getElementById('hojaRejilla');
-    window.MovilHoja.pintar(rejilla, window.Datos.PROYECTOS, function (id) {
-      /* Hasta el bloque 4e el visor que se abre es el de escritorio. La URL ya
-         es la correcta, así que 4e lo sustituye sin tocar esta línea. */
-      window.Router.ir('proyecto', id);
-    });
-    window.Router.alCambiar(function (ruta) {
-      window.MovilHoja.filtrar(rejilla, ruta.tipo === 'categoria' ? ruta.valor : null);
-    });
 
     window.Movil.init(window.matchMedia(window.Movil.CONSULTA), {
       movil: function () { document.body.classList.add('es-movil'); },
