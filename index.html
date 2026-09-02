@@ -371,7 +371,8 @@
 
        Esto tiene que pintarse y suscribirse ANTES de `Router.init()`, no
        después: `Router.init()` avisa a sus suscriptores de forma SÍNCRONA en
-       cuanto arranca (js/router.js:147-150), así que quien se suscribe
+       cuanto arranca (la llamada a `avisar()` del cuerpo de `Router.init`,
+       `js/router.js`, sobre las líneas 147-150), así que quien se suscribe
        después de esa llamada se pierde el aviso de la ruta inicial. Es la
        misma razón por la que `Galeria.init()` (arriba) ya se suscribe antes
        de llegar aquí, y por la que su filtro de escritorio sí funciona en la
@@ -444,18 +445,32 @@
            siempre: un amarillo vacío sin ENTRAR que pulsar.
            `Hero.rematar()` es idempotente, pero la condición NO sobra, y no
            por elegancia: `Movil.init` llama a esta rama de forma SÍNCRONA
-           (js/movil.js:34-35), o sea ANTES de que `Hero.init()` haya corrido
-           unas líneas más abajo. Sin el `if`, en cualquier arranque ancho
-           `heroEl` todavía es `null` y `rematarEntrada` lanza en su primera
-           línea. Y como el `.catch` de `Contenido.cargar`
-           (js/contenido.js:28-30) se traga la excepción y vuelve a llamar a
-           este mismo callback con la lista vacía, el fallo no llega a la
-           consola: llega al usuario disfrazado de error de contenido.
-           Medido quitando el `if` y cargando `#/` en ventana ancha:
-           «rematar LANZO: Cannot set properties of null (setting 'hidden')»,
-           rejilla a 0 celdas y el aviso «No se ha podido cargar el
-           contenido: Cannot set properties of null (setting 'hidden')», con
-           cero errores de consola. */
+           (las dos primeras líneas del cuerpo de `init`, `js/movil.js`,
+           sobre las líneas 34-35), o sea ANTES de que `Hero.init()` haya
+           corrido unas líneas más abajo. Sin el `if`, en cualquier arranque
+           ancho `heroEl` todavía es `null` y `rematarEntrada` lanza — no en
+           su primera línea, sino en la TERCERA, al asignar `heroEl.hidden`
+           (`js/hero.js`, tercera sentencia del cuerpo de `rematarEntrada`,
+           sobre la línea 106). Que sean la tercera y no la primera es lo que
+           explica la evidencia de abajo: las dos líneas que sí corren antes
+           son la guarda y `rematada = true`, así que la bandera queda MARCADA
+           pese a la excepción, y la segunda pasada del arranque —la que
+           provoca el `.catch` al rellamar al callback— sale por la guarda sin
+           hacer nada y sin volver a lanzar. Por eso el registro de abajo dice
+           «rematar OK» la segunda vez.
+
+           Y como el `.catch` de `Contenido.cargar` (`js/contenido.js`, el
+           `.catch` final de `cargar`, sobre las líneas 28-30) se traga la
+           excepción y vuelve a llamar a este mismo callback con la lista
+           vacía, el fallo no llega a la consola: llega al usuario disfrazado
+           de error de contenido. Medido quitando el `if` y cargando `#/` en
+           ventana ancha, con `Hero.rematar` envuelto para registrar Y
+           RELANZAR (si el envoltorio se traga la excepción, el `.catch` no
+           se dispara y sale otra cosa):
+           «rematar LANZO: Cannot set properties of null (setting 'hidden')»
+           y después «rematar OK», rejilla a 0 celdas y el aviso «No se ha
+           podido cargar el contenido: Cannot set properties of null (setting
+           'hidden')», con cero errores de consola. */
         if (puertaMovil) window.Hero.rematar();
         window.Galeria.remedir();
       }
