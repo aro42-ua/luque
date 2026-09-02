@@ -1154,14 +1154,22 @@ body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
    después del fundido, nunca durante. Las dos ramas medidas
    con `getComputedStyle`: 0.38s la normal y 0.2s la reducida.
 
-   Ésta va acotada a `body.es-movil` y las demás de la sección no. La
-   diferencia no es capricho: es la única regla del bloque que planta un
-   `position:fixed` con `inset:0` y `z-index:10` sobre un fondo opaco, o sea la
-   única que taparía la pantalla entera el día que algo dejara `.hoja` visible
-   en una ventana ancha. Hoy no puede pasar —`.hoja{display:none}` apaga el
-   subárbol y un `position:fixed` dentro de un ancestro con `display:none` no
-   pinta nada—, pero el coste de acotarla es un selector y el de no hacerlo es
-   un escritorio en amarillo.
+   Ésta va acotada a `body.es-movil`, y NO es la única de la sección: hay
+   cuatro acotadas contando ésta —`.hoja`, `.hoja.con-hero`,
+   `.hoja.con-hero .hoja-rejilla` y ésta—, más las dos del `@media` del final.
+   Se dice el número a propósito, porque la de `.hoja.con-hero .hoja-rejilla`
+   parece de sobra y no lo es: es la que saca del tabulador los botones que la
+   puerta tapa, y desacotarla reabre esa trampa. Las otras trece reglas de la
+   sección van sueltas, y así se quedan: el subárbol entero va con
+   `display:none` en escritorio.
+
+   Lo que sí distingue a ésta, y por lo que se acotó, es que es la única del
+   bloque que planta un `position:fixed` con `inset:0` y `z-index:10` sobre un
+   fondo opaco, o sea la única que taparía la pantalla entera el día que algo
+   dejara `.hoja` visible en una ventana ancha. Hoy no puede pasar
+   —`.hoja{display:none}` apaga el subárbol y un `position:fixed` dentro de un
+   ancestro con `display:none` no pinta nada—, pero el coste de acotarla es un
+   selector y el de no hacerlo es un escritorio en amarillo.
 ------------------------------------------------------------ */
 body.es-movil .hoja-hero{
   position:fixed; inset:0; z-index:10;
@@ -1201,13 +1209,25 @@ body.es-movil .hoja-hero{
 
 /* La mitad de la pista que sólo se oye. Se saca de la pantalla sin salir del
    árbol de accesibilidad. Ni `display:none` ni `visibility:hidden` valdrían
-   aquí: medido con `Accessibility.getFullAXTree`, la frase aparece en el árbol
-   tal y como está escrita, y desaparece de él en cuanto se le pone cualquiera
-   de las dos — que es justo lo contrario de lo que hace falta. */
+   aquí: medido con `Accessibility.getFullAXTree`, la frase está en el árbol
+   entera y sin recortar, y desaparece de él en cuanto se le pone cualquiera de
+   las dos — que es justo lo contrario de lo que hace falta.
+
+   El `text-transform:none` no es cosmético, porque esto no se ve: el
+   `uppercase` de `.hoja-pista` se HEREDA y se cuela en el nombre accesible.
+   Medido: sin este reset el árbol devolvía «DESLIZA HACIA ARRIBA, O PULSA
+   INTRO, PARA VER LOS TRABAJOS.», en versales, cuando el HTML la escribe en
+   minúsculas; con el reset devuelve «Desliza hacia arriba, o pulsa Intro, para
+   ver los trabajos.», que es literalmente lo que pone el marcado. Es la única
+   cadena del sitio que existe sólo para oírse, y a un lector de pantalla las
+   versales no le aportan nada —hay lectores que deletrean las palabras cortas
+   en versales, «I-N-T-R-O»; eso último es razonado, no medido: aquí no hay
+   lector real—. La mitad visible conserva su `uppercase`. */
 .hoja-pista-lectores{
   position:absolute; width:1px; height:1px;
   margin:-1px; padding:0; border:0;
   clip-path:inset(50%); overflow:hidden; white-space:nowrap;
+  text-transform:none;
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -1221,10 +1241,19 @@ body.es-movil .hoja-hero{
   /* El hero de la portada móvil va aquí dentro y no en un `@media` propio:
      eran dos bloques con la condición idéntica y pegados el uno al otro.
 
-     Y va con `body.es-movil` por delante porque la regla que tiene que ganar
-     también lo lleva: un `@media` NO añade especificidad, así que un
-     `.hoja-hero` a secas (0,1,0) perdería contra el `body.es-movil .hoja-hero`
-     (0,2,1) de arriba y el movimiento reducido se quedaría sin efecto. */
+     El `body.es-movil` de la PRIMERA es load-bearing, y de la segunda no.
+
+     La de `transition` lo necesita: un `@media` NO añade especificidad, así que
+     un `.hoja-hero` a secas (0,1,0) perdería contra el
+     `body.es-movil .hoja-hero` (0,2,1) de arriba y la duración reducida se
+     perdería. Medido desacotando sólo ésta: la transición vuelve a
+     `opacity 0.38s, transform 0.38s`.
+
+     La de `transform` no lo necesita: `.hoja-hero.fuera` es (0,2,0), empata con
+     su gemela suelta de arriba y le gana por ORDEN de aparición, porque este
+     `@media` va después en el fichero. Medido desacotando sólo ésta: el
+     `transform` sigue saliendo `none`. Va acotada por simetría con la de
+     arriba, no porque haga falta. */
   body.es-movil .hoja-hero{ transition:opacity 0.2s ease; }
   body.es-movil .hoja-hero.fuera{ transform:none; }
 }

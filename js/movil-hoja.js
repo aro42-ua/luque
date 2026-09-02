@@ -97,9 +97,12 @@ window.MovilHoja = (function () {
      hacia arriba, sin botón, y no vuelve.
      ---------------------------------------------------------------- */
 
-  /* Cuánto tarda el fundido de salida. Tiene que casar con la transición que
-     la Tarea 6 le pone a `.hoja-hero` en el CSS: si aquí fuera menos, el nodo
-     desaparecería de golpe a mitad del fundido. */
+  /* Cuánto se espera antes de quitar el nodo. No tiene que CASAR con la
+     transición de `.hoja-hero` en css/luque.css: tiene que ser mayor o igual,
+     que no es lo mismo. Si fuera menor, el nodo desaparecería de golpe a mitad
+     del fundido. Hoy la rama normal dura exactamente estos 380ms y la de
+     movimiento reducido baja a 200, así que las dos caben. El porqué está
+     desarrollado en el CSS, sobre `.hoja-hero`. */
   var SALIDA_MS = 380;
 
   var ido = false;
@@ -237,8 +240,8 @@ window.MovilHoja = (function () {
   return {
     PROPORCIONES: PROPORCIONES,
     /* Se exporta para que una prueba pueda esperar lo que dura el fundido sin
-       adivinarlo, y para que la Tarea 6 cuadre la transición del CSS con este
-       número en vez de con una copia suya. */
+       adivinarlo, y para que el CSS mida su transición contra este número en
+       vez de contra una copia suya. */
     SALIDA_MS: SALIDA_MS,
     proporcion: proporcion,
     numero: numero,

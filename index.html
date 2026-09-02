@@ -268,14 +268,22 @@
         <span>Dirección de fotografía</span>
         <span>Operadora de cámara</span>
       </div>
-      <!-- La pista es la ÚNICA indicación de cómo se cruza la puerta, así que
-           no puede ir entera en `aria-hidden`: quien usa lector de pantalla se
-           quedaba sin ninguna. Va partida en dos a propósito. Lo que se ve
-           conserva la frase de la spec; lo que se oye nombra además el teclado,
-           porque el interruptor es el ANCHO y no el dedo (`js/movil.js`) y por
-           esta portada pasa una ventana de escritorio estrechada a 700px, sin
-           pantalla que deslizar. Las teclas que valen son las de `alTeclado`,
-           dentro de `MovilHoja.entrada` (`js/movil-hoja.js`). -->
+      <!-- La pista es la ÚNICA indicación de cómo se cruza la puerta, y antes
+           iba entera en `aria-hidden`: quien usa lector de pantalla se quedaba
+           sin ninguna. Va partida en dos por eso, y sólo por eso. Lo que se ve
+           conserva la frase de la spec; lo que se oye nombra además el teclado.
+           Las teclas que valen son las de `alTeclado`, dentro de
+           `MovilHoja.entrada` (`js/movil-hoja.js`).
+
+           Lo que este arreglo NO cubre, para que nadie lo lea de más: la frase
+           VISIBLE sigue diciendo sólo «Desliza hacia arriba», y el interruptor
+           es el ANCHO y no el dedo (`js/movil.js`), así que por esta portada
+           pasa también una ventana de escritorio estrechada, con ratón y
+           teclado y sin pantalla que deslizar. Quien esté ahí y no use lector
+           de pantalla lee una instrucción que no puede seguir. La puerta se
+           cruza igual —con la rueda, o con cualquiera de las teclas de
+           `alTeclado`—, pero nadie se lo dice. Cambiar la frase visible toca la
+           spec, así que queda levantado y no resuelto aquí. -->
       <span class="hoja-pista">
         <span aria-hidden="true">Desliza hacia arriba</span>
         <span class="hoja-pista-lectores">Desliza hacia arriba, o pulsa Intro, para ver los trabajos.</span>
