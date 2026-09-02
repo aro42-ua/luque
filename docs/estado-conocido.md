@@ -250,19 +250,20 @@ Para repetirla: exponer el servidor a la red local
 el sospechoso es el cortafuegos de Windows: dilo, no lo desactives.
 
 **Aviso para quien mida el ancho del interruptor con Chrome headless en vez
-de un teléfono:** `window.innerWidth` miente con la ventana emulada a móvil.
-Con `Emulation.setDeviceMetricsOverride` a 390px de ancho, `innerWidth` da
-1204. La causa medida es el `mobile:true` de esa llamada, no el
-`devicePixelRatio` —un diagnóstico que circuló durante este bloque atribuía
-la trampa al DPI y proponía `--force-device-scale-factor=1` como arreglo, y
-es falso: `devicePixelRatio` vale 1 con y sin ese flag, e `innerWidth` miente
-igual en los dos casos—. `matchMedia`, `clientWidth` y
-`getBoundingClientRect` sí dan el valor correcto bajo la misma emulación. No
-es un problema del repositorio: `innerWidth` no se usa en ningún `.js` ni
-`.html` del sitio (comprobado con una búsqueda sobre todo el repositorio), así
-que ninguna medición de este bloque quedó invalidada por esto; es sólo una
-trampa para quien mida el interruptor de ancho (`js/movil.js`) sin un
-teléfono delante.
+de un teléfono:** `window.innerWidth` miente con la ventana emulada a móvil
+—razonado, no medido de nuevo por mí en esta tarea, pero sí en el trabajo
+previo de este bloque: con `Emulation.setDeviceMetricsOverride` a 390px de
+ancho, `innerWidth` da 1204—. La causa buena es el `mobile:true` de esa
+llamada, no el `devicePixelRatio`: un diagnóstico que circuló durante este
+bloque atribuía la trampa al DPI y proponía `--force-device-scale-factor=1`
+como arreglo, y era falso —`devicePixelRatio` vale 1 con y sin ese flag, e
+`innerWidth` miente igual en los dos casos—. `matchMedia`, `clientWidth` y
+`getBoundingClientRect` sí dan el valor correcto bajo la misma emulación. Lo
+que sí comprobé yo en esta tarea: no es un problema del repositorio,
+`innerWidth` no se usa en ningún `.js` ni `.html` del sitio (búsqueda sobre
+todo el repositorio), así que ninguna medición de este bloque quedó
+invalidada por esto; es sólo una trampa para quien mida el interruptor de
+ancho (`js/movil.js`) sin un teléfono delante.
 
 ## Cómo se prueba
 
