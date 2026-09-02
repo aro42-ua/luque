@@ -119,7 +119,8 @@ window.Router = (function () {
          la suite entera pasa igual con `||` y nadie se enteraría; pero esa
          coerción es justo la que sobrevive a un cambio de criterio y falla dos
          bloques después. El escritorio llama a `ir` con dos argumentos
-         (js/galeria.js:196-197, js/visor.js:41,129-130), y esta línea normaliza
+         (js/galeria.js, el clic del menú de categorías en Galeria.init, sobre
+         las líneas 231-232; js/visor.js:41,129-130), y esta línea normaliza
          ese `undefined` a `null` para que el destino que ve `decidir` sea
          siempre canónico. Comprobado: `hashDe` toleraría el `undefined` tal
          cual, porque `undefined != null` es false y el tramo no se añade
