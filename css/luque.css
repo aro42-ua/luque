@@ -1159,9 +1159,12 @@ body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
    `.hoja.con-hero .hoja-rejilla` y ésta—, más las dos del `@media` del final.
    Se dice el número a propósito, porque la de `.hoja.con-hero .hoja-rejilla`
    parece de sobra y no lo es: es la que saca del tabulador los botones que la
-   puerta tapa, y desacotarla reabre esa trampa. Las otras trece reglas de la
-   sección van sueltas, y así se quedan: el subárbol entero va con
-   `display:none` en escritorio.
+   puerta tapa. Quitarle el `body.es-movil` es inofensivo —medido: la rejilla
+   sigue en `visibility:hidden` y el Tab sigue cayendo en `BODY`, porque no hay
+   ninguna otra regla que le dispute la propiedad—; lo que reabre la trampa es
+   BORRARLA, y entonces el primer Tab vuelve a caer en «Abrir el proyecto
+   Niebla». Las otras trece reglas de la sección van sueltas, y así se quedan:
+   el subárbol entero va con `display:none` en escritorio.
 
    Lo que sí distingue a ésta, y por lo que se acotó, es que es la única del
    bloque que planta un `position:fixed` con `inset:0` y `z-index:10` sobre un
