@@ -1054,6 +1054,25 @@ body.es-movil .hoja{
    da `"hidden"`. */
 body.es-movil .hoja.con-hero{ overflow:hidden; }
 
+/* Y mientras está delante, tampoco se TABULA por detrás.
+
+   `MovilHoja.entrada` (js/movil-hoja.js) le pone `aria-hidden="true"` a la
+   rejilla, y eso la esconde del lector de pantalla pero NO del tabulador: son
+   dos cosas distintas y `aria-hidden` sólo hace la primera. Sin esta regla, con
+   la puerta puesta el primer Tab caía en el botón «Abrir el proyecto Niebla»
+   —medido: `BUTTON.hoja-boton`, dentro de un `aria-hidden="true"`, con
+   `DIV.hoja-hero` tapando el centro de la pantalla— y el Enter siguiente abría
+   ese proyecto sin que se hubiera visto nunca la portada. Doce botones
+   invisibles y pulsables. Y un elemento enfocable dentro de un
+   `aria-hidden="true"` incumple el 4.1.2 de WCAG por sí solo.
+
+   `visibility:hidden` y no `display:none`: las dos sacan del tabulador, pero
+   `display:none` tiraría la rejilla fuera del flujo y el navegador perdería la
+   posición del scroll al volver. Medido con esta regla puesta: el primer Tab
+   cae en `BODY`, y en cuanto se cruza la puerta la rejilla vuelve a ser
+   navegable con el tabulador. */
+body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
+
 .hoja-rejilla{
   list-style:none;
   display:grid;
