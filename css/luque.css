@@ -1210,22 +1210,56 @@ body.es-movil .hoja-hero{
   opacity:0.6;
 }
 
+/* CUÁL DE LAS DOS PISTAS VISIBLES SE VE.
+
+   El caso base —sin ninguna consulta— es la de ratón y teclado, y la del dedo
+   sólo aparece bajo `(pointer: coarse)`. El orden importa y no es
+   intercambiable: `pointer` tiene TRES valores, `coarse`, `fine` y `none`, y un
+   par de consultas `coarse`/`fine` dejaría a `none` —un aparato sin puntero
+   ninguno— sin ninguna frase. Con base + una sola excepción siempre se ve
+   exactamente una, valga lo que valga `pointer`.
+
+   Medido con `matchMedia` en Chrome: con métricas de móvil Y emulación táctil,
+   `(pointer: coarse)` da `true` y `(pointer: fine)` `false`; en escritorio a
+   1280 y en una ventana estrecha de 700 —el caso que motiva todo esto— da
+   `coarse:false` y `fine:true`. Ojo a la trampa de medición: `mobile:true` en
+   `setDeviceMetricsOverride` NO basta para que el puntero sea grueso; hace
+   falta `setTouchEmulationEnabled`, y sin él las tres emulaciones dan `fine` y
+   parece que la consulta no discrimina. El caso `pointer: none` no se pudo
+   producir en este entorno: que caiga en el caso base es por construcción
+   —razonado, no medido—, y por eso la frase base nombra una tecla y no sólo la
+   rueda. */
+.hoja-pista-dedo{ display:none; }
+
+@media (pointer: coarse){
+  .hoja-pista-raton{ display:none; }
+  .hoja-pista-dedo{ display:inline; }
+}
+
 /* La mitad de la pista que sólo se oye. Se saca de la pantalla sin salir del
    árbol de accesibilidad. Ni `display:none` ni `visibility:hidden` valdrían
    aquí: medido con `Accessibility.getFullAXTree`, la frase está en el árbol
    entera y sin recortar, y desaparece de él en cuanto se le pone cualquiera de
    las dos — que es justo lo contrario de lo que hace falta.
 
+   Esta frase nombra las TRES salidas —el dedo, la rueda y la tecla— y no una
+   sola, a diferencia de las dos visibles, que se reparten según el puntero: un
+   lector de pantalla no tiene por qué coincidir con el tipo de puntero que
+   traiga el aparato, así que aquí no se elige por él. Medido con
+   `Accessibility.getFullAXTree` en los dos casos —móvil con táctil y ventana
+   de 700px sin táctil—: el árbol devuelve UNA sola instrucción, la misma en
+   los dos, y las dos frases visibles no aparecen porque van con `aria-hidden`.
+
    El `text-transform:none` no es cosmético, porque esto no se ve: el
    `uppercase` de `.hoja-pista` se HEREDA y se cuela en el nombre accesible.
-   Medido: sin este reset el árbol devolvía «DESLIZA HACIA ARRIBA, O PULSA
-   INTRO, PARA VER LOS TRABAJOS.», en versales, cuando el HTML la escribe en
-   minúsculas; con el reset devuelve «Desliza hacia arriba, o pulsa Intro, para
-   ver los trabajos.», que es literalmente lo que pone el marcado. Es la única
-   cadena del sitio que existe sólo para oírse, y a un lector de pantalla las
-   versales no le aportan nada —hay lectores que deletrean las palabras cortas
-   en versales, «I-N-T-R-O»; eso último es razonado, no medido: aquí no hay
-   lector real—. La mitad visible conserva su `uppercase`. */
+   Medido: sin este reset el árbol devolvía la frase entera en versales, cuando
+   el HTML la escribe en minúsculas; con el reset devuelve «Desliza hacia
+   arriba, o baja con la rueda, o pulsa Intro, para ver los trabajos.», que es
+   literalmente lo que pone el marcado. Es la única cadena del sitio que existe
+   sólo para oírse, y a un lector de pantalla las versales no le aportan nada
+   —hay lectores que deletrean las palabras cortas en versales, «I-N-T-R-O»;
+   eso último es razonado, no medido: aquí no hay lector real—. Las dos mitades
+   visibles conservan su `uppercase`. */
 .hoja-pista-lectores{
   position:absolute; width:1px; height:1px;
   margin:-1px; padding:0; border:0;

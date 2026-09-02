@@ -268,25 +268,29 @@
         <span>Dirección de fotografía</span>
         <span>Operadora de cámara</span>
       </div>
-      <!-- La pista es la ÚNICA indicación de cómo se cruza la puerta, y antes
-           iba entera en `aria-hidden`: quien usa lector de pantalla se quedaba
-           sin ninguna. Va partida en dos por eso, y sólo por eso. Lo que se ve
-           conserva la frase de la spec; lo que se oye nombra además el teclado.
-           Las teclas que valen son las de `alTeclado`, dentro de
-           `MovilHoja.entrada` (`js/movil-hoja.js`).
+      <!-- La pista es la ÚNICA indicación de cómo se cruza la puerta, así que
+           tiene que servir a los tres públicos que llegan aquí. Van TRES
+           frases, y sólo se ve una cada vez; cuál, lo decide el CSS.
 
-           Lo que este arreglo NO cubre, para que nadie lo lea de más: la frase
-           VISIBLE sigue diciendo sólo «Desliza hacia arriba», y el interruptor
-           es el ANCHO y no el dedo (`js/movil.js`), así que por esta portada
-           pasa también una ventana de escritorio estrechada, con ratón y
-           teclado y sin pantalla que deslizar. Quien esté ahí y no use lector
-           de pantalla lee una instrucción que no puede seguir. La puerta se
-           cruza igual —con la rueda, o con cualquiera de las teclas de
-           `alTeclado`—, pero nadie se lo dice. Cambiar la frase visible toca la
-           spec, así que queda levantado y no resuelto aquí. -->
+           Por qué tres y no una: el interruptor es el ANCHO y no el dedo
+           (`js/movil.js`), así que por esta portada pasa tanto un móvil como
+           una ventana de escritorio estrechada, con ratón y teclado y sin
+           pantalla que deslizar. «Desliza hacia arriba» es imposible de seguir
+           en la segunda, y «Baja con la rueda» no significa nada en la primera.
+           El reparto lo hace `@media (pointer: coarse)` en css/luque.css, sobre
+           `.hoja-pista-dedo`, sin una línea de JavaScript.
+
+           Las dos visibles van con `aria-hidden` y la tercera es sólo para
+           lectores de pantalla, que no tienen por qué coincidir con el tipo de
+           puntero: por eso ésa nombra las TRES salidas y no se reparte. Todo lo
+           que las tres prometen —el deslizamiento, la rueda hacia abajo y la
+           tecla Intro— lo atiende `MovilHoja.entrada` (`js/movil-hoja.js`): el
+           gesto en su `pointerup`, la rueda en su `wheel` y las teclas en su
+           `alTeclado`. -->
       <span class="hoja-pista">
-        <span aria-hidden="true">Desliza hacia arriba</span>
-        <span class="hoja-pista-lectores">Desliza hacia arriba, o pulsa Intro, para ver los trabajos.</span>
+        <span class="hoja-pista-raton" aria-hidden="true">Baja con la rueda o pulsa Intro</span>
+        <span class="hoja-pista-dedo" aria-hidden="true">Desliza hacia arriba</span>
+        <span class="hoja-pista-lectores">Desliza hacia arriba, o baja con la rueda, o pulsa Intro, para ver los trabajos.</span>
       </span>
     </div>
     <ol class="hoja-rejilla" id="hojaRejilla"></ol>
