@@ -170,12 +170,25 @@ window.Galeria = (function () {
     window.GaleriaPaneo.medir();
   }
 
-  /* Volver a medir al cruzar el umbral de ancho. `medir()` sólo se llamaba al
-     activar la galería, así que un lienzo que cambia de tamaño con la ventana
-     se quedaba con las medidas de antes y el paneo apuntaba a un sitio que ya
-     no existía. El `requestAnimationFrame` no es adorno: el cruce llega con el
-     CSS ya aplicado pero antes de que el navegador haya recalculado las cajas,
-     y medir en ese instante mide lo viejo. */
+  /* Volver a medir al cruzar el umbral de ancho, DESPUÉS de que `es-movil` se
+     haya quitado. `medir()` YA corre en cada `resize` de la ventana
+     (`js/galeria-paneo.js:52`) — no es la falta de llamadas el problema.
+     Medido con Chrome real instrumentando los dos eventos: el `resize`
+     nativo se dispara ANTES que el `change` de `matchMedia` que quita
+     `es-movil`. Al volver de móvil a escritorio, ese `resize` llega con
+     `es-movil` todavía puesto, `.gallery` todavía en `display:none` y
+     `#spatialStage` a 0×0, así que ese `medir()` deja `minX = minY = 0` y el
+     lienzo en `translate3d(0,0,0)` — comprobado neutralizando esta función:
+     sin ella el paneo se queda clavado ahí. `remedir()` mide otra vez
+     DESPUÉS de que `Movil.init` ya haya quitado `es-movil`, deshaciendo esa
+     medida equivocada.
+
+     El `requestAnimationFrame`: razonado, no medido. Sustituirlo por una
+     llamada síncrona a `medir()` en esta misma prueba dio también el
+     resultado correcto —`getBoundingClientRect` fuerza su propio recálculo
+     de layout—, así que no se ha encontrado un caso que exija esperar al
+     siguiente fotograma; se conserva por ser la forma más cauta y la que ya
+     prueba la suite, no por una necesidad demostrada. */
   function remedir() {
     if (!stage || !canvas) return;
     requestAnimationFrame(function () { window.GaleriaPaneo.medir(); });
