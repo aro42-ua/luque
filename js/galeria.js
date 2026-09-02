@@ -183,12 +183,21 @@ window.Galeria = (function () {
      DESPUÉS de que `Movil.init` ya haya quitado `es-movil`, deshaciendo esa
      medida equivocada.
 
-     El `requestAnimationFrame`: razonado, no medido. Sustituirlo por una
-     llamada síncrona a `medir()` en esta misma prueba dio también el
-     resultado correcto —`getBoundingClientRect` fuerza su propio recálculo
-     de layout—, así que no se ha encontrado un caso que exija esperar al
-     siguiente fotograma; se conserva por ser la forma más cauta y la que ya
-     prueba la suite, no por una necesidad demostrada. */
+     Sobre el `requestAnimationFrame`, y con la medición delante: NO se ha
+     encontrado ningún caso en que haga falta. Sustituirlo por una llamada
+     síncrona a `medir()` deja el mismo `transform` correcto en el recorrido
+     real (medido: `getBoundingClientRect` fuerza su propio recálculo de
+     layout, así que aquí no hay nada que esperar). Se conserva sólo por
+     cautela, para el caso en que alguien meta dentro algo que sí dependa de
+     que el navegador haya pintado — no porque hoy sea necesario.
+
+     Lo que sí está fijado es que esta línea PROGRAMA el fotograma en vez de
+     medir en el acto: lo cubre la tercera prueba de
+     `tests/pruebas-galeria.js`, que muere si se cambia por la llamada
+     síncrona («esperaba 1 y recibió 0», verificado mutando). Antes de esa
+     prueba esta rama no la cubría nadie: las otras dos se paran en la guarda
+     de abajo y esperan cero fotogramas, y un espía que cuenta cero sigue
+     contando cero aunque la línea espiada desaparezca. */
   function remedir() {
     if (!stage || !canvas) return;
     requestAnimationFrame(function () { window.GaleriaPaneo.medir(); });

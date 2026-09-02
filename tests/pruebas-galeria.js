@@ -65,4 +65,64 @@ describe('Galeria.remedir — la guarda antes de inicializar', function () {
       igual(llamadas, 0);
     });
   });
+
+  /* La rama que hace el trabajo, que hasta ahora no cubría nadie: con
+     `stage` Y `canvas` puestos, `remedir()` tiene que PROGRAMAR un fotograma
+     —no medir en el acto— y ese fotograma tiene que llamar a
+     `GaleriaPaneo.medir()`.
+
+     Es lo que distingue el `requestAnimationFrame` de una llamada síncrona,
+     y sin esta prueba esa diferencia no la fijaba nada: sustituirlo por
+     `window.GaleriaPaneo.medir()` a secas dejaba la suite entera en verde
+     (medido). Las otras dos pruebas de arriba no pueden cazarlo porque las
+     dos se paran en la guarda y las dos esperan CERO fotogramas: un espía
+     que cuenta cero sigue contando cero si la línea espiada desaparece.
+
+     Aquí sí hay que falsificar `GaleriaPaneo` y `GaleriaTeclado`: con los dos
+     nodos presentes, `Galeria.init()` ya no se para en su guarda y llama a
+     `GaleriaPaneo.init()` y a `GaleriaTeclado.init()`, y ninguno de los dos
+     ficheros se carga en esta página (ver tests/test.html). El doble de
+     `medir` sirve además para comprobar que el fotograma programado hace el
+     trabajo, y no sólo que se programó.
+
+     Va la ÚLTIMA de las tres por el mismo motivo que la anterior: deja
+     `stage`/`canvas` con nodos para el resto de la suite y no hay forma de
+     «desinicializar» el módulo. */
+  prueba('con stage y canvas, remedir programa un fotograma que mide', function () {
+    var paneoOriginal = window.GaleriaPaneo;
+    var tecladoOriginal = window.GaleriaTeclado;
+    var rafOriginal = window.requestAnimationFrame;
+    var medidas = 0;
+    var programadas = [];
+    try {
+      window.GaleriaPaneo = {
+        init: function () {},
+        medir: function () { medidas++; }
+      };
+      window.GaleriaTeclado = { init: function () {} };
+
+      ArnesDom.conElemento(
+        '<div><div id="spatialStage"><div id="spatialCanvas"></div></div></div>',
+        function () {
+          Galeria.init();
+
+          window.requestAnimationFrame = function (fn) { programadas.push(fn); };
+          Galeria.remedir();
+
+          /* Programado, y exactamente uno: con una llamada síncrona serían
+             cero programados y una medida ya hecha aquí mismo. */
+          igual(programadas.length, 1);
+          igual(medidas, 0);
+
+          /* Y lo que se programó es el trabajo de verdad, no un hueco. */
+          programadas[0]();
+          igual(medidas, 1);
+        }
+      );
+    } finally {
+      window.requestAnimationFrame = rafOriginal;
+      window.GaleriaPaneo = paneoOriginal;
+      window.GaleriaTeclado = tecladoOriginal;
+    }
+  });
 });
