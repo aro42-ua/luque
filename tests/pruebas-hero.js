@@ -25,20 +25,31 @@ describe('Hero.debeSaltarse', function () {
    `alCargar`, y conviene ser exacto sobre por qué, porque lo que había
    escrito antes en este hueco no era cierto:
 
-   La rama por defecto NO revienta en esta página. Medido: en `test.html` no
-   hay fragmento, así que `Router.rutaActual()` da `{tipo:'todos'}`,
-   `debeSaltarse` es `false` (js/hero.js:41) y la rama se va por
-   `mostrarFaseA()` → `mostrarFaseB()` sin tocar `Galeria` en ningún momento.
-   Llamando a `Hero.init()` sin argumento en esta misma página: no lanza, y
-   4,2 s después `heroMain` tiene la clase `visible` y el botón está
-   habilitado, con cero errores de consola.
+   La rama por defecto NO revienta por culpa de `Galeria`. Medido: en
+   `test.html` no hay fragmento, así que `Router.rutaActual()` da
+   `{tipo:'todos'}`, `debeSaltarse` es `false` (el `if` que lo consulta
+   dentro de `retirarPreloader`, `js/hero.js`, sobre la línea 41) y la rama
+   se va por `mostrarFaseA()` → `mostrarFaseB()` sin tocar `Galeria` en
+   ningún momento.
 
-   Donde sí reventaría es más allá: `Galeria.activar()` —al que sólo se
-   llega pulsando ENTRAR, o con una ruta de proyecto o de categoría— llama a
-   `window.GaleriaPaneo.medir()` (js/galeria.js:170), y `js/galeria-paneo.js`
-   no se carga en esta página (ver tests/test.html, que sí carga
-   `js/galeria.js` para las pruebas de `remedir()`, pero no el resto del
-   escenario espacial). Comprobado aquí mismo: `window.Galeria.activar()` →
+   Con una condición que hay que decir, porque sin ella la frase es falsa:
+   eso vale llamando a `Hero.init()` sin argumento SOBRE EL MISMO MONTAJE
+   que arma `montar()` (aquí abajo). Sobre la página pelada lanza, y no por
+   `Galeria`: `test.html` no trae `#preloader`, ni `#hero`, ni `#heroBoton`
+   —medido: los tres `false`—, así que `init` revienta al tocar
+   `boton.disabled` (`js/hero.js`, en el cuerpo de `init`, sobre la línea
+   129) con `boton` en `null`. Con el montaje puesto no lanza, y 4,2 s
+   después `heroMain` tiene la clase `visible` y el botón está habilitado,
+   con cero errores de consola.
+
+   Donde sí reventaría por `Galeria` es más allá: `Galeria.activar()` —al que
+   sólo se llega pulsando ENTRAR, o con una ruta de proyecto o de categoría—
+   llama a `window.GaleriaPaneo.medir()` (última línea del cuerpo de
+   `activar`, `js/galeria.js`, sobre la línea 170), y `js/galeria-paneo.js`
+   no se carga en esta página (ver la lista de `<script>` de
+   `tests/test.html`, que sí carga `js/galeria.js` para las pruebas de
+   `remedir()`, pero no el resto del escenario espacial). Comprobado aquí
+   mismo: `window.Galeria.activar()` →
    `TypeError: Cannot read properties of undefined (reading 'medir')`.
 
    O sea: las fases A y B SÍ serían probables en esta página y hoy no las
