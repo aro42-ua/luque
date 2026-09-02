@@ -21,15 +21,30 @@ describe('Hero.debeSaltarse', function () {
   });
 });
 
-/* El argumento opcional de la Tarea 5. Sólo se prueba la rama `alCargar`: la
-   rama por defecto acaba llamando a `window.Galeria.activar()`, que llama a
-   `window.GaleriaPaneo.medir()` (js/galeria.js:170) — y `js/galeria-paneo.js`
-   NO se carga en esta página de pruebas (ver tests/test.html:27-30, que sí
-   carga `js/galeria.js` para la prueba de `remedir()` en
-   `pruebas-galeria.js`, pero no el resto del escenario espacial). Ejercitar
-   aquí la rama por defecto reventaría en esa llamada, sin relación con lo
-   que se quiere comprobar. Esa rama, la que ya está en producción, se
-   comprueba a mano en el Paso 7 del brief.
+/* El argumento opcional de la Tarea 5. Aquí sólo se prueba la rama
+   `alCargar`, y conviene ser exacto sobre por qué, porque lo que había
+   escrito antes en este hueco no era cierto:
+
+   La rama por defecto NO revienta en esta página. Medido: en `test.html` no
+   hay fragmento, así que `Router.rutaActual()` da `{tipo:'todos'}`,
+   `debeSaltarse` es `false` (js/hero.js:41) y la rama se va por
+   `mostrarFaseA()` → `mostrarFaseB()` sin tocar `Galeria` en ningún momento.
+   Llamando a `Hero.init()` sin argumento en esta misma página: no lanza, y
+   4,2 s después `heroMain` tiene la clase `visible` y el botón está
+   habilitado, con cero errores de consola.
+
+   Donde sí reventaría es más allá: `Galeria.activar()` —al que sólo se
+   llega pulsando ENTRAR, o con una ruta de proyecto o de categoría— llama a
+   `window.GaleriaPaneo.medir()` (js/galeria.js:170), y `js/galeria-paneo.js`
+   no se carga en esta página (ver tests/test.html, que sí carga
+   `js/galeria.js` para las pruebas de `remedir()`, pero no el resto del
+   escenario espacial). Comprobado aquí mismo: `window.Galeria.activar()` →
+   `TypeError: Cannot read properties of undefined (reading 'medir')`.
+
+   O sea: las fases A y B SÍ serían probables en esta página y hoy no las
+   prueba nadie — es un hueco de cobertura abierto, no una puerta cerrada.
+   La parte que de verdad no se puede ejercitar aquí es la de después de
+   ENTRAR, y ésa se comprueba a mano en el Paso 7 del brief.
 
    Va en `describeAsync` porque `retirarPreloader` corre sobre `setTimeout`
    de verdad: no hay reloj inyectable en `hero.js` (sus 1200ms mínimos y su
