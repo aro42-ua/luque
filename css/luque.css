@@ -1017,8 +1017,6 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 
 /* ============================================================
    EL INTERRUPTOR — ver js/movil.js
-   Aquí sólo se decide QUÉ se ve. El aspecto de la hoja va más
-   abajo, y lo escribe la Tarea 6 del bloque 4d.
 ============================================================ */
 .hoja{ display:none; }
 
@@ -1026,6 +1024,128 @@ body.es-movil .hoja{ display:block; }
 body.es-movil .gallery,
 body.es-movil .hero,
 body.es-movil .navbar{ display:none !important; }
+
+/* ============================================================
+   PORTADA MÓVIL — la hoja
+============================================================ */
+body.es-movil .hoja{
+  position:fixed; inset:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  /* OBLIGATORIO. Sin esto, tirar hacia abajo desde lo alto dispara el
+     pull-to-refresh de Chrome de Android y la web se recarga en mitad del
+     recorrido. Por omisión la web se recarga: hay que apagarlo a propósito. */
+  overscroll-behavior-y:contain;
+  background:var(--yellow);
+  z-index:5;
+}
+
+/* Mientras el hero está delante, la rejilla no se desplaza por detrás.
+
+   `body.es-movil .hoja` (0,2,1) y no sólo `.hoja.con-hero` (0,2,0): medido con
+   `getComputedStyle` en Chrome headless, la regla de dos clases SOLA pierde
+   la partida por `overflow-y` contra la de arriba —tienen la MISMA
+   especificidad de clases, pero la de arriba suma el elemento `body` y eso ya
+   decide, aunque las dos reglas toquen la misma propiedad final con distinta
+   forma (`overflow-y` larga contra `overflow` corta)—: `getComputedStyle(
+   hoja).overflowY` daba `"auto"` con `con-hero` puesto, así que el hero NO
+   bloqueaba el scroll de la rejilla de detrás. Con el `body.es-movil` añadido
+   aquí, la especificidad sube a (0,3,1) y gana; vuelto a medir igual, ahora
+   da `"hidden"`. */
+body.es-movil .hoja.con-hero{ overflow:hidden; }
+
+.hoja-rejilla{
+  list-style:none;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  /* 24px a los lados a propósito: ningún control puede caer en la franja de
+     unos 20px que el navegador se queda para su gesto de «atrás». Los 72 de
+     abajo dejan sitio al indicador de inicio de iOS. */
+  padding:24px 24px 72px;
+}
+
+.hoja-celda{ position:relative; }
+
+/* El atributo `hidden` del navegador es `display:none`, pero la regla que le
+   da display a la celda como hija de la rejilla le ganaría por especificidad.
+   Sin esta línea, filtrar no escondería nada. */
+.hoja-celda[hidden]{ display:none; }
+
+.hoja-boton{
+  display:block; width:100%; padding:0; border:0;
+  position:relative; overflow:hidden;
+  background:var(--grey-dark);
+  /* La proporción la pone `MovilHoja.proporcion` celda a celda: es lo que hace
+     la rejilla irregular. El 1.25 es sólo el respaldo si faltara. */
+  aspect-ratio:1 / var(--proporcion, 1.25);
+  cursor:pointer;
+}
+
+.hoja-boton img{
+  display:block; width:100%; height:100%;
+  object-fit:cover;
+}
+
+/* La foto que no llega deja su marco oscuro con su número dentro: un hueco
+   numerado se lee como «falta esa», no como «la web está rota». */
+.hoja-celda.sin-foto img{ display:none; }
+
+/* Amarillo con sombra, y no una pastilla: aquí el número va sobre la foto,
+   así que la sombra es lo que lo sostiene sobre una foto clara. En el visor
+   —bloque 4e— el texto sí va en pastilla, porque allí hay que leer palabras
+   y no dos cifras. */
+.hoja-numero{
+  position:absolute; top:8px; left:10px;
+  font-size:1.45rem; font-weight:700; line-height:1;
+  letter-spacing:var(--kerning);
+  color:var(--yellow);
+  text-shadow:0 1px 5px rgba(0,0,0,0.85), 0 0 1px rgba(0,0,0,0.9);
+  pointer-events:none;
+}
+
+.hoja-boton:focus-visible{ outline:3px solid var(--black); outline-offset:3px; }
+
+/* ------------------------------------------------------------
+   EL HERO FUNDIDO
+   Ocupa la pantalla entera por encima de la rejilla y se va al
+   deslizar hacia arriba. Los 380ms casan con SALIDA_MS de
+   js/movil-hoja.js: si no casaran, el nodo desaparecería de
+   golpe a mitad del fundido.
+------------------------------------------------------------ */
+.hoja-hero{
+  position:fixed; inset:0; z-index:10;
+  background:var(--yellow);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:22px;
+  padding:0 24px;
+  transition:opacity 380ms ease, transform 380ms ease;
+}
+
+.hoja-hero.fuera{
+  opacity:0;
+  transform:translateY(-28px);
+  pointer-events:none;
+}
+
+.hoja-hero .logo-mark{ width:min(76vw, 420px); height:auto; }
+
+.hoja-hero .roles{
+  text-align:center;
+  font-size:0.95rem; line-height:1.65;
+  display:flex; flex-direction:column;
+}
+
+.hoja-pista{
+  font-size:0.62rem; font-weight:700;
+  letter-spacing:0.22em; text-transform:uppercase;
+  opacity:0.5;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .hoja-hero{ transition:opacity 0.2s ease; }
+  .hoja-hero.fuera{ transform:none; }
+}
 
 @media (prefers-reduced-motion: reduce){
   .visor{ transition:opacity 0.2s ease; }
