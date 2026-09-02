@@ -91,9 +91,33 @@ describe('Galeria.remedir — la guarda antes de inicializar', function () {
      `medir` sirve además para comprobar que el fotograma programado hace el
      trabajo, y no sólo que se programó.
 
-     Va la ÚLTIMA de las tres por el mismo motivo que la anterior: deja
-     `stage`/`canvas` con nodos para el resto de la suite y no hay forma de
-     «desinicializar» el módulo. */
+     Va la ÚLTIMA de las tres, y su residuo es MAYOR que el de la anterior,
+     no el mismo: al pasar la guarda de `init` —que es justo lo que esta
+     prueba busca— se ejecuta el resto del cuerpo de `init`, así que además
+     de dejar `stage`/`canvas` apuntando a nodos ya desconectados
+     (`ArnesDom.conElemento` los retira en su `finally`) deja colgados un
+     `focusin` sobre ese `stage`, un suscriptor de `Router.alCambiar`, un
+     `keydown` en `document`, y `porElemento`/`anchoBase` poblados por
+     `construir()`. La prueba anterior no dejaba nada de eso porque salía
+     por la guarda antes de llegar. No hay forma de «desinicializar» el
+     módulo, así que el residuo se queda.
+
+     Hoy es inocuo, y está medido, no supuesto: el `Router` de esta página
+     no arranca nunca —`Router.init()` sólo se llama dentro de los iframes
+     de `tests/pruebas-router-ir.js`, sobre la línea 39—, así que el
+     suscriptor no se invoca jamás; y el `keydown` sale por
+     `categoria !== null` con `categoria` en `null`. Comprobado además
+     moviendo esta sección al final de `tests/test.html`: el recuento no se
+     mueve (324/0 en las dos posiciones), y al terminar la suite
+     `categoriaActiva` es `null`, `document.body.className` está vacío y no
+     queda ninguna `.arnes-dom-caja` viva.
+
+     Lo que sí queda es una trampa cargada para el futuro: a partir de aquí
+     `Galeria.remedir()` ya no corta en su guarda y programa un fotograma
+     que llamaría a `window.GaleriaPaneo.medir()` con `GaleriaPaneo` de
+     vuelta a `undefined`. No lanza de forma síncrona (medido), así que el
+     fallo se iría al fotograma, fuera de cualquier `prueba()` — si alguien
+     añade pruebas de `Galeria` detrás, que empiece por aquí. */
   prueba('con stage y canvas, remedir programa un fotograma que mide', function () {
     var paneoOriginal = window.GaleriaPaneo;
     var tecladoOriginal = window.GaleriaTeclado;
