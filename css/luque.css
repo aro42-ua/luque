@@ -1149,8 +1149,17 @@ body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
    así que siguen por debajo de los 380 y el nodo se retira
    después del fundido, nunca durante. Las dos ramas medidas
    con `getComputedStyle`: 0.38s la normal y 0.2s la reducida.
+
+   Ésta va acotada a `body.es-movil` y las demás de la sección no. La
+   diferencia no es capricho: es la única regla del bloque que planta un
+   `position:fixed` con `inset:0` y `z-index:10` sobre un fondo opaco, o sea la
+   única que taparía la pantalla entera el día que algo dejara `.hoja` visible
+   en una ventana ancha. Hoy no puede pasar —`.hoja{display:none}` apaga el
+   subárbol y un `position:fixed` dentro de un ancestro con `display:none` no
+   pinta nada—, pero el coste de acotarla es un selector y el de no hacerlo es
+   un escritorio en amarillo.
 ------------------------------------------------------------ */
-.hoja-hero{
+body.es-movil .hoja-hero{
   position:fixed; inset:0; z-index:10;
   background:var(--yellow);
   display:flex; flex-direction:column;
@@ -1204,7 +1213,12 @@ body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
   .visor-ficha, .visor-escena{ transition:none; }
 
   /* El hero de la portada móvil va aquí dentro y no en un `@media` propio:
-     eran dos bloques con la condición idéntica y pegados el uno al otro. */
-  .hoja-hero{ transition:opacity 0.2s ease; }
-  .hoja-hero.fuera{ transform:none; }
+     eran dos bloques con la condición idéntica y pegados el uno al otro.
+
+     Y va con `body.es-movil` por delante porque la regla que tiene que ganar
+     también lo lleva: un `@media` NO añade especificidad, así que un
+     `.hoja-hero` a secas (0,1,0) perdería contra el `body.es-movil .hoja-hero`
+     (0,2,1) de arriba y el movimiento reducido se quedaría sin efecto. */
+  body.es-movil .hoja-hero{ transition:opacity 0.2s ease; }
+  body.es-movil .hoja-hero.fuera{ transform:none; }
 }
