@@ -22,11 +22,14 @@ describe('Hero.debeSaltarse', function () {
 });
 
 /* El argumento opcional de la Tarea 5. Sólo se prueba la rama `alCargar`: la
-   rama por defecto acaba llamando a `window.Galeria.activar()`, y
-   `js/galeria.js` no se carga en esta página de pruebas —no hay ninguna
-   prueba de Galeria en la suite—, así que ejercitarla aquí dispararía un
-   error asíncrono sin relación con lo que se quiere comprobar. Esa rama, la
-   que ya está en producción, se comprueba a mano en el Paso 7 del brief.
+   rama por defecto acaba llamando a `window.Galeria.activar()`, que llama a
+   `window.GaleriaPaneo.medir()` (js/galeria.js:170) — y `js/galeria-paneo.js`
+   NO se carga en esta página de pruebas (ver tests/test.html:27-30, que sí
+   carga `js/galeria.js` para la prueba de `remedir()` en
+   `pruebas-galeria.js`, pero no el resto del escenario espacial). Ejercitar
+   aquí la rama por defecto reventaría en esa llamada, sin relación con lo
+   que se quiere comprobar. Esa rama, la que ya está en producción, se
+   comprueba a mano en el Paso 7 del brief.
 
    Va en `describeAsync` porque `retirarPreloader` corre sobre `setTimeout`
    de verdad: no hay reloj inyectable en `hero.js` (sus 1200ms mínimos y su
