@@ -42,20 +42,20 @@ describe('Galeria.remedir — la guarda antes de inicializar', function () {
      programar. No hace falta llegar a ejecutar ese fotograma —ni falsificar
      `GaleriaPaneo`, que ni siquiera se carga en esta página (`tests/test.html`
      carga `../js/galeria.js` y no `../js/galeria-paneo.js`; ver su lista de
-     `<script>`, sobre las líneas 27-30)— porque espiar `requestAnimationFrame` ya
-     distingue las dos formas del operador sin necesidad de que el fotograma
-     llegue a correr.
+     `<script>`, sobre las líneas 27-30)— porque espiar
+     `requestAnimationFrame` ya distingue las dos formas del operador sin
+     necesidad de que el fotograma llegue a correr.
 
      `Galeria.init()` deja aquí el estado que hace falta y se para sola: con
      `#spatialCanvas` ausente, la guarda DE `init` (`js/galeria.js`, la
      línea siguiente a las dos asignaciones del cuerpo de `init`, sobre la
      línea 213 — ojo, no la guarda de `remedir`, sobre la 204, que tiene el
-     texto exacto igual) corta antes de llamar a `GaleriaPaneo.init()`, así que no hace
-     falta que `GaleriaPaneo` exista para que este montaje sea seguro.
-     Nota: esto deja
-     `Galeria` con `stage`/`canvas` mutados para el resto de la suite —no hay
-     forma de «desinicializarla»—, y por eso esta prueba va DESPUÉS de la de
-     arriba, que necesita el estado limpio de partida. */
+     texto exacto igual) corta antes de llamar a `GaleriaPaneo.init()`, así
+     que no hace falta que `GaleriaPaneo` exista para que este montaje sea
+     seguro. Nota: esto deja `Galeria` con `stage`/`canvas` mutados para el
+     resto de la suite —no hay forma de «desinicializarla»—, y por eso esta
+     prueba va DESPUÉS de la de arriba, que necesita el estado limpio de
+     partida. */
   prueba('con stage pero sin canvas, remedir tampoco programa ningún fotograma', function () {
     ArnesDom.conElemento('<div id="spatialStage"></div>', function () {
       Galeria.init();
