@@ -1066,11 +1066,15 @@ body.es-movil .hoja.con-hero{ overflow:hidden; }
    invisibles y pulsables. Y un elemento enfocable dentro de un
    `aria-hidden="true"` incumple el 4.1.2 de WCAG por sí solo.
 
-   `visibility:hidden` y no `display:none`: las dos sacan del tabulador, pero
-   `display:none` tiraría la rejilla fuera del flujo y el navegador perdería la
-   posición del scroll al volver. Medido con esta regla puesta: el primer Tab
-   cae en `BODY`, y en cuanto se cruza la puerta la rejilla vuelve a ser
-   navegable con el tabulador. */
+   `visibility:hidden` y no `display:none`: la rejilla sigue ocupando su sitio y
+   la hoja conserva su altura desplazable. Medido cambiando una por otra con la
+   puerta puesta: con `visibility:hidden` la rejilla mide 1557px de alto y el
+   `scrollHeight` de la hoja vale 1557; con `display:none` la rejilla pasa a 0 y
+   el `scrollHeight` se desploma a 844, o sea que la hoja deja de tener nada que
+   desplazar mientras dura la puerta.
+
+   Medido con esta regla puesta: el primer Tab cae en `BODY`, y en cuanto se
+   cruza la puerta la rejilla vuelve a ser navegable con el tabulador. */
 body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
 
 .hoja-rejilla{
@@ -1196,8 +1200,10 @@ body.es-movil .hoja-hero{
 }
 
 /* La mitad de la pista que sólo se oye. Se saca de la pantalla sin salir del
-   árbol de accesibilidad: `display:none` y `visibility:hidden` la esconderían
-   también del lector, que es justo lo contrario de lo que hace falta aquí. */
+   árbol de accesibilidad. Ni `display:none` ni `visibility:hidden` valdrían
+   aquí: medido con `Accessibility.getFullAXTree`, la frase aparece en el árbol
+   tal y como está escrita, y desaparece de él en cuanto se le pone cualquiera
+   de las dos — que es justo lo contrario de lo que hace falta. */
 .hoja-pista-lectores{
   position:absolute; width:1px; height:1px;
   margin:-1px; padding:0; border:0;
