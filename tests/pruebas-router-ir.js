@@ -151,7 +151,8 @@ describeAsync('Router.ir', function () {
 
        Se hace con `ir('categoria', 'editorial')` —dos argumentos— porque así
        cubre de paso que llamarla como la llama el escritorio hoy
-       (js/galeria.js:196-197, js/visor.js:41,129-130) no inventa una pieza. Si
+       (el manejador de clic del navbar dentro de `init` en js/galeria.js, y
+       js/visor.js:41,129-130) no inventa una pieza. Si
        el tercer argumento fuera obligatorio, el escritorio no daría error:
        escribiría «#/editorial/undefined», que es peor. */
     return conRouter('#/bruma', function (w, largoInicial, avisos) {
