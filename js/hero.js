@@ -10,6 +10,7 @@ window.Hero = (function () {
   var arranque = 0;
   var saliendo = false;
   var alTerminarLaCarga = null;
+  var rematada = false;
 
   function movimientoReducido() {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -92,7 +93,16 @@ window.Hero = (function () {
     heroEl.classList.add('saliendo');
   }
 
+  /* Idempotente a propósito, con guarda explícita y no sólo por la suerte de
+     que sus efectos lo sean: la Tarea 5 la llama también desde `index.html`
+     al cruzar de móvil a escritorio a mitad de sesión (ver `Hero.rematar` más
+     abajo), y esa puerta puede cruzarse de vuelta más de una vez en la misma
+     visita si el ancho oscila alrededor del umbral. Sin la guarda, cada
+     cruce repetiría el robo de foco a `#gallery` — inocuo la primera vez,
+     molesto si le quita el foco a quien ya estaba tecleando dentro. */
   function rematarEntrada() {
+    if (rematada) return;
+    rematada = true;
     heroEl.hidden = true;
     document.body.classList.remove('entrando');
     document.body.classList.add('galeria-activa');
@@ -132,5 +142,13 @@ window.Hero = (function () {
     else window.addEventListener('load', retirarPreloader);
   }
 
-  return { init: init, debeSaltarse: debeSaltarse };
+  return {
+    init: init,
+    debeSaltarse: debeSaltarse,
+    /* Se expone para que quien cruza de móvil a escritorio sin haber pasado
+       por el botón ENTRAR pueda dejar la galería en el mismo estado que
+       quien sí lo pulsó. Ver el comentario de `rematarEntrada` sobre por qué
+       es seguro llamarla más de una vez. */
+    rematar: rematarEntrada
+  };
 })();

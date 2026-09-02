@@ -408,18 +408,50 @@
       document.getElementById('hoja').appendChild(p);
     }
 
-    window.Movil.init(window.matchMedia(window.Movil.CONSULTA), {
-      movil: function () { document.body.classList.add('es-movil'); },
+    /* La puerta de entrada se elige UNA vez, aquí, y no se vuelve a elegir: el
+       ancho de este instante decide qué hero se arma (más abajo) y de qué
+       lado queda el otro, inerte. Estrechar o ensanchar después no reabre la
+       puerta contraria — pero SÍ tiene que dejar utilizable el lado al que se
+       cruza, y hoy no lo hacía en los dos sentidos por igual (ver los dos
+       comentarios de dentro de `Movil.init`, más abajo). */
+    var consultaMovil = window.matchMedia(window.Movil.CONSULTA);
+    var puertaMovil = consultaMovil.matches;
+
+    window.Movil.init(consultaMovil, {
+      movil: function () {
+        document.body.classList.add('es-movil');
+        /* Quien entró por la puerta de escritorio nunca arma `#hojaHero`:
+           `MovilHoja.entrada()` sólo se llama con la puerta móvil (más abajo),
+           y es quien engancha el dedo, la rueda y el teclado que lo cierran.
+           Sin ese armado, un `#hojaHero` que aparece porque el ancho bajó del
+           umbral a mitad de sesión se queda en el DOM sin ninguna forma de
+           cerrarlo. Se retira aquí, la primera vez que hace falta. */
+        if (!puertaMovil) {
+          var hojaHeroSinArmar = document.getElementById('hojaHero');
+          if (hojaHeroSinArmar && hojaHeroSinArmar.parentNode) {
+            hojaHeroSinArmar.parentNode.removeChild(hojaHeroSinArmar);
+          }
+        }
+      },
       escritorio: function () {
         document.body.classList.remove('es-movil');
+        /* Quien entró por la puerta móvil nunca corre `rematarEntrada()`:
+           esa puerta le cede el remate a `MovilHoja.entrada()` (más abajo) y
+           no pasa nunca por el botón ENTRAR de escritorio. Sin este rescate,
+           cruzar de móvil a escritorio a mitad de sesión (una tableta que
+           gira de vertical a apaisado, por ejemplo) dejaba `body` sin
+           `galeria-activa` y `.gallery` en `visibility:hidden` para
+           siempre: un amarillo vacío sin ENTRAR que pulsar.
+           `Hero.rematar()` es idempotente y sólo se llama si la puerta fue
+           móvil: quien entró por la de escritorio tiene su propio flujo (el
+           botón, la animación, `rematarEntrada()` al terminar) y llamarla
+           aquí se lo saltaría a medias. */
+        if (puertaMovil) window.Hero.rematar();
         window.Galeria.remedir();
       }
     });
 
-    /* La puerta de entrada se elige UNA vez y no se vuelve a elegir. El hero
-       es una entrada por visita, no una sección: estrechar la ventana a mitad
-       de sesión cambia la portada, pero no reabre la puerta del otro lado. */
-    if (window.Movil.actual() === 'movil') {
+    if (puertaMovil) {
       window.Hero.init({ alCargar: function () {
         window.MovilHoja.entrada(document.getElementById('hojaHero'),
                                  document.getElementById('hoja'),
