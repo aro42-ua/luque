@@ -1173,10 +1173,26 @@ body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
   display:flex; flex-direction:column;
 }
 
+/* El 0.6 de opacidad no es estético: con 0.5 el texto salía a 9,92px con un
+   color efectivo de rgb(133,133,5) sobre el amarillo, o sea 3,65:1, y el AA de
+   WCAG pide 4,5:1 —el alivio de «texto grande» empieza en 18,66px en negrita y
+   estas letras miden la mitad, así que no lo alcanza—. Con 0.6 el color
+   efectivo es rgb(108,108,6) y el contraste sube a 5,17:1. Medido aplicando la
+   fórmula de luminancia relativa de WCAG sobre la mezcla real del color con el
+   fondo, no estimado a ojo. */
 .hoja-pista{
   font-size:0.62rem; font-weight:700;
   letter-spacing:0.22em; text-transform:uppercase;
-  opacity:0.5;
+  opacity:0.6;
+}
+
+/* La mitad de la pista que sólo se oye. Se saca de la pantalla sin salir del
+   árbol de accesibilidad: `display:none` y `visibility:hidden` la esconderían
+   también del lector, que es justo lo contrario de lo que hace falta aquí. */
+.hoja-pista-lectores{
+  position:absolute; width:1px; height:1px;
+  margin:-1px; padding:0; border:0;
+  clip-path:inset(50%); overflow:hidden; white-space:nowrap;
 }
 
 @media (prefers-reduced-motion: reduce){

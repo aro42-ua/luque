@@ -268,7 +268,18 @@
         <span>Dirección de fotografía</span>
         <span>Operadora de cámara</span>
       </div>
-      <span class="hoja-pista" aria-hidden="true">Desliza hacia arriba</span>
+      <!-- La pista es la ÚNICA indicación de cómo se cruza la puerta, así que
+           no puede ir entera en `aria-hidden`: quien usa lector de pantalla se
+           quedaba sin ninguna. Va partida en dos a propósito. Lo que se ve
+           conserva la frase de la spec; lo que se oye nombra además el teclado,
+           porque el interruptor es el ANCHO y no el dedo (`js/movil.js`) y por
+           esta portada pasa una ventana de escritorio estrechada a 700px, sin
+           pantalla que deslizar. Las teclas que valen son las de `alTeclado`,
+           dentro de `MovilHoja.entrada` (`js/movil-hoja.js`). -->
+      <span class="hoja-pista">
+        <span aria-hidden="true">Desliza hacia arriba</span>
+        <span class="hoja-pista-lectores">Desliza hacia arriba, o pulsa Intro, para ver los trabajos.</span>
+      </span>
     </div>
     <ol class="hoja-rejilla" id="hojaRejilla"></ol>
   </section>
