@@ -171,8 +171,10 @@ window.Galeria = (function () {
   }
 
   /* Volver a medir al cruzar el umbral de ancho, DESPUÉS de que `es-movil` se
-     haya quitado. `medir()` YA corre en cada `resize` de la ventana
-     (`js/galeria-paneo.js:52`) — no es la falta de llamadas el problema.
+     haya quitado. `medir()` YA corre en cada `resize` de la ventana (el
+     `addEventListener('resize', medir)` del cuerpo de `GaleriaPaneo.init`,
+     `js/galeria-paneo.js`, sobre la línea 52) — no es la falta de llamadas
+     el problema.
      Medido con Chrome real instrumentando los dos eventos: el `resize`
      nativo se dispara ANTES que el `change` de `matchMedia` que quita
      `es-movil`. Al volver de móvil a escritorio, ese `resize` llega con
