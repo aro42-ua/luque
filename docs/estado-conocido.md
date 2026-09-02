@@ -172,20 +172,123 @@ estorba pero lo que peor deja la descubribilidad de las categorías.
 Falta decidir cuál. Antes de decidir, conviene mirarlo en la pantalla de quien
 lo pidió: puede que ahí se vea distinto de lo que sale medido aquí.
 
+## La portada móvil (bloque 4d): lo que queda sin verificar
+
+**El visor de la portada móvil sigue siendo el de escritorio.** Tocar un
+trabajo en la rejilla llama a `Router.ir('proyecto', id)` (`index.html`, en
+el arranque, en la llamada a `MovilHoja.pintar` dentro de
+`Contenido.cargar`), y quien responde es `js/visor.js`, que se diseñó para
+un ratón: su lupa se abre y se recorre con `pointerdown`/`pointermove`
+—«mantén y arrastra»— (`js/visor-lupa.js`), y su tira de miniaturas no cabe
+en una ventana estrecha (ya registrado más arriba, en «Detalles menores
+aplazados»: con ocho piezas o más y 375px se envuelve y solapa unos 20px con
+la foto). La URL que produce ya es la definitiva, así que el bloque 4e
+sustituye el visor sin tocar ese cableado. Hasta entonces, **la mitad de la
+experiencia móvil es la de escritorio encogida.**
+
+**`MovilRecorrido` y `Brillo` siguen sin cablear.** Este bloque cableó
+`MovilGestos` —lo consume el hero fundido, en `MovilHoja.entrada`
+(`js/movil-hoja.js`)— pero `js/movil-recorrido.js` y `js/brillo.js` siguen
+sin un solo consumidor fuera de sus propias pruebas (comprobado buscando
+`MovilRecorrido` y `Brillo` en todos los `.js` y `.html` del repositorio;
+sólo salen en sus propios archivos y en los de prueba): son del visor móvil,
+que llega en el bloque siguiente. Cuando se cableen, **`MovilRecorrido`
+necesita `piezas` como NÚMERO y no como array**; el porqué y lo que cuesta
+equivocarse está más abajo en este mismo documento, en la sección «Cómo se
+prueba», en la entrada sobre `MovilRecorrido.paradas`.
+
+**La comprobación en un teléfono real no se ha hecho todavía.** La spec dice
+con todas las letras que dos cosas de esta portada no se pueden comprobar en
+un navegador de escritorio estrechado por mucho que se le dé el ancho que
+dispara el interruptor: el deslizamiento desde el borde, que se queda el
+gesto de «atrás» del navegador, y el *pull-to-refresh* al tirar hacia abajo
+(`docs/superpowers/specs/2026-08-28-movil-design.md`, sección «Dos cosas del
+sistema operativo», sobre las líneas 286-300). Esta tarea preparó la
+lista para pasársela a Ángel sobre un teléfono de verdad, pero no hay ningún
+commit ni anotación en el repositorio que registre que esa comprobación haya
+llegado a ocurrir —comprobado repasando `git log` de esta rama hasta
+`c71fe56`, el HEAD con el que arrancó esta tarea—, así que los nueve puntos
+siguen sin confirmar, en bloque y no uno por uno:
+
+1. Que se vea el amarillo con LUQUE! al abrir la portada en el móvil.
+2. Que deslizar el dedo hacia arriba sobre el amarillo lo retire y aparezca
+   la rejilla, y si el tiempo se siente bien o mal.
+3. Que tirar con fuerza hacia abajo desde lo alto de la rejilla NO recargue
+   la página. La regla que debería impedirlo, `overscroll-behavior-y:contain`
+   sobre `body.es-movil .hoja` —el contenedor que se desplaza—
+   (`css/luque.css`, sobre la línea 1038), está puesta; que baste en Chrome de
+   Android es justo lo que no se puede comprobar sin el teléfono.
+4. Que deslizar desde el borde izquierdo de la pantalla dispare el gesto de
+   «atrás» del navegador y no algo del sitio, y que no estorbe.
+5. Que recorrer la rejilla arriba y abajo vaya suave y no dé tirones.
+6. Que los números se lean sobre fotos claras y sobre fotos oscuras. La
+   geometría a 860px de ancho está verificada por aritmética sobre el CSS —
+   dos columnas con `gap:10px` y `padding:24px` a los lados dejan baldosas de
+   401px, con `aspect-ratio` de respaldo 1.25 eso da 501px de alto, y
+   `.hoja-numero{font-size:1.45rem}` son 23,2px (`css/luque.css`, sobre las
+   líneas 1080-1088 y 1133-1140)—, pero el contraste del número sobre una
+   foto concreta (razonado, no medido por mí en esta tarea: la cifra que
+   circula en el trabajo previo del bloque es 1,07–1,28:1 sostenido por la
+   sombra del texto) sólo lo puede juzgar quien lo mire en pantalla, y con
+   las fotos reales del estudio ese número cambiará de todos modos.
+7. Que tocar un trabajo abra el visor de escritorio —es lo esperado en este
+   bloque— y que la URL de arriba pase a `#/<id>`.
+8. Que girar el teléfono a horizontal y volver a vertical no pierda el sitio
+   por el que se iba.
+9. Que abrir `#/editorial` directamente muestre sólo los trabajos de esa
+   categoría, numerados 04, 05 y 06, sin el amarillo por delante. Comprobado
+   en `contenido.json`: `editorial` son, en el orden de la lista, `bruma`
+   (posición 4), `salitre` (5) y `oleaje` (6), y `MovilHoja` no renumera al
+   filtrar (`tests/pruebas-movil-hoja.js`, «filtrar NO renumera: bruma sigue
+   siendo el 02» prueba lo mismo sobre otra categoría), así que el número que
+   verá Ángel en cada tarjeta filtrada es el de su posición en la lista
+   completa de doce.
+
+Para repetirla: exponer el servidor a la red local
+(`python -m http.server 8000 --bind 0.0.0.0`) y darle a Ángel
+`http://<ip de la máquina en la red local>:8000/`. Si el teléfono no llega,
+el sospechoso es el cortafuegos de Windows: dilo, no lo desactives.
+
+**Aviso para quien mida el ancho del interruptor con Chrome headless en vez
+de un teléfono:** `window.innerWidth` miente con la ventana emulada a móvil.
+Con `Emulation.setDeviceMetricsOverride` a 390px de ancho, `innerWidth` da
+1204. La causa medida es el `mobile:true` de esa llamada, no el
+`devicePixelRatio` —un diagnóstico que circuló durante este bloque atribuía
+la trampa al DPI y proponía `--force-device-scale-factor=1` como arreglo, y
+es falso: `devicePixelRatio` vale 1 con y sin ese flag, e `innerWidth` miente
+igual en los dos casos—. `matchMedia`, `clientWidth` y
+`getBoundingClientRect` sí dan el valor correcto bajo la misma emulación. No
+es un problema del repositorio: `innerWidth` no se usa en ningún `.js` ni
+`.html` del sitio (comprobado con una búsqueda sobre todo el repositorio), así
+que ninguna medición de este bloque quedó invalidada por esto; es sólo una
+trampa para quien mida el interruptor de ancho (`js/movil.js`) sin un
+teléfono delante.
+
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **271 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **324 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
 quedaba fuera por tocar el DOM —, desde el bloque 4b la capa impura de
-`Router.ir`, que hasta entonces no tenía ninguna prueba, y desde el bloque 4c
-los tres módulos puros del móvil.
+`Router.ir`, que hasta entonces no tenía ninguna prueba, desde el bloque 4c
+los tres módulos puros del móvil, y desde el bloque 4d el interruptor de
+ancho (`js/movil.js`) y la hoja móvil —rejilla, filtrado y hero fundido—
+(`js/movil-hoja.js`). Medido el 2026-09-02 con Chrome headless
+(`--virtual-time-budget=10000 --dump-dom`) contra `tests/test.html` servido
+por `python -m http.server`: la línea final dice «324 pasan, 0 fallan» y hay
+exactamente 324 líneas `class="ok"` en el volcado.
 
-Si las cuentas con `grep -c "prueba("` te van a salir **273**, no 271: dos de
-esas llamadas viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos
-cargas que están diseñadas para fallar. Nunca se ejecutan; están ahí para que la
-sección se ponga en rojo si algún día la carga deja de fallar. El número que
+Si las cuentas con `grep -c "prueba("` te van a salir **330**, no 324. La
+diferencia son seis coincidencias que no llegan a ejecutarse como prueba: dos
+viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos cargas que
+están diseñadas para fallar —nunca se ejecutan; están ahí para que la sección
+se ponga en rojo si algún día la carga deja de fallar—; tres viven en
+`tests/arnes.js` —un comentario que menciona `prueba()`, la línea
+`function prueba(nombre, fn) {` que define la propia función, y una llamada
+de repliegue que sólo corre si una sección `describeAsync` lanza, cosa que no
+pasa con la suite en verde—; y la última es un comentario de
+`tests/pruebas-galeria.js` que también nombra `prueba()`. El número que
 cuenta es el que imprime la suite al pie.
 
 **Lo que comprueba cada uno de los tres módulos del móvil (72 comprobaciones,
@@ -309,8 +412,9 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   `pintar`.
 - El fallback de categoría desconocida en `Lista.pintar` (cuando una fila trae
   una categoría que no está en `ETIQUETAS`).
-- **`js/router.js:127`, la normalización `pieza === undefined ? null : pieza`,
-  no la protege ninguna prueba**, y se decidió a sabiendas no escribirle una.
+- **La normalización `pieza === undefined ? null : pieza`, en el cuerpo de
+  `Router.ir` (`js/router.js`, sobre la línea 128), no la protege ninguna
+  prueba**, y se decidió a sabiendas no escribirle una.
   Cambiarla por `pieza || null` deja la suite entera en verde, porque para
   distinguir las dos formas hay que pasarle un valor *falsy* —`0`, `''`,
   `false`, `NaN`— y de todos ellos el único que un llamador razonable escribiría
@@ -322,9 +426,11 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   suite no le va a avisar. Si algún bloque futuro admite la pieza `0`, esto pasa
   de nota a fallo.
 - **Nadie prueba que `galeria.js` y `visor.js` sigan hablando bien con el
-  router.** Los dos llaman a `Router.ir` —`galeria.js:196,197,213`,
-  `visor.js:41,129,130`— y se suscriben con `Router.alCambiar`, y de eso no hay
-  ni una comprobación: los dos archivos están enteros sin cobertura.
+  router.** Los dos llaman a `Router.ir` —`galeria.js` en el clic del menú de
+  categorías y en el `Escape`, ambos dentro de `Galeria.init` (sobre las
+  líneas 231-232 y 248), `visor.js:41,129,130`— y se suscriben con
+  `Router.alCambiar`, y de eso no hay ni una comprobación: los dos archivos
+  están enteros sin cobertura.
 
   `hero.js` es el caso distinto, y conviene no confundirlo. Toca al router en un
   solo sitio, `js/hero.js:33`, y es **el único archivo del sitio que llama a
@@ -337,7 +443,8 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   seis, corriendo cada una en el código nuevo y en `c3dd54d` —el estado anterior
   al bloque— para comparar en vez de fiarse de la memoria:
 
-  1. Filtrar por categoría (`js/galeria.js:196-197`): pulsar «editorial» deja la
+  1. Filtrar por categoría (`js/galeria.js`, el clic del menú de categorías en
+     `Galeria.init`, sobre las líneas 231-232): pulsar «editorial» deja la
      URL en `#/editorial` y la categoría activa; pulsarla otra vez vuelve a todos
      y deja la URL desnuda. **Idéntico en los dos.**
   2. Abrir un proyecto (`js/visor.js:41`): pulsar la tarjeta de *bruma* deja la
