@@ -1067,9 +1067,21 @@ body.es-movil .hoja.con-hero{ overflow:hidden; }
 
 .hoja-celda{ position:relative; }
 
-/* El atributo `hidden` del navegador es `display:none`, pero la regla que le
-   da display a la celda como hija de la rejilla le ganaría por especificidad.
-   Sin esta línea, filtrar no escondería nada. */
+/* Hoy esta línea no hace falta, y conviene saberlo antes de tocarla: NINGUNA
+   regla de autor le da `display` a la celda —las únicas tres que la nombran en
+   esta hoja son `.hoja-celda{position:relative}`, ésta misma y
+   `.hoja-celda.sin-foto img`, y de esas sólo la última pone `display`, sobre la
+   imagen y no sobre la celda—, así que el `[hidden]` de la hoja del NAVEGADOR
+   gana él solo. Medido borrando esta regla en caliente sobre `#/foto-stills`
+   con nueve celdas ocultas: el `display` calculado sigue siendo `none` y el
+   `scrollHeight` de la hoja no se mueve (844 con ella y sin ella).
+
+   Está por lo que pasaría en cuanto alguien le diera `display` a la celda desde
+   aquí: una regla de AUTOR le gana a la del navegador por ORIGEN de cascada,
+   por poca especificidad que tenga, y entonces filtrar dejaría de esconder.
+   Medido también: quitando esta línea y añadiendo `.hoja-celda{display:block}`,
+   la celda oculta pasa a `display:block`; reponiéndola vuelve a `none`. Es un
+   blindaje, no una necesidad de hoy. */
 .hoja-celda[hidden]{ display:none; }
 
 .hoja-boton{
@@ -1109,9 +1121,15 @@ body.es-movil .hoja.con-hero{ overflow:hidden; }
 /* ------------------------------------------------------------
    EL HERO FUNDIDO
    Ocupa la pantalla entera por encima de la rejilla y se va al
-   deslizar hacia arriba. Los 380ms casan con SALIDA_MS de
-   js/movil-hoja.js: si no casaran, el nodo desaparecería de
-   golpe a mitad del fundido.
+   deslizar hacia arriba. Los 380ms de aquí son exactamente
+   SALIDA_MS de js/movil-hoja.js, que es lo que espera antes de
+   quitar el nodo. Lo que importa no es que sean iguales, sino
+   que el fundido no dure MÁS que esa espera: si durara más, el
+   nodo desaparecería de golpe a mitad del fundido. En
+   movimiento reducido bajan a 200ms (el bloque de más abajo),
+   así que siguen por debajo de los 380 y el nodo se retira
+   después del fundido, nunca durante. Las dos ramas medidas
+   con `getComputedStyle`: 0.38s la normal y 0.2s la reducida.
 ------------------------------------------------------------ */
 .hoja-hero{
   position:fixed; inset:0; z-index:10;
@@ -1143,15 +1161,15 @@ body.es-movil .hoja.con-hero{ overflow:hidden; }
 }
 
 @media (prefers-reduced-motion: reduce){
-  .hoja-hero{ transition:opacity 0.2s ease; }
-  .hoja-hero.fuera{ transform:none; }
-}
-
-@media (prefers-reduced-motion: reduce){
   .visor{ transition:opacity 0.2s ease; }
   .visor.viajando .visor-esquina,
   .visor.viajando .visor-escena img,
   .visor.viajando .visor-escena video{ transition:none; }
   .visor .visor-chrome{ transition:opacity 0.2s ease; }
   .visor-ficha, .visor-escena{ transition:none; }
+
+  /* El hero de la portada móvil va aquí dentro y no en un `@media` propio:
+     eran dos bloques con la condición idéntica y pegados el uno al otro. */
+  .hoja-hero{ transition:opacity 0.2s ease; }
+  .hoja-hero.fuera{ transform:none; }
 }

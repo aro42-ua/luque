@@ -42,10 +42,10 @@ window.MovilHoja = (function () {
     img.decoding = 'async';
 
     /* Si la foto no llega, el marco se queda con su número: un hueco numerado
-       se lee como «falta esa», no como «la web está rota». La clase la usará
-       el CSS de la Tarea 6 para esconder la imagen rota —hoy `.sin-foto` no
-       está todavía en css/luque.css—; el número sobrevive solo, porque cuelga
-       del botón y no de la imagen. */
+       se lee como «falta esa», no como «la web está rota». Quien esconde la
+       imagen rota es la regla `.hoja-celda.sin-foto img` de css/luque.css, ya
+       escrita; el número sobrevive solo, porque cuelga del botón y no de la
+       imagen. */
     img.addEventListener('error', function () {
       celda.classList.add('sin-foto');
     });
@@ -80,9 +80,10 @@ window.MovilHoja = (function () {
      prohíbe cuando dice que el número identifica el trabajo y no su sitio.
 
      `hidden` y no una clase: el atributo saca la celda del tabulador y del
-     lector de pantalla a la vez, que es lo que hace falta. La Tarea 6 añade
-     `.hoja-celda[hidden]{display:none}` porque la regla de rejilla que le da
-     `display` a la celda ganaría al `display:none` del navegador. */
+     lector de pantalla a la vez, que es lo que hace falta. Esconderla es cosa
+     de la hoja del navegador, que ya le da `display:none` a todo lo que lleve
+     `hidden`; css/luque.css repite la regla como blindaje —el porqué está
+     escrito allí, sobre `.hoja-celda[hidden]`— y no porque hoy haga falta. */
   function filtrar(contenedor, categoria) {
     var celdas = contenedor.querySelectorAll('li.hoja-celda');
     for (var i = 0; i < celdas.length; i++) {
