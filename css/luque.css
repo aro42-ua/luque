@@ -1056,7 +1056,7 @@ body.es-movil .hoja.con-hero{ overflow:hidden; }
 
 /* Y mientras está delante, tampoco se TABULA por detrás.
 
-   `MovilHoja.entrada` (js/movil-hoja.js) le pone `aria-hidden="true"` a la
+   `MovilPuerta.entrada` (js/movil-puerta.js) le pone `aria-hidden="true"` a la
    rejilla, y eso la esconde del lector de pantalla pero NO del tabulador: son
    dos cosas distintas y `aria-hidden` sólo hace la primera. Sin esta regla, con
    la puerta puesta el primer Tab caía en el botón «Abrir el proyecto Niebla»
@@ -1145,7 +1145,7 @@ body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
    EL HERO FUNDIDO
    Ocupa la pantalla entera por encima de la rejilla y se va al
    deslizar hacia arriba. Los 380ms de aquí son exactamente
-   SALIDA_MS de js/movil-hoja.js, que es lo que espera antes de
+   SALIDA_MS de js/movil-puerta.js, que es lo que espera antes de
    quitar el nodo. Lo que importa no es que sean iguales, sino
    que el fundido no dure MÁS que esa espera: si durara más, el
    nodo desaparecería de golpe a mitad del fundido. En
