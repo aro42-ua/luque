@@ -29,7 +29,7 @@ describeAsync('MovilPuerta — el hero se va del documento al cruzar', function 
     return c;
   }
 
-  /* Margen holgado sobre el fundido: lo que se comprueba es que el nodo acaba
+  /* Margen holgado sobre el deslizamiento: lo que se comprueba es que el nodo acaba
      yéndose, no cuándo exactamente. */
   function esperar(ms) {
     return new Promise(function (ok) { setTimeout(ok, ms); });

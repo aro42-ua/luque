@@ -268,8 +268,8 @@ una en el bloque 4e; donde una medición contradijo lo razonado, se dice.
    de `visibility` retardada 0,45s para que `translateX(-100%)` siga sacando
    el panel cerrado del orden de tabulación (`css/luque.css`). Medido con la
    misma emulación móvil de verdad: antes del arreglo, `elementFromPoint` en
-   el punto del antiguo botón «Ficha» con el panel abierto devolvía el propio
-   panel, confirmando la sospecha del bloque 4d. El arreglo mismo escondía un
+   el punto del antiguo botón «Ficha» con el panel abierto devolvía `#fichaCat`,
+   confirmando la sospecha del bloque 4d. El arreglo mismo escondía un
    defecto que la medición cazó antes de darlo por bueno: en el CENTRO del
    botón nuevo, `elementFromPoint` devolvía `fichaCat` y no `fichaCerrar` —
    `.visor-ficha-cat` tiene `opacity:0.55`, que le abre su propio contexto de
