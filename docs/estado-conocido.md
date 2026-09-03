@@ -239,7 +239,8 @@ siguen sin confirmar, en bloque y no uno por uno:
    categoría, numerados 04, 05 y 06, sin el amarillo por delante. Comprobado
    en `contenido.json`: `editorial` son, en el orden de la lista, `bruma`
    (posición 4), `salitre` (5) y `oleaje` (6), y `MovilHoja` no renumera al
-   filtrar (`tests/pruebas-movil-hoja.js`, «filtrar NO renumera: bruma sigue
+   filtrar (`tests/pruebas-movil-hoja-filtrar.js`, «filtrar NO renumera: bruma
+   sigue
    siendo el 02» prueba lo mismo sobre otra categoría), así que el número que
    verá Ángel en cada tarjeta filtrada es el de su posición en la lista
    completa de doce.
@@ -267,7 +268,7 @@ ancho (`js/movil.js`) sin un teléfono delante.
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **324 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **325 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -275,12 +276,14 @@ quedaba fuera por tocar el DOM —, desde el bloque 4b la capa impura de
 `Router.ir`, que hasta entonces no tenía ninguna prueba, desde el bloque 4c
 los tres módulos puros del móvil, y desde el bloque 4d el interruptor de
 ancho (`js/movil.js`) y la hoja móvil —rejilla, filtrado y hero fundido—
-(`js/movil-hoja.js`). Medido el 2026-09-02 con Chrome headless
-(`--virtual-time-budget=10000 --dump-dom`) contra `tests/test.html` servido
-por `python -m http.server`: la línea final dice «324 pasan, 0 fallan» y hay
-exactamente 324 líneas `class="ok"` en el volcado.
+(`js/movil-hoja.js`, cuyas pruebas viven repartidas en los cuatro
+`tests/pruebas-movil-hoja-*.js`, uno por `describe`, porque juntas pasaban del
+techo de 300 líneas). Medido el 2026-09-03 con Chrome headless
+(`--virtual-time-budget=15000 --dump-dom`) contra `tests/test.html` servido
+por `python -m http.server`, con el servidor verificado por `curl` antes de
+medir: la línea final dice «325 pasan, 0 fallan».
 
-Si las cuentas con `grep -c "prueba("` te van a salir **330**, no 324. La
+Si las cuentas con `grep -c "prueba("` te van a salir **331**, no 325. La
 diferencia son seis coincidencias que no llegan a ejecutarse como prueba: dos
 viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos cargas que
 están diseñadas para fallar —nunca se ejecutan; están ahí para que la sección
