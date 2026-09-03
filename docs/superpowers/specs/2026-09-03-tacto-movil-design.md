@@ -102,9 +102,13 @@ ella en vez de contra una copia.
 Arrastrar **hacia abajo** no hace nada: el recorrido se fija en cero por abajo.
 La hoja no se puede hundir.
 
-**El movimiento reducido conserva el comportamiento de hoy, entero:** se decide
-al soltar, la hoja se desvanece, y el dedo no arrastra nada. No es una excepción
-por comodidad, son dos razones. La preferencia pide menos movimiento, y una hoja
+**El movimiento reducido conserva lo que se VE hoy:** el dedo no arrastra nada y
+la hoja se desvanece en vez de deslizarse. Lo que no conserva es la regla, y hay
+que decirlo con precisión porque «conserva el comportamiento de hoy» sería
+falso: **la decisión al soltar pasa a ser la nueva —golpe o posición— también
+aquí.** Suprimir el pintado continuo es lo que pide la preferencia; mantener dos
+reglas distintas de salida según una consulta de medios sería un segundo camino
+que nadie prueba. No es una excepción por comodidad, son dos razones. La preferencia pide menos movimiento, y una hoja
 atada al dedo es movimiento continuo. Y hay una trampa concreta: la salida nueva
 es un deslizamiento **sin fundido**, mientras que la regla de movimiento reducido
 de hoy es `transform:none`. Juntarlas sin pensar deja al teléfono con movimiento
