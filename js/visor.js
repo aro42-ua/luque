@@ -57,33 +57,11 @@ window.Visor = (function () {
 
   function movimientoReducido() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
 
-  /* A quién se le pregunta de dónde sale el vuelo de la foto.
-
-     Hasta el bloque 4e se le preguntaba siempre a `Galeria`, y en un móvil eso
-     salía mal de una forma que no daba error: `Galeria.init()` se llama también
-     en móvil, así que devolvía un botón de verdad — pero uno que vive dentro de
-     `.gallery`, al que el CSS móvil le pone `display:none`. El rectángulo de un
-     elemento con `display:none` es todo ceros, así que la foto volaba desde un
-     punto en la esquina superior izquierda, que es lo que se veía como
-     «aparece de la nada».
-
-     Ésta es la primera y única vez que el visor sabe que existe un móvil. Se
-     acepta a propósito: hay exactamente dos portadas y `js/movil.js` ya es el
-     sitio del proyecto donde se pregunta en qué mundo estamos. Si algún día hay
-     una tercera, éste es el punto donde conviene invertir la dependencia y que
-     la portada activa se registre. */
-  function elementoQueAbre(id) {
-    if (window.Movil.actual() === 'movil') {
-      return window.MovilHoja.elementoDe(document.getElementById('hojaRejilla'), id);
-    }
-    return window.Galeria.elementoDe(id);
-  }
-
   function abrir(id) {
     var p = window.Datos.porId(id); if (!p) return;
 
     abiertoConRaton = pendienteConRaton; pendienteConRaton = false; // se consume: solo para esta apertura
-    proyecto = p; elementoQueAbrio = elementoQueAbre(id);
+    proyecto = p; elementoQueAbrio = window.VisorOrigen.elemento(id);   // qué portada responde: js/visor-origen.js
     var esVideo = (p.tipo === 'video');
     estado = window.VisorEstado.abrir(estado, id, esVideo ? 1 : p.piezas.length);
     raiz.classList.toggle('video', esVideo);

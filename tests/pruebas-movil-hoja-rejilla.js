@@ -153,10 +153,18 @@ describe('MovilHoja — la rejilla', function () {
     }), null);
   });
 
-  /* Filtrar esconde con `hidden`, no borra. Una celda escondida sigue teniendo
-     su sitio y su rectángulo vale cero, así que el visor debe poder
-     encontrarla; quien decide qué hacer con un rectángulo en ceros es el
-     visor, no esto. */
+  /* Filtrar esconde con `hidden`, no borra: la celda sigue EN EL DOM y
+     `elementoDe` tiene que seguir encontrándola. Eso es lo único que esta
+     prueba fija, y es lo que hace que el visor caiga en su rama sin vuelo en
+     vez de reventar al abrir un trabajo que el filtro tapa.
+
+     Lo que NO hay que creerse —lo decía este mismo comentario y era falso— es
+     que una celda escondida «conserve su sitio». Medido al filtrar por
+     'videoclip' en una rejilla de cuatro: `bruma` pasa de `{x:250,y:24,w:216,
+     h:269}` a `{0,0,0,0}`, porque `display:none` no deja caja; y `reflejo`, que
+     sobrevive al filtro, REFLOTA de `{x:250,y:303}` a `{x:24,y:24}` al
+     recolocarse las que quedan. O sea que esconder una celda mueve a las demás.
+     Quien decide qué hacer con un rectángulo en ceros es el visor, no esto. */
   prueba('elementoDe encuentra también una celda escondida por el filtro', function () {
     igual(enUnaRejilla(function (ol) {
       MovilHoja.filtrar(ol, 'videoclip');

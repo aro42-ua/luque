@@ -366,6 +366,7 @@
   <script src="js/visor-video.js"></script>
   <script src="js/visor-carga.js"></script>
   <script src="js/visor-chrome.js"></script>
+  <script src="js/visor-origen.js"></script>
   <script src="js/visor.js"></script>
   <script src="js/movil-gestos.js"></script>
   <script src="js/movil.js"></script>
@@ -419,28 +420,6 @@
       window.MovilHoja.filtrarDesdeRuta(rejilla, ruta);
     });
 
-    window.Router.init();
-
-    /* Fallar y no tener nada son cosas distintas y merecen frases distintas:
-       una lista vacía es contenido legítimo de un estudio que aún no ha subido
-       su trabajo, no un error que haya que confesar. */
-    var aviso = null;
-    if (error) aviso = error;
-    else if (!proyectos.length) aviso = 'Todavía no hay proyectos que enseñar.';
-    if (aviso) {
-      window.Galeria.mostrarError(aviso);
-      /* El MISMO aviso, también en la portada móvil, y no uno nuevo.
-         `Galeria.mostrarError` escribe dentro de `#spatialStage`, que en móvil
-         va con display:none: sin esta copia el fallo sería invisible justo en
-         el dispositivo por el que entra más gente, y quien lo viera pensaría
-         que la culpa es de su conexión. */
-      var p = document.createElement('p');
-      p.className = 'galeria-vacia';
-      p.setAttribute('role', 'status');
-      p.textContent = aviso;
-      document.getElementById('hoja').appendChild(p);
-    }
-
     /* La puerta de entrada se elige UNA vez, aquí, y no se vuelve a elegir: el
        ancho de este instante decide qué hero se arma (más abajo) y de qué
        lado queda el otro, inerte. Estrechar o ensanchar después no reabre la
@@ -450,6 +429,33 @@
     var consultaMovil = window.matchMedia(window.Movil.CONSULTA);
     var puertaMovil = consultaMovil.matches;
 
+    /* Esto va ANTES de `Router.init()`, y es la ronda de arreglos de la Tarea 4
+       quien lo subió aquí desde debajo del aviso de error. El motivo es el
+       mismo que el del comentario de arriba sobre `MovilHoja.pintar`, aplicado
+       a otro suscriptor: `Router.init()` avisa de forma SÍNCRONA, y el
+       suscriptor del visor abre el trabajo de la ruta inicial ahí mismo. Al
+       abrir, el visor pregunta a `js/visor-origen.js` de dónde sale el vuelo, y
+       ésa es una pregunta que NO se puede contestar sin que el lado esté ya
+       decidido: con estas líneas debajo de `Router.init()`, `Movil.actual()`
+       valía `null` y un enlace en frío a un trabajo en el móvil
+       —`index.html#/niebla`, el caso normal de quien llega desde un enlace
+       compartido— se iba por la rama de escritorio y volaba desde un
+       rectángulo fuera de pantalla.
+
+       No basta con decidir el lado: hace falta que `body.es-movil` esté
+       APLICADO, porque es esa clase la que enciende `body.es-movil .hoja{
+       display:block}` (css/luque.css) y saca a la rejilla de `display:none`.
+       Una celda en un subárbol apagado mide todo ceros, que es el mismo defecto
+       con otro disfraz. La rama `movil` de aquí abajo pone la clase de forma
+       síncrona, así que al llegar a `Router.init()` las dos cosas están hechas.
+
+       Subirlo es seguro y no da la vuelta a nada de lo que afinó el bloque 4d:
+       en el arranque ancho la rama `escritorio` sólo llama a `Galeria.remedir()`
+       —que necesita `Galeria.init()`, ya corrido más arriba— y se salta
+       `Hero.rematar()` por la guarda `if (puertaMovil)`; en el arranque
+       estrecho la rama `movil` sólo añade una clase y se salta la retirada de
+       `#hojaHero` por la guarda `if (!puertaMovil)`. Ninguna de las dos toca al
+       Router, al Hero ni a la rejilla, y `Hero.init()` sigue yendo el último. */
     window.Movil.init(consultaMovil, {
       movil: function () {
         document.body.classList.add('es-movil');
@@ -479,7 +485,7 @@
            por elegancia: `Movil.init` llama a esta rama de forma SÍNCRONA
            (las dos primeras líneas del cuerpo de `init`, `js/movil.js`,
            sobre las líneas 34-35), o sea ANTES de que `Hero.init()` haya
-           corrido unas líneas más abajo. Sin el `if`, en cualquier arranque
+           corrido más abajo. Sin el `if`, en cualquier arranque
            ancho `heroEl` todavía es `null` y `rematarEntrada` lanza — no en
            su primera línea, sino en la TERCERA, al asignar `heroEl.hidden`
            (`js/hero.js`, tercera sentencia del cuerpo de `rematarEntrada`,
@@ -507,6 +513,28 @@
         window.Galeria.remedir();
       }
     });
+
+    window.Router.init();
+
+    /* Fallar y no tener nada son cosas distintas y merecen frases distintas:
+       una lista vacía es contenido legítimo de un estudio que aún no ha subido
+       su trabajo, no un error que haya que confesar. */
+    var aviso = null;
+    if (error) aviso = error;
+    else if (!proyectos.length) aviso = 'Todavía no hay proyectos que enseñar.';
+    if (aviso) {
+      window.Galeria.mostrarError(aviso);
+      /* El MISMO aviso, también en la portada móvil, y no uno nuevo.
+         `Galeria.mostrarError` escribe dentro de `#spatialStage`, que en móvil
+         va con display:none: sin esta copia el fallo sería invisible justo en
+         el dispositivo por el que entra más gente, y quien lo viera pensaría
+         que la culpa es de su conexión. */
+      var p = document.createElement('p');
+      p.className = 'galeria-vacia';
+      p.setAttribute('role', 'status');
+      p.textContent = aviso;
+      document.getElementById('hoja').appendChild(p);
+    }
 
     if (puertaMovil) {
       window.Hero.init({ alCargar: function () {
