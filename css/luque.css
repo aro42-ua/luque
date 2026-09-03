@@ -952,6 +952,20 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 .visor-linea-marca i:first-child{ top:-11px; left:-5px; border-right:none; border-bottom:none; }
 .visor-linea-marca i:last-child{  top:2px;   left:-5px; border-right:none; border-top:none; }
 
+/* El panel cerrado sigue RENDERIZADO —`translateX(-100%)` lo saca de la vista
+   pero no del documento—, y `aria-hidden` NO saca del orden de tabulación. Sin
+   esto, el botón de cerrar es alcanzable con el tabulador estando el panel
+   fuera de la pantalla, y pulsarlo abre un panel que no se ve: es la misma
+   trampa que el bloque 4d cerró en la rejilla de la portada móvil.
+
+   El RETARDO de la transición es la mitad no evidente. `visibility` no
+   interpola, salta; sin retardarla hasta el final, el panel se volvería
+   invisible en el primer fotograma y su deslizamiento de salida —esos 0,45s
+   que la línea de al lado se molesta en animar— no se vería nunca. Con el
+   retardo, sale deslizándose y sólo entonces desaparece del tabulador.
+
+   La rama abierta pone el retardo a cero: al abrir tiene que ser visible YA,
+   o el deslizamiento de entrada tampoco se vería. */
 .visor-ficha{
   position:absolute; top:0; bottom:0; left:0;
   width:340px;
@@ -959,11 +973,20 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   color:var(--black);
   padding:32px 28px;
   transform:translateX(-100%);
-  transition:transform 0.45s cubic-bezier(.2,.7,.2,1);
+  visibility:hidden;
+  transition:transform 0.45s cubic-bezier(.2,.7,.2,1), visibility 0s 0.45s;
   z-index:4;
   overflow-y:auto;
 }
-.visor.ficha-abierta .visor-ficha{ transform:translateX(0); }
+.visor.ficha-abierta .visor-ficha{
+  transform:translateX(0);
+  visibility:visible;
+  transition:transform 0.45s cubic-bezier(.2,.7,.2,1), visibility 0s 0s;
+}
+
+/* En escritorio no existe: la cabecera se ve entera y un segundo control
+   para cerrar lo mismo es ruido. */
+.visor-ficha-cerrar{ display:none; }
 /* Desplaza la escena con un transform, no con left: left es layout y no
    debe animarse. 340px es el ancho de la ficha, así que el hueco que deja
    coincide con lo que ocuparía cambiar el left del 64px por defecto a 404px. */
@@ -1013,6 +1036,22 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   /* La ficha cubre todo el ancho, así que la foto solo necesita
      desvanecerse: el desplazamiento exacto ya no se ve. */
   .visor.ficha-abierta .visor-escena{ transform:translateX(40px); opacity:0; }
+
+  .visor-ficha-cerrar{
+    display:block;
+    position:absolute; top:18px; right:18px;
+    /* Sin esto, `fichaCat` gana el punto donde se solapan: `opacity:0.55`
+       le abre su propio contexto de apilamiento aunque no esté posicionado,
+       y por orden de DOM ese contexto pinta por encima de este botón —medido
+       con `elementFromPoint` en el centro del botón, que devolvía `fichaCat`
+       hasta que se puso este z-index—. */
+    z-index:1;
+    width:44px; height:44px;
+    border:none; background:none; padding:0;
+    color:var(--black);
+    cursor:pointer;
+  }
+  .visor-ficha-cerrar svg{ width:100%; height:100%; fill:currentColor; }
 }
 
 /* ============================================================

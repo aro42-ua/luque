@@ -1,15 +1,20 @@
 window.VisorFicha = (function () {
-  var elFicha, elInfo, elCat, elTitulo, elDatos;
+  var elFicha, elInfo, elCerrar, elCat, elTitulo, elDatos;
 
   // alAlternar: el manejador de js/visor.js que decide el estado y llama
   // de vuelta a aplicar(). Este módulo no conoce VisorEstado.
   function init(alAlternar) {
     elFicha  = document.getElementById('visorFicha');
     elInfo   = document.getElementById('visorInfo');
+    elCerrar = document.getElementById('fichaCerrar');
     elCat    = document.getElementById('fichaCat');
     elTitulo = document.getElementById('fichaTitulo');
     elDatos  = document.getElementById('fichaDatos');
     elInfo.addEventListener('click', alAlternar);
+    // El mismo manejador que el botón «Ficha»: alAlternar decide el estado
+    // mirándolo, así que desde el panel abierto lo cierra. Dos botones para
+    // una acción, y una sola función que la hace.
+    elCerrar.addEventListener('click', alAlternar);
   }
 
   // Rellena el contenido del panel para el proyecto abierto. Se llama al
