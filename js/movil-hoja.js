@@ -91,6 +91,23 @@ window.MovilHoja = (function () {
     }
   }
 
+  /* Qué elemento representa a un trabajo en la rejilla. Es la pregunta que el
+     visor le hace a la portada antes de volar una foto desde su miniatura, y
+     tiene el mismo nombre que `Galeria.elementoDe` (js/galeria.js) porque es la
+     misma pregunta.
+
+     Lo que NO comparte con aquélla es la firma: aquélla guarda un mapa de
+     módulo y recibe sólo el id; ésta recibe el contenedor, como el resto de
+     `MovilHoja` —`pintar`, `filtrar`—. Mantener este módulo sin estado vale más
+     que las dos firmas iguales.
+
+     Devuelve el BOTÓN y no el `<li>`: al cerrar, el visor le hace `focus()` al
+     elemento que lo abrió, y un `<li>` no lo recibe. */
+  function elementoDe(contenedor, id) {
+    var celda = contenedor.querySelector('li.hoja-celda[data-id="' + id + '"]');
+    return celda ? celda.querySelector('button.hoja-boton') : null;
+  }
+
   /* Traduce una ruta del Router al argumento que espera `filtrar`, con la
      MISMA regla que su equivalente de escritorio (js/galeria.js, el
      suscriptor que arma `Galeria.init()`): 'proyecto' se ignora, porque abrir
@@ -109,6 +126,7 @@ window.MovilHoja = (function () {
     numero: numero,
     filtrar: filtrar,
     filtrarDesdeRuta: filtrarDesdeRuta,
+    elementoDe: elementoDe,
     pintar: pintar
   };
 })();

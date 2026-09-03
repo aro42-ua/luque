@@ -133,4 +133,34 @@ describe('MovilHoja — la rejilla', function () {
       return ol.children.length;
     }), 0);
   });
+
+  /* Devuelve el BOTÓN y no el `<li>`, y no es un detalle: al cerrar el visor,
+     `js/visor.js` le hace `focus()` al elemento que lo abrió, y un `<li>` no
+     recibe foco. Devolver la celda dejaría el foco en el `body` al volver. */
+  prueba('elementoDe devuelve el botón de esa celda', function () {
+    igual(enUnaRejilla(function (ol) {
+      var el = MovilHoja.elementoDe(ol, 'bruma');
+      return [el.tagName, el.className, el.parentNode.dataset.id];
+    }), ['BUTTON', 'hoja-boton', 'bruma']);
+  });
+
+  /* El visor pregunta por cualquier id, también por uno que la rejilla no
+     tenga. Devolver `null` es lo que hace que caiga en su rama sin vuelo en vez
+     de reventar. */
+  prueba('elementoDe devuelve null si ese trabajo no está', function () {
+    igual(enUnaRejilla(function (ol) {
+      return MovilHoja.elementoDe(ol, 'no-existe');
+    }), null);
+  });
+
+  /* Filtrar esconde con `hidden`, no borra. Una celda escondida sigue teniendo
+     su sitio y su rectángulo vale cero, así que el visor debe poder
+     encontrarla; quien decide qué hacer con un rectángulo en ceros es el
+     visor, no esto. */
+  prueba('elementoDe encuentra también una celda escondida por el filtro', function () {
+    igual(enUnaRejilla(function (ol) {
+      MovilHoja.filtrar(ol, 'videoclip');
+      return MovilHoja.elementoDe(ol, 'bruma') !== null;
+    }), true);
+  });
 });
