@@ -31,17 +31,52 @@ soltar termina de salirse por arriba o vuelve a su sitio.
 hoja y la hoja no se transparenta. La metáfora es levantar una hoja de papel de
 una mesa, y una mesa no se mueve ni el papel se vuelve translúcido.
 
-**Qué decide al soltar.** Se va si se cumple cualquiera de las dos:
+**Qué decide al soltar.** Dos ramas, en este orden — es la forma que usa el
+`ViewPager` de Android, y se copia la forma y no solo los números:
 
-- el recorrido hacia arriba supera **1/4 del alto de la ventana**, o
-- la velocidad al soltar supera **0,5 px/ms** y el recorrido llegó al menos a
-  **24px**.
+1. **Manda el golpe.** Si el recorrido llegó al menos a **24px** *y* la
+   velocidad al soltar supera **0,4 px/ms**, la hoja se va.
+2. **Si no, manda la posición.** La hoja se va si se levantó más de **1/4 del
+   alto de la ventana**; si no, vuelve.
 
-El segundo criterio existe porque en un teléfono se pasa página de un golpe
-corto y seco, y exigir un cuarto de pantalla haría que ese golpe no hiciera nada
-—que se siente como que la web no te ha hecho caso—. El mínimo de 24px del
-segundo criterio existe para lo contrario: sin él, un temblor rápido de 6px al
-apoyar el dedo echaría la puerta sin que nadie la empujara.
+La primera rama existe porque en un teléfono se pasa página de un golpe corto y
+seco, y exigir un cuarto de pantalla haría que ese golpe no hiciera nada —se
+siente como que la web no te ha hecho caso—. El mínimo de 24px dentro de esa
+misma rama existe para lo contrario: sin él, un temblor rápido de 6px al apoyar
+el dedo echaría la puerta sin que nadie la empujara. Por eso las dos condiciones
+de la rama 1 van con **`&&` y no con `||`**.
+
+**De dónde salen los tres números.** No son de mi criterio; el criterio ya estaba
+puesto y lo cambié después de mirar fuera:
+
+| | Aquí | Referencia |
+|---|---|---|
+| Distancia mínima del golpe | 24px | `MIN_DISTANCE_FOR_FLING = 25` dip (ViewPager de Android); `threshold: 10` px (Hammer.js) |
+| Velocidad mínima | 0,4 px/ms | `MIN_FLING_VELOCITY = 400` dip/s (ViewPager); `velocity: 0.3` px/ms (Hammer.js) |
+| Fracción de pantalla | 0,25 | `0.4f` (ViewPager); `longSwipesRatio: 0.5` (Swiper.js); ~0,2 es lo que se pide para las hojas inferiores de Material |
+
+**La equivalencia entre `dip` y píxel CSS merece una nota, porque la cuenta
+ingenua sale mal.** Por definición un `dip` es 1/160 de pulgada y un píxel CSS es
+1/96, lo que daría 25 dip = 15 px CSS. Esa conversión no vale en un teléfono: la
+ventana móvil no se escala a 96 por pulgada. Un iPhone 12 declara 390px CSS de
+ancho sobre una pantalla de 64,2mm, o sea unos **154 píxeles CSS por pulgada**,
+frente a los 160 dip por pulgada de Android. Con eso, **1 dip ≈ 1,04 px CSS** y
+los números de Android se trasladan casi uno a uno: 25 dip ≈ 24px, y 400 dip/s ≈
+0,385 px/ms, que se redondea a 0,4.
+
+La fracción de 0,25 es la única que se aparta a propósito de su referencia, y por
+un motivo: el 0,4 de `ViewPager` decide un **cambio de página**, donde
+equivocarse te lleva a otro sitio. Aquí decide una **puerta que se cruza una vez
+y no vuelve**. Equivocarse por exceso cuesta poco —te ahorras el amarillo, que
+era el destino de todos modos— así que el umbral debe ser más generoso que el de
+cambiar de página, no igual.
+
+**La hoja no se mueve hasta que el dedo recorre 10px.** Sin ese margen, apoyar el
+dedo para leer la pantalla ya la desplaza dos o tres píxeles y parece que la web
+tiembla. Los 10px son a la vez el `threshold` por defecto de Hammer.js y el
+`TOQUE` que este repositorio ya tiene escrito en `js/movil-gestos.js`, así que no
+es un número nuevo. **Al cruzarlos, el recorrido se cuenta desde ahí y no desde
+el punto de apoyo**, o la hoja pegaría un salto de 10px justo al empezar.
 
 **La velocidad se mide entre las dos últimas muestras del dedo**, no sobre el
 gesto entero. La diferencia importa y es lo que separa los dos gestos que la
@@ -112,6 +147,12 @@ la spec de agosto, no un accidente— y la salida deja de ser invisible.
 En escritorio no aparece. Un segundo control para cerrar algo que ya se cierra
 desde una cabecera visible es ruido, y el escritorio es el único camino que hoy
 funciona en producción.
+
+Esta elección no es solo gusto: la guía de Material para las hojas inferiores
+nombra las tres salidas de un panel de este tipo y **una de ellas es
+literalmente «un control explícito, como una equis en la barra superior»**. Un
+panel que solo se cierra con un gesto que nadie te ha enseñado no cumple ni
+siquiera la referencia más permisiva.
 
 ## Decisiones, y qué se descartó
 
@@ -221,6 +262,25 @@ de tapar la cabecera, que `touch-action` impida el tirón de recarga, y que el
 arrastre se sienta bien. No hay pruebas de CSS computado en este repositorio —ya
 está anotado como deuda en `docs/estado-conocido.md`—. Eso se verifica midiendo
 en el navegador, y lo último solo en un teléfono de verdad.
+
+## De dónde se copiaron los números
+
+Consultado el 2026-09-03. Se anota la fuente porque un umbral sin procedencia
+es una opinión, y dentro de seis meses nadie sabrá si el 0,4 se midió, se copió
+o se inventó.
+
+- **Hammer.js, reconocedor `swipe`** — `threshold: 10` px, `velocity: 0.3` px/ms.
+  <https://hammerjs.github.io/recognizer-swipe/>
+- **`ViewPager` de Android (AOSP)** — `MIN_DISTANCE_FOR_FLING = 25` dip,
+  `MIN_FLING_VELOCITY = 400` dip, y en `determineTargetPage` la condición del
+  golpe es `Math.abs(deltaX) > mFlingDistance && Math.abs(velocity) >
+  mMinimumVelocity`, con un `truncator` de `0.4f` hacia delante cuando no hay
+  golpe. **De aquí sale la forma de dos ramas, no solo los números.**
+  <https://chromium.googlesource.com/android_tools/+/refs/heads/master/sdk/sources/android-25/android/support/v4/view/ViewPager.java>
+- **Swiper.js** — `longSwipesRatio: 0.5`, `longSwipesMs: 300`,
+  `shortSwipes: true`. <https://swiperjs.com/swiper-api>
+- **Material Design, hojas inferiores** — las salidas de un panel, incluida la
+  equis explícita. <https://m3.material.io/components/bottom-sheets/guidelines>
 
 ## Restricciones globales
 
