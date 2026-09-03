@@ -1294,12 +1294,18 @@ body.es-movil .hoja-hero{
 
      El `body.es-movil` de la PRIMERA es load-bearing, y de la segunda no.
 
+     Las dos mediciones de aquí abajo se REHICIERON en el bloque 4e y no se
+     heredan del anterior: la transición cambió de propiedad, así que una
+     medición vieja ya no valdría. Se tomaron con la preferencia forzada de
+     verdad (Chrome con `--force-prefers-reduced-motion`; sin ese flag este
+     Chrome declara `no-preference` y el `@media` ni siquiera aplica, con lo
+     que desacotar no mide nada), desacotando una regla cada vez.
+
      La de `transition` lo necesita: un `@media` NO añade especificidad, así que
      un `.hoja-hero` a secas (0,1,0) perdería contra el
      `body.es-movil .hoja-hero` (0,2,1) de arriba y la duración reducida se
-     perdería. Medido desacotando sólo ésta: la transición vuelve a
-     `transform 0.38s` —ya no hay `opacity` que perder en la rama normal,
-     porque la salida normal dejó de fundirse.
+     perdería. Medido desacotando sólo ésta: la transición pasa de
+     `opacity 0.2s` a `transform 0.38s`, o sea gana entera la rama normal.
 
      La de `transform` no lo necesita: `.hoja-hero.fuera` es (0,2,0), empata con
      su gemela suelta de arriba y le gana por ORDEN de aparición, porque este
@@ -1310,7 +1316,11 @@ body.es-movil .hoja-hero{
      El `opacity:0` de la segunda regla no compite con nada: la rama normal de
      `.hoja-hero.fuera` no declara `opacity` desde el bloque 4e, así que aquí no
      hay ninguna copia suelta a la que ganarle por especificidad ni por orden
-     — es la única regla de toda la hoja de estilos que la fija. */
+     — es la única regla de toda la hoja de estilos que la fija. Medido con las
+     transiciones apagadas, que es la única forma de leer el DESTINO y no el
+     fotograma que la transición está animando: con la preferencia puesta,
+     `.fuera` da `opacity: 0` y `transform: none`; sin ella, `opacity: 1` y
+     `translateY(-100%)` —la matriz sale con el alto entero de la ventana—. */
   body.es-movil .hoja-hero{ transition:opacity 0.2s ease; }
   /* El `opacity:0` se escribe AQUÍ desde el bloque 4e. Antes lo heredaba de
      `.hoja-hero.fuera`, que ya no lo lleva porque la salida normal dejó de ser

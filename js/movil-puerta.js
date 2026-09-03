@@ -163,10 +163,30 @@ window.MovilPuerta = (function () {
     }
 
     hero.addEventListener('pointerdown', function (e) {
+      /* El estado se apunta ANTES de capturar, y el orden de estas dos líneas
+         es load-bearing: la captura de abajo LANZA con los eventos de la
+         suite, y si se invirtieran, la excepción saldría del oyente antes de
+         apuntar nada y el arrastre se rompería entero en silencio. */
       arrastre = window.MovilArrastre.empezar(arrastre, { y: e.clientY }, e.timeStamp);
       /* Sin capturar el puntero, sacar el dedo del hero mata el arrastre a
-         mitad y la hoja se queda donde estuviera. */
-      if (hero.setPointerCapture) hero.setPointerCapture(e.pointerId);
+         mitad y la hoja se queda donde estuviera.
+
+         Va en `try` porque `setPointerCapture` lanza `NotFoundError` cuando el
+         `pointerId` no es el de un puntero ACTIVO, y la spec obliga a que
+         lance. Un `new PointerEvent(...)` sin `pointerId` trae el 0, que no es
+         ningún puntero de verdad, así que todos los gestos sintetizados de la
+         suite pasan por aquí lanzando —medido: «No active pointer with the
+         given id is found»—. Comprobar que el método existe no bastaba:
+         existe, y aun así lanza. Hoy no pone nada en rojo sólo porque el arnés
+         no instala `window.onerror`; el día que alguien añada ese portón, la
+         suite entera se caería por esto.
+
+         Se traga sin más: no poder capturar el puntero no rompe el arrastre,
+         sólo lo deja sin la red de seguir al dedo fuera del hero, que es justo
+         lo que un puntero que no existe no necesita. */
+      try {
+        hero.setPointerCapture(e.pointerId);
+      } catch (sinPunteroActivo) {}
     });
 
     hero.addEventListener('pointermove', function (e) {
@@ -176,11 +196,12 @@ window.MovilPuerta = (function () {
     });
 
     /* El punto del propio `pointerup` entra como una muestra más ANTES de
-       soltar, y no es cosmético: un navegador siempre manda un `pointermove`
-       justo antes de levantar el dedo, pero un evento sintetizado —los de la
-       suite— puede no mandarlo, y entonces el estado se habría quedado en el
-       punto de apoyo y el recorrido saldría cero. Alimentarlo aquí hace que la
-       decisión use la última posición real pase lo que pase. */
+       soltar, y no es cosmético: en un arrastre de verdad el navegador manda
+       un `pointermove` justo antes de levantar el dedo —no siempre: un toque
+       limpio da `pointerdown` y `pointerup` a secas—, y un evento sintetizado
+       puede no mandarlo nunca. Sin esta muestra el estado se habría quedado en
+       el punto de apoyo y el recorrido saldría cero. Alimentarlo aquí hace que
+       la decisión use la última posición real pase lo que pase. */
     function alSoltar(e) {
       if (!arrastre.activo) return;
       arrastre = window.MovilArrastre.mover(arrastre, { y: e.clientY }, e.timeStamp);

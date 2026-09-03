@@ -36,8 +36,14 @@ describeAsync('MovilPuerta — el hero se va del documento al cruzar', function 
   }
 
   var raiz = caja();
+  /* El alto explícito NO es decoración. Sin él el `#ha` mide cero, y entonces
+     el cuarto de pantalla contra el que `MovilArrastre` compara la posición
+     vale cero también: la puerta se cruzaba por la rama degenerada que
+     `js/movil-arrastre.js` documenta como trampa —cualquier levantada mayor
+     que cero supera un umbral de cero—, o sea pasaba por accidente. Con 800px
+     el umbral son 200 de verdad y el gesto de abajo tiene que ganárselo. */
   raiz.innerHTML =
-    '<div class="hoja-hero" id="ha"></div>' +
+    '<div class="hoja-hero" id="ha" style="height:800px"></div>' +
     '<ol class="hoja-rejilla" id="ra"></ol>';
 
   var hero = raiz.querySelector('#ha');
@@ -45,10 +51,18 @@ describeAsync('MovilPuerta — el hero se va del documento al cruzar', function 
 
   MovilPuerta.entrada(hero, raiz, rejilla, { tipo: 'todos', valor: null, pieza: null });
 
+  /* Cruza por POSICIÓN —400px de recorrido contra los 200 del cuarto de
+     pantalla— y no por golpe, por el mismo motivo que el `deslizarArriba` de
+     pruebas-movil-puerta.js: `timeStamp` es de sólo lectura y se fija al
+     construir el evento, así que la velocidad de un gesto sintetizado sale
+     cero casi siempre. El `pointermove` del medio hace falta para que haya
+     gesto: sin él el dedo no se movió. */
   hero.dispatchEvent(new PointerEvent('pointerdown',
-    { clientX: 100, clientY: 300, bubbles: true }));
+    { clientX: 100, clientY: 780, bubbles: true }));
+  hero.dispatchEvent(new PointerEvent('pointermove',
+    { clientX: 100, clientY: 400, bubbles: true }));
   hero.dispatchEvent(new PointerEvent('pointerup',
-    { clientX: 100, clientY: 210, bubbles: true }));
+    { clientX: 100, clientY: 380, bubbles: true }));
 
   /* La limpieza va en las dos ramas del `then`, no sólo en la buena: una
      prueba en rojo que dejara la caja colgada ensuciaría el documento de las

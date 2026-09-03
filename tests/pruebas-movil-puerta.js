@@ -1,6 +1,12 @@
 /* El hero deslizante: la puerta de entrada de la portada móvil. */
 describe('MovilPuerta — el hero deslizante', function () {
 
+  /* El alto del `#h` es load-bearing: `MovilArrastre` compara lo levantado
+     contra un cuarto de él, así que un `<div>` pelado —que mide cero— haría
+     que la puerta se cruzara con cualquier arrastre, incluso hacia abajo, por
+     la rama degenerada que `js/movil-arrastre.js` documenta como trampa. Con
+     800px el umbral de la posición son 200 de verdad, y es contra ese número
+     contra el que está calibrado `deslizarArriba`. */
   var MARCO =
     '<div>' +
       '<div class="hoja-hero" id="h" style="height:800px"></div>' +
@@ -20,20 +26,35 @@ describe('MovilPuerta — el hero deslizante', function () {
   function rutaProyecto() { return { tipo: 'proyecto', valor: 'bruma', pieza: 3 }; }
   function rutaCategoria(){ return { tipo: 'categoria', valor: 'editorial', pieza: null }; }
 
-  /* Un deslizamiento hacia arriba de verdad: 90px de recorrido vertical, muy
-     por encima de los 24 de `MovilGestos.UMBRAL` —que `MovilArrastre` reutiliza
-     como mínimo del golpe— y sin componente horizontal.
+  /* Un deslizamiento hacia arriba que cruza la puerta por POSICIÓN, no por
+     golpe: 400px de recorrido contra el marco de 800, muy por encima del
+     cuarto de pantalla —200px— que pide `MovilArrastre.FRACCION`.
 
-     El `pointermove` del medio es obligatorio desde el bloque 4e y no es
-     decorativo: el navegador siempre manda uno antes de levantar el dedo, pero
-     un evento sintetizado no, y sin él la hoja nunca se habría movido. */
+     Cruzar por posición no es una preferencia, es lo único que se puede
+     sintetizar. La rama del golpe necesita velocidad; la velocidad sale de
+     `timeStamp`; y `Event.timeStamp` se fija al CONSTRUIR el evento, es de
+     sólo lectura, y Chrome lo cuantiza a 100 µs. Construir el `pointermove`,
+     despacharlo y construir el `pointerup` cabe en el mismo cubo el 97% de
+     las veces —medido, 500 intentos—, así que `dt` sale 0, la velocidad sale
+     0 —`MovilArrastre` lo hace a propósito para no dividir por cero— y el
+     golpe no dispara. Un ayudante que cruzara por golpe deja la suite roja
+     una de cada tres corridas, que es exactamente lo que pasó al escribirlo
+     así en la primera versión de esta tarea.
+
+     La rama del golpe NO se queda sin cubrir: está probada a fondo en
+     `tests/pruebas-movil-arrastre.js`, donde el instante es un parámetro de la
+     función en vez de un reloj que no se puede fijar. Aquí lo que hace falta
+     es CRUZAR.
+
+     El `pointermove` del medio es obligatorio desde el bloque 4e: sin él el
+     gesto es un dedo que no se movió y la hoja nunca se levanta. */
   function deslizarArriba(el) {
     el.dispatchEvent(new PointerEvent('pointerdown',
-      { clientX: 100, clientY: 300, bubbles: true }));
+      { clientX: 100, clientY: 780, bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointermove',
-      { clientX: 100, clientY: 240, bubbles: true }));
+      { clientX: 100, clientY: 400, bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointerup',
-      { clientX: 100, clientY: 210, bubbles: true }));
+      { clientX: 100, clientY: 380, bubbles: true }));
   }
 
   function deslizarAbajo(el) {
@@ -184,22 +205,7 @@ describe('MovilPuerta — el hero deslizante', function () {
     igual(conElHero(rutaPortada(), function (hero, raiz, rejilla) {
       var antes = [rejilla.getAttribute('aria-hidden'),
                    raiz.classList.contains('con-hero')];
-      /* No se usa `deslizarArriba`: sus 90px cruzan por GOLPE a propósito (por
-         eso el `#h` del marco mide 800px de alto), y el golpe se mide entre
-         las dos últimas muestras. Con eventos sintetizados y despachados sin
-         que pase tiempo real, esas dos muestras pueden caer en el mismo
-         instante —`dt` cero, que `MovilArrastre` trata como velocidad cero a
-         propósito y está probado en su propia suite— y entonces el golpe no
-         dispara. Esta prueba no fija el golpe, fija que aria-hidden y
-         con-hero se sueltan al cruzar, así que cruza por POSICIÓN: 400px de
-         recorrido, muy por encima del cuarto de los 800 (200px), que cruza
-         sin depender de ninguna velocidad. */
-      hero.dispatchEvent(new PointerEvent('pointerdown',
-        { clientX: 100, clientY: 780, bubbles: true }));
-      hero.dispatchEvent(new PointerEvent('pointermove',
-        { clientX: 100, clientY: 400, bubbles: true }));
-      hero.dispatchEvent(new PointerEvent('pointerup',
-        { clientX: 100, clientY: 380, bubbles: true }));
+      deslizarArriba(hero);
       return [antes, [rejilla.getAttribute('aria-hidden'),
                       raiz.classList.contains('con-hero')]];
     }), [['true', true], [null, false]]);
@@ -215,10 +221,17 @@ describe('MovilPuerta — el hero deslizante', function () {
      estilo en línea. Lo que se fija es el comportamiento — antes de moverse no
      hay nada, después sí. */
   /* `window.matchMedia` se falsifica, y no por comodidad: sin eso esta prueba
-     diría cosas distintas según el navegador que la corra. Chrome headless
-     declara `prefers-reduced-motion: reduce` POR DEFECTO, y un compañero que
-     tenga la preferencia puesta en su sistema la vería fallar sola. Una prueba
-     que depende del entorno no fija comportamiento, sólo hace ruido.
+     diría cosas distintas según DÓNDE se corra. La preferencia es del sistema
+     operativo, así que un compañero que la tenga puesta —o un portátil en modo
+     de ahorro— vería fallar esta prueba sin haber tocado nada. Una prueba que
+     depende del entorno no fija comportamiento, sólo hace ruido.
+
+     Que conste medido, porque circula lo contrario: este Chrome headless NO
+     declara `reduce` por defecto —`matchMedia('(prefers-reduced-motion:
+     reduce)').matches` da `false`, y para medir la otra rama hay que pasarle
+     `--force-prefers-reduced-motion`—. O sea que hoy la prueba pasaría igual
+     sin falsificar nada; se falsifica para que siga pasando en la máquina de
+     quien no tenga esa suerte.
 
      El `finally` es obligatorio: dejar `matchMedia` falsificado envenenaría
      todo lo que corra después en la misma página. */
