@@ -284,7 +284,7 @@
            lectores de pantalla, que no tienen por qué coincidir con el tipo de
            puntero: por eso ésa nombra las TRES salidas y no se reparte. Todo lo
            que las tres prometen —el deslizamiento, la rueda hacia abajo y la
-           tecla Intro— lo atiende `MovilHoja.entrada` (`js/movil-hoja.js`): el
+           tecla Intro— lo atiende `MovilPuerta.entrada` (`js/movil-puerta.js`): el
            gesto en su `pointerup`, la rueda en su `wheel` y las teclas en su
            `alTeclado`. -->
       <span class="hoja-pista">
@@ -370,6 +370,7 @@
   <script src="js/movil-gestos.js"></script>
   <script src="js/movil.js"></script>
   <script src="js/movil-hoja.js"></script>
+  <script src="js/movil-puerta.js"></script>
   <script>
   /* El contenido llega por red, así que la galería no puede construirse hasta
      que esté. El preloader ya está en pantalla desde el marcado, sin que nadie
@@ -445,7 +446,7 @@
       movil: function () {
         document.body.classList.add('es-movil');
         /* Quien entró por la puerta de escritorio nunca arma `#hojaHero`:
-           `MovilHoja.entrada()` sólo se llama con la puerta móvil (más abajo),
+           `MovilPuerta.entrada()` sólo se llama con la puerta móvil (más abajo),
            y es quien engancha el dedo, la rueda y el teclado que lo cierran.
            Sin ese armado, un `#hojaHero` que aparece porque el ancho bajó del
            umbral a mitad de sesión se queda en el DOM sin ninguna forma de
@@ -460,7 +461,7 @@
       escritorio: function () {
         document.body.classList.remove('es-movil');
         /* Quien entró por la puerta móvil nunca corre `rematarEntrada()`:
-           esa puerta le cede el remate a `MovilHoja.entrada()` (más abajo) y
+           esa puerta le cede el remate a `MovilPuerta.entrada()` (más abajo) y
            no pasa nunca por el botón ENTRAR de escritorio. Sin este rescate,
            cruzar de móvil a escritorio a mitad de sesión (una tableta que
            gira de vertical a apaisado, por ejemplo) dejaba `body` sin
@@ -501,7 +502,7 @@
 
     if (puertaMovil) {
       window.Hero.init({ alCargar: function () {
-        window.MovilHoja.entrada(document.getElementById('hojaHero'),
+        window.MovilPuerta.entrada(document.getElementById('hojaHero'),
                                  document.getElementById('hoja'),
                                  rejilla,
                                  window.Router.rutaActual());

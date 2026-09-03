@@ -11,12 +11,12 @@
    antes esto se llamaba a mano por una puerta trasera de la API y la prueba
    pasaba con el `setTimeout` borrado.
 
-   Fichero aparte y no dentro de pruebas-movil-hoja-hero.js: es la única
+   Fichero aparte y no dentro de pruebas-movil-puerta.js: es la única
    sección de las cuatro en que se partió la antigua pruebas-movil-hoja.js que
    usa `describeAsync` en vez de `describe`, y separarla evita mezclar el
    montaje manual del contenedor con el `ArnesDom.conElemento` síncrono que
    usa el resto de la suite del hero. */
-describeAsync('MovilHoja — el hero se va del documento al cruzar', function () {
+describeAsync('MovilPuerta — el hero se va del documento al cruzar', function () {
 
   /* Fuera de pantalla y NO con display:none, igual que `ArnesDom.caja`: el
      nodo tiene que estar vivo dentro del documento para que quitarlo signifique
@@ -43,7 +43,7 @@ describeAsync('MovilHoja — el hero se va del documento al cruzar', function ()
   var hero = raiz.querySelector('#ha');
   var rejilla = raiz.querySelector('#ra');
 
-  MovilHoja.entrada(hero, raiz, rejilla, { tipo: 'todos', valor: null, pieza: null });
+  MovilPuerta.entrada(hero, raiz, rejilla, { tipo: 'todos', valor: null, pieza: null });
 
   hero.dispatchEvent(new PointerEvent('pointerdown',
     { clientX: 100, clientY: 300, bubbles: true }));
@@ -53,7 +53,7 @@ describeAsync('MovilHoja — el hero se va del documento al cruzar', function ()
   /* La limpieza va en las dos ramas del `then`, no sólo en la buena: una
      prueba en rojo que dejara la caja colgada ensuciaría el documento de las
      siguientes. */
-  return esperar(MovilHoja.SALIDA_MS + 250).then(function () {
+  return esperar(MovilPuerta.SALIDA_MS + 250).then(function () {
     var sigue = raiz.querySelector('.hoja-hero') !== null;
 
     prueba('cruzada la puerta, el nodo se va del documento', function () {

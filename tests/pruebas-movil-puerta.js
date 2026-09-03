@@ -1,5 +1,5 @@
 /* El hero fundido: la puerta de entrada de la portada móvil. */
-describe('MovilHoja — el hero fundido', function () {
+describe('MovilPuerta — el hero fundido', function () {
 
   var MARCO =
     '<div>' +
@@ -11,7 +11,7 @@ describe('MovilHoja — el hero fundido', function () {
     return ArnesDom.conElemento(MARCO, function (raiz) {
       var hero = raiz.querySelector('#h');
       var rejilla = raiz.querySelector('#r');
-      MovilHoja.entrada(hero, raiz, rejilla, ruta);
+      MovilPuerta.entrada(hero, raiz, rejilla, ruta);
       return fn(hero, raiz, rejilla);
     });
   }
@@ -40,7 +40,7 @@ describe('MovilHoja — el hero fundido', function () {
 
   prueba('en la portada, el hero se queda', function () {
     cierto(conElHero(rutaPortada(), function (hero) {
-      return !MovilHoja.heroIdo() && !hero.classList.contains('fuera');
+      return !MovilPuerta.heroIdo() && !hero.classList.contains('fuera');
     }), 'con la ruta vacía el hero tiene que verse');
   });
 
@@ -48,13 +48,13 @@ describe('MovilHoja — el hero fundido', function () {
      pedía un trabajo concreto y anteponerle una portada sería desobedecerlo. */
   prueba('un enlace a un proyecto se salta el hero', function () {
     cierto(conElHero(rutaProyecto(), function () {
-      return MovilHoja.heroIdo();
+      return MovilPuerta.heroIdo();
     }), 'con #/bruma/3 el hero no puede aparecer');
   });
 
   prueba('un enlace a una categoría también se lo salta', function () {
     cierto(conElHero(rutaCategoria(), function () {
-      return MovilHoja.heroIdo();
+      return MovilPuerta.heroIdo();
     }), 'con #/editorial el hero no puede aparecer');
   });
 
@@ -74,7 +74,7 @@ describe('MovilHoja — el hero fundido', function () {
   prueba('deslizar hacia arriba se lleva el hero', function () {
     igual(conElHero(rutaPortada(), function (hero, raiz) {
       deslizarArriba(hero);
-      return [MovilHoja.heroIdo(), hero.classList.contains('fuera'),
+      return [MovilPuerta.heroIdo(), hero.classList.contains('fuera'),
               raiz.querySelector('.hoja-hero') !== null];
     }), [true, true, true]);
   });
@@ -84,7 +84,7 @@ describe('MovilHoja — el hero fundido', function () {
   prueba('deslizar hacia abajo no se lo lleva', function () {
     cierto(conElHero(rutaPortada(), function (hero) {
       deslizarAbajo(hero);
-      return !MovilHoja.heroIdo() && !hero.classList.contains('fuera');
+      return !MovilPuerta.heroIdo() && !hero.classList.contains('fuera');
     }), 'hacia abajo no es el gesto');
   });
 
@@ -96,7 +96,7 @@ describe('MovilHoja — el hero fundido', function () {
         { clientX: 100, clientY: 300, bubbles: true }));
       hero.dispatchEvent(new PointerEvent('pointerup',
         { clientX: 102, clientY: 301, bubbles: true }));
-      return !MovilHoja.heroIdo();
+      return !MovilPuerta.heroIdo();
     }), 'un toque no es un deslizamiento');
   });
 
@@ -105,14 +105,14 @@ describe('MovilHoja — el hero fundido', function () {
   prueba('la rueda hacia abajo se lo lleva', function () {
     cierto(conElHero(rutaPortada(), function (hero) {
       hero.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true }));
-      return MovilHoja.heroIdo();
+      return MovilPuerta.heroIdo();
     }), 'sin la rueda, una ventana estrecha con ratón no puede entrar');
   });
 
   prueba('la rueda hacia arriba no se lo lleva', function () {
     cierto(conElHero(rutaPortada(), function (hero) {
       hero.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, bubbles: true }));
-      return !MovilHoja.heroIdo();
+      return !MovilPuerta.heroIdo();
     }), 'rodar hacia arriba no avanza');
   });
 
@@ -122,7 +122,7 @@ describe('MovilHoja — el hero fundido', function () {
       cierto(conElHero(rutaPortada(), function () {
         document.dispatchEvent(new KeyboardEvent('keydown',
           { key: tecla, bubbles: true }));
-        return MovilHoja.heroIdo();
+        return MovilPuerta.heroIdo();
       }), 'la tecla ' + tecla + ' tiene que abrir la puerta');
     });
   });
@@ -131,7 +131,7 @@ describe('MovilHoja — el hero fundido', function () {
     cierto(conElHero(rutaPortada(), function () {
       document.dispatchEvent(new KeyboardEvent('keydown',
         { key: 'a', bubbles: true }));
-      return !MovilHoja.heroIdo();
+      return !MovilPuerta.heroIdo();
     }), 'escribir una letra no es cruzar la puerta');
   });
 
@@ -153,7 +153,7 @@ describe('MovilHoja — el hero fundido', function () {
       return conElHero(rutaPortada(), function (hero, raiz, rejilla) {
         document.dispatchEvent(new KeyboardEvent('keydown',
           { key: 'Enter', bubbles: true }));
-        return [MovilHoja.heroIdo(), hero.classList.contains('fuera'),
+        return [MovilPuerta.heroIdo(), hero.classList.contains('fuera'),
                 rejilla.getAttribute('aria-hidden')];
       });
     }), [true, true, null]);
@@ -164,7 +164,7 @@ describe('MovilHoja — el hero fundido', function () {
       deslizarArriba(hero);
       deslizarArriba(hero);
       hero.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true }));
-      return MovilHoja.heroIdo();
+      return MovilPuerta.heroIdo();
     }), 'el segundo gesto tiene que ser inofensivo');
   });
 
