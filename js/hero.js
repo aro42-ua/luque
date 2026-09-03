@@ -9,6 +9,8 @@ window.Hero = (function () {
   var SOSTEN_FASE_A = 900;    // ms que se sostiene el logo de fin de carga
   var arranque = 0;
   var saliendo = false;
+  var alTerminarLaCarga = null;
+  var rematada = false;
 
   function movimientoReducido() {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,6 +32,12 @@ window.Hero = (function () {
       setTimeout(function () {
         preloader.style.display = 'none';
         document.body.classList.add('preloader-done');
+        /* La portada móvil se queda con lo que pasa después. El preloader
+           sigue siendo de este módulo —sus 1200ms mínimos y su fundido viven
+           aquí y en ningún otro sitio—, pero quién entra por la puerta lo
+           decide quien arranca. Sin esto, el móvil tendría que copiar esos
+           tiempos, y una constante copiada es una constante que diverge. */
+        if (alTerminarLaCarga) { alTerminarLaCarga(); return; }
         if (debeSaltarse(window.Router.rutaActual())) rematarEntrada();
         else mostrarFaseA();
       }, 700);
@@ -85,7 +93,16 @@ window.Hero = (function () {
     heroEl.classList.add('saliendo');
   }
 
+  /* Idempotente a propósito, con guarda explícita y no sólo por la suerte de
+     que sus efectos lo sean: la Tarea 5 la llama también desde `index.html`
+     al cruzar de móvil a escritorio a mitad de sesión (ver `Hero.rematar` más
+     abajo), y esa puerta puede cruzarse de vuelta más de una vez en la misma
+     visita si el ancho oscila alrededor del umbral. Sin la guarda, cada
+     cruce repetiría el robo de foco a `#gallery` — inocuo la primera vez,
+     molesto si le quita el foco a quien ya estaba tecleando dentro. */
   function rematarEntrada() {
+    if (rematada) return;
+    rematada = true;
     heroEl.hidden = true;
     document.body.classList.remove('entrando');
     document.body.classList.add('galeria-activa');
@@ -98,7 +115,9 @@ window.Hero = (function () {
     }
   }
 
-  function init() {
+  function init(opciones) {
+    alTerminarLaCarga = (opciones && opciones.alCargar) || null;
+
     preloader  = document.getElementById('preloader');
     heroEl     = document.getElementById('hero');
     intro      = document.getElementById('heroIntro');
@@ -123,5 +142,13 @@ window.Hero = (function () {
     else window.addEventListener('load', retirarPreloader);
   }
 
-  return { init: init, debeSaltarse: debeSaltarse };
+  return {
+    init: init,
+    debeSaltarse: debeSaltarse,
+    /* Se expone para que quien cruza de móvil a escritorio sin haber pasado
+       por el botón ENTRAR pueda dejar la galería en el mismo estado que
+       quien sí lo pulsó. Ver el comentario de `rematarEntrada` sobre por qué
+       es seguro llamarla más de una vez. */
+    rematar: rematarEntrada
+  };
 })();

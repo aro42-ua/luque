@@ -253,6 +253,50 @@
   </section>
 
   <!-- ============================================================
+       PORTADA MÓVIL — la hoja
+       Está siempre en el marcado y el CSS decide si se ve: el
+       interruptor de js/movil.js es el ancho, y construir las dos
+       portadas una sola vez evita reconstruir al girar el móvil,
+       que es lo que costaría la posición del recorrido.
+       Las imágenes son loading="lazy", así que en escritorio —donde
+       este bloque va con display:none— el navegador no las pide.
+  ============================================================ -->
+  <section class="hoja" id="hoja" aria-label="Trabajo seleccionado">
+    <div class="hoja-hero" id="hojaHero">
+      <img class="logo-mark" src="logo-luque.svg" alt="LUQUE!">
+      <div class="roles">
+        <span>Dirección de fotografía</span>
+        <span>Operadora de cámara</span>
+      </div>
+      <!-- La pista es la ÚNICA indicación de cómo se cruza la puerta, así que
+           tiene que servir a los tres públicos que llegan aquí. Van TRES
+           frases, y sólo se ve una cada vez; cuál, lo decide el CSS.
+
+           Por qué tres y no una: el interruptor es el ANCHO y no el dedo
+           (`js/movil.js`), así que por esta portada pasa tanto un móvil como
+           una ventana de escritorio estrechada, con ratón y teclado y sin
+           pantalla que deslizar. «Desliza hacia arriba» es imposible de seguir
+           en la segunda, y «Baja con la rueda» no significa nada en la primera.
+           El reparto lo hace `@media (pointer: coarse)` en css/luque.css, sobre
+           `.hoja-pista-dedo`, sin una línea de JavaScript.
+
+           Las dos visibles van con `aria-hidden` y la tercera es sólo para
+           lectores de pantalla, que no tienen por qué coincidir con el tipo de
+           puntero: por eso ésa nombra las TRES salidas y no se reparte. Todo lo
+           que las tres prometen —el deslizamiento, la rueda hacia abajo y la
+           tecla Intro— lo atiende `MovilHoja.entrada` (`js/movil-hoja.js`): el
+           gesto en su `pointerup`, la rueda en su `wheel` y las teclas en su
+           `alTeclado`. -->
+      <span class="hoja-pista">
+        <span class="hoja-pista-raton" aria-hidden="true">Baja con la rueda o pulsa Intro</span>
+        <span class="hoja-pista-dedo" aria-hidden="true">Desliza hacia arriba</span>
+        <span class="hoja-pista-lectores">Desliza hacia arriba, o baja con la rueda, o pulsa Intro, para ver los trabajos.</span>
+      </span>
+    </div>
+    <ol class="hoja-rejilla" id="hojaRejilla"></ol>
+  </section>
+
+  <!-- ============================================================
        VISOR DE PROYECTO
   ============================================================ -->
   <div class="visor" id="visor" role="dialog" aria-modal="true"
@@ -323,6 +367,9 @@
   <script src="js/visor-carga.js"></script>
   <script src="js/visor-chrome.js"></script>
   <script src="js/visor.js"></script>
+  <script src="js/movil-gestos.js"></script>
+  <script src="js/movil.js"></script>
+  <script src="js/movil-hoja.js"></script>
   <script>
   /* El contenido llega por red, así que la galería no puede construirse hasta
      que esté. El preloader ya está en pantalla desde el marcado, sin que nadie
@@ -339,16 +386,129 @@
     window.Datos.establecer(proyectos);
     window.Galeria.init();
     window.Visor.init();
+
+    /* La portada móvil se construye siempre, aunque estemos en escritorio: es
+       lo que permite cruzar el umbral de ancho sin reconstruir nada y sin
+       perder la posición. Sus imágenes son perezosas y el bloque va con
+       display:none en escritorio, así que el navegador no las pide.
+
+       Esto tiene que pintarse y suscribirse ANTES de `Router.init()`, no
+       después: `Router.init()` avisa a sus suscriptores de forma SÍNCRONA en
+       cuanto arranca (la llamada a `avisar()` del cuerpo de `Router.init`,
+       `js/router.js`, sobre las líneas 147-150), así que quien se suscribe
+       después de esa llamada se pierde el aviso de la ruta inicial. Es la
+       misma razón por la que `Galeria.init()` (arriba) ya se suscribe antes
+       de llegar aquí, y por la que su filtro de escritorio sí funciona en la
+       carga inicial. */
+    var rejilla = document.getElementById('hojaRejilla');
+    window.MovilHoja.pintar(rejilla, window.Datos.PROYECTOS, function (id) {
+      /* Hasta el bloque 4e el visor que se abre es el de escritorio. La URL ya
+         es la correcta, así que 4e lo sustituye sin tocar esta línea. */
+      window.Router.ir('proyecto', id);
+    });
+    window.Router.alCambiar(function (ruta) {
+      window.MovilHoja.filtrarDesdeRuta(rejilla, ruta);
+    });
+
     window.Router.init();
+
     /* Fallar y no tener nada son cosas distintas y merecen frases distintas:
        una lista vacía es contenido legítimo de un estudio que aún no ha subido
        su trabajo, no un error que haya que confesar. */
-    if (error) window.Galeria.mostrarError(error);
-    else if (!proyectos.length) window.Galeria.mostrarError('Todavía no hay proyectos que enseñar.');
-    /* También en la rama de error: Contenido.cargar nunca lanza y siempre llama
-       aquí, así que un contenido.json caído da aviso y portada, no un preloader
-       colgado para siempre. */
-    window.Hero.init();
+    var aviso = null;
+    if (error) aviso = error;
+    else if (!proyectos.length) aviso = 'Todavía no hay proyectos que enseñar.';
+    if (aviso) {
+      window.Galeria.mostrarError(aviso);
+      /* El MISMO aviso, también en la portada móvil, y no uno nuevo.
+         `Galeria.mostrarError` escribe dentro de `#spatialStage`, que en móvil
+         va con display:none: sin esta copia el fallo sería invisible justo en
+         el dispositivo por el que entra más gente, y quien lo viera pensaría
+         que la culpa es de su conexión. */
+      var p = document.createElement('p');
+      p.className = 'galeria-vacia';
+      p.setAttribute('role', 'status');
+      p.textContent = aviso;
+      document.getElementById('hoja').appendChild(p);
+    }
+
+    /* La puerta de entrada se elige UNA vez, aquí, y no se vuelve a elegir: el
+       ancho de este instante decide qué hero se arma (más abajo) y de qué
+       lado queda el otro, inerte. Estrechar o ensanchar después no reabre la
+       puerta contraria — pero SÍ tiene que dejar utilizable el lado al que se
+       cruza, y hoy no lo hacía en los dos sentidos por igual (ver los dos
+       comentarios de dentro de `Movil.init`, más abajo). */
+    var consultaMovil = window.matchMedia(window.Movil.CONSULTA);
+    var puertaMovil = consultaMovil.matches;
+
+    window.Movil.init(consultaMovil, {
+      movil: function () {
+        document.body.classList.add('es-movil');
+        /* Quien entró por la puerta de escritorio nunca arma `#hojaHero`:
+           `MovilHoja.entrada()` sólo se llama con la puerta móvil (más abajo),
+           y es quien engancha el dedo, la rueda y el teclado que lo cierran.
+           Sin ese armado, un `#hojaHero` que aparece porque el ancho bajó del
+           umbral a mitad de sesión se queda en el DOM sin ninguna forma de
+           cerrarlo. Se retira aquí, la primera vez que hace falta. */
+        if (!puertaMovil) {
+          var hojaHeroSinArmar = document.getElementById('hojaHero');
+          if (hojaHeroSinArmar && hojaHeroSinArmar.parentNode) {
+            hojaHeroSinArmar.parentNode.removeChild(hojaHeroSinArmar);
+          }
+        }
+      },
+      escritorio: function () {
+        document.body.classList.remove('es-movil');
+        /* Quien entró por la puerta móvil nunca corre `rematarEntrada()`:
+           esa puerta le cede el remate a `MovilHoja.entrada()` (más abajo) y
+           no pasa nunca por el botón ENTRAR de escritorio. Sin este rescate,
+           cruzar de móvil a escritorio a mitad de sesión (una tableta que
+           gira de vertical a apaisado, por ejemplo) dejaba `body` sin
+           `galeria-activa` y `.gallery` en `visibility:hidden` para
+           siempre: un amarillo vacío sin ENTRAR que pulsar.
+           `Hero.rematar()` es idempotente, pero la condición NO sobra, y no
+           por elegancia: `Movil.init` llama a esta rama de forma SÍNCRONA
+           (las dos primeras líneas del cuerpo de `init`, `js/movil.js`,
+           sobre las líneas 34-35), o sea ANTES de que `Hero.init()` haya
+           corrido unas líneas más abajo. Sin el `if`, en cualquier arranque
+           ancho `heroEl` todavía es `null` y `rematarEntrada` lanza — no en
+           su primera línea, sino en la TERCERA, al asignar `heroEl.hidden`
+           (`js/hero.js`, tercera sentencia del cuerpo de `rematarEntrada`,
+           sobre la línea 106). Que sean la tercera y no la primera es lo que
+           explica la evidencia de abajo: las dos líneas que sí corren antes
+           son la guarda y `rematada = true`, así que la bandera queda MARCADA
+           pese a la excepción, y la segunda pasada del arranque —la que
+           provoca el `.catch` al rellamar al callback— sale por la guarda sin
+           hacer nada y sin volver a lanzar. Por eso el registro de abajo dice
+           «rematar OK» la segunda vez.
+
+           Y como el `.catch` de `Contenido.cargar` (`js/contenido.js`, el
+           `.catch` final de `cargar`, sobre las líneas 28-30) se traga la
+           excepción y vuelve a llamar a este mismo callback con la lista
+           vacía, el fallo no llega a la consola: llega al usuario disfrazado
+           de error de contenido. Medido quitando el `if` y cargando `#/` en
+           ventana ancha, con `Hero.rematar` envuelto para registrar Y
+           RELANZAR (si el envoltorio se traga la excepción, el `.catch` no
+           se dispara y sale otra cosa):
+           «rematar LANZO: Cannot set properties of null (setting 'hidden')»
+           y después «rematar OK», rejilla a 0 celdas y el aviso «No se ha
+           podido cargar el contenido: Cannot set properties of null (setting
+           'hidden')», con cero errores de consola. */
+        if (puertaMovil) window.Hero.rematar();
+        window.Galeria.remedir();
+      }
+    });
+
+    if (puertaMovil) {
+      window.Hero.init({ alCargar: function () {
+        window.MovilHoja.entrada(document.getElementById('hojaHero'),
+                                 document.getElementById('hoja'),
+                                 rejilla,
+                                 window.Router.rutaActual());
+      } });
+    } else {
+      window.Hero.init();
+    }
   });
   </script>
 

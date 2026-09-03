@@ -1015,6 +1015,258 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   .visor.ficha-abierta .visor-escena{ transform:translateX(40px); opacity:0; }
 }
 
+/* ============================================================
+   EL INTERRUPTOR — ver js/movil.js
+============================================================ */
+.hoja{ display:none; }
+
+body.es-movil .hoja{ display:block; }
+body.es-movil .gallery,
+body.es-movil .hero,
+body.es-movil .navbar{ display:none !important; }
+
+/* ============================================================
+   PORTADA MÓVIL — la hoja
+============================================================ */
+body.es-movil .hoja{
+  position:fixed; inset:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  /* OBLIGATORIO. Sin esto, tirar hacia abajo desde lo alto dispara el
+     pull-to-refresh de Chrome de Android y la web se recarga en mitad del
+     recorrido. Por omisión la web se recarga: hay que apagarlo a propósito. */
+  overscroll-behavior-y:contain;
+  background:var(--yellow);
+  z-index:5;
+}
+
+/* Mientras el hero está delante, la rejilla no se desplaza por detrás.
+
+   `body.es-movil .hoja` (0,2,1) y no sólo `.hoja.con-hero` (0,2,0): medido con
+   `getComputedStyle` en Chrome headless, la regla de dos clases SOLA pierde
+   la partida por `overflow-y` contra la de arriba —tienen la MISMA
+   especificidad de clases, pero la de arriba suma el elemento `body` y eso ya
+   decide, aunque las dos reglas toquen la misma propiedad final con distinta
+   forma (`overflow-y` larga contra `overflow` corta)—: `getComputedStyle(
+   hoja).overflowY` daba `"auto"` con `con-hero` puesto, así que el hero NO
+   bloqueaba el scroll de la rejilla de detrás. Con el `body.es-movil` añadido
+   aquí, la especificidad sube a (0,3,1) y gana; vuelto a medir igual, ahora
+   da `"hidden"`. */
+body.es-movil .hoja.con-hero{ overflow:hidden; }
+
+/* Y mientras está delante, tampoco se TABULA por detrás.
+
+   `MovilHoja.entrada` (js/movil-hoja.js) le pone `aria-hidden="true"` a la
+   rejilla, y eso la esconde del lector de pantalla pero NO del tabulador: son
+   dos cosas distintas y `aria-hidden` sólo hace la primera. Sin esta regla, con
+   la puerta puesta el primer Tab caía en el botón «Abrir el proyecto Niebla»
+   —medido: `BUTTON.hoja-boton`, dentro de un `aria-hidden="true"`, con
+   `DIV.hoja-hero` tapando el centro de la pantalla— y el Enter siguiente abría
+   ese proyecto sin que se hubiera visto nunca la portada. Doce botones
+   invisibles y pulsables. Y un elemento enfocable dentro de un
+   `aria-hidden="true"` incumple el 4.1.2 de WCAG por sí solo.
+
+   `visibility:hidden` y no `display:none`: la rejilla sigue ocupando su sitio y
+   la hoja conserva su altura desplazable. Medido cambiando una por otra con la
+   puerta puesta: con `visibility:hidden` la rejilla mide 1557px de alto y el
+   `scrollHeight` de la hoja vale 1557; con `display:none` la rejilla pasa a 0 y
+   el `scrollHeight` se desploma a 844, o sea que la hoja deja de tener nada que
+   desplazar mientras dura la puerta.
+
+   Medido con esta regla puesta: el primer Tab cae en `BODY`, y en cuanto se
+   cruza la puerta la rejilla vuelve a ser navegable con el tabulador. */
+body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
+
+.hoja-rejilla{
+  list-style:none;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  /* 24px a los lados a propósito: ningún control puede caer en la franja de
+     unos 20px que el navegador se queda para su gesto de «atrás». Los 72 de
+     abajo dejan sitio al indicador de inicio de iOS. */
+  padding:24px 24px 72px;
+}
+
+.hoja-celda{ position:relative; }
+
+/* Hoy esta línea no hace falta, y conviene saberlo antes de tocarla: NINGUNA
+   regla de autor le da `display` a la celda —las únicas tres que la nombran en
+   esta hoja son `.hoja-celda{position:relative}`, ésta misma y
+   `.hoja-celda.sin-foto img`, y de esas sólo la última pone `display`, sobre la
+   imagen y no sobre la celda—, así que el `[hidden]` de la hoja del NAVEGADOR
+   gana él solo. Medido borrando esta regla en caliente sobre `#/foto-stills`
+   con nueve celdas ocultas: el `display` calculado sigue siendo `none` y el
+   `scrollHeight` de la hoja no se mueve (844 con ella y sin ella).
+
+   Está por lo que pasaría en cuanto alguien le diera `display` a la celda desde
+   aquí: una regla de AUTOR le gana a la del navegador por ORIGEN de cascada,
+   por poca especificidad que tenga, y entonces filtrar dejaría de esconder.
+   Medido también: quitando esta línea y añadiendo `.hoja-celda{display:block}`,
+   la celda oculta pasa a `display:block`; reponiéndola vuelve a `none`. Es un
+   blindaje, no una necesidad de hoy. */
+.hoja-celda[hidden]{ display:none; }
+
+.hoja-boton{
+  display:block; width:100%; padding:0; border:0;
+  position:relative; overflow:hidden;
+  background:var(--grey-dark);
+  /* La proporción la pone `MovilHoja.proporcion` celda a celda: es lo que hace
+     la rejilla irregular. El 1.25 es sólo el respaldo si faltara. */
+  aspect-ratio:1 / var(--proporcion, 1.25);
+  cursor:pointer;
+}
+
+.hoja-boton img{
+  display:block; width:100%; height:100%;
+  object-fit:cover;
+}
+
+/* La foto que no llega deja su marco oscuro con su número dentro: un hueco
+   numerado se lee como «falta esa», no como «la web está rota». */
+.hoja-celda.sin-foto img{ display:none; }
+
+/* Amarillo con sombra, y no una pastilla: aquí el número va sobre la foto,
+   así que la sombra es lo que lo sostiene sobre una foto clara. En el visor
+   —bloque 4e— el texto sí va en pastilla, porque allí hay que leer palabras
+   y no dos cifras. */
+.hoja-numero{
+  position:absolute; top:8px; left:10px;
+  font-size:1.45rem; font-weight:700; line-height:1;
+  letter-spacing:var(--kerning);
+  color:var(--yellow);
+  text-shadow:0 1px 5px rgba(0,0,0,0.85), 0 0 1px rgba(0,0,0,0.9);
+  pointer-events:none;
+}
+
+.hoja-boton:focus-visible{ outline:3px solid var(--black); outline-offset:3px; }
+
+/* ------------------------------------------------------------
+   EL HERO FUNDIDO
+   Ocupa la pantalla entera por encima de la rejilla y se va al
+   deslizar hacia arriba. Los 380ms de aquí son exactamente
+   SALIDA_MS de js/movil-hoja.js, que es lo que espera antes de
+   quitar el nodo. Lo que importa no es que sean iguales, sino
+   que el fundido no dure MÁS que esa espera: si durara más, el
+   nodo desaparecería de golpe a mitad del fundido. En
+   movimiento reducido bajan a 200ms (el bloque de más abajo),
+   así que siguen por debajo de los 380 y el nodo se retira
+   después del fundido, nunca durante. Las dos ramas medidas
+   con `getComputedStyle`: 0.38s la normal y 0.2s la reducida.
+
+   Ésta va acotada a `body.es-movil`, y NO es la única de la sección: hay
+   cuatro acotadas contando ésta —`.hoja`, `.hoja.con-hero`,
+   `.hoja.con-hero .hoja-rejilla` y ésta—, más las dos del `@media` del final.
+   Se dice el número a propósito, porque la de `.hoja.con-hero .hoja-rejilla`
+   parece de sobra y no lo es: es la que saca del tabulador los botones que la
+   puerta tapa. Quitarle el `body.es-movil` es inofensivo —medido: la rejilla
+   sigue en `visibility:hidden` y el Tab sigue cayendo en `BODY`, porque no hay
+   ninguna otra regla que le dispute la propiedad—; lo que reabre la trampa es
+   BORRARLA, y entonces el primer Tab vuelve a caer en «Abrir el proyecto
+   Niebla». Las otras trece reglas de la sección van sueltas, y así se quedan:
+   el subárbol entero va con `display:none` en escritorio.
+
+   Lo que sí distingue a ésta, y por lo que se acotó, es que es la única del
+   bloque que planta un `position:fixed` con `inset:0` y `z-index:10` sobre un
+   fondo opaco, o sea la única que taparía la pantalla entera el día que algo
+   dejara `.hoja` visible en una ventana ancha. Hoy no puede pasar
+   —`.hoja{display:none}` apaga el subárbol y un `position:fixed` dentro de un
+   ancestro con `display:none` no pinta nada—, pero el coste de acotarla es un
+   selector y el de no hacerlo es un escritorio en amarillo.
+------------------------------------------------------------ */
+body.es-movil .hoja-hero{
+  position:fixed; inset:0; z-index:10;
+  background:var(--yellow);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:22px;
+  padding:0 24px;
+  transition:opacity 380ms ease, transform 380ms ease;
+}
+
+.hoja-hero.fuera{
+  opacity:0;
+  transform:translateY(-28px);
+  pointer-events:none;
+}
+
+.hoja-hero .logo-mark{ width:min(76vw, 420px); height:auto; }
+
+.hoja-hero .roles{
+  text-align:center;
+  font-size:0.95rem; line-height:1.65;
+  display:flex; flex-direction:column;
+}
+
+/* El 0.6 de opacidad no es estético: con 0.5 el texto salía a 9,92px con un
+   color efectivo de rgb(133,133,5) sobre el amarillo, o sea 3,65:1, y el AA de
+   WCAG pide 4,5:1 —el alivio de «texto grande» empieza en 18,66px en negrita y
+   estas letras miden la mitad, así que no lo alcanza—. Con 0.6 el color
+   efectivo es rgb(108,108,6) y el contraste sube a 5,17:1. Medido aplicando la
+   fórmula de luminancia relativa de WCAG sobre la mezcla real del color con el
+   fondo, no estimado a ojo. */
+.hoja-pista{
+  font-size:0.62rem; font-weight:700;
+  letter-spacing:0.22em; text-transform:uppercase;
+  opacity:0.6;
+}
+
+/* CUÁL DE LAS DOS PISTAS VISIBLES SE VE.
+
+   El caso base —sin ninguna consulta— es la de ratón y teclado, y la del dedo
+   sólo aparece bajo `(pointer: coarse)`. El orden importa y no es
+   intercambiable: `pointer` tiene TRES valores, `coarse`, `fine` y `none`, y un
+   par de consultas `coarse`/`fine` dejaría a `none` —un aparato sin puntero
+   ninguno— sin ninguna frase. Con base + una sola excepción siempre se ve
+   exactamente una, valga lo que valga `pointer`.
+
+   Medido con `matchMedia` en Chrome: con métricas de móvil Y emulación táctil,
+   `(pointer: coarse)` da `true` y `(pointer: fine)` `false`; en escritorio a
+   1280 y en una ventana estrecha de 700 —el caso que motiva todo esto— da
+   `coarse:false` y `fine:true`. Ojo a la trampa de medición: `mobile:true` en
+   `setDeviceMetricsOverride` NO basta para que el puntero sea grueso; hace
+   falta `setTouchEmulationEnabled`, y sin él las tres emulaciones dan `fine` y
+   parece que la consulta no discrimina. El caso `pointer: none` no se pudo
+   producir en este entorno: que caiga en el caso base es por construcción
+   —razonado, no medido—, y por eso la frase base nombra una tecla y no sólo la
+   rueda. */
+.hoja-pista-dedo{ display:none; }
+
+@media (pointer: coarse){
+  .hoja-pista-raton{ display:none; }
+  .hoja-pista-dedo{ display:inline; }
+}
+
+/* La mitad de la pista que sólo se oye. Se saca de la pantalla sin salir del
+   árbol de accesibilidad. Ni `display:none` ni `visibility:hidden` valdrían
+   aquí: medido con `Accessibility.getFullAXTree`, la frase está en el árbol
+   entera y sin recortar, y desaparece de él en cuanto se le pone cualquiera de
+   las dos — que es justo lo contrario de lo que hace falta.
+
+   Esta frase nombra las TRES salidas —el dedo, la rueda y la tecla— y no una
+   sola, a diferencia de las dos visibles, que se reparten según el puntero: un
+   lector de pantalla no tiene por qué coincidir con el tipo de puntero que
+   traiga el aparato, así que aquí no se elige por él. Medido con
+   `Accessibility.getFullAXTree` en los dos casos —móvil con táctil y ventana
+   de 700px sin táctil—: el árbol devuelve UNA sola instrucción, la misma en
+   los dos, y las dos frases visibles no aparecen porque van con `aria-hidden`.
+
+   El `text-transform:none` no es cosmético, porque esto no se ve: el
+   `uppercase` de `.hoja-pista` se HEREDA y se cuela en el nombre accesible.
+   Medido: sin este reset el árbol devolvía la frase entera en versales, cuando
+   el HTML la escribe en minúsculas; con el reset devuelve «Desliza hacia
+   arriba, o baja con la rueda, o pulsa Intro, para ver los trabajos.», que es
+   literalmente lo que pone el marcado. Es la única cadena del sitio que existe
+   sólo para oírse, y a un lector de pantalla las versales no le aportan nada
+   —hay lectores que deletrean las palabras cortas en versales, «I-N-T-R-O»;
+   eso último es razonado, no medido: aquí no hay lector real—. Las dos mitades
+   visibles conservan su `uppercase`. */
+.hoja-pista-lectores{
+  position:absolute; width:1px; height:1px;
+  margin:-1px; padding:0; border:0;
+  clip-path:inset(50%); overflow:hidden; white-space:nowrap;
+  text-transform:none;
+}
+
 @media (prefers-reduced-motion: reduce){
   .visor{ transition:opacity 0.2s ease; }
   .visor.viajando .visor-esquina,
@@ -1022,4 +1274,23 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   .visor.viajando .visor-escena video{ transition:none; }
   .visor .visor-chrome{ transition:opacity 0.2s ease; }
   .visor-ficha, .visor-escena{ transition:none; }
+
+  /* El hero de la portada móvil va aquí dentro y no en un `@media` propio:
+     eran dos bloques con la condición idéntica y pegados el uno al otro.
+
+     El `body.es-movil` de la PRIMERA es load-bearing, y de la segunda no.
+
+     La de `transition` lo necesita: un `@media` NO añade especificidad, así que
+     un `.hoja-hero` a secas (0,1,0) perdería contra el
+     `body.es-movil .hoja-hero` (0,2,1) de arriba y la duración reducida se
+     perdería. Medido desacotando sólo ésta: la transición vuelve a
+     `opacity 0.38s, transform 0.38s`.
+
+     La de `transform` no lo necesita: `.hoja-hero.fuera` es (0,2,0), empata con
+     su gemela suelta de arriba y le gana por ORDEN de aparición, porque este
+     `@media` va después en el fichero. Medido desacotando sólo ésta: el
+     `transform` sigue saliendo `none`. Va acotada por simetría con la de
+     arriba, no porque haga falta. */
+  body.es-movil .hoja-hero{ transition:opacity 0.2s ease; }
+  body.es-movil .hoja-hero.fuera{ transform:none; }
 }
