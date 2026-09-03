@@ -63,9 +63,10 @@ en `docs/estado-conocido.md`:
    antes es la caché, no tu cambio.
 3. **Windows deja bindear dos veces el mismo puerto sin dar error.** Verifica con
    `curl` contra qué estás midiendo antes de creerte una medición.
-4. **Chrome headless es `no-preference` por defecto, sin `--force-prefers-reduced-motion`.** Esto
-   importa mucho en este bloque: quien quiera medir la rama de movimiento reducido debe
-   activarla a propósito con esa bandera; sin ella se mide la rama normal.
+4. **Chrome headless es `no-preference` por defecto**, sin
+   `--force-prefers-reduced-motion`. Esto importa mucho en este bloque: quien
+   quiera medir la rama de movimiento reducido tiene que encenderla a propósito
+   con esa bandera; sin ella se mide la rama normal.
 
 ---
 
