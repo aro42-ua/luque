@@ -11,10 +11,11 @@ window.MovilPuerta = (function () {
 
   /* Cuánto se espera antes de quitar el nodo. No tiene que CASAR con la
      transición de `.hoja-hero` en css/luque.css: tiene que ser mayor o igual,
-     que no es lo mismo. Si fuera menor, el nodo desaparecería de golpe a mitad
-     del fundido. Hoy la rama normal dura exactamente estos 380ms y la de
-     movimiento reducido baja a 200, así que las dos caben. El porqué está
-     desarrollado en el CSS, sobre `.hoja-hero`. */
+     que no es lo mismo. Si fuera menor, el nodo desaparecería de golpe a
+     mitad de la salida —el deslizamiento en la rama normal, el fundido en
+     movimiento reducido—. Hoy la rama normal dura exactamente estos 380ms y
+     la de movimiento reducido baja a 200, así que las dos caben. El porqué
+     está desarrollado en el CSS, sobre `.hoja-hero`. */
   var SALIDA_MS = 380;
 
   var ido = false;
@@ -117,19 +118,83 @@ window.MovilPuerta = (function () {
        SIN pantalla táctil. Sin la rueda y sin el teclado, esa ventana se queda
        encerrada en el amarillo sin forma de salir. */
 
-    /* 1. El dedo. `MovilGestos` es quien decide si un arrastre fue un
-          deslizamiento: aquí no se mide nada, sólo se le pasan los puntos. */
-    var gesto = window.MovilGestos.inicial();
+    /* 1. El dedo, que ahora LEVANTA la hoja en vez de limitarse a decidir
+          cuando se va. La regla —golpe o posición— vive entera en
+          `js/movil-arrastre.js`; aquí no se mide nada, sólo se le pasan los
+          puntos y el tiempo del evento, y se pinta lo que responda. */
+    var arrastre = window.MovilArrastre.inicial();
+
+    /* Quien pidió menos movimiento no arrastra la hoja con el dedo: la decisión
+       al soltar es la misma para todos, y lo que se suprime es el pintado
+       continuo. Se lee una vez por entrada y no en cada `pointermove`, que
+       serían decenas de consultas por gesto. */
+    var reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* El alto sale de `getBoundingClientRect` del propio hero y NO de
+       `window.innerHeight`. Dos motivos, y el segundo está medido: el hero es
+       `position:fixed; inset:0`, así que su alto ES el de la ventana; y
+       `innerWidth`/`innerHeight` mienten bajo emulación de móvil en Chrome
+       headless —está documentado en docs/estado-conocido.md— mientras que
+       `getBoundingClientRect` sale correcto. Se mide al soltar y no al empezar,
+       para que girar el teléfono a mitad de arrastre no decida con el alto de
+       antes. */
+    function altoDeLaVentana() { return hero.getBoundingClientRect().height; }
+
+    function pintarArrastre() {
+      hero.style.transition = 'none';
+      hero.style.transform =
+        'translateY(-' + window.MovilArrastre.levantado(arrastre) + 'px)';
+    }
+
+    /* Deja el elemento sin estilo en línea, y hace falta en las DOS ramas de
+       soltar: el estilo en línea gana a cualquier clase, así que un `transform`
+       olvidado clava la hoja a medio camino y ya no la mueve ni `.fuera` ni el
+       reposo.
+
+       Y hay que llamarla ANTES de `cerrarPuerta()`, no después, aunque parezca
+       que eso devuelve la hoja a su sitio de un salto. No lo hace: al quitar el
+       estilo en línea y añadir la clase sin forzar ningún reflujo entre medias,
+       el navegador calcula el estilo una sola vez, y la transición arranca
+       desde el `translateY` que hay pintado ahora hasta el `-100%` de `.fuera`.
+       Un `offsetHeight` colado entre las dos líneas sí rompería esto. */
+    function limpiarEstilo() {
+      hero.style.transition = '';
+      hero.style.transform = '';
+    }
+
     hero.addEventListener('pointerdown', function (e) {
-      gesto = window.MovilGestos.presionar(gesto, { x: e.clientX, y: e.clientY });
+      arrastre = window.MovilArrastre.empezar(arrastre, { y: e.clientY }, e.timeStamp);
+      /* Sin capturar el puntero, sacar el dedo del hero mata el arrastre a
+         mitad y la hoja se queda donde estuviera. */
+      if (hero.setPointerCapture) hero.setPointerCapture(e.pointerId);
     });
-    hero.addEventListener('pointerup', function (e) {
-      var r = window.MovilGestos.soltar(gesto, { x: e.clientX, y: e.clientY });
-      gesto = r.estado;
-      /* 'arriba' en MovilGestos es el DEDO subiendo (`dy < 0`), que es
-         literalmente lo que pide la spec: «se va al deslizar hacia arriba». */
-      if (r.intencion === 'arriba') cerrarPuerta();
+
+    hero.addEventListener('pointermove', function (e) {
+      if (!arrastre.activo) return;
+      arrastre = window.MovilArrastre.mover(arrastre, { y: e.clientY }, e.timeStamp);
+      if (!reducido) pintarArrastre();
     });
+
+    /* El punto del propio `pointerup` entra como una muestra más ANTES de
+       soltar, y no es cosmético: un navegador siempre manda un `pointermove`
+       justo antes de levantar el dedo, pero un evento sintetizado —los de la
+       suite— puede no mandarlo, y entonces el estado se habría quedado en el
+       punto de apoyo y el recorrido saldría cero. Alimentarlo aquí hace que la
+       decisión use la última posición real pase lo que pase. */
+    function alSoltar(e) {
+      if (!arrastre.activo) return;
+      arrastre = window.MovilArrastre.mover(arrastre, { y: e.clientY }, e.timeStamp);
+      var r = window.MovilArrastre.soltar(arrastre, altoDeLaVentana());
+      arrastre = r.estado;
+      limpiarEstilo();
+      if (r.salir) cerrarPuerta();
+    }
+
+    hero.addEventListener('pointerup', alSoltar);
+    /* `pointercancel` llega cuando el navegador se queda el gesto: una llamada
+       entrante, el gesto de sistema del borde de la pantalla. Sin esta rama la
+       hoja se quedaría levantada para siempre con el dedo ya fuera. */
+    hero.addEventListener('pointercancel', alSoltar);
 
     /* 2. La rueda, para el ratón de una ventana estrecha. */
     hero.addEventListener('wheel', function (e) {
@@ -150,7 +215,7 @@ window.MovilPuerta = (function () {
   }
 
   return {
-    /* Se exporta para que una prueba pueda esperar lo que dura el fundido sin
+    /* Se exporta para que una prueba pueda esperar lo que dura la salida sin
        adivinarlo, y para que el CSS mida su transición contra este número en
        vez de contra una copia suya. */
     SALIDA_MS: SALIDA_MS,

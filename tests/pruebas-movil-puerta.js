@@ -1,9 +1,9 @@
-/* El hero fundido: la puerta de entrada de la portada móvil. */
-describe('MovilPuerta — el hero fundido', function () {
+/* El hero deslizante: la puerta de entrada de la portada móvil. */
+describe('MovilPuerta — el hero deslizante', function () {
 
   var MARCO =
     '<div>' +
-      '<div class="hoja-hero" id="h"></div>' +
+      '<div class="hoja-hero" id="h" style="height:800px"></div>' +
       '<ol class="hoja-rejilla" id="r"></ol>' +
     '</div>';
 
@@ -21,12 +21,17 @@ describe('MovilPuerta — el hero fundido', function () {
   function rutaCategoria(){ return { tipo: 'categoria', valor: 'editorial', pieza: null }; }
 
   /* Un deslizamiento hacia arriba de verdad: 90px de recorrido vertical, muy
-     por encima de los 24 de MovilGestos.UMBRAL y sin componente horizontal que
-     lo convierta en diagonal. Los eventos se sintetizan porque un navegador de
-     escritorio no genera toques. */
+     por encima de los 24 de `MovilGestos.UMBRAL` —que `MovilArrastre` reutiliza
+     como mínimo del golpe— y sin componente horizontal.
+
+     El `pointermove` del medio es obligatorio desde el bloque 4e y no es
+     decorativo: el navegador siempre manda uno antes de levantar el dedo, pero
+     un evento sintetizado no, y sin él la hoja nunca se habría movido. */
   function deslizarArriba(el) {
     el.dispatchEvent(new PointerEvent('pointerdown',
       { clientX: 100, clientY: 300, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove',
+      { clientX: 100, clientY: 240, bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointerup',
       { clientX: 100, clientY: 210, bubbles: true }));
   }
@@ -34,6 +39,8 @@ describe('MovilPuerta — el hero fundido', function () {
   function deslizarAbajo(el) {
     el.dispatchEvent(new PointerEvent('pointerdown',
       { clientX: 100, clientY: 210, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointermove',
+      { clientX: 100, clientY: 270, bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointerup',
       { clientX: 100, clientY: 300, bubbles: true }));
   }
@@ -65,9 +72,9 @@ describe('MovilPuerta — el hero fundido', function () {
 
      Sin esto, `cerrarPuerta` podría llamar a `quitarNodo()` en el acto y la
      suite entera seguiría en verde: la prueba asíncrona sólo mira después de
-     esperar el fundido, así que no ve la diferencia. Y quitarlo en el acto es
+     esperar la salida, así que no ve la diferencia. Y quitarlo en el acto es
      justo el defecto que el diferido existe para evitar — el comentario de
-     `SALIDA_MS` lo dice: el nodo se iría «de golpe a mitad del fundido».
+     `SALIDA_MS` lo dice: el nodo se iría «de golpe a mitad de la salida».
 
      Se busca con `raiz.querySelector` y no en `document`: la caja del arnés
      vive dentro del documento, pero lo que importa es este árbol. */
@@ -177,9 +184,83 @@ describe('MovilPuerta — el hero fundido', function () {
     igual(conElHero(rutaPortada(), function (hero, raiz, rejilla) {
       var antes = [rejilla.getAttribute('aria-hidden'),
                    raiz.classList.contains('con-hero')];
-      deslizarArriba(hero);
+      /* No se usa `deslizarArriba`: sus 90px cruzan por GOLPE a propósito (por
+         eso el `#h` del marco mide 800px de alto), y el golpe se mide entre
+         las dos últimas muestras. Con eventos sintetizados y despachados sin
+         que pase tiempo real, esas dos muestras pueden caer en el mismo
+         instante —`dt` cero, que `MovilArrastre` trata como velocidad cero a
+         propósito y está probado en su propia suite— y entonces el golpe no
+         dispara. Esta prueba no fija el golpe, fija que aria-hidden y
+         con-hero se sueltan al cruzar, así que cruza por POSICIÓN: 400px de
+         recorrido, muy por encima del cuarto de los 800 (200px), que cruza
+         sin depender de ninguna velocidad. */
+      hero.dispatchEvent(new PointerEvent('pointerdown',
+        { clientX: 100, clientY: 780, bubbles: true }));
+      hero.dispatchEvent(new PointerEvent('pointermove',
+        { clientX: 100, clientY: 400, bubbles: true }));
+      hero.dispatchEvent(new PointerEvent('pointerup',
+        { clientX: 100, clientY: 380, bubbles: true }));
       return [antes, [rejilla.getAttribute('aria-hidden'),
                       raiz.classList.contains('con-hero')]];
     }), [['true', true], [null, false]]);
+  });
+
+  /* Lo único de esta tarea que la suite puede ver: que la hoja se mueve
+     MIENTRAS el dedo se mueve, no al soltar. Que se sienta bien es una
+     comprobación humana, y que `touch-action` impida el tirón de recarga no se
+     puede comprobar sin un teléfono.
+
+     No se afirma el valor exacto del `transform` a propósito: eso ataría la
+     prueba a la unidad y al formato que el navegador elija al serializar el
+     estilo en línea. Lo que se fija es el comportamiento — antes de moverse no
+     hay nada, después sí. */
+  /* `window.matchMedia` se falsifica, y no por comodidad: sin eso esta prueba
+     diría cosas distintas según el navegador que la corra. Chrome headless
+     declara `prefers-reduced-motion: reduce` POR DEFECTO, y un compañero que
+     tenga la preferencia puesta en su sistema la vería fallar sola. Una prueba
+     que depende del entorno no fija comportamiento, sólo hace ruido.
+
+     El `finally` es obligatorio: dejar `matchMedia` falsificado envenenaría
+     todo lo que corra después en la misma página. */
+  prueba('la hoja se levanta mientras el dedo arrastra, no al soltar', function () {
+    var original = window.matchMedia;
+    var estilos;
+    try {
+      window.matchMedia = function () { return { matches: false }; };
+      estilos = conElHero(rutaPortada(), function (hero) {
+        var alApoyar;
+        hero.dispatchEvent(new PointerEvent('pointerdown',
+          { clientX: 100, clientY: 300, bubbles: true }));
+        alApoyar = hero.style.transform;
+        hero.dispatchEvent(new PointerEvent('pointermove',
+          { clientX: 100, clientY: 240, bubbles: true }));
+        return [alApoyar, hero.style.transform.indexOf('translateY') !== -1];
+      });
+    } finally {
+      window.matchMedia = original;
+    }
+    igual(estilos, ['', true]);
+  });
+
+  /* La otra mitad de la misma decisión, y hace falta las dos: con la
+     preferencia puesta el dedo NO arrastra nada. Sin esta prueba, una
+     implementación que ignore `prefers-reduced-motion` y pinte siempre pasa
+     la de arriba y nadie se entera. */
+  prueba('con movimiento reducido el dedo no arrastra la hoja', function () {
+    var original = window.matchMedia;
+    var transform;
+    try {
+      window.matchMedia = function () { return { matches: true }; };
+      transform = conElHero(rutaPortada(), function (hero) {
+        hero.dispatchEvent(new PointerEvent('pointerdown',
+          { clientX: 100, clientY: 300, bubbles: true }));
+        hero.dispatchEvent(new PointerEvent('pointermove',
+          { clientX: 100, clientY: 240, bubbles: true }));
+        return hero.style.transform;
+      });
+    } finally {
+      window.matchMedia = original;
+    }
+    igual(transform, '');
   });
 });

@@ -1142,17 +1142,25 @@ body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
 .hoja-boton:focus-visible{ outline:3px solid var(--black); outline-offset:3px; }
 
 /* ------------------------------------------------------------
-   EL HERO FUNDIDO
+   LA HOJA QUE SE DESLIZA
    Ocupa la pantalla entera por encima de la rejilla y se va al
-   deslizar hacia arriba. Los 380ms de aquí son exactamente
-   SALIDA_MS de js/movil-puerta.js, que es lo que espera antes de
-   quitar el nodo. Lo que importa no es que sean iguales, sino
-   que el fundido no dure MÁS que esa espera: si durara más, el
-   nodo desaparecería de golpe a mitad del fundido. En
-   movimiento reducido bajan a 200ms (el bloque de más abajo),
-   así que siguen por debajo de los 380 y el nodo se retira
-   después del fundido, nunca durante. Las dos ramas medidas
-   con `getComputedStyle`: 0.38s la normal y 0.2s la reducida.
+   deslizar hacia arriba: desde el bloque 4e la hoja sigue al dedo
+   mientras arrastra (js/movil-puerta.js), y `.fuera` no hace más que
+   continuar ese mismo movimiento hasta sacarla del todo por encima
+   del borde superior. Ya no hay fundido en la rama normal —una hoja
+   de papel no se transparenta al levantarla— y la transición sólo
+   mueve `transform`. Los 380ms de aquí son exactamente SALIDA_MS de
+   js/movil-puerta.js, que es lo que espera antes de quitar el nodo.
+   Lo que importa no es que sean iguales, sino que el deslizamiento no
+   dure MÁS que esa espera: si durara más, el nodo desaparecería de
+   golpe a mitad del recorrido. En movimiento reducido la salida vuelve
+   a ser un fundido corto (200ms, el bloque de más abajo) en vez de un
+   deslizamiento —quien pide menos movimiento no quiere ver la pantalla
+   entera desplazarse—, y esos 200ms también quedan por debajo de los
+   380, así que el nodo se retira después de terminar de fundirse,
+   nunca durante. Las dos ramas siguen midiendo 0.38s la normal y 0.2s
+   la reducida con `getComputedStyle`, pero ya no es la misma propiedad:
+   la normal transiciona `transform` y la reducida `opacity`.
 
    Ésta va acotada a `body.es-movil`, y NO es la única de la sección: hay
    cuatro acotadas contando ésta —`.hoja`, `.hoja.con-hero`,
@@ -1180,12 +1188,18 @@ body.es-movil .hoja-hero{
   display:flex; flex-direction:column;
   align-items:center; justify-content:center; gap:22px;
   padding:0 24px;
-  transition:opacity 380ms ease, transform 380ms ease;
+  transition:transform 380ms ease;
+  /* Sin esto el navegador se queda el gesto vertical antes de que llegue a
+     `pointermove`, y en Chrome de Android eso significa el «tirar para
+     recargar». El `overscroll-behavior-y:contain` que hay más arriba está en
+     `.hoja` y no cubre este caso. */
+  touch-action:none;
 }
 
+/* Se sale por arriba entera, continuando el movimiento que el dedo empezó. Ya
+   no se desvanece: una hoja de papel no se transparenta al levantarla. */
 .hoja-hero.fuera{
-  opacity:0;
-  transform:translateY(-28px);
+  transform:translateY(-100%);
   pointer-events:none;
 }
 
@@ -1284,13 +1298,24 @@ body.es-movil .hoja-hero{
      un `.hoja-hero` a secas (0,1,0) perdería contra el
      `body.es-movil .hoja-hero` (0,2,1) de arriba y la duración reducida se
      perdería. Medido desacotando sólo ésta: la transición vuelve a
-     `opacity 0.38s, transform 0.38s`.
+     `transform 0.38s` —ya no hay `opacity` que perder en la rama normal,
+     porque la salida normal dejó de fundirse.
 
      La de `transform` no lo necesita: `.hoja-hero.fuera` es (0,2,0), empata con
      su gemela suelta de arriba y le gana por ORDEN de aparición, porque este
      `@media` va después en el fichero. Medido desacotando sólo ésta: el
      `transform` sigue saliendo `none`. Va acotada por simetría con la de
-     arriba, no porque haga falta. */
+     arriba, no porque haga falta.
+
+     El `opacity:0` de la segunda regla no compite con nada: la rama normal de
+     `.hoja-hero.fuera` no declara `opacity` desde el bloque 4e, así que aquí no
+     hay ninguna copia suelta a la que ganarle por especificidad ni por orden
+     — es la única regla de toda la hoja de estilos que la fija. */
   body.es-movil .hoja-hero{ transition:opacity 0.2s ease; }
-  body.es-movil .hoja-hero.fuera{ transform:none; }
+  /* El `opacity:0` se escribe AQUÍ desde el bloque 4e. Antes lo heredaba de
+     `.hoja-hero.fuera`, que ya no lo lleva porque la salida normal dejó de ser
+     un fundido. Sin esta línea, un teléfono con movimiento reducido se queda
+     con el hero VISIBLE y quieto hasta que el nodo se retira solo: una pantalla
+     muerta de 380ms que ninguna prueba de la suite ve. */
+  body.es-movil .hoja-hero.fuera{ transform:none; opacity:0; }
 }
