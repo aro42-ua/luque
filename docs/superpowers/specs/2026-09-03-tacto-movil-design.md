@@ -78,6 +78,16 @@ tiembla. Los 10px son a la vez el `threshold` por defecto de Hammer.js y el
 es un número nuevo. **Al cruzarlos, el recorrido se cuenta desde ahí y no desde
 el punto de apoyo**, o la hoja pegaría un salto de 10px justo al empezar.
 
+**Los 24px del golpe y los 10px del margen se miden distinto, y la diferencia
+importa.** El mínimo del golpe se compara contra el **recorrido del dedo**
+—porque los 25 dip de `ViewPager` son recorrido del dedo—, mientras que la
+fracción de pantalla se compara contra lo **levantado**, que es el recorrido
+menos el margen: es lo que el ojo ve. Son diez píxeles de diferencia sobre
+umbrales de veinte y de doscientos, así que no cambia el comportamiento; se
+escribe porque un implementador que use la misma medida para las dos cosas no
+estará equivocándose, y quien lo revise después no debería tener que deducir
+cuál era la intención.
+
 **La velocidad se mide entre las dos últimas muestras del dedo**, no sobre el
 gesto entero. La diferencia importa y es lo que separa los dos gestos que la
 gente hace de verdad: quien arrastra despacio y remata con un golpe seco sí echa
@@ -174,21 +184,30 @@ como argumento**, desde `e.timeStamp`, y nunca se lee dentro. Sin eso, la
 velocidad no se puede probar sin falsificar un reloj, y falsificar un reloj es
 fijar la implementación en vez del comportamiento.
 
-### `MovilGestos` se queda, y deja de usarlo el hero
+### Los dos umbrales no se copian: ya están escritos en `MovilGestos`
 
-Hoy `js/movil-gestos.js` tiene **un solo consumidor**: la puerta del hero. Si el
-arrastre continuo la sustituye, el módulo se queda sin nadie que lo llame.
+Al mapear las referencias apareció algo que no se buscaba. Las constantes que
+este diseño saca de Hammer.js y de `ViewPager` **ya existen en el repositorio con
+esos mismos valores**, puestas en el bloque 4c sin conocer ninguna de las dos
+fuentes:
 
-No se borra, y hay que decir por qué para que nadie lo tome por código muerto en
-una revisión: la spec de agosto describe un visor móvil con dos ejes de
-deslizamiento —horizontal cambia de trabajo, vertical baja por las piezas hasta
-la ficha— que todavía no está construido, y ese visor es exactamente para lo que
-`MovilGestos` decide una dirección al soltar. Sigue siendo el módulo correcto
-para su trabajo; lo que pasa es que su trabajo aún no ha llegado.
+- `MovilGestos.TOQUE = 10` — «por debajo de esto el dedo no se ha movido».
+  Es el `threshold` de Hammer.js, y es el margen que necesita este arrastre.
+- `MovilGestos.UMBRAL = 24` — «el eje dominante tiene que recorrer al menos
+  esto». Es el `MIN_DISTANCE_FOR_FLING` de Android, y es el mínimo del golpe.
 
-Queda anotado en `docs/estado-conocido.md`: **`MovilGestos` sin consumidores
-hasta el visor móvil.** Sin esa nota, la próxima revisión que barra código
-huérfano lo encuentra y lo tira.
+Así que **`js/movil-arrastre.js` los lee de `MovilGestos` en vez de declararlos
+otra vez.** No es una optimización: son literalmente la misma pregunta con la
+misma respuesta, y dos copias de un umbral son dos sitios donde cambiarlo y uno
+donde olvidarse. La lectura es perezosa —dentro de las funciones, no al definir
+el módulo—, así que no impone ningún orden de carga entre los dos.
+
+Esto **disuelve un problema que este mismo documento daba por hecho** en su
+primera versión: que `MovilGestos` se quedaría sin consumidores al sustituirle
+el arrastre la única llamada que tenía, y que habría que anotarlo para que
+ninguna revisión lo tirara por huérfano. Sigue teniendo consumidor, y ahora dos:
+sus constantes aquí, y su decisión de dirección al soltar cuando exista el visor
+móvil de dos ejes que describe la spec de agosto.
 
 ### La puerta se muda a su propio fichero
 
