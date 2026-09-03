@@ -276,4 +276,66 @@ describe('MovilPuerta — el hero deslizante', function () {
     }
     igual(transform, '');
   });
+
+  /* Las dos de abajo NECESITAN la rama de movimiento reducido apagada, y no por
+     gusto: con `reduce` puesta el dedo no pinta nada, así que no habría estilo
+     en línea que limpiar y las dos pasarían sin ejercitar la línea que vienen a
+     fijar. Se falsifica `matchMedia` por lo mismo que en las dos de arriba —la
+     preferencia es del sistema operativo, y una prueba que dependa de ella
+     falla en la máquina de otro sin que nadie haya tocado nada— y con el mismo
+     `finally`, que si se queda puesto envenena todo lo que corra después. */
+  function sinMovimientoReducido(fn) {
+    var original = window.matchMedia;
+    try {
+      window.matchMedia = function () { return { matches: false }; };
+      return fn();
+    } finally {
+      window.matchMedia = original;
+    }
+  }
+
+  /* `limpiarEstilo()` dentro de `alSoltar` (js/movil-puerta.js) era un mutante
+     silencioso: quitándola, la suite entera seguía en verde —medido: 347 pasan,
+     0 fallan— y en un navegador de verdad la hoja se quedaba CLAVADA en el
+     `translateY` donde estuviera el dedo, porque el estilo en línea gana a
+     cualquier clase. O sea que el defecto que este bloque venía a arreglar
+     volvía entero, y peor, sin una sola prueba en rojo.
+
+     El hueco era de mirada, no de escenario: las quince pruebas de esta puerta
+     miran el `transform` DURANTE el `pointermove` y ninguna lo miraba DESPUÉS
+     de soltar. Estas dos cubren las dos mitades del gesto, que son las dos que
+     el comentario de `limpiarEstilo` promete.
+
+     El primer valor de la primera no es decorativo: comprueba que el estilo
+     llegó a pintarse. Sin él, una implementación que no pintara nunca las
+     pasaría las dos sin haber hecho nada. */
+  prueba('al soltar a medias, la hoja vuelve: no queda estilo en línea que la clave', function () {
+    igual(sinMovimientoReducido(function () {
+      return conElHero(rutaPortada(), function (hero) {
+        hero.dispatchEvent(new PointerEvent('pointerdown',
+          { clientX: 100, clientY: 300, bubbles: true }));
+        hero.dispatchEvent(new PointerEvent('pointermove',
+          { clientX: 100, clientY: 240, bubbles: true }));
+        var arrastrando = hero.style.transform.indexOf('translateY') !== -1;
+        hero.dispatchEvent(new PointerEvent('pointerup',
+          { clientX: 100, clientY: 240, bubbles: true }));
+        return [arrastrando, hero.style.transform, hero.style.transition,
+                MovilPuerta.heroIdo()];
+      });
+    }), [true, '', '', false]);
+  });
+
+  /* Y al CRUZAR tampoco queda: es lo que deja que la transición de `.fuera`
+     arranque desde donde está el dedo. Con el estilo puesto, `translateY(-370px)`
+     le gana a la clase y la hoja se congela ahí hasta que el nodo desaparece de
+     golpe a los 380ms. */
+  prueba('y al cruzar tampoco, para que la salida arranque desde donde está el dedo', function () {
+    igual(sinMovimientoReducido(function () {
+      return conElHero(rutaPortada(), function (hero) {
+        deslizarArriba(hero);
+        return [hero.style.transform, hero.style.transition,
+                hero.classList.contains('fuera')];
+      });
+    }), ['', '', true]);
+  });
 });
