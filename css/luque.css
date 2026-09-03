@@ -1231,8 +1231,36 @@ body.es-movil .hoja-hero{
   /* Sin esto el navegador se queda el gesto vertical antes de que llegue a
      `pointermove`, y en Chrome de Android eso significa el «tirar para
      recargar». El `overscroll-behavior-y:contain` que hay más arriba está en
-     `.hoja` y no cubre este caso. */
-  touch-action:none;
+     `.hoja` y no cubre este caso.
+
+     `pinch-zoom` y no `none`, y la diferencia es de accesibilidad. `none`
+     declina TODOS los gestos del navegador sobre el elemento, y éste es
+     `position:fixed; inset:0`: la pantalla entera mientras la puerta está
+     puesta. Con `none`, quien necesite ampliar para leer no puede, y poder
+     ampliar no es un capricho. `pinch-zoom` a secas sigue bloqueando todo el
+     desplazamiento —lo único que el tirón de recarga necesita que se bloquee—
+     y devuelve sólo el pellizco de dos dedos. `pan-x pinch-zoom` haría lo
+     mismo por la mitad mala: le regalaría al navegador el gesto horizontal de
+     un dedo, y como aquí no hay nada que desplazar en horizontal, de eso sólo
+     puede salir que un arrastre torcido se lo quede el navegador y llegue un
+     `pointercancel`, que `js/movil-puerta.js` trata como un soltar.
+
+     AVISO, y va aquí porque es justo lo que no se puede dar por bueno: ESTE
+     CAMBIO NO ESTÁ VERIFICADO. `Input.synthesizePinchGesture` no mueve el
+     `pageScale` en Chrome headless bajo emulación —tampoco sobre una página
+     sin `touch-action` ninguno, o sea que el control también falla—, así que
+     aquí nadie ha visto ni que `none` apagara el pellizco ni que `pinch-zoom`
+     lo devuelva. Lo que SÍ está medido: que la superficie es la pantalla
+     entera (`[0,0,390,844]` a 390×844, y `elementFromPoint` en el centro
+     devuelve el hero); que sus tres ancestros están en `touch-action:auto`;
+     que el `<meta name="viewport">` del sitio no prohíbe ampliar —no lleva
+     `user-scalable=no` ni `maximum-scale`—, así que si el zoom está apagado
+     ahí, lo apaga esta declaración y sólo ella; que Chrome acepta el valor sin
+     coercionarlo a `none`; y que el arrastre de la hoja sale idéntico con los
+     tres valores, probado con toques reales. La mitad que falta sólo se ve en
+     un teléfono, y está anotada en la lista de comprobación de
+     docs/estado-conocido.md. */
+  touch-action:pinch-zoom;
 }
 
 /* Se sale por arriba entera, continuando el movimiento que el dedo empezó. Ya

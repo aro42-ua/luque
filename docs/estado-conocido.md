@@ -361,11 +361,15 @@ descuido.
 
 ### Qué sigue sin poder certificar la suite
 
-No hay pruebas de CSS computado en este repositorio, así que tres cosas del
+No hay pruebas de CSS computado en este repositorio, así que cuatro cosas del
 bloque 4e sólo las puede juzgar quien las mire en un teléfono: el aspecto del
-panel al deslizarse, que `touch-action:none` sobre el hero baste para que
-Chrome de Android no confunda el arrastre con un *pull-to-refresh*, y que el
-arrastre se sienta bien al dedo.
+panel al deslizarse, que el `touch-action` del hero baste para que Chrome de
+Android no confunda el arrastre con un *pull-to-refresh*, que **el pellizco
+amplíe** sobre ese mismo hero, y que el arrastre se sienta bien al dedo.
+
+Las dos del medio cuelgan de la MISMA declaración y tiran en sentidos
+contrarios, así que conviene mirarlas juntas: ver el punto 10 de la lista de
+abajo.
 
 **El aviso viejo, ya cumplido:** la spec decía
 con todas las letras que dos cosas de esta portada no se pueden comprobar en
@@ -412,6 +416,28 @@ sustituir ninguna medición de escritorio—:
    siendo el 02» prueba lo mismo sobre otra categoría), así que el número que
    verá Ángel en cada tarjeta filtrada es el de su posición en la lista
    completa de doce.
+10. **Que el pellizco de dos dedos AMPLÍE sobre el amarillo**, y que tirar
+    hacia abajo sobre él siga sin recargar. Añadido en la ronda de arreglos de
+    la revisión final del bloque 4e; va al final para no correr la numeración
+    de los nueve de arriba, que están citados por su número más de una vez.
+
+    Las dos cosas cuelgan de la misma declaración, `touch-action` sobre
+    `body.es-movil .hoja-hero` (`css/luque.css`, sobre la línea 1235), que pasó
+    de `none` a `pinch-zoom` justamente para devolver el zoom sin devolver el
+    tirón: `none` declina TODOS los gestos del navegador, y ese elemento es
+    `position:fixed; inset:0`, o sea la pantalla entera mientras la puerta está
+    puesta, así que apagaba también el ampliar — que es una necesidad de
+    accesibilidad, no un capricho.
+
+    **El cambio se aplicó sin poder verificarlo aquí, y por eso está en esta
+    lista y no dado por bueno.** `Input.synthesizePinchGesture` no mueve el
+    `pageScale` en Chrome headless bajo emulación ni siquiera sobre una página
+    sin `touch-action` ninguno: el control falla, así que la medición no vale
+    para nada y no hay forma de comprobarlo sin un teléfono. Cuidado con la
+    trampa que ya engañó una vez a quien lo midió: si la sonda hace un
+    `Emulation.setPageScaleFactor` antes del pellizco, lo que se lee después es
+    el valor forzado y parece que el pellizco funcionó. Si el pellizco no
+    amplía, la sospechosa es esa línea del CSS y no el JavaScript.
 
 Para repetirla: exponer el servidor a la red local
 (`python -m http.server 8000 --bind 0.0.0.0`) y darle a Ángel
