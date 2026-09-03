@@ -220,6 +220,19 @@ describe('MovilHoja — filtrar y la foto que falta', function () {
     }), 'las celdas fuera del filtro tienen que llevar hidden');
   });
 
+  /* La regla que traduce una ruta a filtro tiene que ser la MISMA que la del
+     suscriptor de escritorio (js/galeria.js, el suscriptor que arma
+     `Galeria.init()`): 'proyecto' se ignora, porque abrir un proyecto no dice
+     nada del filtro. Sin esta guarda, `filtrarDesdeRuta` traducía 'proyecto'
+     a `null` y deshacía el filtro de categoría que ya había. */
+  prueba('una ruta de proyecto no toca el filtro que ya había', function () {
+    igual(pintada(function (ol) {
+      MovilHoja.filtrarDesdeRuta(ol, { tipo: 'categoria', valor: 'editorial', pieza: null });
+      MovilHoja.filtrarDesdeRuta(ol, { tipo: 'proyecto', valor: 'niebla', pieza: null });
+      return visibles(ol);
+    }), ['bruma', 'oleaje']);
+  });
+
   prueba('una foto que no carga marca su celda', function () {
     cierto(pintada(function (ol) {
       var celda = ol.querySelector('li[data-id="bruma"]');

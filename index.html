@@ -407,7 +407,7 @@
       window.Router.ir('proyecto', id);
     });
     window.Router.alCambiar(function (ruta) {
-      window.MovilHoja.filtrar(rejilla, ruta.tipo === 'categoria' ? ruta.valor : null);
+      window.MovilHoja.filtrarDesdeRuta(rejilla, ruta);
     });
 
     window.Router.init();

@@ -91,6 +91,18 @@ window.MovilHoja = (function () {
     }
   }
 
+  /* Traduce una ruta del Router al argumento que espera `filtrar`, con la
+     MISMA regla que su equivalente de escritorio (js/galeria.js, el
+     suscriptor que arma `Galeria.init()`): 'proyecto' se ignora, porque abrir
+     un proyecto no dice nada del filtro. Sin esta guarda, una ruta de
+     proyecto se traducía a `null` y deshacía el filtro de categoría que ya
+     había en la rejilla — el escritorio y la hoja quedaban en desacuerdo
+     sobre qué significa navegar a un proyecto. */
+  function filtrarDesdeRuta(contenedor, ruta) {
+    if (ruta.tipo === 'proyecto') return;
+    filtrar(contenedor, ruta.tipo === 'categoria' ? ruta.valor : null);
+  }
+
   /* ----------------------------------------------------------------
      EL HERO FUNDIDO
      El amarillo con LUQUE! que hay antes de la rejilla. Se va al deslizar
@@ -246,6 +258,7 @@ window.MovilHoja = (function () {
     proporcion: proporcion,
     numero: numero,
     filtrar: filtrar,
+    filtrarDesdeRuta: filtrarDesdeRuta,
     entrada: entrada,
     heroIdo: heroIdo,
     pintar: pintar
