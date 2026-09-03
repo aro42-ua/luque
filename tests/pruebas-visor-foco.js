@@ -1,9 +1,16 @@
-/* El envolvente de foco del visor (`atraparFoco`, js/visor.js), que hasta el
-   bloque 4e no tenía ninguna prueba y que este bloque rompió sin enterarse.
+/* El envolvente de foco del visor (`VisorFoco.atrapar`, js/visor-foco.js), que
+   hasta el bloque 4e no tenía ninguna prueba y que este bloque rompió sin
+   enterarse.
 
-   POR QUÉ ESTA PRUEBA EXISTE. `atraparFoco` decide quién es el `primero` y el
-   `ultimo` foco del diálogo filtrando por `offsetParent !== null`. Ese filtro
-   sólo ve UNA de las dos formas de esconder: `display:none` anula
+   Se ejercita a través de `js/visor.js`, que es quien lo llama, y no llamando a
+   `VisorFoco.atrapar` a pelo: lo que se rompió no fue la función suelta sino el
+   diálogo entero, y probarla aislada obligaría a construir a mano la lista de
+   focos, o sea a comprobar el escenario en vez del visor.
+
+   POR QUÉ ESTA PRUEBA EXISTE. El envolvente decide quién es el `primero` y el
+   `ultimo` foco del diálogo, y hasta esta ronda filtraba sólo por
+   `offsetParent !== null`. Ese filtro ve UNA de las dos formas de esconder:
+   `display:none` anula
    `offsetParent`, `visibility:hidden` NO. El botón «Cerrar la ficha» que añadió
    este bloque se esconde de las dos maneras según el ancho —`display:none` en
    escritorio, `visibility:hidden` heredada del panel a ≤860px—, así que a
@@ -22,7 +29,7 @@
 
    POR QUÉ NO SE TABULA DE VERDAD. Un `KeyboardEvent` sintético no mueve el foco
    —eso lo hace el navegador, no el evento—, así que lo que se comprueba es lo
-   único que `atraparFoco` hace de su parte: que al llegar al extremo llame a
+   único que el envolvente hace de su parte: que al llegar al extremo llame a
    `focus()` sobre el otro extremo y consuma el evento. Es exactamente la mitad
    que se rompía: con el defecto, `activeElement === ultimo` era inalcanzable,
    no se llamaba a nadie y el evento salía sin consumir — que en un navegador de
@@ -55,7 +62,8 @@ describeAsync('Visor — el envolvente de foco del diálogo', function () {
                  '../js/visor-estado.js', '../js/visor-transicion.js',
                  '../js/visor-lupa.js', '../js/visor-ficha.js', '../js/visor-video.js',
                  '../js/visor-carga.js', '../js/visor-chrome.js',
-                 '../js/visor-origen.js', '../js/visor.js'];
+                 '../js/visor-origen.js', '../js/visor-foco.js',
+                 '../js/visor.js'];
 
   function dobles() {
     return {

@@ -271,7 +271,7 @@ window.Visor = (function () {
 
     if (e.key === 'ArrowRight' && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.siguiente(estado); renderizar(); }
     if (e.key === 'ArrowLeft'  && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.anterior(estado);  renderizar(); }
-    if (e.key === 'Tab') atraparFoco(e);
+    if (e.key === 'Tab') window.VisorFoco.atrapar(raiz, e);   // quién es enfocable ahora: js/visor-foco.js
 
     window.VisorChrome.despertar();
   }
@@ -282,16 +282,6 @@ window.Visor = (function () {
                             : window.VisorEstado.anterior(estado);
     renderizar();
     window.VisorChrome.despertar();
-  }
-
-  function atraparFoco(e) {
-    /* Y la visibilidad, porque esconder tiene DOS formas y offsetParent sólo ve una: el botón de cerrar la ficha se esconde con `visibility:hidden` a ≤860px —el `display:none` que lo tapaba es sólo de escritorio—, y un `ultimo` que el navegador no enfoca nunca deja escapar el Tab del diálogo. `visibility` se hereda, así que basta preguntárselo al propio botón y no al panel que la declara. */
-    var focos = Array.prototype.filter.call(raiz.querySelectorAll('button:not([disabled]), [role="slider"]'),
-      function (el) { return el.offsetParent !== null && getComputedStyle(el).visibility !== 'hidden'; });   // offsetParent nulo con display:none: fuera la línea en modo foto
-    if (!focos.length) return;
-    var primero = focos[0], ultimo = focos[focos.length - 1];
-    if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
-    else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
   }
 
   function estaAbierto() { return estado && estado.abierto; }
