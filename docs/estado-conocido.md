@@ -197,18 +197,65 @@ necesita `piezas` como NÚMERO y no como array**; el porqué y lo que cuesta
 equivocarse está más abajo en este mismo documento, en la sección «Cómo se
 prueba», en la entrada sobre `MovilRecorrido.paradas`.
 
-**La comprobación en un teléfono real no se ha hecho todavía.** La spec dice
+**La comprobación en un teléfono real YA SE HIZO, el 2026-09-03.** Ángel la
+dio por hecha sobre su propio teléfono, con el sitio servido desde la red
+local. Los resultados punto por punto no quedaron registrados —sólo el hecho
+de que la comprobación ocurrió—, pero sacó **tres defectos**, que son trabajo
+del bloque siguiente y están descritos justo debajo, en «Lo que encontró la
+comprobación en el teléfono».
+
+Para llegar al servidor desde el teléfono hizo falta pelearse con dos cosas de
+la máquina, y conviene no volver a diagnosticarlas desde cero: el adaptador de
+NordVPN estaba activo, y la Wi-Fi de casa estaba clasificada por Windows como
+red **pública**, que es el perfil en el que el cortafuegos bloquea por defecto
+todo lo entrante. El servidor en sí estaba bien —`0.0.0.0:8000`, HTTP 200
+desde la propia máquina en su IP de la Wi-Fi—, así que si vuelve a pasar, el
+sospechoso no es el código. La IP pública no sirve: sin abrir puertos en el
+router no llega a la máquina.
+
+## Lo que encontró la comprobación en el teléfono (trabajo del bloque 4e)
+
+Los tres los vio Ángel en pantalla real; las causas que siguen a cada uno son
+**razonadas y no medidas**, y quien las arregle debería empezar por medirlas.
+
+1. **El hero se retira de golpe, y debería seguir al dedo.** Hoy el gesto es
+   todo o nada: `MovilHoja.entrada` sólo actúa cuando `MovilGestos.soltar`
+   devuelve la intención `'arriba'`, ya con el dedo levantado
+   (`js/movil-hoja.js`). Lo que se pide es una transición interactiva —la hoja
+   se levanta con la mano, y si el dedo vuelve al origen la hoja vuelve con
+   él—, lo que necesita seguir el `pointermove` y transformar el hero en
+   vivo, más un umbral al soltar que decida entre cruzar y volver. `MovilGestos`
+   no sobra: sigue haciendo falta para la decisión final, pero deja de ser el
+   único que manda.
+
+2. **Las fotos aparecen de la nada al abrirse.** Deberían ampliarse desde la
+   misma imagen que ya se está viendo en pantalla. Es una transición de
+   elemento compartido entre la celda de la rejilla y la foto del visor:
+   medir el rectángulo de la miniatura y animar desde ahí. Afecta a la
+   apertura del visor (`js/visor.js`, `abrir`) y a la celda de origen
+   (`js/movil-hoja.js`).
+
+3. **Del panel informativo no se puede salir.** Es el más grave de los tres,
+   porque es un callejón sin salida y no un detalle de acabado. En escritorio
+   hay dos salidas —`Escape`, que `js/visor.js` maneja en `alPulsarTecla`, y
+   la tecla `i`—, y en el teléfono no hay ninguna de las dos: la única es
+   volver a pulsar el botón de información, cuyo oyente vive en
+   `VisorFicha.init` (`js/visor-ficha.js`). La sospecha, sin medir, es que el
+   panel abierto tapa ese botón, así que la única salida que queda en un
+   teléfono es justo la que la ficha esconde. Encaja con lo ya sabido: el
+   visor del móvil sigue siendo el de escritorio, diseñado para un ratón y un
+   teclado.
+
+**El aviso viejo, ya cumplido:** la spec decía
 con todas las letras que dos cosas de esta portada no se pueden comprobar en
 un navegador de escritorio estrechado por mucho que se le dé el ancho que
 dispara el interruptor: el deslizamiento desde el borde, que se queda el
 gesto de «atrás» del navegador, y el *pull-to-refresh* al tirar hacia abajo
 (`docs/superpowers/specs/2026-08-28-movil-design.md`, sección «Dos cosas del
-sistema operativo», sobre las líneas 286-300). Esta tarea preparó la
-lista para pasársela a Ángel sobre un teléfono de verdad, pero no hay ningún
-commit ni anotación en el repositorio que registre que esa comprobación haya
-llegado a ocurrir —comprobado repasando `git log` de esta rama hasta
-`c71fe56`, el HEAD con el que arrancó esta tarea—, así que los nueve puntos
-siguen sin confirmar, en bloque y no uno por uno:
+sistema operativo», sobre las líneas 286-300). Ésta fue la lista que se le
+pasó a Ángel, y se conserva porque es la que hay que volver a recorrer cada
+vez que la portada móvil cambie —los puntos 3 y 4 en particular no los puede
+sustituir ninguna medición de escritorio—:
 
 1. Que se vea el amarillo con LUQUE! al abrir la portada en el móvil.
 2. Que deslizar el dedo hacia arriba sobre el amarillo lo retire y aparezca
