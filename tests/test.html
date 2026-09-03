@@ -75,6 +75,12 @@
      fallo conocido, es una comprobación pendiente. Si al abrir esto con
      doble clic la sección "panel.js" no pinta nada, es la primera sospechosa. -->
 <script src="pruebas-panel.js"></script>
+<!-- Carga js/visor.js entero en un iframe, con el marcado del #visor sacado de
+     index.html en vivo y css/luque.css de verdad: el defecto que cubre —el
+     envolvente de foco del diálogo a anchura de móvil— no está en el JS solo ni
+     en el CSS solo, sino en el encuentro de los dos. Necesita servidor, igual
+     que la sección de abajo. -->
+<script src="pruebas-visor-foco.js"></script>
 <script src="pruebas-contenido-real.js"></script>
 <script>window.Arnes.resumen();</script>
 </body>

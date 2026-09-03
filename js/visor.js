@@ -285,8 +285,9 @@ window.Visor = (function () {
   }
 
   function atraparFoco(e) {
+    /* Y la visibilidad, porque esconder tiene DOS formas y offsetParent sólo ve una: el botón de cerrar la ficha se esconde con `visibility:hidden` a ≤860px —el `display:none` que lo tapaba es sólo de escritorio—, y un `ultimo` que el navegador no enfoca nunca deja escapar el Tab del diálogo. `visibility` se hereda, así que basta preguntárselo al propio botón y no al panel que la declara. */
     var focos = Array.prototype.filter.call(raiz.querySelectorAll('button:not([disabled]), [role="slider"]'),
-      function (el) { return el.offsetParent !== null; });   // offsetParent nulo con display:none: fuera la línea en modo foto
+      function (el) { return el.offsetParent !== null && getComputedStyle(el).visibility !== 'hidden'; });   // offsetParent nulo con display:none: fuera la línea en modo foto
     if (!focos.length) return;
     var primero = focos[0], ultimo = focos[focos.length - 1];
     if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
