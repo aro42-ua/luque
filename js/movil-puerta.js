@@ -57,10 +57,17 @@ window.MovilPuerta = (function () {
        aislamiento entre pruebas. Cada llamada que NO se salta el hero suscribe
        un oyente de teclado en `document`, y sólo se da de baja al cruzar la
        puerta; las que salen por el `return` temprano del enlace profundo no
-       llegan a suscribir ninguno. En la suite hay 19 llamadas a `entrada()`, de
-       las que 17 suscriben oyente (contadas instrumentando `entrada` y
-       `addEventListener` sobre la suite entera; el conteo está en el informe de
-       la Tarea 4, no estimado a ojo).
+       llegan a suscribir ninguno. En la suite hay 23 llamadas a `entrada()`, de
+       las que 21 suscriben oyente (contadas instrumentando `entrada` sobre la
+       suite entera y volcándola con Chrome headless, no estimadas a ojo).
+
+       Esas dos cifras CADUCAN cada vez que alguien añade una prueba que llame a
+       `conElHero`, y ya han caducado dos veces: entraron valiendo 19 y 17 en el
+       bloque 4d, la Tarea 3 de este bloque añadió dos pruebas sin recontar, y la
+       ronda de arreglos de la revisión final otras dos. Lo que sostiene el
+       razonamiento es que sean MUCHAS y solapadas, no que sean exactamente
+       éstas: si vuelven a desfasarse, el número miente pero el argumento sigue
+       en pie.
 
        El escenario que este diseño impide: con una sola bandera compartida por
        el módulo, el oyente de una prueba anterior atendería la tecla de la

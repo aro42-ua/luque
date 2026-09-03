@@ -245,10 +245,19 @@ una en el bloque 4e; donde una medición contradijo lo razonado, se dice.
    `--window-size` a secas el ancho sale mentiroso, ver más abajo): el
    rectángulo de escritorio (`Galeria.elementoDe('niebla')`) da
    `{x:0,y:0,w:0,h:0}` y el de la celda móvil da
-   `{x:24,y:24,w:166,h:207.5}`. `js/visor.js` gana `elementoQueAbre(id)`, que
-   pregunta a `window.Movil.actual()` cuál es la portada puesta y sólo
-   entonces decide a quién preguntarle el origen del vuelo; se desbordaba del
-   techo de 300 líneas y salió a `js/visor-origen.js`.
+   `{x:24,y:24,w:166,h:207.5}` — el ancho de esa medición importa y por eso se
+   dice: **390 CSS px**; véase el aviso del final de este apartado.
+
+   Quien decide a qué portada preguntarle el origen del vuelo es
+   **`VisorOrigen.elemento(id)`**, en `js/visor-origen.js`: pregunta a
+   `window.Movil.actual()` cuál es la portada puesta y sólo entonces se dirige a
+   `MovilHoja.elementoDe` o a `Galeria.elementoDe`. De `js/visor.js` cambió
+   **una sola línea**, la que hoy dice
+   `elementoQueAbrio = window.VisorOrigen.elemento(id)`. El plan del bloque
+   proponía una función `elementoQueAbre(id)` dentro de `js/visor.js`, y **ese
+   nombre no existe en el código**: el fichero estaba a una línea del techo de
+   300 y la función salió fuera con otro nombre. Si lo buscas, no lo vas a
+   encontrar.
 
    Esto destapó un segundo defecto, no descrito en el bloque 4d porque nadie
    había medido el enlace en frío: `Router.init()` avisa de forma síncrona y
@@ -258,16 +267,51 @@ una en el bloque 4e; donde una medición contradijo lo razonado, se dice.
    `MovilHoja.elementoDe` se llamaba cero veces, el vuelo salía de
    `{x:-304,y:-25}` y el foco al cerrar caía en `BODY`. El orden se invirtió
    —`Movil.init` antes que `Router.init`— y con el mismo caso se mide
-   `MovilHoja.elementoDe` llamado una vez, el rectángulo `{x:24,y:24,w:216,
-   h:269}` y el foco de vuelta en la celda.
+   `MovilHoja.elementoDe` llamado una vez, **el mismo rectángulo de arriba**
+   —`{x:24,y:24,w:166,h:207.5}` a 390×844— y el foco de vuelta en la celda.
+
+   **Sobre ese rectángulo, porque aquí llegó a haber dos cifras distintas para
+   la misma celda.** La buena es `{x:24,y:24,w:166,h:207.5}` y corresponde a un
+   viewport de **390×844 CSS px** con `mobile:true`; vuelta a medir el
+   2026-09-04 en la ronda de arreglos de la revisión final, sobre `#/niebla`,
+   y sale idéntica para el `<li>`, el `.hoja-boton` y la `<img>` de la celda.
+   El 166 se comprueba con el CSS a mano: `390 − 48` de `padding` menos los
+   `10` de `gap`, entre dos columnas, son 166; y `166 × 1,25` —la primera de
+   `MovilHoja.PROPORCIONES`— son los 207,5 de alto.
+
+   El `216×269` que circuló **no es de este ancho**: medido, sale a un viewport
+   de **490px** (`(490 − 48 − 10) / 2 = 216`, y `216 × 1,25 = 270`). O sea que
+   entró de una medición hecha con la ventana más ancha de lo que se creía,
+   exactamente la trampa que este documento avisa dos apartados más abajo. Si
+   vuelves a medir y te sale 216, lo primero que hay que mirar no es el código
+   sino el ancho real del viewport.
 
 3. **Del panel informativo no se podía salir. Resuelto, y la sospecha del
    bloque 4d era cierta.** `#visorFicha` gana un botón propio, «Cerrar la
    ficha», cableado al mismo `alAlternar` que el botón «Ficha»
-   (`js/visor-ficha.js`, `init`); visible sólo bajo 860px y con la transición
-   de `visibility` retardada 0,45s para que `translateX(-100%)` siga sacando
-   el panel cerrado del orden de tabulación (`css/luque.css`). Medido con la
-   misma emulación móvil de verdad: antes del arreglo, `elementFromPoint` en
+   (`js/visor-ficha.js`, `init`); visible sólo bajo 860px.
+
+   **Lo que saca el panel cerrado del orden de tabulación es `visibility:hidden`,
+   y sólo eso.** `translateX(-100%)` nunca lo sacó: el panel cerrado sigue
+   RENDERIZADO, sólo que a `left:-340px`, y `aria-hidden` tampoco saca del
+   tabulador — es justamente por eso por lo que hubo que añadir la
+   `visibility`, y el comentario de `css/luque.css` sobre `.visor-ficha` lo dice
+   con todas las letras. **Y el retardo de 0,45s no tiene nada que ver con el
+   tabulador**: existe porque `visibility` no interpola, salta; sin retardarla
+   hasta el final, el panel se volvería invisible en el primer fotograma y el
+   deslizamiento de salida que la línea de al lado se molesta en animar no se
+   vería nunca. La rama abierta pone ese retardo a cero, porque al abrir tiene
+   que ser visible ya. Quien «simplifique» quitando el retardo creyendo que es
+   accesibilidad, lo que rompe es la animación de salida.
+
+   Y un aviso que costó una regresión: el filtro del envolvente de foco del
+   visor (`atraparFoco`, `js/visor.js`) mira `offsetParent`, que `display:none`
+   anula pero `visibility:hidden` **no**. Ese botón nuevo entraba en la lista de
+   focos siendo inenfocable y el Tab se escapaba del diálogo a ≤860px; se
+   arregló en la ronda de la revisión final añadiendo la visibilidad a la
+   condición, y lo cubre `tests/pruebas-visor-foco.js`.
+
+   Medido con la misma emulación móvil de verdad: antes del arreglo, `elementFromPoint` en
    el punto del antiguo botón «Ficha» con el panel abierto devolvía `#fichaCat`,
    confirmando la sospecha del bloque 4d. El arreglo mismo escondía un
    defecto que la medición cazó antes de darlo por bueno: en el CENTRO del
@@ -407,7 +451,7 @@ recicla el CSS de la primera.
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **347 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **355 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -419,14 +463,19 @@ los tres módulos puros del móvil, desde el bloque 4d el interruptor de ancho
 (`tests/pruebas-movil-arrastre.js`) y la puerta del hero, que se mudó de
 `movil-hoja.js` a `js/movil-puerta.js` con sus pruebas
 (`tests/pruebas-movil-puerta.js` y `tests/pruebas-movil-puerta-async.js`,
-antes `...-hoja-hero...`). Medido el 2026-09-03 con Chrome headless
-(`--virtual-time-budget=15000 --dump-dom`) contra `tests/test.html` servido
-por `python -m http.server`, con el servidor verificado por `curl` antes de
-medir: la línea final dice «347 pasan, 0 fallan».
+antes `...-hoja-hero...`), y desde la ronda de arreglos de la revisión final
+del 4e el envolvente de foco del visor (`tests/pruebas-visor-foco.js`, la única
+sección que carga `js/visor.js`) y las dos que fijan que al soltar el dedo no
+quede estilo en línea clavando la hoja. Medido el 2026-09-04 con Chrome
+headless (`--virtual-time-budget=15000 --dump-dom`) contra `tests/test.html`
+servido por `python -m http.server`, con el servidor verificado por `curl` y
+por que su registro CRECIERA antes de medir: la línea final dice «355 pasan, 0
+fallan».
 
-Si las cuentas con `grep -c "prueba("` te van a salir **353**, no 347. La
+Si las cuentas con `grep -c "prueba("` te van a salir **361**, no 355. La
 diferencia son las mismas seis coincidencias de siempre que no llegan a
-ejecutarse como prueba —el bloque 4e no añadió ninguna nueva—: dos
+ejecutarse como prueba —ni el bloque 4e ni su ronda de arreglos añadieron
+ninguna nueva—: dos
 viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos cargas que
 están diseñadas para fallar —nunca se ejecutan; están ahí para que la sección
 se ponga en rojo si algún día la carga deja de fallar—; tres viven en
@@ -575,8 +624,15 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   router.** Los dos llaman a `Router.ir` —`galeria.js` en el clic del menú de
   categorías y en el `Escape`, ambos dentro de `Galeria.init` (sobre las
   líneas 231-232 y 248), `visor.js:41,129,130`— y se suscriben con
-  `Router.alCambiar`, y de eso no hay ni una comprobación: los dos archivos
-  están enteros sin cobertura.
+  `Router.alCambiar`, y de ese empalme sigue sin haber ni una comprobación.
+
+  Lo que ha cambiado desde la ronda de arreglos de la revisión final del bloque
+  4e, para no dejar la frase más gorda de lo que es: `js/visor.js` **ya no está
+  entero sin cobertura**. `tests/pruebas-visor-foco.js` lo carga de verdad —con
+  el `#visor` sacado de `index.html` en vivo y `css/luque.css` puesta— y ejerce
+  `init`, `abrir` y el envolvente de foco. Lo que sigue sin probarse es
+  precisamente el empalme con el router: esa sección dobla la portada y nunca
+  llega a `Router.ir`. `js/galeria.js` sí sigue entero sin cobertura.
 
   `hero.js` es el caso distinto, y conviene no confundirlo. Toca al router en un
   solo sitio, `js/hero.js:33`, y es **el único archivo del sitio que llama a
