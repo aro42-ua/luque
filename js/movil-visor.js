@@ -28,6 +28,22 @@ window.MovilVisor = (function () {
     escena = refs.escena;
     orden = ordenDe(proyectos);
     aqui = null;
+    window.MovilHud.init({
+      raiz:     refs.hud,
+      cat:      refs.cat,
+      cats:     refs.cats,
+      cerrar:   refs.cerrar,
+      titulo:   refs.titulo,
+      contador: refs.contador
+    }, function (categoria) {
+      /* Elegir una categoría cierra el visor y deja la portada filtrada: es
+         una petición sobre QUÉ trabajos ver, y contestarla sin salir del
+         trabajo abierto dejaría la pantalla diciendo una cosa y la URL otra. */
+      if (categoria === 'todos') window.Router.ir('todos', null);
+      else window.Router.ir('categoria', categoria);
+    }, function () {
+      window.Router.ir('todos', null);
+    });
     engancharGestos();
   }
 
@@ -63,6 +79,7 @@ window.MovilVisor = (function () {
     if (aqui.pieza === 'ficha')     escena.appendChild(fichaDe(p));
     else if (aqui.pieza === null)   escena.appendChild(videoDe(p));
     else                            escena.appendChild(fotoDe(p, aqui.pieza));
+    window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
   }
 
   /* La foto, con carga progresiva. Se pinta primero la PORTADA —que la rejilla
@@ -220,8 +237,10 @@ window.MovilVisor = (function () {
     gesto = r.estado;
     if (r.intencion === null) return;
 
-    /* En la Tarea 4 el toque despierta el HUD. Aquí se consume sin hacer nada,
-       que es lo correcto mientras no haya HUD que despertar. */
+    /* El toque despierta el HUD y no navega. Que no navegue es lo que hace
+       posible volver a encenderlo sin cambiar de foto. */
+    if (r.intencion === 'toque') { window.MovilHud.despertar(); return; }
+
     var ruta = siguienteRuta(aqui, r.intencion, orden);
     if (!ruta) return;
     window.Router.ir(ruta.tipo, ruta.valor, ruta.pieza);

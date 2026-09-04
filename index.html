@@ -364,6 +364,31 @@
   <div class="mvisor" id="movilVisor" role="dialog" aria-modal="true"
        aria-label="Visor de trabajos" hidden>
     <div class="mvisor-escena" id="movilVisorEscena"></div>
+
+    <!-- Pastillas amarillas con texto negro. Medido en la spec: el amarillo
+         suelto sobre una foto clara da 1,07:1 de contraste y el negro suelto
+         sobre una foto oscura ~1,2:1 — el mismo fallo cambiado de lado, y como
+         las fotos las sube el estudio no se puede apostar por ninguno. La
+         pastilla da 17,6:1 pase lo que pase, porque el fondo del texto deja de
+         ser la foto.
+
+         Ningún control queda en los ~20px de los bordes laterales: esa franja
+         se la queda el gesto de «atrás» del navegador (Safari en el borde
+         izquierdo, Chrome en los dos) y no se puede desactivar desde la web.
+         Lo impone `.mvisor-hud` en css/luque.css. -->
+    <div class="mvisor-hud" id="movilVisorHud" aria-hidden="false">
+      <div class="mvisor-hud-arriba">
+        <button class="mvisor-cat" id="movilVisorCat" type="button"
+                aria-expanded="false" aria-haspopup="true"></button>
+        <ul class="mvisor-cats" id="movilVisorCats" hidden></ul>
+        <button class="mvisor-cerrar" id="movilVisorCerrar" type="button"
+                aria-label="Volver a la portada">&times;</button>
+      </div>
+      <div class="mvisor-hud-abajo">
+        <p class="mvisor-titulo" id="movilVisorTitulo"></p>
+        <span class="mvisor-contador" id="movilVisorContador"></span>
+      </div>
+    </div>
   </div>
 
   <footer>
@@ -399,6 +424,13 @@
        que abrir el visor desde una ruta de proyecto. La suite no puede cazarlo
        porque tests/test.html carga sus scripts por su cuenta. -->
   <script src="js/movil-recorrido.js"></script>
+  <!-- Va ANTES de movil-visor.js, que lo usa en `init()` para enganchar el HUD
+       y en `pintar()` para pintarlo en cada parada. Sin esta línea
+       `window.MovilHud` es undefined y `MovilVisor.init` lanza un TypeError
+       en cuanto arranca, antes de enganchar ningún gesto: el visor móvil no
+       abriría ni un solo trabajo. La suite no puede cazarlo porque
+       tests/test.html carga sus scripts por su cuenta. -->
+  <script src="js/movil-hud.js"></script>
   <script src="js/movil-visor.js"></script>
   <!-- Va ANTES de movil-puerta.js, que lo usa en `entrada()`. Sin esta línea
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError
@@ -460,8 +492,14 @@
        antes de él, porque lo que corre en el aviso inicial es `aplicar`, no
        `init`, y para entonces `Movil.actual()` ya tiene valor. */
     window.MovilVisor.init({
-      raiz:   document.getElementById('movilVisor'),
-      escena: document.getElementById('movilVisorEscena')
+      raiz:     document.getElementById('movilVisor'),
+      escena:   document.getElementById('movilVisorEscena'),
+      hud:      document.getElementById('movilVisorHud'),
+      cat:      document.getElementById('movilVisorCat'),
+      cats:     document.getElementById('movilVisorCats'),
+      cerrar:   document.getElementById('movilVisorCerrar'),
+      titulo:   document.getElementById('movilVisorTitulo'),
+      contador: document.getElementById('movilVisorContador')
     }, window.Datos.PROYECTOS);
     window.Router.alCambiar(function (ruta) {
       window.MovilVisor.aplicar(ruta);

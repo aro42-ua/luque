@@ -43,6 +43,11 @@
      que pinta la escena— recibe su contenedor del arnés de DOM.
      Ver pruebas-movil-visor.js. -->
 <script src="../js/movil-visor.js"></script>
+<!-- movil-hud.js no toca el DOM al cargarse: sólo define window.MovilHud.
+     `contador` y `OCULTAR_TRAS` se prueban solos; `pintar` e `init`, que sí
+     construyen nodos, reciben sus elementos del arnés de DOM.
+     Ver pruebas-movil-hud.js. -->
+<script src="../js/movil-hud.js"></script>
 <script src="../js/movil-puerta.js"></script>
 <script src="../js/hero.js"></script>
 <script src="../panel/js/identificador.js"></script>
@@ -70,6 +75,7 @@
 <script src="pruebas-movil-hoja-rejilla.js"></script>
 <script src="pruebas-movil-hoja-filtrar.js"></script>
 <script src="pruebas-movil-visor.js"></script>
+<script src="pruebas-movil-hud.js"></script>
 <script src="pruebas-movil-puerta.js"></script>
 <script src="pruebas-movil-puerta-async.js"></script>
 <script src="pruebas-hero.js"></script>

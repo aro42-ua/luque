@@ -19,6 +19,60 @@ var MV_PROYECTOS = [
     tipo: 'video' }
 ];
 
+/* El marcado de las ocho referencias que `MovilVisor.init` exige desde la
+   Tarea 4: la escena de siempre más las seis del HUD. Vive en un solo sitio
+   porque los tres arneses de abajo (`conVisor` y los dos `conEscena`) lo
+   necesitan igual, letra por letra. */
+var MV_MARCADO =
+  '<div><div id="mvRaiz" hidden><div id="mvEscena"></div>' +
+  '<div id="mvHud"><button id="mvCat"></button><ul id="mvCats"></ul>' +
+  '<button id="mvCerrar"></button><p id="mvTitulo"></p>' +
+  '<span id="mvContador"></span></div></div></div>';
+
+function mvRefsDesde(caja) {
+  return {
+    raiz:     caja.querySelector('#mvRaiz'),
+    escena:   caja.querySelector('#mvEscena'),
+    hud:      caja.querySelector('#mvHud'),
+    cat:      caja.querySelector('#mvCat'),
+    cats:     caja.querySelector('#mvCats'),
+    cerrar:   caja.querySelector('#mvCerrar'),
+    titulo:   caja.querySelector('#mvTitulo'),
+    contador: caja.querySelector('#mvContador')
+  };
+}
+
+/* Ayudante ÚNICO y compartido por `conVisor` y los dos `conEscena` de más
+   abajo: construye las ocho referencias, llama a `MovilVisor.init` y falsea
+   `window.Datos` con `porId` y `CATEGORIAS` —esta última porque desde la
+   Tarea 4 `pintar()` llama a `MovilHud.pintar`, que la lee—.
+
+   Antes de la Tarea 4 este cuerpo estaba copiado tres veces, una por cada
+   arnés, con sólo dos referencias. Al ampliar `refs` a ocho se hizo evidente
+   que una cuarta copia —la de este mismo bloque— habría sido la señal de que
+   copiar ya no compensaba, así que se extrae aquí. */
+function conVisorSobre(proyectos, fn) {
+  return ArnesDom.conElemento(MV_MARCADO, function (caja) {
+    var refs = mvRefsDesde(caja);
+    MovilVisor.init(refs, proyectos);
+    var antes = window.Datos;
+    window.Datos = {
+      CATEGORIAS: ['editorial', 'foto-fija', 'cortometraje'],
+      porId: function (id) {
+        for (var i = 0; i < proyectos.length; i++) {
+          if (proyectos[i].id === id) return proyectos[i];
+        }
+        return null;
+      }
+    };
+    try { return fn(refs); }
+    finally {
+      window.Datos = antes;
+      document.body.classList.remove('mvisor-abierto');
+    }
+  });
+}
+
 describe('MovilVisor — el orden que consume MovilRecorrido', function () {
 
   prueba('convierte piezas a NÚMERO, que es lo que espera MovilRecorrido', function () {
@@ -69,32 +123,15 @@ describe('MovilVisor — abre y cierra según la ruta', function () {
     try { return fn(); } finally { window.Movil = antes; }
   }
 
-  /* Desde la Tarea 2, `pintar` le pide el proyecto entero a `window.Datos`.
-     Este bloque sólo comprueba `estado()` y `raiz.hidden`, no lo que se pinta,
-     pero `pintar` corre igual y revienta si `Datos.porId` no está: se falsea
-     con la misma lista de la prueba para no depender del contenido real. */
+  /* Desde la Tarea 2, `pintar` le pide el proyecto entero a `window.Datos`, y
+     desde la Tarea 4 también pinta el HUD, que necesita las seis referencias
+     nuevas y `Datos.CATEGORIAS`. Este bloque sólo comprueba `estado()` y
+     `raiz.hidden`, no lo que se pinta, pero `pintar` corre igual y revienta si
+     falta cualquiera de las dos cosas. Ver `conVisorSobre`, arriba. */
   function conVisor(fn) {
-    return ArnesDom.conElemento(
-      '<div><div id="mvRaiz" hidden><div id="mvEscena"></div></div></div>',
-      function (caja) {
-        var raiz = caja.querySelector('#mvRaiz');
-        var escena = caja.querySelector('#mvEscena');
-        MovilVisor.init({ raiz: raiz, escena: escena }, MV_PROYECTOS);
-        var antes = window.Datos;
-        window.Datos = {
-          porId: function (id) {
-            for (var i = 0; i < MV_PROYECTOS.length; i++) {
-              if (MV_PROYECTOS[i].id === id) return MV_PROYECTOS[i];
-            }
-            return null;
-          }
-        };
-        try { return fn(raiz, escena); }
-        finally {
-          window.Datos = antes;
-          document.body.classList.remove('mvisor-abierto');
-        }
-      });
+    return conVisorSobre(MV_PROYECTOS, function (refs) {
+      return fn(refs.raiz, refs.escena);
+    });
   }
 
   var RUTA_NIEBLA = { tipo: 'proyecto', valor: 'niebla', pieza: null };
@@ -190,31 +227,12 @@ describe('MovilVisor — qué pinta cada parada del eje', function () {
     piezas: [{ url: 'pieza-1.jpg' }, { url: 'pieza-2.jpg' }]
   }];
 
+  /* `Datos.porId` es a quien `pintar` le pide el proyecto entero, porque
+     `orden` sólo guarda `{id, piezas}`; `Datos.CATEGORIAS` es lo que desde la
+     Tarea 4 lee `MovilHud.pintar`. Las dos las falsea `conVisorSobre`, arriba,
+     sobre la lista de la prueba, para no depender del contenido real. */
   function conEscena(proyectos, fn) {
-    return ArnesDom.conElemento(
-      '<div><div id="mvRaiz" hidden><div id="mvEscena"></div></div></div>',
-      function (caja) {
-        var raiz = caja.querySelector('#mvRaiz');
-        var escena = caja.querySelector('#mvEscena');
-        MovilVisor.init({ raiz: raiz, escena: escena }, proyectos);
-        /* `Datos.porId` es a quien `pintar` le pide el proyecto entero, porque
-           `orden` sólo guarda `{id, piezas}`. Se falsea sobre la lista de la
-           prueba para no depender del contenido real. */
-        var antes = window.Datos;
-        window.Datos = {
-          porId: function (id) {
-            for (var i = 0; i < proyectos.length; i++) {
-              if (proyectos[i].id === id) return proyectos[i];
-            }
-            return null;
-          }
-        };
-        try { return fn(escena); }
-        finally {
-          window.Datos = antes;
-          document.body.classList.remove('mvisor-abierto');
-        }
-      });
+    return conVisorSobre(proyectos, function (refs) { return fn(refs.escena); });
   }
 
   /* La mitad que importa de la carga progresiva: lo PRIMERO que se pide es la
@@ -295,21 +313,11 @@ describe('MovilVisor — el proyecto de vídeo', function () {
     piezas: []
   }];
 
+  /* Mismo ayudante compartido que las dos secciones de arriba. `porId` sale
+     igual de `conVisorSobre` buscando en `MV_VIDEO`, así que ya no hace falta
+     el atajo `function () { return MV_VIDEO[0]; }` que tenía este bloque. */
   function conEscena(fn) {
-    return ArnesDom.conElemento(
-      '<div><div id="mvRaiz" hidden><div id="mvEscena"></div></div></div>',
-      function (caja) {
-        var escena = caja.querySelector('#mvEscena');
-        MovilVisor.init({ raiz: caja.querySelector('#mvRaiz'), escena: escena },
-                        MV_VIDEO);
-        var antes = window.Datos;
-        window.Datos = { porId: function () { return MV_VIDEO[0]; } };
-        try { return fn(escena); }
-        finally {
-          window.Datos = antes;
-          document.body.classList.remove('mvisor-abierto');
-        }
-      });
+    return conVisorSobre(MV_VIDEO, function (refs) { return fn(refs.escena); });
   }
 
   prueba('sin vimeo se ve el póster, no un rectángulo negro', function () {
