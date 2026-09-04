@@ -52,11 +52,113 @@ window.MovilVisor = (function () {
     escena.innerHTML = '';
   }
 
-  /* En la Tarea 2 esto pinta la pieza de verdad. Aquí sólo deja constancia de
-     dónde estamos, que es lo que la Tarea 1 puede comprobar sin escena. */
+  /* Vacía la escena antes de cada parada: sin esto, deslizar acumularía una
+     <img> encima de otra y la memoria crecería con cada gesto. */
   function pintar() {
-    escena.dataset.proyecto = aqui.proyecto;
-    escena.dataset.pieza = String(aqui.pieza);
+    var p = window.Datos.porId(aqui.proyecto);
+    if (!p) { cerrar(); return; }
+
+    escena.innerHTML = '';
+    if (aqui.pieza === 'ficha')     escena.appendChild(fichaDe(p));
+    else if (aqui.pieza === null)   escena.appendChild(videoDe(p));
+    else                            escena.appendChild(fotoDe(p, aqui.pieza));
+  }
+
+  /* La foto, con carga progresiva. Se pinta primero la PORTADA —que la rejilla
+     ya tiene descargada, porque venías de verla— y se cambia a la pieza entera
+     cuando llega. Medido el 2026-09-04 sobre el visor de escritorio en móvil:
+     pedir la pieza de primeras eran 1371 ms hasta ver algo, contra 4 ms con la
+     imagen ya en caché. Sin esto, cada deslizamiento en 4G es un segundo de
+     negro.
+
+     CONDICIÓN SOBRE EL CONTENIDO, no sobre este código: la portada y la pieza
+     tienen que ser la misma foto EN LA MISMA PROPORCIÓN. La escena usa
+     `object-fit:contain` (css/luque.css), así que la caja pintada la decide la
+     proporción de la imagen: si no coinciden, el cambio da un salto. En el
+     relleno coinciden (las dos 4:5); quien genere los recortes de las fotos del
+     estudio tiene que mantenerlo.
+
+     No se reutiliza `js/visor-carga.js`, que hace esto mismo para el
+     escritorio: aquel módulo guarda su raíz en una variable de módulo, y
+     llamarlo desde aquí la reapuntaría al marco móvil, dejando el indicador del
+     escritorio atado a un elemento que ya no se ve en cuanto se cruza el umbral
+     de ancho con el visor abierto. Quince líneas repetidas salen más baratas
+     que un fallo que sólo aparece girando una tableta. */
+  function fotoDe(p, numero) {
+    var plena = p.piezas[numero - 1].url;
+    var img = document.createElement('img');
+    img.className = 'mvisor-foto';
+    img.src = p.portadaUrl || plena;
+    img.alt = p.titulo + ', pieza ' + numero + ' de ' + p.piezas.length;
+    img.decoding = 'async';
+    if (p.portadaUrl && p.portadaUrl !== plena) relevar(img, plena);
+    return img;
+  }
+
+  /* Cambia a la foto entera cuando está descargada y decodificada, así que el
+     cambio no parpadea. El fallo NO releva a propósito: dejar la portada buena
+     en pantalla es mejor que cambiarla por una imagen rota. Y comprueba
+     `parentNode` porque el dedo puede haber deslizado a otra parada mientras
+     tanto, y esta <img> ya no estar en ninguna escena. */
+  function relevar(img, plena) {
+    var grande = new Image();
+    grande.addEventListener('load', function () {
+      if (img.parentNode) img.src = plena;
+    }, { once: true });
+    grande.src = plena;
+  }
+
+  /* Sin `vimeo` se enseña el póster y no un rectángulo negro, que es lo que la
+     spec pide en «Cuando algo falla». Hoy es el camino NORMAL y no el de
+     excepción: los seis proyectos de vídeo de `contenido.json` llevan
+     `vimeo: null` hasta que el estudio suba los suyos. */
+  function videoDe(p) {
+    if (!p.vimeo) {
+      var poster = document.createElement('img');
+      poster.className = 'mvisor-foto';
+      poster.src = p.portadaUrl;
+      poster.alt = p.titulo + ', fotograma del vídeo';
+      poster.decoding = 'async';
+      return poster;
+    }
+    var marco = document.createElement('iframe');
+    marco.className = 'mvisor-video';
+    marco.src = 'https://player.vimeo.com/video/' + p.vimeo;
+    marco.title = p.titulo;
+    marco.setAttribute('allow', 'fullscreen; picture-in-picture');
+    marco.setAttribute('allowfullscreen', '');
+    return marco;
+  }
+
+  /* La ficha es el FONDO del eje vertical, no un panel que se despliega encima:
+     por eso se pinta en la misma escena y sustituye a la foto. Las cinco filas
+     son las mismas que enseña el escritorio en `VisorFicha.pintar`
+     (js/visor-ficha.js), y con los mismos rótulos, porque es la misma ficha
+     vista en otra pantalla. */
+  function fichaDe(p) {
+    var caja = document.createElement('div');
+    caja.className = 'mvisor-ficha';
+
+    var h = document.createElement('h2');
+    h.className = 'mvisor-ficha-titulo';
+    h.textContent = p.titulo;
+    caja.appendChild(h);
+
+    var lista = document.createElement('dl');
+    lista.className = 'mvisor-ficha-datos';
+    [['Cliente', p.ficha.cliente],
+     ['Año',     p.ficha.anio],
+     ['Cámara',  p.ficha.camara],
+     ['Óptica',  p.ficha.optica],
+     ['Piezas',  p.piezas.length]].forEach(function (f) {
+      var fila = document.createElement('div');
+      var dt = document.createElement('dt'); dt.textContent = f[0];
+      var dd = document.createElement('dd'); dd.textContent = f[1];
+      fila.appendChild(dt); fila.appendChild(dd);
+      lista.appendChild(fila);
+    });
+    caja.appendChild(lista);
+    return caja;
   }
 
   return {

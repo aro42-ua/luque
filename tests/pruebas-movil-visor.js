@@ -69,6 +69,10 @@ describe('MovilVisor — abre y cierra según la ruta', function () {
     try { return fn(); } finally { window.Movil = antes; }
   }
 
+  /* Desde la Tarea 2, `pintar` le pide el proyecto entero a `window.Datos`.
+     Este bloque sólo comprueba `estado()` y `raiz.hidden`, no lo que se pinta,
+     pero `pintar` corre igual y revienta si `Datos.porId` no está: se falsea
+     con la misma lista de la prueba para no depender del contenido real. */
   function conVisor(fn) {
     return ArnesDom.conElemento(
       '<div><div id="mvRaiz" hidden><div id="mvEscena"></div></div></div>',
@@ -76,8 +80,20 @@ describe('MovilVisor — abre y cierra según la ruta', function () {
         var raiz = caja.querySelector('#mvRaiz');
         var escena = caja.querySelector('#mvEscena');
         MovilVisor.init({ raiz: raiz, escena: escena }, MV_PROYECTOS);
+        var antes = window.Datos;
+        window.Datos = {
+          porId: function (id) {
+            for (var i = 0; i < MV_PROYECTOS.length; i++) {
+              if (MV_PROYECTOS[i].id === id) return MV_PROYECTOS[i];
+            }
+            return null;
+          }
+        };
         try { return fn(raiz, escena); }
-        finally { document.body.classList.remove('mvisor-abierto'); }
+        finally {
+          window.Datos = antes;
+          document.body.classList.remove('mvisor-abierto');
+        }
       });
   }
 
@@ -152,5 +168,165 @@ describe('MovilVisor — abre y cierra según la ruta', function () {
       });
       return raiz.hidden;
     }), true);
+  });
+});
+
+describe('MovilVisor — qué pinta cada parada del eje', function () {
+
+  function conLado(lado, fn) {
+    var antes = window.Movil;
+    window.Movil = { actual: function () { return lado; } };
+    try { return fn(); } finally { window.Movil = antes; }
+  }
+
+  /* Estos proyectos llevan `portadaUrl` porque es lo que `Datos.establecer`
+     resuelve y lo que la rejilla ya tiene cargado; es la vista previa de la
+     carga progresiva. Se usan URLs de mentira y no `data:` porque aquí no se
+     espera a ningún evento de carga: sólo se mira QUÉ se pide primero. */
+  var MV_CON_FOTOS = [{
+    id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'foto',
+    portadaUrl: 'portada-niebla.jpg',
+    ficha: { cliente: 'Estudio', anio: '2026', camara: 'Mamiya', optica: '80mm' },
+    piezas: [{ url: 'pieza-1.jpg' }, { url: 'pieza-2.jpg' }]
+  }];
+
+  function conEscena(proyectos, fn) {
+    return ArnesDom.conElemento(
+      '<div><div id="mvRaiz" hidden><div id="mvEscena"></div></div></div>',
+      function (caja) {
+        var raiz = caja.querySelector('#mvRaiz');
+        var escena = caja.querySelector('#mvEscena');
+        MovilVisor.init({ raiz: raiz, escena: escena }, proyectos);
+        /* `Datos.porId` es a quien `pintar` le pide el proyecto entero, porque
+           `orden` sólo guarda `{id, piezas}`. Se falsea sobre la lista de la
+           prueba para no depender del contenido real. */
+        var antes = window.Datos;
+        window.Datos = {
+          porId: function (id) {
+            for (var i = 0; i < proyectos.length; i++) {
+              if (proyectos[i].id === id) return proyectos[i];
+            }
+            return null;
+          }
+        };
+        try { return fn(escena); }
+        finally {
+          window.Datos = antes;
+          document.body.classList.remove('mvisor-abierto');
+        }
+      });
+  }
+
+  /* La mitad que importa de la carga progresiva: lo PRIMERO que se pide es la
+     portada, que la rejilla ya tiene descargada. Medido el 2026-09-04 sobre el
+     visor de escritorio: pedir la pieza entera de primeras eran 1371 ms de
+     espera contra 4 ms con la imagen ya en caché. */
+  prueba('la foto arranca con la portada, que la rejilla ya tiene cargada', function () {
+    igual(conEscena(MV_CON_FOTOS, function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 1 });
+      });
+      return escena.querySelector('img').getAttribute('src');
+    }), 'portada-niebla.jpg');
+  });
+
+  prueba('la foto lleva texto alternativo con el trabajo y la pieza', function () {
+    igual(conEscena(MV_CON_FOTOS, function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
+      });
+      return escena.querySelector('img').alt;
+    }), 'Niebla, pieza 2 de 2');
+  });
+
+  /* La ficha es el FONDO del eje vertical, no un panel aparte, así que se pinta
+     en la misma escena y sustituye a la foto. */
+  prueba('la parada ficha pinta la ficha técnica, no una foto', function () {
+    igual(conEscena(MV_CON_FOTOS, function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 'ficha' });
+      });
+      return { fichas: escena.querySelectorAll('.mvisor-ficha').length,
+               fotos:  escena.querySelectorAll('img').length };
+    }), { fichas: 1, fotos: 0 });
+  });
+
+  prueba('la ficha lleva los cuatro campos y el recuento de piezas', function () {
+    igual(conEscena(MV_CON_FOTOS, function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 'ficha' });
+      });
+      var dts = escena.querySelectorAll('dt');
+      var out = [];
+      for (var i = 0; i < dts.length; i++) out.push(dts[i].textContent);
+      return out;
+    }), ['Cliente', 'Año', 'Cámara', 'Óptica', 'Piezas']);
+  });
+
+  /* Cambiar de parada VACÍA la escena antes de pintar. Sin esto, deslizar
+     acumularía una <img> encima de otra y la memoria crecería con cada gesto. */
+  prueba('cambiar de parada no acumula nodos en la escena', function () {
+    igual(conEscena(MV_CON_FOTOS, function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 1 });
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 'ficha' });
+      });
+      return escena.childNodes.length;
+    }), 1);
+  });
+});
+
+describe('MovilVisor — el proyecto de vídeo', function () {
+
+  function conLado(lado, fn) {
+    var antes = window.Movil;
+    window.Movil = { actual: function () { return lado; } };
+    try { return fn(); } finally { window.Movil = antes; }
+  }
+
+  /* `vimeo: null` es el estado REAL de los seis proyectos de vídeo de
+     `contenido.json` hasta que el estudio suba los suyos, así que el camino de
+     degradación es hoy el camino normal y merece prueba antes que el otro. */
+  var MV_VIDEO = [{
+    id: 'oleaje', titulo: 'Oleaje', categoria: 'cortometraje', tipo: 'video',
+    portadaUrl: 'poster-oleaje.jpg', vimeo: null,
+    ficha: { cliente: 'Estudio', anio: '2026', camara: 'Arri', optica: '35mm' },
+    piezas: []
+  }];
+
+  function conEscena(fn) {
+    return ArnesDom.conElemento(
+      '<div><div id="mvRaiz" hidden><div id="mvEscena"></div></div></div>',
+      function (caja) {
+        var escena = caja.querySelector('#mvEscena');
+        MovilVisor.init({ raiz: caja.querySelector('#mvRaiz'), escena: escena },
+                        MV_VIDEO);
+        var antes = window.Datos;
+        window.Datos = { porId: function () { return MV_VIDEO[0]; } };
+        try { return fn(escena); }
+        finally {
+          window.Datos = antes;
+          document.body.classList.remove('mvisor-abierto');
+        }
+      });
+  }
+
+  prueba('sin vimeo se ve el póster, no un rectángulo negro', function () {
+    igual(conEscena(function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'oleaje', pieza: null });
+      });
+      return escena.querySelector('img').getAttribute('src');
+    }), 'poster-oleaje.jpg');
+  });
+
+  prueba('y no se cuela ningún iframe cuando no hay vídeo que enseñar', function () {
+    igual(conEscena(function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'oleaje', pieza: null });
+      });
+      return escena.querySelectorAll('iframe').length;
+    }), 0);
   });
 });
