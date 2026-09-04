@@ -475,9 +475,69 @@ puesto: sin eso, `python -m http.server` no manda `Cache-Control` (aviso 2 de
 la cabecera del plan del bloque) y una segunda medición en la misma pestaña
 recicla el CSS de la primera.
 
+## El cuarto defecto del teléfono: el visor tardaba en abrirse (resuelto)
+
+Lo vio Ángel el 2026-09-04, en la comprobación de la rama del 4e: el vuelo
+salía de la miniatura correcta —eso sí lo arregló el bloque— pero **tardaba
+tanto en arrancar que se perdía toda la fluidez**.
+
+**No lo rompió el 4e.** `git log` sobre `js/visor-transicion.js` confirma que
+la rama no tocó ese fichero; el parón viene de cuando se añadió la lupa. Lo
+que hizo el 4e fue destaparlo: antes el vuelo móvil salía de un elemento con
+`display:none` y rectángulo `{0,0,0,0}`, así que no había fluidez que echar de
+menos. Esto último es razonado, no medido.
+
+**La causa, medida.** `VisorTransicion.volar` no arrancaba el vuelo hasta que
+la `<img>` de la escena estaba completa, y esa `<img>` pedía la foto a tamaño
+completo — una URL que no está en ninguna caché, porque la rejilla enseña la
+portada (`1200x1500`, 171 KB) y el visor pedía la pieza (`2400x3000`, 763 KB):
+misma foto, URL distinta. Los 763 KB coinciden con la cifra que ya había
+medida en el comentario de `js/visor.js` sobre la tira de miniaturas.
+
+Medido con CDP a mano en móvil de verdad (`mobile:true`, 390x844) sobre
+`#/niebla`, contando de `Visor.abrir` a la clase `viajando` en `#visor`:
+
+| árbol | móvil 390x844 | escritorio 1280x800 |
+|---|---|---|
+| antes | 3439 y 3282 ms | 970 ms |
+| después | 5 y 7 ms | 19 ms |
+
+Las dos cifras de móvil son las dos corridas, en los dos órdenes y con perfil
+de Chrome nuevo cada vez: sin perfil nuevo la segunda medición hereda las
+fotos de la caché de la primera y el A/B no vale nada. Que la espera era la
+causa se ve además en que el arranque del vuelo iba pegado al final de la
+descarga: 1371 ms contra 1362 en la primera sonda.
+
+**El arreglo** está en `js/visor-carga.js`: `vistaPrevia()` elige una URL que
+el navegador YA tiene —la portada para la primera pieza, la miniatura de la
+tira para las demás— y se pinta ésa; `relevar()` descarga la grande aparte y
+la pone cuando llega. Sin ninguna de las dos, todo sigue como antes.
+
+**Condición sobre el CONTENIDO, no sobre el código:** la previa y la plena
+tienen que ser la misma foto en la MISMA PROPORCIÓN. `.visor-escena img` usa
+`object-fit:contain` con `max-width/max-height:100%`, así que la caja pintada
+la decide la proporción de la imagen: si no coinciden, el relevo da un salto a
+mitad del vuelo. En el relleno coinciden (las dos 4:5). Quien genere los
+recortes de las fotos del estudio tiene que mantenerlo.
+
+**Lo que sigue sin poder certificar la suite, y necesita un teléfono:** que el
+relevo no se note —debería ser invisible, porque para entonces el navegador ya
+tiene la grande decodificada— y si el indicador de carga sobre una vista previa
+que ya se ve bien ayuda o estorba. La suite fija QUÉ URL se pide y que la
+grande acaba puesta; que el cambio no parpadee sólo se juzga mirándolo.
+
+**Trampa que cazó a esta misma medición**, hermana de la del `display:none` de
+más arriba: la sonda comprobaba que la rejilla estuviera cargada con
+`document.querySelector('.hoja-celda img, .proj img')`. Una lista de selectores
+devuelve el primero en ORDEN DEL DOCUMENTO, y las `.proj img` de la galería de
+escritorio van antes; en móvil viven bajo `display:none`, no cargan nunca y
+`complete` es falso para siempre. La sonda decía «rejilla sin cargar» en las
+cuatro corridas y era mentira: inspeccionando el DOM hay 12 celdas con sus 12
+`<img>`, y la primera da `complete:true` y `naturalWidth:1200`.
+
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **355 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **361 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -492,16 +552,17 @@ los tres módulos puros del móvil, desde el bloque 4d el interruptor de ancho
 antes `...-hoja-hero...`), y desde la ronda de arreglos de la revisión final
 del 4e el envolvente de foco del visor (`tests/pruebas-visor-foco.js`, la única
 sección que carga `js/visor.js`) y las dos que fijan que al soltar el dedo no
-quede estilo en línea clavando la hoja. Medido el 2026-09-04 con Chrome
-headless (`--virtual-time-budget=15000 --dump-dom`) contra `tests/test.html`
-servido por `python -m http.server`, con el servidor verificado por `curl` y
-por que su registro CRECIERA antes de medir: la línea final dice «355 pasan, 0
-fallan».
+quede estilo en línea clavando la hoja, y desde el arreglo del parón al abrir
+el visor las seis de `tests/pruebas-visor-carga.js`. Medido el 2026-09-04 con
+Chrome headless (`--virtual-time-budget=15000 --dump-dom`) contra
+`tests/test.html` servido por `python -m http.server`, con el servidor
+verificado por `curl` y por que su registro CRECIERA antes de medir: la línea
+final dice «361 pasan, 0 fallan».
 
-Si las cuentas con `grep -c "prueba("` te van a salir **361**, no 355. La
+Si las cuentas con `grep -c "prueba("` te van a salir **367**, no 361. La
 diferencia son las mismas seis coincidencias de siempre que no llegan a
-ejecutarse como prueba —ni el bloque 4e ni su ronda de arreglos añadieron
-ninguna nueva—: dos
+ejecutarse como prueba —ni el bloque 4e, ni su ronda de arreglos, ni el
+arreglo del parón al abrir el visor añadieron ninguna nueva—: dos
 viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos cargas que
 están diseñadas para fallar —nunca se ejecutan; están ahí para que la sección
 se ponga en rojo si algún día la carga deja de fallar—; tres viven en
