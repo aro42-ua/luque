@@ -1397,6 +1397,13 @@ body.es-movil .hoja-hero{
   body.es-movil .hoja-hero.fuera{ transform:none; opacity:0; }
 }
 
+/* ── El visor móvil (bloque 4f) ─────────────────────────────────────────────
+   Sólo existe bajo `body.es-movil`. En escritorio el marcado está en el DOM
+   pero con `hidden`, igual que la rejilla de la portada: es lo que permite
+   cruzar el umbral de ancho sin reconstruir nada. */
+
+.mvisor{ display:none; }
+
 /* Dos cosas que no salen del código de este repositorio sino del
    comportamiento de los móviles, y que sin ponerlas a propósito rompen el
    recorrido en el dispositivo real aunque en un navegador de escritorio
@@ -1412,6 +1419,131 @@ body.es-movil .hoja-hero{
    dos ejes los interpreta `js/movil-gestos.js`. Fuera del visor NO se pone: la
    rejilla de la portada sí tiene que poder desplazarse con el dedo. */
 body.es-movil .mvisor{
+  display:block;
+  position:fixed; inset:0;
+  z-index:60;
+  background:var(--black);
   overscroll-behavior-y:contain;
   touch-action:none;
+}
+
+body.es-movil .mvisor[hidden]{ display:none; }
+
+/* La escena ocupa todo, y la foto se centra dentro sin recortarse.
+   `object-fit:contain` es lo que hace que la caja pintada la decida la
+   proporción de la imagen — de ahí la condición de la Tarea 2 sobre que la
+   portada y la pieza compartan proporción. Con `cover` no haría falta esa
+   condición, pero se recortarían las fotos del estudio. */
+body.es-movil .mvisor-escena{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+}
+
+body.es-movil .mvisor-foto{
+  max-width:100%; max-height:100%;
+  object-fit:contain;
+  /* La foto no se arrastra ni se selecciona: el dedo que la toca está
+     deslizando, y el «arrastrar imagen» del navegador se comería el gesto. */
+  -webkit-user-drag:none; user-select:none;
+}
+
+body.es-movil .mvisor-video{
+  width:100%; aspect-ratio:16/9; border:0;
+}
+
+/* La ficha es el fondo del eje vertical, así que ocupa la escena entera y no
+   flota encima de nada. */
+body.es-movil .mvisor-ficha{
+  padding:2rem 1.6rem;
+  max-width:34rem;
+  color:var(--yellow);
+}
+
+body.es-movil .mvisor-ficha-titulo{
+  font-size:1.6rem; line-height:1.1; margin:0 0 1.4rem;
+}
+
+body.es-movil .mvisor-ficha-datos div{
+  display:flex; justify-content:space-between; gap:1rem;
+  padding:.55rem 0;
+  border-bottom:1px solid rgba(255,255,0,.25);
+}
+
+body.es-movil .mvisor-ficha-datos dt{ opacity:.7; }
+body.es-movil .mvisor-ficha-datos dd{ margin:0; text-align:right; }
+
+/* ── El HUD ────────────────────────────────────────────────────────────────
+   El padding lateral de 24px NO es decorativo. En Safari de iOS, arrastrar
+   desde el borde izquierdo hacia dentro vuelve a la página anterior, y en
+   Chrome de Android ocurre en los dos bordes; no se puede desactivar desde la
+   web. Un control dentro de esa franja de ~20px sería imposible de pulsar sin
+   que el navegador se lleve el gesto. Los 24 dan margen sobre los 20. */
+body.es-movil .mvisor-hud{
+  position:absolute; inset:0;
+  padding:1rem 24px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  /* El HUD no intercepta el dedo: el deslizamiento tiene que pasar a través.
+     Los botones lo recuperan uno a uno, más abajo. */
+  pointer-events:none;
+  opacity:1;
+  transition:opacity .35s ease;
+}
+
+body.es-movil .mvisor-hud.dormido{ opacity:0; }
+
+body.es-movil .mvisor-hud-arriba,
+body.es-movil .mvisor-hud-abajo{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:.6rem;
+}
+
+/* Las pastillas: amarillo con texto negro, 17,6:1 de contraste pase lo que
+   pase con la foto, porque el fondo del texto deja de ser la foto. Medido en
+   la spec: el amarillo suelto sobre foto clara da 1,07:1 y el negro suelto
+   sobre foto oscura ~1,2:1 — el mismo fallo cambiado de lado. */
+body.es-movil .mvisor-cat,
+body.es-movil .mvisor-cerrar,
+body.es-movil .mvisor-titulo,
+body.es-movil .mvisor-contador,
+body.es-movil .mvisor-cat-opcion{
+  background:var(--yellow);
+  color:var(--black);
+  border:0;
+  padding:.4rem .8rem;
+  font:inherit;
+  line-height:1.2;
+  margin:0;
+}
+
+body.es-movil .mvisor-cat,
+body.es-movil .mvisor-cerrar,
+body.es-movil .mvisor-cat-opcion{
+  pointer-events:auto;
+  cursor:pointer;
+}
+
+body.es-movil .mvisor-cerrar{
+  font-size:1.3rem; line-height:1; padding:.35rem .7rem;
+}
+
+body.es-movil .mvisor-cats{
+  position:absolute; top:3rem; left:24px;
+  list-style:none; margin:0; padding:0;
+  display:flex; flex-direction:column; gap:.3rem;
+  pointer-events:auto;
+}
+
+body.es-movil .mvisor-cats[hidden]{ display:none; }
+
+body.es-movil .mvisor-titulo{ max-width:70%; }
+
+body.es-movil .mvisor :focus-visible{
+  outline:2px solid var(--yellow); outline-offset:4px;
+}
+
+/* Con movimiento reducido el HUD desaparece sin transición en vez de quedarse
+   puesto: lo que se pide es menos movimiento, no menos función. Es la misma
+   regla que el sitio ya aplica al centrado por teclado de la galería. */
+@media (prefers-reduced-motion: reduce){
+  body.es-movil .mvisor-hud{ transition:none; }
 }
