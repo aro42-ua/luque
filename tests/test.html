@@ -38,6 +38,11 @@
 <script src="../js/brillo.js"></script>
 <script src="../js/movil.js"></script>
 <script src="../js/movil-hoja.js"></script>
+<!-- movil-visor.js no toca el DOM al cargarse: sólo define window.MovilVisor.
+     `ordenDe` es pura y se prueba sola; lo que sí construye nodos —`aplicar`,
+     que pinta la escena— recibe su contenedor del arnés de DOM.
+     Ver pruebas-movil-visor.js. -->
+<script src="../js/movil-visor.js"></script>
 <script src="../js/movil-puerta.js"></script>
 <script src="../js/hero.js"></script>
 <script src="../panel/js/identificador.js"></script>
@@ -64,6 +69,7 @@
 <script src="pruebas-movil.js"></script>
 <script src="pruebas-movil-hoja-rejilla.js"></script>
 <script src="pruebas-movil-hoja-filtrar.js"></script>
+<script src="pruebas-movil-visor.js"></script>
 <script src="pruebas-movil-puerta.js"></script>
 <script src="pruebas-movil-puerta-async.js"></script>
 <script src="pruebas-hero.js"></script>

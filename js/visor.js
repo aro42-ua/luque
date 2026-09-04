@@ -42,6 +42,19 @@ window.Visor = (function () {
     });
 
     window.Router.alCambiar(function (ruta) {
+      /* La guarda de lado. Desde el bloque 4f hay DOS visores suscritos a la
+         misma ruta, y sin esto los dos abrirían el mismo trabajo a la vez.
+         Responde el del lado en que estamos y el otro se queda quieto; la
+         guarda simétrica está en `MovilVisor.aplicar`.
+
+         Que `Movil.actual()` ya tenga valor cuando esto corre no es
+         casualidad ni suerte: `index.html` llama a `Movil.init` ANTES de
+         `Router.init`, y `Router.init` avisa a sus suscriptores de forma
+         SÍNCRONA. Es la misma dependencia de orden de la que ya vive
+         `js/visor-origen.js`, y allí está explicada con la evidencia de lo
+         que pasaba cuando estaba al revés: un enlace en frío a un trabajo en
+         el móvil volaba desde un rectángulo fuera de pantalla. */
+      if (window.Movil.actual() === 'movil') return;
       if (ruta.tipo === 'proyecto') abrir(ruta.valor);
       else if (estado.abierto) cerrarSinTocarLaRuta();
     });

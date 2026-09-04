@@ -351,6 +351,21 @@
     </div>
   </div>
 
+  <!-- El visor móvil es un bloque APARTE del `#visor` de escritorio, y no una
+       variante suya con clases. Los dos tienen marco, escena y controles, pero
+       ni el marcado ni los gestos coinciden: aquí no hay tira de miniaturas, ni
+       lupa, ni línea de progreso, y sí hay dos ejes de deslizamiento. Fundirlos
+       en un solo árbol obligaría a que cada regla de CSS y cada oyente
+       preguntara de qué lado está, que es justo el `if` repartido por todas
+       partes que `js/movil.js` existe para evitar.
+
+       Cuál de los dos responde lo decide la guarda de lado del suscriptor de
+       `Visor.init` (js/visor.js) y la simétrica de `MovilVisor.aplicar`. -->
+  <div class="mvisor" id="movilVisor" role="dialog" aria-modal="true"
+       aria-label="Visor de trabajos" hidden>
+    <div class="mvisor-escena" id="movilVisorEscena"></div>
+  </div>
+
   <footer>
     LUQUE! · © 2026 — Estudio de fotografía y cine
   </footer>
@@ -378,6 +393,7 @@
   <script src="js/movil-gestos.js"></script>
   <script src="js/movil.js"></script>
   <script src="js/movil-hoja.js"></script>
+  <script src="js/movil-visor.js"></script>
   <!-- Va ANTES de movil-puerta.js, que lo usa en `entrada()`. Sin esta línea
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError
        DESPUÉS de haber puesto `con-hero` y `aria-hidden`, o sea antes de
@@ -425,6 +441,24 @@
     });
     window.Router.alCambiar(function (ruta) {
       window.MovilHoja.filtrarDesdeRuta(rejilla, ruta);
+    });
+
+    /* El visor móvil se suscribe aquí, y aquí quiere decir ANTES de
+       `Router.init()`, por el mismo motivo que ya obligó a subir a
+       `MovilHoja.pintar` y a `Movil.init`: `Router.init()` avisa a sus
+       suscriptores de forma SÍNCRONA, así que quien se suscribe después se
+       pierde la ruta inicial y un enlace en frío a un trabajo no abriría
+       nada.
+
+       Va después de `Movil.init` en el ORDEN DE EJECUCIÓN aunque esté escrito
+       antes de él, porque lo que corre en el aviso inicial es `aplicar`, no
+       `init`, y para entonces `Movil.actual()` ya tiene valor. */
+    window.MovilVisor.init({
+      raiz:   document.getElementById('movilVisor'),
+      escena: document.getElementById('movilVisorEscena')
+    }, window.Datos.PROYECTOS);
+    window.Router.alCambiar(function (ruta) {
+      window.MovilVisor.aplicar(ruta);
     });
 
     /* La puerta de entrada se elige UNA vez, aquí, y no se vuelve a elegir: el
