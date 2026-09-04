@@ -30,9 +30,11 @@
 <script src="../js/galeria.js"></script>
 <script src="../js/movil-recorrido.js"></script>
 <script src="../js/movil-gestos.js"></script>
+<script src="../js/movil-arrastre.js"></script>
 <script src="../js/brillo.js"></script>
 <script src="../js/movil.js"></script>
 <script src="../js/movil-hoja.js"></script>
+<script src="../js/movil-puerta.js"></script>
 <script src="../js/hero.js"></script>
 <script src="../panel/js/identificador.js"></script>
 <script src="../panel/js/orden.js"></script>
@@ -52,12 +54,13 @@
 <script src="pruebas-galeria.js"></script>
 <script src="pruebas-movil-recorrido.js"></script>
 <script src="pruebas-movil-gestos.js"></script>
+<script src="pruebas-movil-arrastre.js"></script>
 <script src="pruebas-brillo.js"></script>
 <script src="pruebas-movil.js"></script>
 <script src="pruebas-movil-hoja-rejilla.js"></script>
 <script src="pruebas-movil-hoja-filtrar.js"></script>
-<script src="pruebas-movil-hoja-hero.js"></script>
-<script src="pruebas-movil-hoja-hero-async.js"></script>
+<script src="pruebas-movil-puerta.js"></script>
+<script src="pruebas-movil-puerta-async.js"></script>
 <script src="pruebas-hero.js"></script>
 <script src="pruebas-identificador.js"></script>
 <script src="pruebas-orden.js"></script>
@@ -72,6 +75,12 @@
      fallo conocido, es una comprobación pendiente. Si al abrir esto con
      doble clic la sección "panel.js" no pinta nada, es la primera sospechosa. -->
 <script src="pruebas-panel.js"></script>
+<!-- Carga js/visor.js entero en un iframe, con el marcado del #visor sacado de
+     index.html en vivo y css/luque.css de verdad: el defecto que cubre —el
+     envolvente de foco del diálogo a anchura de móvil— no está en el JS solo ni
+     en el CSS solo, sino en el encuentro de los dos. Necesita servidor, igual
+     que la sección de abajo. -->
+<script src="pruebas-visor-foco.js"></script>
 <script src="pruebas-contenido-real.js"></script>
 <script>window.Arnes.resumen();</script>
 </body>

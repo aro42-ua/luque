@@ -952,6 +952,20 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 .visor-linea-marca i:first-child{ top:-11px; left:-5px; border-right:none; border-bottom:none; }
 .visor-linea-marca i:last-child{  top:2px;   left:-5px; border-right:none; border-top:none; }
 
+/* El panel cerrado sigue RENDERIZADO —`translateX(-100%)` lo saca de la vista
+   pero no del documento—, y `aria-hidden` NO saca del orden de tabulación. Sin
+   esto, el botón de cerrar es alcanzable con el tabulador estando el panel
+   fuera de la pantalla, y pulsarlo abre un panel que no se ve: es la misma
+   trampa que el bloque 4d cerró en la rejilla de la portada móvil.
+
+   El RETARDO de la transición es la mitad no evidente. `visibility` no
+   interpola, salta; sin retardarla hasta el final, el panel se volvería
+   invisible en el primer fotograma y su deslizamiento de salida —esos 0,45s
+   que la línea de al lado se molesta en animar— no se vería nunca. Con el
+   retardo, sale deslizándose y sólo entonces desaparece del tabulador.
+
+   La rama abierta pone el retardo a cero: al abrir tiene que ser visible YA,
+   o el deslizamiento de entrada tampoco se vería. */
 .visor-ficha{
   position:absolute; top:0; bottom:0; left:0;
   width:340px;
@@ -959,11 +973,20 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   color:var(--black);
   padding:32px 28px;
   transform:translateX(-100%);
-  transition:transform 0.45s cubic-bezier(.2,.7,.2,1);
+  visibility:hidden;
+  transition:transform 0.45s cubic-bezier(.2,.7,.2,1), visibility 0s 0.45s;
   z-index:4;
   overflow-y:auto;
 }
-.visor.ficha-abierta .visor-ficha{ transform:translateX(0); }
+.visor.ficha-abierta .visor-ficha{
+  transform:translateX(0);
+  visibility:visible;
+  transition:transform 0.45s cubic-bezier(.2,.7,.2,1), visibility 0s 0s;
+}
+
+/* En escritorio no existe: la cabecera se ve entera y un segundo control
+   para cerrar lo mismo es ruido. */
+.visor-ficha-cerrar{ display:none; }
 /* Desplaza la escena con un transform, no con left: left es layout y no
    debe animarse. 340px es el ancho de la ficha, así que el hueco que deja
    coincide con lo que ocuparía cambiar el left del 64px por defecto a 404px. */
@@ -1013,6 +1036,22 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   /* La ficha cubre todo el ancho, así que la foto solo necesita
      desvanecerse: el desplazamiento exacto ya no se ve. */
   .visor.ficha-abierta .visor-escena{ transform:translateX(40px); opacity:0; }
+
+  .visor-ficha-cerrar{
+    display:block;
+    position:absolute; top:18px; right:18px;
+    /* Sin esto, `fichaCat` gana el punto donde se solapan: `opacity:0.55`
+       le abre su propio contexto de apilamiento aunque no esté posicionado,
+       y por orden de DOM ese contexto pinta por encima de este botón —medido
+       con `elementFromPoint` en el centro del botón, que devolvía `fichaCat`
+       hasta que se puso este z-index—. */
+    z-index:1;
+    width:44px; height:44px;
+    border:none; background:none; padding:0;
+    color:var(--black);
+    cursor:pointer;
+  }
+  .visor-ficha-cerrar svg{ width:100%; height:100%; fill:currentColor; }
 }
 
 /* ============================================================
@@ -1056,7 +1095,7 @@ body.es-movil .hoja.con-hero{ overflow:hidden; }
 
 /* Y mientras está delante, tampoco se TABULA por detrás.
 
-   `MovilHoja.entrada` (js/movil-hoja.js) le pone `aria-hidden="true"` a la
+   `MovilPuerta.entrada` (js/movil-puerta.js) le pone `aria-hidden="true"` a la
    rejilla, y eso la esconde del lector de pantalla pero NO del tabulador: son
    dos cosas distintas y `aria-hidden` sólo hace la primera. Sin esta regla, con
    la puerta puesta el primer Tab caía en el botón «Abrir el proyecto Niebla»
@@ -1142,17 +1181,25 @@ body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
 .hoja-boton:focus-visible{ outline:3px solid var(--black); outline-offset:3px; }
 
 /* ------------------------------------------------------------
-   EL HERO FUNDIDO
+   LA HOJA QUE SE DESLIZA
    Ocupa la pantalla entera por encima de la rejilla y se va al
-   deslizar hacia arriba. Los 380ms de aquí son exactamente
-   SALIDA_MS de js/movil-hoja.js, que es lo que espera antes de
-   quitar el nodo. Lo que importa no es que sean iguales, sino
-   que el fundido no dure MÁS que esa espera: si durara más, el
-   nodo desaparecería de golpe a mitad del fundido. En
-   movimiento reducido bajan a 200ms (el bloque de más abajo),
-   así que siguen por debajo de los 380 y el nodo se retira
-   después del fundido, nunca durante. Las dos ramas medidas
-   con `getComputedStyle`: 0.38s la normal y 0.2s la reducida.
+   deslizar hacia arriba: desde el bloque 4e la hoja sigue al dedo
+   mientras arrastra (js/movil-puerta.js), y `.fuera` no hace más que
+   continuar ese mismo movimiento hasta sacarla del todo por encima
+   del borde superior. Ya no hay fundido en la rama normal —una hoja
+   de papel no se transparenta al levantarla— y la transición sólo
+   mueve `transform`. Los 380ms de aquí son exactamente SALIDA_MS de
+   js/movil-puerta.js, que es lo que espera antes de quitar el nodo.
+   Lo que importa no es que sean iguales, sino que el deslizamiento no
+   dure MÁS que esa espera: si durara más, el nodo desaparecería de
+   golpe a mitad del recorrido. En movimiento reducido la salida vuelve
+   a ser un fundido corto (200ms, el bloque de más abajo) en vez de un
+   deslizamiento —quien pide menos movimiento no quiere ver la pantalla
+   entera desplazarse—, y esos 200ms también quedan por debajo de los
+   380, así que el nodo se retira después de terminar de fundirse,
+   nunca durante. Las dos ramas siguen midiendo 0.38s la normal y 0.2s
+   la reducida con `getComputedStyle`, pero ya no es la misma propiedad:
+   la normal transiciona `transform` y la reducida `opacity`.
 
    Ésta va acotada a `body.es-movil`, y NO es la única de la sección: hay
    cuatro acotadas contando ésta —`.hoja`, `.hoja.con-hero`,
@@ -1180,12 +1227,46 @@ body.es-movil .hoja-hero{
   display:flex; flex-direction:column;
   align-items:center; justify-content:center; gap:22px;
   padding:0 24px;
-  transition:opacity 380ms ease, transform 380ms ease;
+  transition:transform 380ms ease;
+  /* Sin esto el navegador se queda el gesto vertical antes de que llegue a
+     `pointermove`, y en Chrome de Android eso significa el «tirar para
+     recargar». El `overscroll-behavior-y:contain` que hay más arriba está en
+     `.hoja` y no cubre este caso.
+
+     `pinch-zoom` y no `none`, y la diferencia es de accesibilidad. `none`
+     declina TODOS los gestos del navegador sobre el elemento, y éste es
+     `position:fixed; inset:0`: la pantalla entera mientras la puerta está
+     puesta. Con `none`, quien necesite ampliar para leer no puede, y poder
+     ampliar no es un capricho. `pinch-zoom` a secas sigue bloqueando todo el
+     desplazamiento —lo único que el tirón de recarga necesita que se bloquee—
+     y devuelve sólo el pellizco de dos dedos. `pan-x pinch-zoom` haría lo
+     mismo por la mitad mala: le regalaría al navegador el gesto horizontal de
+     un dedo, y como aquí no hay nada que desplazar en horizontal, de eso sólo
+     puede salir que un arrastre torcido se lo quede el navegador y llegue un
+     `pointercancel`, que `js/movil-puerta.js` trata como un soltar.
+
+     AVISO, y va aquí porque es justo lo que no se puede dar por bueno: ESTE
+     CAMBIO NO ESTÁ VERIFICADO. `Input.synthesizePinchGesture` no mueve el
+     `pageScale` en Chrome headless bajo emulación —tampoco sobre una página
+     sin `touch-action` ninguno, o sea que el control también falla—, así que
+     aquí nadie ha visto ni que `none` apagara el pellizco ni que `pinch-zoom`
+     lo devuelva. Lo que SÍ está medido: que la superficie es la pantalla
+     entera (`[0,0,390,844]` a 390×844, y `elementFromPoint` en el centro
+     devuelve el hero); que sus tres ancestros están en `touch-action:auto`;
+     que el `<meta name="viewport">` del sitio no prohíbe ampliar —no lleva
+     `user-scalable=no` ni `maximum-scale`—, así que si el zoom está apagado
+     ahí, lo apaga esta declaración y sólo ella; que Chrome acepta el valor sin
+     coercionarlo a `none`; y que el arrastre de la hoja sale idéntico con los
+     tres valores, probado con toques reales. La mitad que falta sólo se ve en
+     un teléfono, y está anotada en la lista de comprobación de
+     docs/estado-conocido.md. */
+  touch-action:pinch-zoom;
 }
 
+/* Se sale por arriba entera, continuando el movimiento que el dedo empezó. Ya
+   no se desvanece: una hoja de papel no se transparenta al levantarla. */
 .hoja-hero.fuera{
-  opacity:0;
-  transform:translateY(-28px);
+  transform:translateY(-100%);
   pointer-events:none;
 }
 
@@ -1280,17 +1361,38 @@ body.es-movil .hoja-hero{
 
      El `body.es-movil` de la PRIMERA es load-bearing, y de la segunda no.
 
+     Las dos mediciones de aquí abajo se REHICIERON en el bloque 4e y no se
+     heredan del anterior: la transición cambió de propiedad, así que una
+     medición vieja ya no valdría. Se tomaron con la preferencia forzada de
+     verdad (Chrome con `--force-prefers-reduced-motion`; sin ese flag este
+     Chrome declara `no-preference` y el `@media` ni siquiera aplica, con lo
+     que desacotar no mide nada), desacotando una regla cada vez.
+
      La de `transition` lo necesita: un `@media` NO añade especificidad, así que
      un `.hoja-hero` a secas (0,1,0) perdería contra el
      `body.es-movil .hoja-hero` (0,2,1) de arriba y la duración reducida se
-     perdería. Medido desacotando sólo ésta: la transición vuelve a
-     `opacity 0.38s, transform 0.38s`.
+     perdería. Medido desacotando sólo ésta: la transición pasa de
+     `opacity 0.2s` a `transform 0.38s`, o sea gana entera la rama normal.
 
      La de `transform` no lo necesita: `.hoja-hero.fuera` es (0,2,0), empata con
      su gemela suelta de arriba y le gana por ORDEN de aparición, porque este
      `@media` va después en el fichero. Medido desacotando sólo ésta: el
      `transform` sigue saliendo `none`. Va acotada por simetría con la de
-     arriba, no porque haga falta. */
+     arriba, no porque haga falta.
+
+     El `opacity:0` de la segunda regla no compite con nada: la rama normal de
+     `.hoja-hero.fuera` no declara `opacity` desde el bloque 4e, así que aquí no
+     hay ninguna copia suelta a la que ganarle por especificidad ni por orden
+     — es la única regla de toda la hoja de estilos que la fija. Medido con las
+     transiciones apagadas, que es la única forma de leer el DESTINO y no el
+     fotograma que la transición está animando: con la preferencia puesta,
+     `.fuera` da `opacity: 0` y `transform: none`; sin ella, `opacity: 1` y
+     `translateY(-100%)` —la matriz sale con el alto entero de la ventana—. */
   body.es-movil .hoja-hero{ transition:opacity 0.2s ease; }
-  body.es-movil .hoja-hero.fuera{ transform:none; }
+  /* El `opacity:0` se escribe AQUÍ desde el bloque 4e. Antes lo heredaba de
+     `.hoja-hero.fuera`, que ya no lo lleva porque la salida normal dejó de ser
+     un fundido. Sin esta línea, un teléfono con movimiento reducido se queda
+     con el hero VISIBLE y quieto hasta que el nodo se retira solo: una pantalla
+     muerta de 380ms que ninguna prueba de la suite ve. */
+  body.es-movil .hoja-hero.fuera{ transform:none; opacity:0; }
 }

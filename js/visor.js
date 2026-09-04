@@ -61,7 +61,7 @@ window.Visor = (function () {
     var p = window.Datos.porId(id); if (!p) return;
 
     abiertoConRaton = pendienteConRaton; pendienteConRaton = false; // se consume: solo para esta apertura
-    proyecto = p; elementoQueAbrio = window.Galeria.elementoDe(id);
+    proyecto = p; elementoQueAbrio = window.VisorOrigen.elemento(id);   // qué portada responde: js/visor-origen.js
     var esVideo = (p.tipo === 'video');
     estado = window.VisorEstado.abrir(estado, id, esVideo ? 1 : p.piezas.length);
     raiz.classList.toggle('video', esVideo);
@@ -271,7 +271,7 @@ window.Visor = (function () {
 
     if (e.key === 'ArrowRight' && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.siguiente(estado); renderizar(); }
     if (e.key === 'ArrowLeft'  && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.anterior(estado);  renderizar(); }
-    if (e.key === 'Tab') atraparFoco(e);
+    if (e.key === 'Tab') window.VisorFoco.atrapar(raiz, e);   // quién es enfocable ahora: js/visor-foco.js
 
     window.VisorChrome.despertar();
   }
@@ -282,15 +282,6 @@ window.Visor = (function () {
                             : window.VisorEstado.anterior(estado);
     renderizar();
     window.VisorChrome.despertar();
-  }
-
-  function atraparFoco(e) {
-    var focos = Array.prototype.filter.call(raiz.querySelectorAll('button:not([disabled]), [role="slider"]'),
-      function (el) { return el.offsetParent !== null; });   // offsetParent nulo con display:none: fuera la línea en modo foto
-    if (!focos.length) return;
-    var primero = focos[0], ultimo = focos[focos.length - 1];
-    if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
-    else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
   }
 
   function estaAbierto() { return estado && estado.abierto; }

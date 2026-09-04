@@ -187,8 +187,9 @@ sustituye el visor sin tocar ese cableado. Hasta entonces, **la mitad de la
 experiencia móvil es la de escritorio encogida.**
 
 **`MovilRecorrido` y `Brillo` siguen sin cablear.** Este bloque cableó
-`MovilGestos` —lo consume el hero fundido, en `MovilHoja.entrada`
-(`js/movil-hoja.js`)— pero `js/movil-recorrido.js` y `js/brillo.js` siguen
+`MovilGestos` —lo consume el hero fundido, entonces en `MovilHoja.entrada`
+(`js/movil-hoja.js`; desde el bloque 4e es `MovilPuerta.entrada` en
+`js/movil-puerta.js`)— pero `js/movil-recorrido.js` y `js/brillo.js` siguen
 sin un solo consumidor fuera de sus propias pruebas (comprobado buscando
 `MovilRecorrido` y `Brillo` en todos los `.js` y `.html` del repositorio;
 sólo salen en sus propios archivos y en los de prueba): son del visor móvil,
@@ -213,38 +214,162 @@ desde la propia máquina en su IP de la Wi-Fi—, así que si vuelve a pasar, el
 sospechoso no es el código. La IP pública no sirve: sin abrir puertos en el
 router no llega a la máquina.
 
-## Lo que encontró la comprobación en el teléfono (trabajo del bloque 4e)
+## Lo que encontró la comprobación en el teléfono (bloque 4e, resuelto)
 
-Los tres los vio Ángel en pantalla real; las causas que siguen a cada uno son
-**razonadas y no medidas**, y quien las arregle debería empezar por medirlas.
+Los tres los vio Ángel en pantalla real durante el bloque 4d. Las causas que se
+razonaron entonces quedan sustituidas aquí por las medidas al arreglar cada
+una en el bloque 4e; donde una medición contradijo lo razonado, se dice.
 
-1. **El hero se retira de golpe, y debería seguir al dedo.** Hoy el gesto es
-   todo o nada: `MovilHoja.entrada` sólo actúa cuando `MovilGestos.soltar`
-   devuelve la intención `'arriba'`, ya con el dedo levantado
-   (`js/movil-hoja.js`). Lo que se pide es una transición interactiva —la hoja
-   se levanta con la mano, y si el dedo vuelve al origen la hoja vuelve con
-   él—, lo que necesita seguir el `pointermove` y transformar el hero en
-   vivo, más un umbral al soltar que decida entre cruzar y volver. `MovilGestos`
-   no sobra: sigue haciendo falta para la decisión final, pero deja de ser el
-   único que manda.
+1. **El hero se retiraba de golpe. Resuelto.** `js/movil-arrastre.js` es un
+   módulo puro nuevo —sin DOM y sin reloj, el tiempo entra como argumento— que
+   decide cuánto se ha levantado la hoja en cada `pointermove` y si al soltar
+   se va o vuelve. `js/movil-puerta.js` lo cablea: `pointerdown` empieza el
+   arrastre, `pointermove` pinta `translateY` en vivo salvo con
+   `prefers-reduced-motion: reduce`, y `pointerup`/`pointercancel` deciden con
+   la misma regla que el `determineTargetPage` del `ViewPager` de Android —
+   golpe (recorrido y velocidad juntos) o posición (un cuarto de pantalla
+   levantado)—. Los cuatro números y su procedencia están más abajo, en «De
+   dónde salen los cuatro umbrales del arrastre».
 
-2. **Las fotos aparecen de la nada al abrirse.** Deberían ampliarse desde la
-   misma imagen que ya se está viendo en pantalla. Es una transición de
-   elemento compartido entre la celda de la rejilla y la foto del visor:
-   medir el rectángulo de la miniatura y animar desde ahí. Afecta a la
-   apertura del visor (`js/visor.js`, `abrir`) y a la celda de origen
-   (`js/movil-hoja.js`).
+2. **Las fotos aparecían de la nada. Resuelto, y la causa medida no fue la
+   razonada.** Lo que se sospechó en el bloque 4d —animar desde el rectángulo
+   de la miniatura— ya era lo que `js/visor.js` intentaba: `abrir()` le
+   preguntaba a `Galeria.elementoDe(id)`, que en móvil sí devuelve un botón de
+   verdad, sólo que uno que vive dentro de `.gallery`, a la que el CSS de
+   `body.es-movil` le pone `display:none`. El rectángulo de un elemento con
+   `display:none` es todo ceros, así que el vuelo salía desde `{0,0,0,0}` y no
+   desde ningún sitio erróneo por falta de medición: la medición ya estaba,
+   apuntaba al elemento equivocado. Medido el 2026-09-03 contra la celda
+   `niebla` con Chrome headless en modo móvil de verdad
+   (`Emulation.setDeviceMetricsOverride` con `mobile:true` a 390×844; con
+   `--window-size` a secas el ancho sale mentiroso, ver más abajo): el
+   rectángulo de escritorio (`Galeria.elementoDe('niebla')`) da
+   `{x:0,y:0,w:0,h:0}` y el de la celda móvil da
+   `{x:24,y:24,w:166,h:207.5}` — el ancho de esa medición importa y por eso se
+   dice: **390 CSS px**; véase el aviso del final de este apartado.
 
-3. **Del panel informativo no se puede salir.** Es el más grave de los tres,
-   porque es un callejón sin salida y no un detalle de acabado. En escritorio
-   hay dos salidas —`Escape`, que `js/visor.js` maneja en `alPulsarTecla`, y
-   la tecla `i`—, y en el teléfono no hay ninguna de las dos: la única es
-   volver a pulsar el botón de información, cuyo oyente vive en
-   `VisorFicha.init` (`js/visor-ficha.js`). La sospecha, sin medir, es que el
-   panel abierto tapa ese botón, así que la única salida que queda en un
-   teléfono es justo la que la ficha esconde. Encaja con lo ya sabido: el
-   visor del móvil sigue siendo el de escritorio, diseñado para un ratón y un
-   teclado.
+   Quien decide a qué portada preguntarle el origen del vuelo es
+   **`VisorOrigen.elemento(id)`**, en `js/visor-origen.js`: pregunta a
+   `window.Movil.actual()` cuál es la portada puesta y sólo entonces se dirige a
+   `MovilHoja.elementoDe` o a `Galeria.elementoDe`. De `js/visor.js` cambió
+   **una sola línea**, la que hoy dice
+   `elementoQueAbrio = window.VisorOrigen.elemento(id)`. El plan del bloque
+   proponía una función `elementoQueAbre(id)` dentro de `js/visor.js`, y **ese
+   nombre no existe en el código**: el fichero estaba a una línea del techo de
+   300 y la función salió fuera con otro nombre. Si lo buscas, no lo vas a
+   encontrar.
+
+   Esto destapó un segundo defecto, no descrito en el bloque 4d porque nadie
+   había medido el enlace en frío: `Router.init()` avisa de forma síncrona y
+   corría **antes** que `Movil.init()`, así que al entrar por una URL con
+   `#/<id>` `Movil.actual()` todavía valía `null` y la pregunta caía siempre en
+   `Galeria`. Medido contra el commit anterior a este arreglo, en móvil:
+   `MovilHoja.elementoDe` se llamaba cero veces, el vuelo salía de
+   `{x:-304,y:-25}` y el foco al cerrar caía en `BODY`. El orden se invirtió
+   —`Movil.init` antes que `Router.init`— y con el mismo caso se mide
+   `MovilHoja.elementoDe` llamado una vez, **el mismo rectángulo de arriba**
+   —`{x:24,y:24,w:166,h:207.5}` a 390×844— y el foco de vuelta en la celda.
+
+   **Sobre ese rectángulo, porque aquí llegó a haber dos cifras distintas para
+   la misma celda.** La buena es `{x:24,y:24,w:166,h:207.5}` y corresponde a un
+   viewport de **390×844 CSS px** con `mobile:true`; vuelta a medir el
+   2026-09-04 en la ronda de arreglos de la revisión final, sobre `#/niebla`,
+   y sale idéntica para el `<li>`, el `.hoja-boton` y la `<img>` de la celda.
+   El 166 se comprueba con el CSS a mano: `390 − 48` de `padding` menos los
+   `10` de `gap`, entre dos columnas, son 166; y `166 × 1,25` —la primera de
+   `MovilHoja.PROPORCIONES`— son los 207,5 de alto.
+
+   El `216×269` que circuló **no es de este ancho**: medido, sale a un viewport
+   de **490px** (`(490 − 48 − 10) / 2 = 216`, y `216 × 1,25 = 270`). O sea que
+   entró de una medición hecha con la ventana más ancha de lo que se creía,
+   exactamente la trampa que este documento avisa dos apartados más abajo. Si
+   vuelves a medir y te sale 216, lo primero que hay que mirar no es el código
+   sino el ancho real del viewport.
+
+3. **Del panel informativo no se podía salir. Resuelto, y la sospecha del
+   bloque 4d era cierta.** `#visorFicha` gana un botón propio, «Cerrar la
+   ficha», cableado al mismo `alAlternar` que el botón «Ficha»
+   (`js/visor-ficha.js`, `init`); visible sólo bajo 860px.
+
+   **Lo que saca el panel cerrado del orden de tabulación es `visibility:hidden`,
+   y sólo eso.** `translateX(-100%)` nunca lo sacó: el panel cerrado sigue
+   RENDERIZADO, sólo que a `left:-340px`, y `aria-hidden` tampoco saca del
+   tabulador — es justamente por eso por lo que hubo que añadir la
+   `visibility`, y el comentario de `css/luque.css` sobre `.visor-ficha` lo dice
+   con todas las letras. **Y el retardo de 0,45s no tiene nada que ver con el
+   tabulador**: existe porque `visibility` no interpola, salta; sin retardarla
+   hasta el final, el panel se volvería invisible en el primer fotograma y el
+   deslizamiento de salida que la línea de al lado se molesta en animar no se
+   vería nunca. La rama abierta pone ese retardo a cero, porque al abrir tiene
+   que ser visible ya. Quien «simplifique» quitando el retardo creyendo que es
+   accesibilidad, lo que rompe es la animación de salida.
+
+   Y un aviso que costó una regresión: el filtro del envolvente de foco del
+   visor (`atraparFoco`, `js/visor.js`) mira `offsetParent`, que `display:none`
+   anula pero `visibility:hidden` **no**. Ese botón nuevo entraba en la lista de
+   focos siendo inenfocable y el Tab se escapaba del diálogo a ≤860px; se
+   arregló en la ronda de la revisión final añadiendo la visibilidad a la
+   condición, y lo cubre `tests/pruebas-visor-foco.js`.
+
+   Medido con la misma emulación móvil de verdad: antes del arreglo, `elementFromPoint` en
+   el punto del antiguo botón «Ficha» con el panel abierto devolvía `#fichaCat`,
+   confirmando la sospecha del bloque 4d. El arreglo mismo escondía un
+   defecto que la medición cazó antes de darlo por bueno: en el CENTRO del
+   botón nuevo, `elementFromPoint` devolvía `fichaCat` y no `fichaCerrar` —
+   `.visor-ficha-cat` tiene `opacity:0.55`, que le abre su propio contexto de
+   apilamiento aunque no esté posicionada, y por orden de DOM ese contexto
+   pintaba por encima del botón absoluto sin `z-index` explícito. Un
+   `z-index:1` en `.visor-ficha-cerrar` lo corrige. Vuelto a medir tras el
+   arreglo: el punto del botón resuelve dentro de `#fichaCerrar` y pulsarlo
+   quita la clase `ficha-abierta` del visor.
+
+### De dónde salen los cuatro umbrales del arrastre
+
+`js/movil-arrastre.js` no declara sus cuatro números en el mismo sitio: dos son
+nuevos y dos son préstamos.
+
+- **`FRACCION` (0,25)** — qué fracción de pantalla hay que levantar para que la
+  hoja se vaya sola. Viene del `0,4f` del `determineTargetPage` del
+  `ViewPager` de Android, con el número bajado: allí equivocarse te lleva a
+  otra página, aquí es una puerta que se cruza una vez y no vuelve, y
+  equivocarse por exceso sólo te ahorra un amarillo que era el destino de
+  todos modos.
+- **`VELOCIDAD` (0,4 px/ms)** — el `MIN_FLING_VELOCITY` de Android, 400 dip/s,
+  trasladado a píxeles CSS. Hammer.js usa 0,3 para lo mismo.
+- **`MovilGestos.TOQUE` (10) y `MovilGestos.UMBRAL` (24)** — no son nuevos: son
+  los mismos umbrales que ya cableaba el hero fundido desde el bloque 4c
+  (margen antes de moverse y mínimo del golpe), y `MovilArrastre` los
+  reutiliza en vez de copiarlos. **Desde este bloque están compartidos entre
+  dos comportamientos**: cambiar `MovilGestos.TOQUE` o `MovilGestos.UMBRAL`
+  mueve a la vez la zona muerta del deslizamiento de la rejilla Y el arrastre
+  de la hoja, no sólo el primero.
+
+**Aviso sobre la conversión dip↔px:** no es la de la definición —1/160" contra
+1/96", que daría 15px por cada 16dip—. En la pantalla de un teléfono normal 1
+dip son aproximadamente 1,04px CSS, casi la misma unidad, y es esa
+aproximación la que se usó para trasladar los números de Android.
+
+### Dónde vive ahora la puerta del hero
+
+**La puerta del hero —el amarillo con LUQUE!— vive en `js/movil-puerta.js`
+desde el bloque 4e**, no en `js/movil-hoja.js`. Salió de allí porque el
+cableado del arrastre no cabía bajo el techo de 300 líneas: `movil-hoja.js`
+quedó con la rejilla —numeración, proporciones, pintado, filtrado— y
+`movil-puerta.js` con la puerta que se cruza una vez por visita. Quien busque
+«hero» en `movil-hoja.js` a partir de ahora no encuentra nada, y no es un
+descuido.
+
+### Qué sigue sin poder certificar la suite
+
+No hay pruebas de CSS computado en este repositorio, así que cuatro cosas del
+bloque 4e sólo las puede juzgar quien las mire en un teléfono: el aspecto del
+panel al deslizarse, que el `touch-action` del hero baste para que Chrome de
+Android no confunda el arrastre con un *pull-to-refresh*, que **el pellizco
+amplíe** sobre ese mismo hero, y que el arrastre se sienta bien al dedo.
+
+Las dos del medio cuelgan de la MISMA declaración y tiran en sentidos
+contrarios, así que conviene mirarlas juntas: ver el punto 10 de la lista de
+abajo.
 
 **El aviso viejo, ya cumplido:** la spec decía
 con todas las letras que dos cosas de esta portada no se pueden comprobar en
@@ -291,6 +416,28 @@ sustituir ninguna medición de escritorio—:
    siendo el 02» prueba lo mismo sobre otra categoría), así que el número que
    verá Ángel en cada tarjeta filtrada es el de su posición en la lista
    completa de doce.
+10. **Que el pellizco de dos dedos AMPLÍE sobre el amarillo**, y que tirar
+    hacia abajo sobre él siga sin recargar. Añadido en la ronda de arreglos de
+    la revisión final del bloque 4e; va al final para no correr la numeración
+    de los nueve de arriba, que están citados por su número más de una vez.
+
+    Las dos cosas cuelgan de la misma declaración, `touch-action` sobre
+    `body.es-movil .hoja-hero` (`css/luque.css`, sobre la línea 1235), que pasó
+    de `none` a `pinch-zoom` justamente para devolver el zoom sin devolver el
+    tirón: `none` declina TODOS los gestos del navegador, y ese elemento es
+    `position:fixed; inset:0`, o sea la pantalla entera mientras la puerta está
+    puesta, así que apagaba también el ampliar — que es una necesidad de
+    accesibilidad, no un capricho.
+
+    **El cambio se aplicó sin poder verificarlo aquí, y por eso está en esta
+    lista y no dado por bueno.** `Input.synthesizePinchGesture` no mueve el
+    `pageScale` en Chrome headless bajo emulación ni siquiera sobre una página
+    sin `touch-action` ninguno: el control falla, así que la medición no vale
+    para nada y no hay forma de comprobarlo sin un teléfono. Cuidado con la
+    trampa que ya engañó una vez a quien lo midió: si la sonda hace un
+    `Emulation.setPageScaleFactor` antes del pellizco, lo que se lee después es
+    el valor forzado y parece que el pellizco funcionó. Si el pellizco no
+    amplía, la sospechosa es esa línea del CSS y no el JavaScript.
 
 Para repetirla: exponer el servidor a la red local
 (`python -m http.server 8000 --bind 0.0.0.0`) y darle a Ángel
@@ -313,25 +460,48 @@ todo el repositorio), así que ninguna medición de este bloque quedó
 invalidada por esto; es sólo una trampa para quien mida el interruptor de
 ancho (`js/movil.js`) sin un teléfono delante.
 
+**La misma trampa, medida de nuevo en el bloque 4e con `--window-size` en vez
+de `Emulation.setDeviceMetricsOverride`:** `chrome --headless
+--window-size=390,844` **no** activa `mobile:true`. Con esa bandera sola,
+medido contra `_medir.html` (borrador local, no en el repositorio), la ventana
+sale a 504px de ancho —ni 390 ni el 1204 del aviso de arriba: otro número
+falso, mayor que el pedido, distinto según lo que la página tenga cargado—, y
+`getBoundingClientRect().right` de un botón con `right:18px` puesto por CSS
+daba negativo. La única combinación que dio medidas de fiar en este bloque fue
+CDP a mano —`ws = new WebSocket(...)` del propio Node 24, sin dependencias,
+hablando `Emulation.setDeviceMetricsOverride({mobile:true, width:390,
+height:844, ...})` seguido de `Page.navigate`— con `Network.setCacheDisabled`
+puesto: sin eso, `python -m http.server` no manda `Cache-Control` (aviso 2 de
+la cabecera del plan del bloque) y una segunda medición en la misma pestaña
+recicla el CSS de la primera.
+
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **325 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **355 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
 quedaba fuera por tocar el DOM —, desde el bloque 4b la capa impura de
 `Router.ir`, que hasta entonces no tenía ninguna prueba, desde el bloque 4c
-los tres módulos puros del móvil, y desde el bloque 4d el interruptor de
-ancho (`js/movil.js`) y la hoja móvil —rejilla, filtrado y hero fundido—
-(`js/movil-hoja.js`, cuyas pruebas viven repartidas en los cuatro
-`tests/pruebas-movil-hoja-*.js`, uno por `describe`, porque juntas pasaban del
-techo de 300 líneas). Medido el 2026-09-03 con Chrome headless
-(`--virtual-time-budget=15000 --dump-dom`) contra `tests/test.html` servido
-por `python -m http.server`, con el servidor verificado por `curl` antes de
-medir: la línea final dice «325 pasan, 0 fallan».
+los tres módulos puros del móvil, desde el bloque 4d el interruptor de ancho
+(`js/movil.js`) y la hoja móvil —rejilla y filtrado, en
+`tests/pruebas-movil-hoja-*.js`—, y desde el bloque 4e el arrastre de la hoja
+(`tests/pruebas-movil-arrastre.js`) y la puerta del hero, que se mudó de
+`movil-hoja.js` a `js/movil-puerta.js` con sus pruebas
+(`tests/pruebas-movil-puerta.js` y `tests/pruebas-movil-puerta-async.js`,
+antes `...-hoja-hero...`), y desde la ronda de arreglos de la revisión final
+del 4e el envolvente de foco del visor (`tests/pruebas-visor-foco.js`, la única
+sección que carga `js/visor.js`) y las dos que fijan que al soltar el dedo no
+quede estilo en línea clavando la hoja. Medido el 2026-09-04 con Chrome
+headless (`--virtual-time-budget=15000 --dump-dom`) contra `tests/test.html`
+servido por `python -m http.server`, con el servidor verificado por `curl` y
+por que su registro CRECIERA antes de medir: la línea final dice «355 pasan, 0
+fallan».
 
-Si las cuentas con `grep -c "prueba("` te van a salir **331**, no 325. La
-diferencia son seis coincidencias que no llegan a ejecutarse como prueba: dos
+Si las cuentas con `grep -c "prueba("` te van a salir **361**, no 355. La
+diferencia son las mismas seis coincidencias de siempre que no llegan a
+ejecutarse como prueba —ni el bloque 4e ni su ronda de arreglos añadieron
+ninguna nueva—: dos
 viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos cargas que
 están diseñadas para fallar —nunca se ejecutan; están ahí para que la sección
 se ponga en rojo si algún día la carga deja de fallar—; tres viven en
@@ -480,8 +650,15 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   router.** Los dos llaman a `Router.ir` —`galeria.js` en el clic del menú de
   categorías y en el `Escape`, ambos dentro de `Galeria.init` (sobre las
   líneas 231-232 y 248), `visor.js:41,129,130`— y se suscriben con
-  `Router.alCambiar`, y de eso no hay ni una comprobación: los dos archivos
-  están enteros sin cobertura.
+  `Router.alCambiar`, y de ese empalme sigue sin haber ni una comprobación.
+
+  Lo que ha cambiado desde la ronda de arreglos de la revisión final del bloque
+  4e, para no dejar la frase más gorda de lo que es: `js/visor.js` **ya no está
+  entero sin cobertura**. `tests/pruebas-visor-foco.js` lo carga de verdad —con
+  el `#visor` sacado de `index.html` en vivo y `css/luque.css` puesta— y ejerce
+  `init`, `abrir` y el envolvente de foco. Lo que sigue sin probarse es
+  precisamente el empalme con el router: esa sección dobla la portada y nunca
+  llega a `Router.ir`. `js/galeria.js` sí sigue entero sin cobertura.
 
   `hero.js` es el caso distinto, y conviene no confundirlo. Toca al router en un
   solo sitio, `js/hero.js:33`, y es **el único archivo del sitio que llama a
