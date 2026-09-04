@@ -24,6 +24,10 @@
 <script src="../js/router.js"></script>
 <script src="../js/composicion.js"></script>
 <script src="../js/visor-estado.js"></script>
+<!-- visor-carga.js no toca el DOM al cargarse: sólo define window.VisorCarga.
+     Se carga por pintar(), que sí construye la <img> de la escena; el arnés de
+     DOM le da su contenedor. Ver pruebas-visor-carga.js. -->
+<script src="../js/visor-carga.js"></script>
 <!-- Sólo por remedir(): su guarda no toca GaleriaPaneo, GaleriaTeclado ni
      Composicion.disponer, así que no hace falta cargar el resto del
      escenario espacial para probarla. Ver pruebas-galeria.js. -->
@@ -51,6 +55,7 @@
 <script src="pruebas-router-ir.js"></script>
 <script src="pruebas-composicion.js"></script>
 <script src="pruebas-visor-estado.js"></script>
+<script src="pruebas-visor-carga.js"></script>
 <script src="pruebas-galeria.js"></script>
 <script src="pruebas-movil-recorrido.js"></script>
 <script src="pruebas-movil-gestos.js"></script>
