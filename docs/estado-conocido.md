@@ -186,14 +186,21 @@ la foto). La URL que produce ya es la definitiva, así que el bloque 4e
 sustituye el visor sin tocar ese cableado. Hasta entonces, **la mitad de la
 experiencia móvil es la de escritorio encogida.**
 
-**`MovilRecorrido` y `Brillo` siguen sin cablear.** Este bloque cableó
-`MovilGestos` —lo consume el hero fundido, entonces en `MovilHoja.entrada`
-(`js/movil-hoja.js`; desde el bloque 4e es `MovilPuerta.entrada` en
-`js/movil-puerta.js`)— pero `js/movil-recorrido.js` y `js/brillo.js` siguen
-sin un solo consumidor fuera de sus propias pruebas (comprobado buscando
-`MovilRecorrido` y `Brillo` en todos los `.js` y `.html` del repositorio;
-sólo salen en sus propios archivos y en los de prueba): son del visor móvil,
-que llega en el bloque siguiente. Cuando se cableen, **`MovilRecorrido`
+**Los TRES módulos puros del bloque 4c siguen sin cablear: `MovilRecorrido`,
+`MovilGestos` y `Brillo`.** Hasta el 2026-09-04 este párrafo decía que el
+bloque 4d había cableado `MovilGestos` en el hero fundido. **Era cierto
+entonces y hoy es falso**: el bloque 4e sustituyó ese consumo por
+`MovilArrastre` (`js/movil-puerta.js`), y `MovilGestos` se quedó sin ninguno.
+Comprobado buscando los tres nombres en todos los `.js` y `.html` del
+repositorio: `MovilRecorrido` y `MovilGestos` sólo salen en su propio archivo
+y en los de prueba, y `Brillo` sólo sale además **en un comentario** de
+`js/movil.js`, que no es un consumidor.
+
+Los tres están escritos y probados, y no los usa nadie porque **son las piezas
+del visor móvil de dos ejes, que todavía no existe**: en el móvil sigue
+respondiendo el visor de escritorio adaptado. No son código muerto por
+descuido, son código adelantado; si ese visor se descartara, habría que
+borrarlos con él. Cuando se cableen, **`MovilRecorrido`
 necesita `piezas` como NÚMERO y no como array**; el porqué y lo que cuesta
 equivocarse está más abajo en este mismo documento, en la sección «Cómo se
 prueba», en la entrada sobre `MovilRecorrido.paradas`.
@@ -520,11 +527,20 @@ la decide la proporción de la imagen: si no coinciden, el relevo da un salto a
 mitad del vuelo. En el relleno coinciden (las dos 4:5). Quien genere los
 recortes de las fotos del estudio tiene que mantenerlo.
 
-**Lo que sigue sin poder certificar la suite, y necesita un teléfono:** que el
-relevo no se note —debería ser invisible, porque para entonces el navegador ya
-tiene la grande decodificada— y si el indicador de carga sobre una vista previa
-que ya se ve bien ayuda o estorba. La suite fija QUÉ URL se pide y que la
-grande acaba puesta; que el cambio no parpadee sólo se juzga mirándolo.
+**Comprobado en el teléfono de Ángel el 2026-09-04:** el vuelo arranca en el
+acto y el relevo no se nota. Queda por tanto cerrado lo que la suite no podía
+certificar sobre el parón.
+
+**El indicador ya no se dibuja sobre una vista previa, y es la misma
+comprobación quien lo pidió.** Ángel lo vio y le sobraba. Ahora el indicador
+sigue a la `<img> DE LA ESCENA` y no a la descarga de la foto entera: se
+enciende sólo mientras no hay nada que enseñar y se apaga en cuanto lo hay, así
+que el relevo ocurre por debajo de una imagen ya visible sin taparla.
+`relevar()` no toca el indicador a propósito. Lo fija
+`tests/pruebas-visor-carga.js`, leyendo la clase SÍNCRONAMENTE después de
+`pintar` con la previa precalentada — y comprobando antes que la previa esté de
+verdad decodificada, porque si no lo estuviera no habría nada que tapar y la
+prueba no mediría nada.
 
 **Trampa que cazó a esta misma medición**, hermana de la del `display:none` de
 más arriba: la sonda comprobaba que la rejilla estuviera cargada con
@@ -537,7 +553,7 @@ cuatro corridas y era mentira: inspeccionando el DOM hay 12 celdas con sus 12
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **361 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **362 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -553,25 +569,46 @@ antes `...-hoja-hero...`), y desde la ronda de arreglos de la revisión final
 del 4e el envolvente de foco del visor (`tests/pruebas-visor-foco.js`, la única
 sección que carga `js/visor.js`) y las dos que fijan que al soltar el dedo no
 quede estilo en línea clavando la hoja, y desde el arreglo del parón al abrir
-el visor las seis de `tests/pruebas-visor-carga.js`. Medido el 2026-09-04 con
+el visor las siete de `tests/pruebas-visor-carga.js`. Medido el 2026-09-04 con
 Chrome headless (`--virtual-time-budget=15000 --dump-dom`) contra
 `tests/test.html` servido por `python -m http.server`, con el servidor
 verificado por `curl` y por que su registro CRECIERA antes de medir: la línea
-final dice «361 pasan, 0 fallan».
+final dice «362 pasan, 0 fallan».
 
-Si las cuentas con `grep -c "prueba("` te van a salir **367**, no 361. La
-diferencia son las mismas seis coincidencias de siempre que no llegan a
-ejecutarse como prueba —ni el bloque 4e, ni su ronda de arreglos, ni el
-arreglo del parón al abrir el visor añadieron ninguna nueva—: dos
+### La trampa del arnés que da PASA sin comprobar nada
+
+**`prueba()` es SÍNCRONA.** Llama a su función dentro de un `try` y apunta PASA
+en cuanto vuelve (`tests/arnes.js`). Si esa función **devuelve una promesa**, lo
+que se compruebe dentro de su `.then` no lo ve el arnés: la promesa se cae al
+suelo, y su fallo se pierde como rechazo no gestionado. La prueba sale en verde
+con el código roto, y encima cuenta como comprobación.
+
+Ocurrió de verdad. Las dos pruebas asíncronas de `tests/pruebas-visor-carga.js`
+—el relevo y la huérfana— se escribieron así el 2026-09-04, y **no comprobaban
+nada**: daban PASA antes y después del arreglo. Se descubrió porque una prueba
+nueva del indicador, escrita para fallar, salió en verde. El arreglo del visor
+era bueno igualmente —lo respalda el A/B y la comprobación en el teléfono—,
+pero su red de seguridad tenía dos agujeros.
+
+**La forma correcta**, la de `tests/pruebas-movil-puerta-async.js` y ahora
+también la de `tests/pruebas-visor-carga.js`: la espera va **fuera** de
+`prueba()`, y `prueba()` se llama **dentro** del `.then` con la comprobación ya
+síncrona. Regla para reconocerlo de un vistazo: **si ves un `return` de una
+promesa dentro de `prueba(...)`, esa prueba no comprueba nada.**
+
+Si las cuentas con `grep -c "prueba("` te van a salir **369**, no 362. La
+diferencia son siete coincidencias que no llegan a ejecutarse como prueba: dos
 viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos cargas que
 están diseñadas para fallar —nunca se ejecutan; están ahí para que la sección
 se ponga en rojo si algún día la carga deja de fallar—; tres viven en
 `tests/arnes.js` —un comentario que menciona `prueba()`, la línea
 `function prueba(nombre, fn) {` que define la propia función, y una llamada
 de repliegue que sólo corre si una sección `describeAsync` lanza, cosa que no
-pasa con la suite en verde—; y la última es un comentario de
-`tests/pruebas-galeria.js` que también nombra `prueba()`. El número que
-cuenta es el que imprime la suite al pie.
+pasa con la suite en verde—; una es un comentario de
+`tests/pruebas-galeria.js` que también nombra `prueba()`; y la séptima, nueva,
+es el aviso sobre `prueba()` de la sección de arriba, escrito en
+`tests/pruebas-visor-carga.js`. El número que cuenta es el que imprime la
+suite al pie.
 
 **Lo que comprueba cada uno de los tres módulos del móvil (72 comprobaciones,
 bloque 4c):**

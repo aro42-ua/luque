@@ -110,23 +110,86 @@ describeAsync('VisorCarga — la foto grande releva a la vista previa', function
     });
   }
 
-  prueba('cuando la grande termina de cargar, sustituye a la previa', function () {
+  /* precalentar: deja el navegador con esa URL ya descargada y DECODIFICADA.
+     Medido en Chrome el 2026-09-04: un `data:` URI recién asignado da
+     `complete === false`, pero el mismo URI una segunda vez lo da `true` de
+     forma SÍNCRONA. Eso es lo que convierte la prueba de abajo en una lectura
+     directa en vez de una carrera contra dos eventos de carga. */
+  function precalentar(url) {
+    return new Promise(function (res) {
+      var i = new Image();
+      i.addEventListener('load', res, { once: true });
+      i.addEventListener('error', res, { once: true });
+      i.src = url;
+    });
+  }
+
+  /* El indicador existe para cuando NO hay nada que enseñar. Con la vista previa
+     ya pintada sí lo hay, y taparla con él esconde justo la foto que el arreglo
+     consigue poner en el acto.
+
+     El estado se lee SÍNCRONAMENTE, en cuanto `pintar` vuelve: gracias al
+     precalentado la previa está en pantalla en ese mismo instante y la grande no
+     ha podido llegar todavía. Es el momento que importa, y no depende de qué
+     evento de carga gane la carrera.
+
+     La primera comprobación es la que impide que esta prueba se vuelva vacía: si
+     `complete` fuera false, la <img> no estaría pintada, no habría nada que tapar
+     y la segunda comprobación pasaría sin significar nada. Ya pasó una vez. */
+  /* LA ESPERA VA FUERA DE `prueba()`, Y LA COMPROBACIÓN DENTRO. No es estilo.
+     `prueba` es SÍNCRONA (`tests/arnes.js`): llama a su función dentro de un
+     `try` y apunta PASA en cuanto vuelve. Si esa función devuelve una promesa,
+     lo que se compruebe en su `.then` no lo ve el arnés y su fallo se pierde
+     como rechazo no gestionado. Escrito del revés, esta sección entera daba
+     PASA con el código roto — pasó de verdad, el 2026-09-04, en las dos pruebas
+     de abajo. La forma correcta es la de `pruebas-movil-puerta-async.js`. */
+  return precalentar(VC_PREVIA).then(function () {
+
+    /* El indicador existe para cuando NO hay nada que enseñar. Con la vista
+       previa ya pintada sí lo hay, y taparla con él esconde justo la foto que
+       el arreglo consigue poner en el acto.
+
+       El estado se lee SÍNCRONAMENTE, en cuanto `pintar` vuelve: gracias al
+       precalentado la previa está en pantalla en ese mismo instante y la grande
+       no ha podido llegar todavía. Es el momento que importa, y no depende de
+       qué evento de carga gane la carrera.
+
+       La primera comprobación es la que impide que esto se vuelva vacío: si
+       `complete` fuera false, la <img> no estaría pintada, no habría nada que
+       tapar, y la segunda pasaría sin significar nada. */
     var c = caja();
     var p = vcProyecto(true, false);
-    vcInit();
+    var raiz = vcInit();
     VisorCarga.pintar(c, p, { indice: 0, total: 2 }, vcLista(p));
-    var img = c.querySelector('img');
-    igual(img.getAttribute('src'), VC_PREVIA, 'arranca con la previa');
-    return esperarSrc(img, VC_PLENA).then(function (src) {
-      c.parentNode && c.parentNode.removeChild(c);
-      igual(src, VC_PLENA);
-    });
-  });
+    var pintada = c.querySelector('img').complete;
+    var tapada = raiz.classList.contains('cargando');
+    c.parentNode && c.parentNode.removeChild(c);
 
-  /* El mismo guardián que ya tenía el indicador de carga: si el usuario cambia
-     de pieza antes de que la grande llegue, renderizar() vacía la escena y esta
-     <img> queda huérfana. Su relevo, aunque llegue tarde, no debe tocarla. */
-  prueba('si la escena se vació antes, la huérfana no se releva', function () {
+    prueba('con la vista previa ya en pantalla, el indicador no la tapa', function () {
+      igual(pintada, true, 'la previa está decodificada, o esto no mide nada');
+      igual(tapada, false);
+    });
+
+    var c2 = caja();
+    var p2 = vcProyecto(true, false);
+    vcInit();
+    VisorCarga.pintar(c2, p2, { indice: 0, total: 2 }, vcLista(p2));
+    var img = c2.querySelector('img');
+    var arranca = img.getAttribute('src');
+    return esperarSrc(img, VC_PLENA).then(function (src) {
+      c2.parentNode && c2.parentNode.removeChild(c2);
+      prueba('cuando la grande termina de cargar, sustituye a la previa', function () {
+        igual(arranca, VC_PREVIA, 'arranca con la previa');
+        igual(src, VC_PLENA);
+      });
+    });
+
+  }).then(function () {
+
+    /* El mismo guardián que ya tenía el indicador de carga: si el usuario
+       cambia de pieza antes de que la grande llegue, renderizar() vacía la
+       escena y esta <img> queda huérfana. Su relevo, aunque llegue tarde, no
+       debe tocarla. */
     var c = caja();
     var p = vcProyecto(true, false);
     vcInit();
@@ -135,7 +198,9 @@ describeAsync('VisorCarga — la foto grande releva a la vista previa', function
     c.removeChild(img);
     return esperarSrc(img, VC_PLENA, 250).then(function (src) {
       c.parentNode && c.parentNode.removeChild(c);
-      igual(src, VC_PREVIA);
+      prueba('si la escena se vació antes, la huérfana no se releva', function () {
+        igual(src, VC_PREVIA);
+      });
     });
   });
 });

@@ -45,19 +45,26 @@ window.VisorCarga = (function () {
     img.alt = proyecto.titulo + ', pieza ' + (estado.indice + 1) + ' de ' + estado.total;
     escena.appendChild(img);
 
+    // El indicador sigue a la <img> DE LA ESCENA, no a la descarga de la foto
+    // entera: se enciende sólo mientras no hay nada que enseñar, y se apaga en
+    // cuanto hay algo. Con vista previa eso es casi siempre en el acto —ya está
+    // descargada—, así que el relevo de más abajo ocurre por debajo de una foto
+    // que ya se ve, sin taparla. Taparla escondería justo lo que se acaba de
+    // conseguir pintar al instante.
+    //
     // Si el usuario cambia de pieza antes de que esta termine de cargar,
     // renderizar() vacía la escena y esta <img> queda huérfana: su
     // 'load'/'error', aunque llegue tarde, comprueba parentNode y no
     // toca el indicador de la pieza que esté mostrándose entonces.
-    if (previa && previa !== plena) {
-      relevar(img, plena);
-    } else if (!img.complete) {
+    if (!img.complete) {
       marcar(true);
       img.addEventListener('load',  function () { if (img.parentNode) marcar(false); }, { once: true });
       img.addEventListener('error', function () { if (img.parentNode) marcar(false); }, { once: true });
     } else {
       marcar(false);
     }
+
+    if (previa && previa !== plena) relevar(img, plena);
 
     precargar(lista, estado.indice + 1);
     precargar(lista, estado.indice - 1);
@@ -77,17 +84,17 @@ window.VisorCarga = (function () {
      quien genere los recortes de las fotos del estudio tiene que mantenerlo.
 
      El error no releva a propósito: dejar la previa buena en pantalla es mejor
-     que cambiarla por una imagen rota. */
+     que cambiarla por una imagen rota.
+
+     NO TOCA EL INDICADOR, y es deliberado. Este relevo ocurre por debajo de una
+     foto que ya se está viendo: encenderlo aquí taparía con un icono la imagen
+     que el visor acaba de conseguir pintar al instante. De que se avise cuando
+     de verdad no hay nada en pantalla se encarga `pintar`, siguiendo a la <img>
+     de la escena. Por eso el fallo tampoco tiene nada que apagar. */
   function relevar(img, plena) {
-    marcar(true);
     var grande = new Image();
     grande.addEventListener('load', function () {
-      if (!img.parentNode) return;
-      img.src = plena;
-      marcar(false);
-    }, { once: true });
-    grande.addEventListener('error', function () {
-      if (img.parentNode) marcar(false);
+      if (img.parentNode) img.src = plena;
     }, { once: true });
     grande.src = plena;
   }
