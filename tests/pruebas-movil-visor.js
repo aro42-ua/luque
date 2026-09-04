@@ -57,7 +57,12 @@ function conVisorSobre(proyectos, fn) {
     MovilVisor.init(refs, proyectos);
     var antes = window.Datos;
     window.Datos = {
-      CATEGORIAS: ['editorial', 'foto-fija', 'cortometraje'],
+      /* Las cuatro de verdad y en el orden en que las declara
+         `js/reglas-contenido.js`, que es su única fuente. El ejemplo del plan
+         traía una `foto-fija` que no existe; dejarla aquí, con
+         `pruebas-movil-hud.js` usando las buenas al lado, invitaba a escribir
+         mañana una prueba contra una categoría inventada. */
+      CATEGORIAS: ['foto-stills', 'editorial', 'videoclip', 'cortometraje'],
       porId: function (id) {
         for (var i = 0; i < proyectos.length; i++) {
           if (proyectos[i].id === id) return proyectos[i];

@@ -44,8 +44,11 @@ window.MovilHud = (function () {
   function pintar(proyecto, pieza, total) {
     refs.titulo.textContent = proyecto.titulo;
     /* El guion cambiado por espacio, igual que ya hace `VisorFicha.pintar`
-       (js/visor-ficha.js): `foto-fija` es un identificador de URL y no algo
-       que se le enseñe a nadie. */
+       (js/visor-ficha.js), con esta misma llamada letra por letra:
+       `foto-stills` es un identificador de URL y no algo que se le enseñe a
+       nadie, así que aquí arriba se lee «foto stills». De las cuatro
+       categorías de `js/reglas-contenido.js` es la única con guion, o sea la
+       única en la que este `replace` cambia algo. */
     refs.cat.textContent = proyecto.categoria.replace('-', ' ');
     refs.contador.textContent = contador(pieza, total);
     pintarCategorias();

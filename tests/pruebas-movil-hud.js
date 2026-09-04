@@ -95,8 +95,10 @@ describe('MovilHud — qué se enseña en cada parada', function () {
   });
 
   /* La categoría se enseña con el guion cambiado por un espacio, igual que ya
-     hace el escritorio en `VisorFicha.pintar`: `foto-fija` es un
-     identificador de URL, no algo que se le enseñe a nadie. */
+     hace el escritorio en `VisorFicha.pintar`: `foto-stills` —la de
+     `HUD_PROYECTO`, y la única de las cuatro de `js/reglas-contenido.js` que
+     lleva guion— es un identificador de URL, no algo que se le enseñe a
+     nadie. */
   prueba('la categoría se lee, no se enseña su identificador', function () {
     igual(conHud(function (refs) {
       MovilHud.pintar(HUD_PROYECTO, 2, 3);
