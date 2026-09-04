@@ -473,6 +473,49 @@ puros. Pero no cubre lo nuevo, y conviene separar qué está y qué no:
   la misma aplicación de Access, un tercer correo rechazado, tokens falsificados
   devueltos con 403, y el conflicto de versión reproducido con dos sesiones.
 
+### Despliegue del bloque 4 completo (2026-09-04)
+
+Versión `49189f00-7ae9-45ac-8a7c-7442052f40d8`, desde `main` en `9b07e82`, con
+`git archive` a un directorio temporal: 131 archivos, y comprobado antes de
+subir que no salían `.superpowers/`, `.worktrees/`, `.wrangler/` ni `.git/`.
+Auditor de rutas OK y `pesar_imagenes.py` OK (la galería pide 2,08 MB de un
+presupuesto de 3).
+
+**Es el primer despliegue con la experiencia móvil.** Antes de éste, lo
+publicado era el sitio del bloque 3b: `js/movil-hoja.js` daba **404** en
+producción. Ahora da 200, igual que `movil-puerta.js`, `movil-arrastre.js`,
+`movil-recorrido.js`, `visor-carga.js` y `visor-foco.js`.
+
+Repetido lo de siempre y todo en su sitio: `robots.txt` 200 y
+`x-robots-tag: noindex` en `/`; `docs/estado-conocido.md`, `.claude/launch.json`
+y `worker/estatico/wrangler.toml` en 302 a la portada; `/panel`,
+`/panel/css/panel.css` y `/api/borrador` en 302 a Access;
+`luque.angelrubioortiz2005.workers.dev/panel` en 404. Tipos MIME y caché
+correctos: `font/otf` con `31536000, immutable` y `nosniff` en las tipografías,
+`text/css` y `text/javascript` con `3600`, `application/json` en
+`contenido.json`.
+
+#### La suite NO se puede pasar entera desde producción, y es correcto
+
+Ejecutada contra `https://lidialuque.com/tests/test.html`: **298 pasan, 44
+fallan** — donde en local son 362 y 0.
+
+**Los 44 son, sin una sola excepción, los tres módulos del panel**:
+`Identificador`, `Orden` y `Lista`, más las 20 comprobaciones que ni llegan a
+registrarse. La causa está comprobada, no supuesta: `/panel/js/*.js` devuelve
+**302 al login de Access**, así que `tests/test.html` recibe la página de
+acceso en vez del JavaScript. Los archivos no protegidos —`tests/arnes.js`,
+`js/datos.js`— dan 200 y sus pruebas pasan.
+
+**Nada del sitio público falla servido desde Cloudflare.** Esto cierra la
+comprobación que quedaba pendiente desde agosto, y con un matiz que hay que
+saber: **no se puede cerrar del todo, por diseño**. `/tests/*` es accesible a
+propósito, pero `/panel/*` está tras Access a propósito también, y las pruebas
+del panel importan de ahí. La cifra que vale como «todo en verde» es la local;
+la de producción vale para lo que prueba, que es que el código del sitio
+público funciona servido de verdad. Si algún día en producción falla algo que
+NO sea del panel, eso sí es un problema.
+
 ### Repetido contra `https://lidialuque.com` al fusionar el bloque 3b (2026-08-27)
 
 Tras `wrangler deploy` de `main` ya fusionada (versión
