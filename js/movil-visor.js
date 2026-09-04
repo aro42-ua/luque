@@ -28,6 +28,7 @@ window.MovilVisor = (function () {
     escena = refs.escena;
     orden = ordenDe(proyectos);
     aqui = null;
+    engancharGestos();
   }
 
   /* El suscriptor del router, y la guarda simétrica a la de `js/visor.js`. */
@@ -161,10 +162,76 @@ window.MovilVisor = (function () {
     return caja;
   }
 
+  /* Del dedo a la ruta. Devuelve `null` cuando la intención no mueve —el toque,
+     el pellizco, la zona muerta, y el borde de la serie— para no llamar al
+     router sin necesidad: `Router.decidir` trataría ese destino como «avisar» y
+     volveríamos a pintar la misma parada por nada.
+
+     Este módulo NO invierte las direcciones. `MovilRecorrido.mover` lleva
+     escrito que los nombres son los del DEDO y que la inversión vive allí y en
+     ningún otro sitio, porque si viviera en quien pinta, cada pantalla nueva
+     podría equivocarse de signo por su cuenta. Si algún día los gestos se
+     sienten al revés, el sitio donde mirar es `movil-recorrido.js`. */
+  function siguienteRuta(aqui, intencion, orden) {
+    if (!aqui) return null;
+    if (intencion !== 'izquierda' && intencion !== 'derecha'
+        && intencion !== 'arriba' && intencion !== 'abajo') return null;
+
+    var destino = window.MovilRecorrido.mover(aqui, intencion, orden);
+    if (destino.proyecto === aqui.proyecto && destino.pieza === aqui.pieza) {
+      return null;
+    }
+    return window.MovilRecorrido.aRuta(destino);
+  }
+
+  var gesto = null;
+
+  /* Los oyentes van en la RAÍZ y no en la escena: la escena la vacía `pintar`
+     en cada parada, así que un oyente puesto allí se iría con el primer
+     deslizamiento y el segundo no haría nada. La raíz sobrevive a todo el
+     recorrido.
+
+     `pointer*` y no `touch*`: es lo que ya usa el resto del móvil
+     (`js/movil-puerta.js`) y lo que permite probar el gesto con un ratón en el
+     escritorio mientras se desarrolla.
+
+     `pointercancel` cuenta como soltar. El sistema lo dispara cuando se lleva
+     el gesto —una llamada entrante, el gesto de «atrás» del navegador desde el
+     borde— y sin tratarlo el contador de dedos de `MovilGestos` se quedaría en
+     uno para siempre, dejando el visor sordo hasta recargar. */
+  function engancharGestos() {
+    gesto = window.MovilGestos.inicial();
+
+    raiz.addEventListener('pointerdown', function (e) {
+      gesto = window.MovilGestos.presionar(gesto, { x: e.clientX, y: e.clientY });
+    });
+
+    raiz.addEventListener('pointerup', function (e) {
+      soltarEn(e);
+    });
+
+    raiz.addEventListener('pointercancel', function (e) {
+      soltarEn(e);
+    });
+  }
+
+  function soltarEn(e) {
+    var r = window.MovilGestos.soltar(gesto, { x: e.clientX, y: e.clientY });
+    gesto = r.estado;
+    if (r.intencion === null) return;
+
+    /* En la Tarea 4 el toque despierta el HUD. Aquí se consume sin hacer nada,
+       que es lo correcto mientras no haya HUD que despertar. */
+    var ruta = siguienteRuta(aqui, r.intencion, orden);
+    if (!ruta) return;
+    window.Router.ir(ruta.tipo, ruta.valor, ruta.pieza);
+  }
+
   return {
     ordenDe: ordenDe,
     init: init,
     aplicar: aplicar,
-    estado: estado
+    estado: estado,
+    siguienteRuta: siguienteRuta
   };
 })();

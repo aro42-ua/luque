@@ -1396,3 +1396,22 @@ body.es-movil .hoja-hero{
      muerta de 380ms que ninguna prueba de la suite ve. */
   body.es-movil .hoja-hero.fuera{ transform:none; opacity:0; }
 }
+
+/* Dos cosas que no salen del código de este repositorio sino del
+   comportamiento de los móviles, y que sin ponerlas a propósito rompen el
+   recorrido en el dispositivo real aunque en un navegador de escritorio
+   encogido no se note.
+
+   `overscroll-behavior-y: contain` apaga el «tirar para recargar» de Chrome en
+   Android. El gesto «foto anterior» empieza deslizando hacia abajo desde
+   arriba, que es exactamente el gesto que recarga la página: sin esto, el
+   recorrido se interrumpe con una recarga a mitad.
+
+   `touch-action: none` le dice al navegador que no se quede con el
+   desplazamiento ni el zoom por su cuenta dentro del visor, porque aquí los
+   dos ejes los interpreta `js/movil-gestos.js`. Fuera del visor NO se pone: la
+   rejilla de la portada sí tiene que poder desplazarse con el dedo. */
+body.es-movil .mvisor{
+  overscroll-behavior-y:contain;
+  touch-action:none;
+}

@@ -330,3 +330,73 @@ describe('MovilVisor — el proyecto de vídeo', function () {
     }), 0);
   });
 });
+
+describe('MovilVisor — del dedo a la ruta', function () {
+
+  var MV_ORDEN = [
+    { id: 'niebla',  piezas: 3 },
+    { id: 'oleaje',  piezas: 0 },
+    { id: 'salitre', piezas: 2 }
+  ];
+
+  function en(proyecto, pieza) { return { proyecto: proyecto, pieza: pieza }; }
+
+  /* Deslizar a la izquierda trae el trabajo SIGUIENTE: los nombres son los del
+     dedo, no los del contenido, y la inversión vive en `MovilRecorrido.mover`.
+     Aquí sólo se comprueba que este módulo no la duplique ni la deshaga. */
+  prueba('deslizar a la izquierda lleva al trabajo siguiente, por su portada',
+    function () {
+    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'izquierda', MV_ORDEN),
+          { tipo: 'proyecto', valor: 'oleaje', pieza: null });
+  });
+
+  prueba('deslizar arriba baja una parada dentro del mismo trabajo', function () {
+    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'arriba', MV_ORDEN),
+          { tipo: 'proyecto', valor: 'niebla', pieza: 2 });
+  });
+
+  /* En un proyecto de vídeo la única parada antes de la ficha es el propio
+     vídeo, así que bajar llega a los créditos en UN gesto. Es la razón entera
+     de que el eje vertical signifique «más sobre este trabajo»: seis de los
+     doce proyectos son de vídeo, y un eje que significara «más fotos» no haría
+     nada en la mitad del portafolio. */
+  prueba('en un vídeo, bajar llega a la ficha en un solo gesto', function () {
+    igual(MovilVisor.siguienteRuta(en('oleaje', null), 'arriba', MV_ORDEN),
+          { tipo: 'proyecto', valor: 'oleaje', pieza: 'ficha' });
+  });
+
+  /* Recortar en vez de dar la vuelta: al llegar al final la serie se detiene,
+     para que no se confunda dónde termina. `mover` devuelve el MISMO estado, y
+     este módulo lo traduce a `null` para no llamar al router sin necesidad. */
+  prueba('en el último trabajo, seguir deslizando no sale al vacío', function () {
+    igual(MovilVisor.siguienteRuta(en('salitre', 1), 'izquierda', MV_ORDEN), null);
+  });
+
+  prueba('en la primera parada, subir no sale del trabajo', function () {
+    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'abajo', MV_ORDEN), null);
+  });
+
+  /* El toque no navega: en la Tarea 4 despierta el HUD. Lo que no puede es
+     moverse por la rejilla, porque entonces sería imposible volver a encender
+     el HUD sin cambiar de foto. */
+  prueba('un toque no mueve el recorrido', function () {
+    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'toque', MV_ORDEN), null);
+  });
+
+  /* El pellizco se recibe y no mueve. Este bloque no amplía —eso es el 4g—,
+     pero lo que no puede pasar es que se cuele como deslizamiento y cambie de
+     trabajo mientras alguien intenta ampliar. */
+  prueba('un pellizco no mueve el recorrido', function () {
+    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'pellizco', MV_ORDEN), null);
+  });
+
+  /* `MovilGestos.soltar` devuelve `null` para la zona muerta: el arrastre corto
+     o diagonal que no quiso tocar ni quiso deslizar. */
+  prueba('la zona muerta no mueve el recorrido', function () {
+    igual(MovilVisor.siguienteRuta(en('niebla', 1), null, MV_ORDEN), null);
+  });
+
+  prueba('con el visor cerrado no hay ruta a la que ir', function () {
+    igual(MovilVisor.siguienteRuta(null, 'izquierda', MV_ORDEN), null);
+  });
+});
