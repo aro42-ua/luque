@@ -580,3 +580,35 @@ esté resuelto, el sitio se despliega cerrado a los buscadores
 bloque 3b el sitio sí tiene dominio propio (`lidialuque.com`) — el cierre a
 buscadores no depende de eso, es deuda conocida aparte, no un descuido, y
 queda anotada también en `docs/estado-conocido.md`.
+
+## Despliegue del bloque 4f sin fusionar (2026-09-05)
+
+Versión `f8dc8786-04be-4031-8021-ad75552a032f`. **Es el primer despliegue que no
+sale de `main`**: el árbol viene de `git archive visor-movil-4f`, la rama del
+bloque 4f, para que Ángel pueda probar el visor móvil de dos ejes en su teléfono
+antes de decidir si el bloque entra en `main`.
+
+Conviene ser explícito sobre por qué esto no contradice la sección de arriba
+sobre Workers Builds. Lo que se desconectó el 2026-08-24 no fue «desplegar una
+rama», fue **desplegar sin que nadie lo decidiera**: cualquier empujón a GitHub
+publicaba, y así llegó al escaparate una rama sin fusionar y sin revisar. Aquí
+la rama trae sus seis tareas revisadas una a una, una revisión final de conjunto
+y 407 comprobaciones en verde, y el despliegue lo pidió el estudio en el momento
+y para un fin concreto. La condición que aquel día se escribió —«que ninguna
+rama a medias llegue al escaparate por el simple hecho de empujarla»— se sigue
+cumpliendo: empujar no despliega nada.
+
+Lo que sí deja esta decisión es una **divergencia temporal**: producción va por
+delante de `main`. Se cierra fusionando el bloque cuando la prueba en el móvil
+lo apruebe. Mientras dure, `main` no es lo que sirve `lidialuque.com`.
+
+Comprobado tras desplegar, contra el dominio real:
+
+- 136 archivos en el árbol exportado; ni `.superpowers/`, ni `.worktrees/`, ni
+  `.wrangler/` (`wrangler` subió 11 archivos, 123 ya estaban).
+- `js/movil-visor.js`, `js/movil-hud.js`, `js/movil-recorrido.js` y
+  `js/visor-foco.js` responden `200`.
+- El `index.html` publicado carga `js/movil-recorrido.js`, que es la etiqueta
+  que faltaba y que la suite no puede vigilar.
+- El sitio **sigue cerrado a buscadores**: `robots.txt` con `Disallow: /` y la
+  cabecera `x-robots-tag: noindex` en la respuesta.
