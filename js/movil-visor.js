@@ -57,6 +57,14 @@ window.MovilVisor = (function () {
 
     aqui = nuevo;
     raiz.hidden = false;
+    /* `mvisor-abierto` es un gancho de estado que HOY ningún CSS usa. Se
+       nombra igual que `visor-abierto` del escritorio, que sí tiene reglas
+       —esconde la barra de navegación—, así que conviene decirlo aquí y no
+       dejar que se dé por hecho. El candidato natural es bloquear el
+       desplazamiento del cuerpo mientras el visor está abierto; está sin
+       decidir porque eso cambia cosas —la posición de desplazamiento al
+       cerrar, la barra de direcciones— que sólo se pueden juzgar en un
+       teléfono de verdad, y esa comprobación está pendiente. */
     document.body.classList.add('mvisor-abierto');
     pintar();
   }
