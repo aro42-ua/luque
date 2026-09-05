@@ -38,6 +38,13 @@
 <script src="../js/brillo.js"></script>
 <script src="../js/movil.js"></script>
 <script src="../js/movil-hoja.js"></script>
+<!-- Va ANTES de movil-visor.js, que desde la ronda de arreglos de la revisión
+     final del bloque 4f usa `window.VisorFoco.atrapar` para el envolvente de
+     foco del diálogo móvil, con el mismo orden relativo que ya usa
+     index.html. Sin esta línea `window.VisorFoco` es undefined y el Tab
+     dentro del visor abierto lanza un TypeError. Ver
+     pruebas-movil-visor.js, sección «el foco del diálogo». -->
+<script src="../js/visor-foco.js"></script>
 <!-- movil-visor.js no toca el DOM al cargarse: sólo define window.MovilVisor.
      `ordenDe` es pura y se prueba sola; lo que sí construye nodos —`aplicar`,
      que pinta la escena— recibe su contenedor del arnés de DOM.

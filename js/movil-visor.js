@@ -14,7 +14,14 @@ window.MovilVisor = (function () {
     });
   }
 
-  var raiz = null, escena = null, orden = [], aqui = null;
+  var raiz = null, escena = null, orden = [], aqui = null, elCerrar = null;
+
+  /* Quién tenía el foco justo antes de abrir —normalmente el botón de la
+     rejilla que se tocó—, para devolvérselo al cerrar. No se pregunta a
+     `js/visor-origen.js`, que hace lo mismo para el escritorio: aquél
+     necesita saber DE QUÉ portada salió el visor, y aquí no hace falta,
+     porque lo que estuviera enfocado antes de abrir ya es la respuesta. */
+  var elFocoDeAntes = null;
 
   /* `estado` es `null` cuando el visor está cerrado, y `{proyecto, pieza}`
      cuando está abierto. No se usa el `{proyecto: null}` de
@@ -26,6 +33,7 @@ window.MovilVisor = (function () {
   function init(refs, proyectos) {
     raiz = refs.raiz;
     escena = refs.escena;
+    elCerrar = refs.cerrar;
     orden = ordenDe(proyectos);
     aqui = null;
     window.MovilHud.init({
@@ -47,13 +55,20 @@ window.MovilVisor = (function () {
     engancharGestos();
   }
 
-  /* El suscriptor del router, y la guarda simétrica a la de `js/visor.js`. */
+  /* El suscriptor del router, y la guarda simétrica a la de `js/visor.js`.
+     `abriendo` distingue ENTRAR al visor de moverse dentro de él ya abierto
+     —deslizar una pieza, cambiar de trabajo—: sólo la primera pide foco
+     inicial y engancha el tabulador; lo segundo pintaría de nuevo la escena
+     pero no debe arrancarle el foco a quien esté navegando con teclado. */
   function aplicar(ruta) {
     if (window.Movil.actual() !== 'movil') return;
     if (ruta.tipo !== 'proyecto') { cerrar(); return; }
 
     var nuevo = window.MovilRecorrido.desdeRuta(ruta, orden);
     if (nuevo.proyecto === null) { cerrar(); return; }
+
+    var abriendo = (aqui === null);
+    if (abriendo) elFocoDeAntes = document.activeElement;
 
     aqui = nuevo;
     raiz.hidden = false;
@@ -67,6 +82,17 @@ window.MovilVisor = (function () {
        teléfono de verdad, y esa comprobación está pendiente. */
     document.body.classList.add('mvisor-abierto');
     pintar();
+    if (abriendo) {
+      document.addEventListener('keydown', alTeclado);
+      elCerrar.focus({ preventScroll: true });
+    }
+  }
+
+  /* A QUIÉN se puede enfocar lo decide `window.VisorFoco.atrapar`
+     (js/visor-foco.js); aquí sólo se le pasa la raíz y el evento, igual que
+     hace `js/visor.js`. */
+  function alTeclado(e) {
+    if (e.key === 'Tab') window.VisorFoco.atrapar(raiz, e);
   }
 
   function cerrar() {
@@ -75,6 +101,15 @@ window.MovilVisor = (function () {
     raiz.hidden = true;
     document.body.classList.remove('mvisor-abierto');
     escena.innerHTML = '';
+    document.removeEventListener('keydown', alTeclado);
+    /* Devuelve el foco a quien lo tenía antes de abrir, y no si ese elemento
+       ya salió del documento —la rejilla pudo repintarse mientras el visor
+       estaba abierto—: `focus()` sobre un nodo huérfano no hace nada por su
+       cuenta, pero más vale no depender de ese silencio. */
+    if (elFocoDeAntes && document.contains(elFocoDeAntes)) {
+      elFocoDeAntes.focus({ preventScroll: true });
+    }
+    elFocoDeAntes = null;
   }
 
   /* Vacía la escena antes de cada parada: sin esto, deslizar acumularía una

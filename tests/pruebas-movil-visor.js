@@ -413,3 +413,147 @@ describe('MovilVisor — del dedo a la ruta', function () {
     igual(MovilVisor.siguienteRuta(null, 'izquierda', MV_ORDEN), null);
   });
 });
+
+/* El hallazgo de la revisión final del bloque 4f: `#movilVisor` se declara
+   `role="dialog" aria-modal="true"` en index.html, pero hasta esta ronda
+   `MovilVisor` no tocaba el foco para nada. Sin envolvente el tabulador se
+   escapaba a la rejilla de detrás; sin foco de entrada el diálogo se abría
+   sin que el teclado supiera que había pasado nada; y sin devolución el foco
+   se perdía en el `<body>` al cerrar.
+
+   El envolvente se reutiliza de `window.VisorFoco.atrapar` (js/visor-foco.js),
+   que ya sabe A QUIÉN se puede enfocar; aquí sólo se comprueba CUÁNDO se
+   engancha y CUÁNDO se suelta, que es lo que le toca a este módulo. Por eso
+   estas pruebas espían `VisorFoco.atrapar` en vez de reconstruir su lista de
+   enfocables: reconstruirla aquí sería duplicar lo que ya prueba
+   `tests/pruebas-visor-foco.js` bajo otro nombre.
+
+   Necesita `window.VisorFoco` de verdad y no un doble: test.html lo carga
+   ahora antes de `js/movil-visor.js`, en el mismo orden relativo que ya usa
+   index.html (ver el comentario de esa línea en tests/test.html). */
+describe('MovilVisor — el foco del diálogo (VisorFoco)', function () {
+
+  function conLado(lado, fn) {
+    var antes = window.Movil;
+    window.Movil = { actual: function () { return lado; } };
+    try { return fn(); } finally { window.Movil = antes; }
+  }
+
+  var RUTA_NIEBLA = { tipo: 'proyecto', valor: 'niebla', pieza: null };
+  var RUTA_TODOS  = { tipo: 'todos', valor: null, pieza: null };
+
+  function conVisor(fn) {
+    return conVisorSobre(MV_PROYECTOS, fn);
+  }
+
+  function tabular(shift) {
+    var e = new KeyboardEvent('keydown',
+      { key: 'Tab', shiftKey: !!shift, bubbles: true, cancelable: true });
+    document.dispatchEvent(e);
+    return e.defaultPrevented;
+  }
+
+  prueba('al abrir, el foco entra en el diálogo por el botón de cerrar', function () {
+    igual(conVisor(function (refs) {
+      conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
+      var dentro = document.activeElement === refs.cerrar;
+      conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
+      return dentro;
+    }), true);
+  });
+
+  prueba('con el foco en el último control, el Tab da la vuelta al primero', function () {
+    igual(conVisor(function (refs) {
+      conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
+      refs.cerrar.focus();
+      var consumido = tabular(false);
+      var r = { consumido: consumido, foco: document.activeElement === refs.cat };
+      conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
+      return r;
+    }), { consumido: true, foco: true });
+  });
+
+  prueba('con el foco en el primer control, Shift+Tab da la vuelta al último', function () {
+    igual(conVisor(function (refs) {
+      conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
+      refs.cat.focus();
+      var consumido = tabular(true);
+      var r = { consumido: consumido, foco: document.activeElement === refs.cerrar };
+      conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
+      return r;
+    }), { consumido: true, foco: true });
+  });
+
+  /* La devolución no depende de la rejilla ni de `VisorOrigen`: guarda quien
+     tenía el foco justo antes de abrir —normalmente el botón que se tocó— y
+     se lo devuelve al cerrar. Es el mismo patrón que ya usa `js/visor.js`
+     con `elementoQueAbrio`, pero sin acoplarse a cuál de las dos portadas
+     abrió el visor, que es justo lo que decide `js/visor-origen.js` para el
+     escritorio y que aquí no hace falta preguntar. */
+  prueba('al cerrar, el foco vuelve a quien lo tenía antes de abrir', function () {
+    igual(conVisor(function () {
+      var externo = document.createElement('button');
+      document.body.appendChild(externo);
+      try {
+        externo.focus();
+        conLado('movil', function () {
+          MovilVisor.aplicar(RUTA_NIEBLA);
+          MovilVisor.aplicar(RUTA_TODOS);
+        });
+        return document.activeElement === externo;
+      } finally {
+        document.body.removeChild(externo);
+      }
+    }), true);
+  });
+
+  prueba('al cerrar, el foco no se pierde en el <body>', function () {
+    igual(conVisor(function () {
+      conLado('movil', function () {
+        MovilVisor.aplicar(RUTA_NIEBLA);
+        MovilVisor.aplicar(RUTA_TODOS);
+      });
+      return document.activeElement === document.body;
+    }), false);
+  });
+
+  /* El oyente tiene que sobrevivir exactamente mientras el diálogo está
+     abierto: ni un tic menos —el Tab del punto anterior no se atraparía— ni
+     uno más —seguiría atrapando el Tab del resto de la página después de
+     cerrar, que es el fallo que el propio encargo llama «peor que el que
+     arreglas»—. Las dos pruebas de abajo espían `VisorFoco.atrapar` en vez de
+     mirar el resultado del Tab, porque tras cerrar `raiz` queda oculto y
+     `atrapar` no encontraría a nadie que enfocar aunque siguiera enganchado:
+     sin el espía, un oyente que sobreviviera al cierre pasaría la prueba
+     igual, por la razón equivocada. */
+  prueba('abrir engancha el oyente: el Tab SÍ llama a VisorFoco.atrapar', function () {
+    igual(conVisor(function () {
+      var antes = window.VisorFoco.atrapar;
+      var llamadas = 0;
+      window.VisorFoco.atrapar = function () { llamadas++; };
+      try {
+        conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
+        tabular(false);
+      } finally {
+        window.VisorFoco.atrapar = antes;
+        conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
+      }
+      return llamadas;
+    }), 1);
+  });
+
+  prueba('cerrar desengancha el oyente: el Tab deja de llamar a VisorFoco.atrapar',
+    function () {
+    igual(conVisor(function () {
+      conLado('movil', function () {
+        MovilVisor.aplicar(RUTA_NIEBLA);
+        MovilVisor.aplicar(RUTA_TODOS);
+      });
+      var antes = window.VisorFoco.atrapar;
+      var llamadas = 0;
+      window.VisorFoco.atrapar = function () { llamadas++; };
+      try { tabular(false); } finally { window.VisorFoco.atrapar = antes; }
+      return llamadas;
+    }), 0);
+  });
+});
