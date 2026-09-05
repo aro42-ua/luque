@@ -45,6 +45,10 @@
      dentro del visor abierto lanza un TypeError. Ver
      pruebas-movil-visor.js, sección «el foco del diálogo». -->
 <script src="../js/visor-foco.js"></script>
+<!-- Va ANTES de movil-visor.js, que lo usa en `pintar()` para construir la
+     ficha técnica. movil-ficha.js no toca el DOM al cargarse: sólo define
+     window.MovilFicha; sus pruebas van en pruebas-movil-ficha.js. -->
+<script src="../js/movil-ficha.js"></script>
 <!-- movil-visor.js no toca el DOM al cargarse: sólo define window.MovilVisor.
      `ordenDe` es pura y se prueba sola; lo que sí construye nodos —`aplicar`,
      que pinta la escena— recibe su contenedor del arnés de DOM.
@@ -81,6 +85,7 @@
 <script src="pruebas-movil.js"></script>
 <script src="pruebas-movil-hoja-rejilla.js"></script>
 <script src="pruebas-movil-hoja-filtrar.js"></script>
+<script src="pruebas-movil-ficha.js"></script>
 <script src="pruebas-movil-visor.js"></script>
 <script src="pruebas-movil-hud.js"></script>
 <script src="pruebas-movil-puerta.js"></script>

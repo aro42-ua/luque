@@ -431,6 +431,12 @@
        abriría ni un solo trabajo. La suite no puede cazarlo porque
        tests/test.html carga sus scripts por su cuenta. -->
   <script src="js/movil-hud.js"></script>
+  <!-- Va ANTES de movil-visor.js, que lo usa en `pintar()` para construir la
+       ficha técnica de la parada vertical. Sin esta línea `window.MovilFicha`
+       es undefined y llegar al fondo del eje vertical lanza un TypeError. La
+       suite no puede cazarlo porque tests/test.html carga sus scripts por su
+       cuenta. -->
+  <script src="js/movil-ficha.js"></script>
   <script src="js/movil-visor.js"></script>
   <!-- Va ANTES de movil-puerta.js, que lo usa en `entrada()`. Sin esta línea
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError
