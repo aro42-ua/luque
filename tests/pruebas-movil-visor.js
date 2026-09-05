@@ -557,3 +557,85 @@ describe('MovilVisor — el foco del diálogo (VisorFoco)', function () {
     }), 0);
   });
 });
+
+/* La animación de entrada del bloque 4f: quién decide la CLASE es
+   MovilAnimacion.claseDe, ya probada sola en pruebas-movil-animacion.js; lo
+   que le toca fijar a este módulo es CUÁNDO se la pasa a `MovilAnimacion.
+   aplicar` — que es tras un deslizamiento de verdad, y sólo una vez.
+
+   `window.Router` se falsea, y no por comodidad: `soltarEn` llama a
+   `Router.ir` de verdad, y el router real de esta misma página cambiaría
+   `location.hash`, contaminando el historial y el estado de todas las
+   pruebas que corren después en el mismo documento. Falsearlo deja capturar
+   la ruta que pide el gesto sin tocar nada fuera de esta prueba, y la
+   llamada a `MovilVisor.aplicar` con esa ruta hace a mano lo que el
+   suscriptor real del router haría al recibirla. */
+describe('MovilVisor — la animación de entrada tras un deslizamiento', function () {
+
+  function conLado(lado, fn) {
+    var antes = window.Movil;
+    window.Movil = { actual: function () { return lado; } };
+    try { return fn(); } finally { window.Movil = antes; }
+  }
+
+  var MV_CON_VIDEO = [
+    { id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'foto',
+      piezas: [{ url: 'a' }, { url: 'b' }] },
+    { id: 'oleaje', titulo: 'Oleaje', categoria: 'cortometraje', tipo: 'video',
+      piezas: [] }
+  ];
+
+  /* Simula UN deslizamiento real de verdad de principio a fin: dispara los
+     eventos de puntero sobre la raíz, deja que `soltarEn` decida la
+     intención con `MovilGestos`, y hace a mano lo que el router real haría
+     al recibir la ruta que `soltarEn` le pide —llamar de vuelta a
+     `MovilVisor.aplicar`—, sin tocar `location.hash`. Devuelve la ruta
+     capturada por si la prueba la necesita. */
+  function deslizarIzquierda(raiz) {
+    var antesRouter = window.Router;
+    var capturada = null;
+    window.Router = { ir: function (tipo, valor, pieza) {
+      capturada = { tipo: tipo, valor: valor, pieza: pieza };
+    } };
+    try {
+      raiz.dispatchEvent(new PointerEvent('pointerdown',
+        { clientX: 200, clientY: 100, bubbles: true }));
+      raiz.dispatchEvent(new PointerEvent('pointerup',
+        { clientX: 120, clientY: 100, bubbles: true }));
+    } finally {
+      window.Router = antesRouter;
+    }
+    if (capturada) MovilVisor.aplicar(capturada);
+    return capturada;
+  }
+
+  prueba('un deslizamiento real anima la pieza nueva con la clase de esa dirección',
+    function () {
+    igual(conVisorSobre(MV_CON_VIDEO, function (refs) {
+      return conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 1 });
+        var ruta = deslizarIzquierda(refs.raiz);
+        return {
+          fueAOleaje: ruta && ruta.valor === 'oleaje',
+          animada: refs.escena.firstChild.classList.contains('mvisor-entra-der')
+        };
+      });
+    }), { fueAOleaje: true, animada: true });
+  });
+
+  /* El cuidado del encargo: la dirección se consume UNA vez. Llegar a la
+     parada siguiente por otra vía —aquí, una `MovilVisor.aplicar` directa,
+     que es exactamente lo que hace el suscriptor del router al entrar por la
+     URL o al volver con el botón de atrás— no puede heredar la animación del
+     deslizamiento anterior. */
+  prueba('la parada siguiente, sin gesto detrás, no hereda la animación', function () {
+    igual(conVisorSobre(MV_CON_VIDEO, function (refs) {
+      return conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 1 });
+        deslizarIzquierda(refs.raiz);
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
+        return refs.escena.firstChild.className;
+      });
+    }), 'mvisor-foto');
+  });
+});

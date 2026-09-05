@@ -437,6 +437,11 @@
        suite no puede cazarlo porque tests/test.html carga sus scripts por su
        cuenta. -->
   <script src="js/movil-ficha.js"></script>
+  <!-- Va ANTES de movil-visor.js, que lo usa en `pintar()` para animar la
+       entrada de la pieza nueva. Sin esta línea `window.MovilAnimacion` es
+       undefined y deslizar dentro del visor lanza un TypeError. La suite no
+       puede cazarlo porque tests/test.html carga sus scripts por su cuenta. -->
+  <script src="js/movil-animacion.js"></script>
   <script src="js/movil-visor.js"></script>
   <!-- Va ANTES de movil-puerta.js, que lo usa en `entrada()`. Sin esta línea
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError

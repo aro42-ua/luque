@@ -16,6 +16,14 @@ window.MovilVisor = (function () {
 
   var raiz = null, escena = null, orden = [], aqui = null, elCerrar = null;
 
+  /* La dirección del último gesto que movió el recorrido, a la espera de que
+     `pintar` la consuma. Se CONSUME UNA VEZ y se olvida (ver `pintar`): así,
+     llegar a una pieza por la URL o por el botón de atrás del navegador —que
+     no pasan por `soltarEn`— la encuentra en `null` y la escena aparece sin
+     animar, en vez de arrastrar la dirección de un gesto anterior que ya no
+     viene a cuento. */
+  var direccionPendiente = null;
+
   /* Quién tenía el foco justo antes de abrir —normalmente el botón de la
      rejilla que se tocó—, para devolvérselo al cerrar. No se pregunta a
      `js/visor-origen.js`, que hace lo mismo para el escritorio: aquél
@@ -118,10 +126,14 @@ window.MovilVisor = (function () {
     var p = window.Datos.porId(aqui.proyecto);
     if (!p) { cerrar(); return; }
 
+    var direccion = direccionPendiente;
+    direccionPendiente = null;
+
     escena.innerHTML = '';
-    if (aqui.pieza === 'ficha')     escena.appendChild(window.MovilFicha.de(p));
-    else if (aqui.pieza === null)   escena.appendChild(videoDe(p));
-    else                            escena.appendChild(fotoDe(p, aqui.pieza));
+    var nodo = (aqui.pieza === 'ficha') ? window.MovilFicha.de(p) :
+               (aqui.pieza === null)    ? videoDe(p) : fotoDe(p, aqui.pieza);
+    escena.appendChild(nodo);
+    window.MovilAnimacion.aplicar(nodo, direccion);
     window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
   }
 
@@ -255,6 +267,7 @@ window.MovilVisor = (function () {
 
     var ruta = siguienteRuta(aqui, r.intencion, orden);
     if (!ruta) return;
+    direccionPendiente = r.intencion;
     window.Router.ir(ruta.tipo, ruta.valor, ruta.pieza);
   }
 

@@ -1472,6 +1472,30 @@ body.es-movil .mvisor-ficha-datos div{
 body.es-movil .mvisor-ficha-datos dt{ opacity:.7; }
 body.es-movil .mvisor-ficha-datos dd{ margin:0; text-align:right; }
 
+/* La animación de entrada del bloque 4f (js/movil-animacion.js decide CUÁL de
+   las cuatro toca). 200ms y no los ~620ms del vuelo de escritorio
+   (css/luque.css, `.visor.viajando`): aquello es un vuelo desde la portada que
+   se hace una vez al abrir; esto se repite en cada deslizamiento dentro del
+   visor, así que tiene que sentirse inmediato y no demorar el gesto
+   siguiente. `ease-out` porque lo que importa es que LLEGUE con brío y frene
+   suave, no que arranque despacio. */
+body.es-movil .mvisor-entra-der,
+body.es-movil .mvisor-entra-izq,
+body.es-movil .mvisor-entra-abajo,
+body.es-movil .mvisor-entra-arriba{
+  animation-duration:.2s;
+  animation-timing-function:ease-out;
+}
+body.es-movil .mvisor-entra-der{    animation-name:mvisor-entra-der; }
+body.es-movil .mvisor-entra-izq{    animation-name:mvisor-entra-izq; }
+body.es-movil .mvisor-entra-abajo{  animation-name:mvisor-entra-abajo; }
+body.es-movil .mvisor-entra-arriba{ animation-name:mvisor-entra-arriba; }
+
+@keyframes mvisor-entra-der{    from{ transform:translateX(100%);  } to{ transform:none; } }
+@keyframes mvisor-entra-izq{    from{ transform:translateX(-100%); } to{ transform:none; } }
+@keyframes mvisor-entra-abajo{  from{ transform:translateY(100%);  } to{ transform:none; } }
+@keyframes mvisor-entra-arriba{ from{ transform:translateY(-100%); } to{ transform:none; } }
+
 /* ── El HUD ────────────────────────────────────────────────────────────────
    El padding lateral de 24px NO es decorativo. En Safari de iOS, arrastrar
    desde el borde izquierdo hacia dentro vuelve a la página anterior, y en
