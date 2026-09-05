@@ -172,38 +172,40 @@ estorba pero lo que peor deja la descubribilidad de las categorías.
 Falta decidir cuál. Antes de decidir, conviene mirarlo en la pantalla de quien
 lo pidió: puede que ahí se vea distinto de lo que sale medido aquí.
 
-## La portada móvil (bloque 4d): lo que queda sin verificar
+## La portada móvil (bloque 4d) y el visor móvil (bloque 4f)
 
-**El visor de la portada móvil sigue siendo el de escritorio.** Tocar un
-trabajo en la rejilla llama a `Router.ir('proyecto', id)` (`index.html`, en
-el arranque, en la llamada a `MovilHoja.pintar` dentro de
-`Contenido.cargar`), y quien responde es `js/visor.js`, que se diseñó para
-un ratón: su lupa se abre y se recorre con `pointerdown`/`pointermove`
-—«mantén y arrastra»— (`js/visor-lupa.js`), y su tira de miniaturas no cabe
-en una ventana estrecha (ya registrado más arriba, en «Detalles menores
-aplazados»: con ocho piezas o más y 375px se envuelve y solapa unos 20px con
-la foto). La URL que produce ya es la definitiva, así que el bloque 4e
-sustituye el visor sin tocar ese cableado. Hasta entonces, **la mitad de la
-experiencia móvil es la de escritorio encogida.**
+**El visor de la portada móvil ya no es el de escritorio.** Hasta el bloque
+4f, tocar un trabajo en la rejilla abría `js/visor.js`, pensado para un ratón.
+Desde el bloque 4f el móvil tiene su propio marco, `js/movil-visor.js`
+(`window.MovilVisor`), con su propia escena, su propio HUD y sus propios
+gestos de dedo. **El visor de escritorio sigue vivo e intacto**: la guarda de
+lado hace que los dos convivan suscritos a la misma ruta sin pisarse (ver la
+sección de abajo).
 
-**Los TRES módulos puros del bloque 4c siguen sin cablear: `MovilRecorrido`,
-`MovilGestos` y `Brillo`.** Hasta el 2026-09-04 este párrafo decía que el
-bloque 4d había cableado `MovilGestos` en el hero fundido. **Era cierto
-entonces y hoy es falso**: el bloque 4e sustituyó ese consumo por
-`MovilArrastre` (`js/movil-puerta.js`), y `MovilGestos` se quedó sin ninguno.
-Comprobado buscando los tres nombres en todos los `.js` y `.html` del
-repositorio: `MovilRecorrido` y `MovilGestos` sólo salen en su propio archivo
-y en los de prueba, y `Brillo` sólo sale además **en un comentario** de
-`js/movil.js`, que no es un consumidor.
+**De los tres módulos puros del bloque 4c, dos ya están cableados y uno
+sigue sin consumidor.** `MovilRecorrido` y `MovilGestos` los usa
+`js/movil-visor.js`: `MovilVisor.siguienteRuta` le pasa el gesto que decide
+`MovilGestos.soltar` a `MovilRecorrido.mover`, y el `pointerdown`/`pointerup`/
+`pointercancel` de la raíz del visor los alimenta. `Brillo` sigue **sin
+ningún consumidor**: comprobado buscando `window.Brillo` y el nombre
+`Brillo` en todos los `.js` y `.html` del repositorio fuera de su propio
+archivo y de sus pruebas — la única otra aparición es un comentario de
+`js/movil.js` que lo cita como ejemplo de argumento inyectado, no una
+llamada. No es un olvido de este bloque: sus esquinas adaptativas al brillo
+de la foto son trabajo del bloque 4g, y ya está explicado más abajo, en «El
+camino automático del brillo sigue sin verificarse», por qué hoy no podrían
+funcionar de todos modos con las fotos de picsum — ningún `<img>` del sitio
+las pide en modo CORS, así que el lienzo que necesita `Brillo.decidir` para
+medir se mancha antes de llegar a medir nada.
 
-Los tres están escritos y probados, y no los usa nadie porque **son las piezas
-del visor móvil de dos ejes, que todavía no existe**: en el móvil sigue
-respondiendo el visor de escritorio adaptado. No son código muerto por
-descuido, son código adelantado; si ese visor se descartara, habría que
-borrarlos con él. Cuando se cableen, **`MovilRecorrido`
-necesita `piezas` como NÚMERO y no como array**; el porqué y lo que cuesta
-equivocarse está más abajo en este mismo documento, en la sección «Cómo se
-prueba», en la entrada sobre `MovilRecorrido.paradas`.
+Los dos que se cablearon están escritos y probados desde el bloque 4c y no
+tuvieron que reescribirse: **son las piezas del visor móvil de dos ejes**,
+que hasta el bloque 4f no tenía quien las llamara. Cuando se cablearon,
+`MovilVisor.ordenDe` hizo la conversión que ya pedía por escrito el
+comentario de `js/movil-recorrido.js`: **`MovilRecorrido` necesita `piezas`
+como NÚMERO y no como array**; el porqué y lo que cuesta equivocarse está más
+abajo en este mismo documento, en la sección «Cómo se prueba», en la entrada
+sobre `MovilRecorrido.paradas`.
 
 **La comprobación en un teléfono real YA SE HIZO, el 2026-09-03.** Ángel la
 dio por hecha sobre su propio teléfono, con el sitio servido desde la red
@@ -551,9 +553,121 @@ escritorio van antes; en móvil viven bajo `display:none`, no cargan nunca y
 cuatro corridas y era mentira: inspeccionando el DOM hay 12 celdas con sus 12
 `<img>`, y la primera da `complete:true` y `naturalWidth:1200`.
 
+## El visor móvil de dos ejes (bloque 4f)
+
+**La guarda de lado tiene dos mitades, una en cada visor.** Desde este bloque
+hay dos suscriptores a `Router.alCambiar` compitiendo por la misma ruta: el
+de `Visor.init` (`js/visor.js`) y `MovilVisor.aplicar` (`js/movil-visor.js`).
+Cada uno mira `window.Movil.actual()` y se calla si no es su lado —el de
+escritorio si vale `'movil'`, el móvil si no vale `'movil'`—, así que sólo
+responde uno de los dos por cada cambio de ruta.
+
+Que `Movil.actual()` ya tenga valor cuando las dos guardas corren no es
+casualidad: en `index.html`, `window.Movil.init(...)` se llama ANTES que
+`window.Router.init()`, y `Router.init()` avisa a sus suscriptores de forma
+SÍNCRONA. Si el orden estuviera al revés, la primera ruta llegaría con
+`Movil.actual()` a `null` y ninguna de las dos guardas la reconocería como
+propia. Es la misma dependencia de orden que ya explica `js/visor-origen.js`
+para el vuelo del visor, y que se repite aquí sin cambios: ordenar
+`Movil.init` antes que `Router.init` es una condición que hay que conservar
+si algún día se reordena `index.html`.
+
+**La escena móvil no reutiliza `js/visor-carga.js`.** Aquel módulo resuelve el
+mismo problema —pintar la portada ya cacheada antes de que llegue la pieza
+grande— pero guarda su raíz en una variable de módulo propia. Llamarlo desde
+la escena móvil la reapuntaría a ese marco, y el visor de escritorio se
+quedaría con el indicador de carga atado a un elemento que ya no se ve en
+cuanto se cruza el umbral de ancho con el visor abierto: el fallo concreto es
+girar una tableta con el visor abierto, cruzando los 860px con la pieza a
+medio cargar. `js/movil-visor.js` repite las mismas quince líneas en vez de
+compartirlas, y lo dice en su propio comentario.
+
+**La condición sobre el contenido, no sobre el código:** la portada y la
+pieza tienen que ser la misma foto en la MISMA PROPORCIÓN. `.mvisor-foto`
+usa `object-fit:contain`, así que la caja pintada la decide la proporción de
+la imagen que hay dentro; si la portada y la pieza no comparten proporción,
+el cambio de una a otra da un salto visible a mitad del vuelo. En el
+contenido de relleno coinciden (las dos 4:5); quien genere los recortes de
+las fotos reales del estudio tiene que mantener esa igualdad.
+
+**Las dos cosas del sistema operativo, en `css/luque.css`:**
+
+- La franja de los bordes que se queda el navegador. El HUD lleva
+  `padding:1rem 24px` y no es decorativo: en Safari de iOS, arrastrar desde
+  el borde izquierdo hacia dentro vuelve a la página anterior, y en Chrome de
+  Android ocurre en los dos bordes; un control dentro de esa franja de ~20px
+  sería imposible de pulsar sin que el navegador se llevara el gesto por
+  delante. Los 24px dan margen sobre los 20.
+- `overscroll-behavior-y:contain` sobre `.mvisor`. El gesto «foto anterior»
+  empieza deslizando hacia abajo desde arriba, que es el mismo gesto que
+  dispara el «tirar para recargar» de Chrome en Android; sin esto, el
+  recorrido se interrumpiría con una recarga a mitad. Va acompañado de
+  `touch-action:none` sobre el mismo elemento, para que el navegador no se
+  quede con el desplazamiento ni el zoom por su cuenta dentro del visor —los
+  dos ejes los interpreta `js/movil-gestos.js`— sin apagarlos fuera de él,
+  donde la rejilla de la portada sí tiene que poder desplazarse con el dedo.
+
+**Dos ganchos de clase que el HTML/JS ponen y que ningún CSS usa todavía**,
+cotejadas todas las clases entre JavaScript y CSS en las dos direcciones:
+
+- `mvisor-abierto`, que `js/movil-visor.js` añade a `<body>` al abrir el
+  visor móvil y quita al cerrarlo. Se llama casi igual que `visor-abierto` del
+  escritorio, que sí tiene reglas —esconde la barra de navegación—, así que
+  conviene decirlo aquí para que nadie dé por hecho que ésta también hace
+  algo. El candidato natural es bloquear el desplazamiento del cuerpo
+  mientras el visor está abierto; queda sin decidir a propósito porque eso
+  cambia la posición de desplazamiento al cerrar y el comportamiento de la
+  barra de direcciones de una forma que sólo se puede juzgar en un teléfono
+  de verdad, y esa comprobación está pendiente.
+- `preloader-done`, anterior a este bloque: la pone `js/hero.js` al retirar el
+  preloader, ningún CSS la usa, y lo único que la mira es
+  `tests/pruebas-hero.js`, comprobando sólo que se pone. Queda fuera del
+  alcance de este bloque, pero se anota aquí porque es el mismo patrón que
+  `mvisor-abierto` y conviene no descubrirlo dos veces por separado.
+
+### Lo que la suite no puede certificar sobre este bloque
+
+No hay pruebas de CSS computado ni de gesto táctil en este repositorio, así
+que lo que sigue sólo lo puede juzgar el estudio en un móvil real: **el
+tacto de los gestos** —si el umbral de deslizamiento responde como se
+espera al dedo—, **si 3 segundos es el plazo correcto** para ocultar el HUD,
+y **si ese ocultado se siente elegante o se siente como que la web se apaga
+sola**. Ninguna prueba puede decir ninguna de las tres.
+
+Propias de este bloque, además:
+
+- **La franja de los bordes hay que probarla en un iPhone de verdad.** En un
+  navegador de escritorio encogido a 390px de ancho el gesto de «atrás» del
+  sistema no existe, así que ese navegador no puede confirmar ni desmentir
+  que los 24px de margen bastan; daríamos por buena una cifra que sólo se
+  puede medir en el dispositivo real.
+- **Girar el móvil con el visor abierto debe conservar la posición**: mismo
+  proyecto, misma foto. En un teléfono de 390×844 girar a apaisado no cruza
+  el umbral de 860px de `Movil.CONSULTA`, así que no se reconstruye nada y no
+  hay nada que perder. En una tableta girar sí puede cruzar ese umbral —de
+  vertical, bajo 860px, a apaisado, por encima—, y ahí la posición está sin
+  comprobar: no hay un teléfono de prueba con esa anchura a mano, y ningún
+  test de esta suite simula el cruce del interruptor con el visor móvil
+  abierto.
+
+### Una propiedad permanente del arnés de pruebas, no una anécdota de este bloque
+
+**La suite no puede ver que falte un `<script>` en `index.html`.**
+`tests/test.html` carga su propio juego de `<script>` —incluido
+`js/movil-recorrido.js`— por su cuenta, así que una suite en verde no dice
+nada sobre qué scripts carga `index.html` de verdad. Pasó de hecho en este
+bloque: el primer commit de la Tarea 3 cableó `MovilRecorrido` al router sin
+añadir su `<script>` a `index.html`, y la suite seguía dando verde porque
+`tests/test.html` ya lo tenía cargado por su lado. En un móvil
+real ese estado habría lanzado un `TypeError` en cuanto el dedo llamara a
+`window.MovilRecorrido`. El segundo commit de la Tarea 3 añadió la línea que
+faltaba. Es una propiedad de cómo está montado el arnés, no un descuido
+puntual: cualquier bloque futuro que cablee un módulo nuevo tiene que
+acordarse de `index.html` a mano, porque la suite no se lo va a recordar.
+
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **362 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **400 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -561,7 +675,7 @@ quedaba fuera por tocar el DOM —, desde el bloque 4b la capa impura de
 `Router.ir`, que hasta entonces no tenía ninguna prueba, desde el bloque 4c
 los tres módulos puros del móvil, desde el bloque 4d el interruptor de ancho
 (`js/movil.js`) y la hoja móvil —rejilla y filtrado, en
-`tests/pruebas-movil-hoja-*.js`—, y desde el bloque 4e el arrastre de la hoja
+`tests/pruebas-movil-hoja-*.js`—, desde el bloque 4e el arrastre de la hoja
 (`tests/pruebas-movil-arrastre.js`) y la puerta del hero, que se mudó de
 `movil-hoja.js` a `js/movil-puerta.js` con sus pruebas
 (`tests/pruebas-movil-puerta.js` y `tests/pruebas-movil-puerta-async.js`,
@@ -569,11 +683,16 @@ antes `...-hoja-hero...`), y desde la ronda de arreglos de la revisión final
 del 4e el envolvente de foco del visor (`tests/pruebas-visor-foco.js`, la única
 sección que carga `js/visor.js`) y las dos que fijan que al soltar el dedo no
 quede estilo en línea clavando la hoja, y desde el arreglo del parón al abrir
-el visor las siete de `tests/pruebas-visor-carga.js`. Medido el 2026-09-04 con
-Chrome headless (`--virtual-time-budget=15000 --dump-dom`) contra
-`tests/test.html` servido por `python -m http.server`, con el servidor
-verificado por `curl` y por que su registro CRECIERA antes de medir: la línea
-final dice «362 pasan, 0 fallan».
+el visor las siete de `tests/pruebas-visor-carga.js`. Y desde el bloque 4f, el
+visor móvil de dos ejes: `tests/pruebas-movil-visor.js` (27 comprobaciones,
+`js/movil-visor.js`: `ordenDe`, `aplicar` con su guarda de lado y
+`siguienteRuta`) y `tests/pruebas-movil-hud.js` (11 comprobaciones,
+`js/movil-hud.js`: el contador, la categoría activa y el ocultado a los
+3000ms). Medido el 2026-09-05 con Chrome headless
+(`--virtual-time-budget=15000 --dump-dom`) contra `tests/test.html` servido
+por `python -m http.server`, con el servidor verificado por `curl` y por que
+su registro CRECIERA antes de medir: la línea final dice «400 pasan, 0
+fallan».
 
 ### La trampa del arnés que da PASA sin comprobar nada
 
@@ -596,17 +715,19 @@ también la de `tests/pruebas-visor-carga.js`: la espera va **fuera** de
 síncrona. Regla para reconocerlo de un vistazo: **si ves un `return` de una
 promesa dentro de `prueba(...)`, esa prueba no comprueba nada.**
 
-Si las cuentas con `grep -c "prueba("` te van a salir **369**, no 362. La
-diferencia son siete coincidencias que no llegan a ejecutarse como prueba: dos
-viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos cargas que
-están diseñadas para fallar —nunca se ejecutan; están ahí para que la sección
-se ponga en rojo si algún día la carga deja de fallar—; tres viven en
+Si las cuentas con `grep -c "prueba("` te van a salir **407**, no 400. La
+diferencia son siete coincidencias que no llegan a ejecutarse como prueba —el
+mismo recuento que ya daba esta diferencia antes del bloque 4f, porque
+ninguno de sus dos archivos nuevos añade una coincidencia que no se ejecute—:
+dos viven en `tests/pruebas-arnes-dom.js`, en la rama de éxito de dos cargas
+que están diseñadas para fallar —nunca se ejecutan; están ahí para que la
+sección se ponga en rojo si algún día la carga deja de fallar—; tres viven en
 `tests/arnes.js` —un comentario que menciona `prueba()`, la línea
 `function prueba(nombre, fn) {` que define la propia función, y una llamada
 de repliegue que sólo corre si una sección `describeAsync` lanza, cosa que no
 pasa con la suite en verde—; una es un comentario de
-`tests/pruebas-galeria.js` que también nombra `prueba()`; y la séptima, nueva,
-es el aviso sobre `prueba()` de la sección de arriba, escrito en
+`tests/pruebas-galeria.js` que también nombra `prueba()`; y la séptima es el
+aviso sobre `prueba()` de la sección de arriba, escrito en
 `tests/pruebas-visor-carga.js`. El número que cuenta es el que imprime la
 suite al pie.
 
@@ -849,18 +970,21 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   riesgo de esto», sobre las líneas 98-101): el camino automático
   está sin verificar, y sin esta anotación el halo puede quedarse puesto meses
   en producción sin que nadie note que la medición nunca llegó a funcionar.
-- **A los tres módulos del bloque 4c no los carga ni los llama ningún código
-  todavía.** `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` se cargan
-  sólo desde `tests/test.html`: `index.html` no los nombra, y en `js/` y
-  `panel/js/` no hay una sola mención fuera de los propios tres archivos
-  (comprobado buscando los nombres de archivo y los globales
-  `MovilRecorrido`, `MovilGestos` y `Brillo` en todos los `.js` y `.html` del
-  repositorio; sólo salen ellos, sus tres archivos de pruebas y `test.html`).
-  La spec y los planes de los bloques anteriores sí los nombran, como es
-  normal, pero eso es prosa: no carga nada. Es deliberado: este bloque
-  construye lo puro y el que sigue lo cablea a la pantalla. Mientras tanto el
-  móvil sigue viendo exactamente lo mismo que antes, y una suite en verde aquí
-  no dice nada sobre lo que se ve en un teléfono.
+- **Desde el bloque 4f esto ya no es cierto para dos de los tres: sólo
+  `brillo.js` sigue sin que lo cargue ni lo llame ningún código.** Hasta el
+  bloque 4f, `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` se
+  cargaban sólo desde `tests/test.html`. Ahora `index.html` nombra a
+  `js/movil-recorrido.js` y `js/movil-gestos.js`, y `js/movil-visor.js` los
+  llama de verdad: `MovilVisor.siguienteRuta` pasa por
+  `MovilRecorrido.mover`, y `pointerdown`/`pointerup`/`pointercancel` sobre la
+  raíz del visor alimentan `MovilGestos.presionar`/`soltar`. `brillo.js`
+  sigue sin ninguna mención fuera de su propio archivo y de sus pruebas
+  (comprobado buscando el nombre de archivo y el global `Brillo` en todos los
+  `.js` y `.html` del repositorio); la razón está más arriba, en la sección
+  del visor móvil, y en «El camino automático del brillo sigue sin
+  verificarse»: sus esquinas adaptativas son del bloque 4g, y hoy no podrían
+  funcionar de todos modos porque ningún `<img>` del sitio pide la foto en
+  modo CORS.
 - **`MovilRecorrido.paradas` lee `piezas` como una cuenta, y en todo el resto
   del repositorio `piezas` es un array.** En `contenido.json`, en
   `Datos.PROYECTOS` y en lo que consume `Router.piezasPorId`
@@ -889,16 +1013,25 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   —`'diagonal'` y la cadena vacía— y comprueba que devuelve el estado intacto.
   No son todos los valores posibles, pero el código no tiene más ramas: lo que
   no cae en las cuatro direcciones sale por el `return estado` del final, así
-  que un evento de giro tampoco movería la posición. Lo
-  que ninguna prueba comprueba —porque todavía no existe el archivo que lo
-  haría: `js/movil-hoja.js`, `js/movil-visor.js` y `js/movil.js` no están en
-  el repositorio— es que
-  quien repinte tras el giro vuelva a *leer* ese estado en vez de
-  reconstruirlo desde cero: eso es del bloque que pinta, y hasta entonces el
-  requisito de «que girar no mueva la posición»
+  que un evento de giro tampoco movería la posición.
+
+  **Esto ya no es del todo cierto: desde el bloque 4f `js/movil-visor.js`
+  existe y sí guarda el estado (`aqui`) en vez de reconstruirlo en cada
+  parada**, así que la mitad que faltaba —quien repinte tras el giro vuelve a
+  *leer* el estado— está cubierta mientras el giro no cruce el interruptor de
+  ancho: `MovilVisor.aplicar` sólo se llama desde `Router.alCambiar`, y girar
+  el teléfono no cambia la ruta. Lo que sigue sin cubrir, y sin ninguna
+  prueba que lo ejercite, es el caso de una tableta girando con el visor
+  abierto y cruzando los 860px de `Movil.CONSULTA` a mitad de gesto: ni
+  `Movil.init` ni `index.html` vuelven a llamar a `MovilVisor` al cruzar el
+  interruptor de lado (revisado el cuerpo de las dos ramas, `movil` y
+  `escritorio`, en `window.Movil.init` dentro de `index.html`), así que ese
+  caso concreto sigue exactamente donde lo dejaba esta entrada: sin
+  comprobar. El requisito de «que girar no mueva la posición»
   (`docs/superpowers/specs/2026-08-28-movil-design.md`, sección «Cómo se
   prueba», en la viñeta de `movil-recorrido.js`, sobre la línea 308) está
-  cubierto sólo por su mitad.
+  cubierto para el caso normal —un teléfono, que nunca cruza el umbral al
+  girar— y sin comprobar para el caso raro de una tableta que sí lo cruza.
 - **`movil-gestos.js` no tiene todavía lo que hace falta para un acercamiento
   continuo.** Hoy sólo expone `presionar` y `soltar`: el pellizco llega como
   una etiqueta (`'pellizco'`) al levantar el último dedo, un instante único,
@@ -984,9 +1117,16 @@ está roto; el porqué de todo esto está explicado en la cabecera del archivo.
 
 ## Estructura
 
-El código está repartido en módulos de una responsabilidad cada uno, ninguno por
-encima de 300 líneas. `contenido.json` es el único sitio donde vive el contenido, y
-`js/datos.js` el único que lo custodia en memoria.
+El código está repartido en módulos de una responsabilidad cada uno, casi
+ninguno por encima de 300 líneas. **La excepción, desde este bloque, es
+`js/visor.js`: 303.** La guarda de lado de la Tarea 1 —comentario incluido—
+lo subió desde 290; el propio comentario explica por qué la guarda hace
+falta y no se acorta más sin perder esa explicación. No se sacó a otro
+archivo porque son tres líneas y el resto del fichero es del visor de
+escritorio, no del móvil; queda anotado aquí para que la próxima mano que
+toque `js/visor.js` sepa que ya no hay margen y cualquier añadido nuevo
+tiene que sacar algo primero. `contenido.json` es el único sitio donde vive
+el contenido, y `js/datos.js` el único que lo custodia en memoria.
 `js/router.js` es la única fuente de verdad sobre qué está abierto: la galería y
 el visor reaccionan a él y no se llaman entre sí.
 
