@@ -612,3 +612,23 @@ Comprobado tras desplegar, contra el dominio real:
   que faltaba y que la suite no puede vigilar.
 - El sitio **sigue cerrado a buscadores**: `robots.txt` con `Disallow: /` y la
   cabecera `x-robots-tag: noindex` en la respuesta.
+
+## La divergencia, cerrada (2026-09-09)
+
+La sección de arriba dejaba una divergencia abierta y hay que decir que ya no
+existe, porque una frase que el repositorio contradice es el fallo característico
+de este proyecto.
+
+Entre medias hubo un segundo despliegue desde la misma rama, versión
+`c02cde37-9019-430f-b47c-d5e2cc69f70b`, 140 archivos: la animación de entrada de
+la pieza al deslizar, que fue lo único que la prueba en el teléfono de Ángel
+encontró mal. Con ella la suite quedó en 422 comprobaciones.
+
+El bloque 4f está **fusionado en `main`**. `main` vuelve a contener todo lo que
+sirve `lidialuque.com`; el despliegue que hay en el escaparate salió del commit
+`4da242b`, que ahora está dentro de la historia de `main`. No hace falta volver
+a desplegar para cerrar la divergencia: el código servido y el fusionado son el
+mismo.
+
+Lo que sigue igual: **empujar a GitHub no despliega nada**. El despliegue es a
+mano y lo decide el estudio en el momento.
