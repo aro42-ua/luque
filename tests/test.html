@@ -38,6 +38,32 @@
 <script src="../js/brillo.js"></script>
 <script src="../js/movil.js"></script>
 <script src="../js/movil-hoja.js"></script>
+<!-- Va ANTES de movil-visor.js, que desde la ronda de arreglos de la revisión
+     final del bloque 4f usa `window.VisorFoco.atrapar` para el envolvente de
+     foco del diálogo móvil, con el mismo orden relativo que ya usa
+     index.html. Sin esta línea `window.VisorFoco` es undefined y el Tab
+     dentro del visor abierto lanza un TypeError. Ver
+     pruebas-movil-visor.js, sección «el foco del diálogo». -->
+<script src="../js/visor-foco.js"></script>
+<!-- Va ANTES de movil-visor.js, que lo usa en `pintar()` para construir la
+     ficha técnica. movil-ficha.js no toca el DOM al cargarse: sólo define
+     window.MovilFicha; sus pruebas van en pruebas-movil-ficha.js. -->
+<script src="../js/movil-ficha.js"></script>
+<!-- Va ANTES de movil-visor.js, que lo usa en `pintar()` para animar la
+     entrada de la pieza nueva. movil-animacion.js no toca el DOM al cargarse:
+     sólo define window.MovilAnimacion; sus pruebas van en
+     pruebas-movil-animacion.js. -->
+<script src="../js/movil-animacion.js"></script>
+<!-- movil-visor.js no toca el DOM al cargarse: sólo define window.MovilVisor.
+     `ordenDe` es pura y se prueba sola; lo que sí construye nodos —`aplicar`,
+     que pinta la escena— recibe su contenedor del arnés de DOM.
+     Ver pruebas-movil-visor.js. -->
+<script src="../js/movil-visor.js"></script>
+<!-- movil-hud.js no toca el DOM al cargarse: sólo define window.MovilHud.
+     `contador` y `OCULTAR_TRAS` se prueban solos; `pintar` e `init`, que sí
+     construyen nodos, reciben sus elementos del arnés de DOM.
+     Ver pruebas-movil-hud.js. -->
+<script src="../js/movil-hud.js"></script>
 <script src="../js/movil-puerta.js"></script>
 <script src="../js/hero.js"></script>
 <script src="../panel/js/identificador.js"></script>
@@ -64,6 +90,10 @@
 <script src="pruebas-movil.js"></script>
 <script src="pruebas-movil-hoja-rejilla.js"></script>
 <script src="pruebas-movil-hoja-filtrar.js"></script>
+<script src="pruebas-movil-ficha.js"></script>
+<script src="pruebas-movil-animacion.js"></script>
+<script src="pruebas-movil-visor.js"></script>
+<script src="pruebas-movil-hud.js"></script>
 <script src="pruebas-movil-puerta.js"></script>
 <script src="pruebas-movil-puerta-async.js"></script>
 <script src="pruebas-hero.js"></script>
