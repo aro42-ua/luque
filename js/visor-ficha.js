@@ -24,11 +24,15 @@ window.VisorFicha = (function () {
     elCat.textContent = proyecto.categoria.replace('-', ' ');
     elTitulo.textContent = proyecto.titulo;
     elDatos.innerHTML = '';
+    /* Por `FichaDato.de` y no en crudo: los cuatro videoclips no traen
+       `cliente`, y un `dd` vacío se lee como «la web está rota» en vez de
+       como «este dato no lo tenemos». La misma función la usa la ficha móvil,
+       que es esta misma ficha en otra pantalla. */
     var filas = [
-      ['Cliente', proyecto.ficha.cliente],
-      ['Año',     proyecto.ficha.anio],
-      ['Papel',   proyecto.ficha.papel],
-      ['Piezas',  total]
+      ['Cliente', FichaDato.de(proyecto.ficha.cliente)],
+      ['Año',     FichaDato.de(proyecto.ficha.anio)],
+      ['Papel',   FichaDato.de(proyecto.ficha.papel)],
+      ['Piezas',  FichaDato.de(total)]
     ];
     filas.forEach(function (f) {
       var fila = document.createElement('div');

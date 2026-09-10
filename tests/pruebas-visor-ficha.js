@@ -35,6 +35,20 @@ describe('VisorFicha — la ficha del escritorio', function () {
     });
   });
 
+  /* El caso real: los cuatro videoclips de Lidia no traen `cliente`. Sin el
+     hueco la fila sale con el rotulo puesto y el valor en blanco, que se lee
+     como «la web esta rota» y no como «este dato no lo tenemos». La regla vive
+     en FichaDato porque la ficha movil la necesita igual. */
+  prueba('un cliente que falta sale como el hueco', function () {
+    ArnesDom.conElemento(MARCADO, function (raiz) {
+      preparar();
+      var p = proyecto(null);
+      delete p.ficha.cliente;
+      VisorFicha.pintar(p, 6);
+      igual(raiz.querySelectorAll('#fichaDatos dd')[0].textContent, '######');
+    });
+  });
+
   prueba('con enlace aparece el boton', function () {
     ArnesDom.conElemento(MARCADO, function (raiz) {
       preparar();

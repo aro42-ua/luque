@@ -21,10 +21,12 @@ window.MovilFicha = (function () {
 
     var lista = document.createElement('dl');
     lista.className = 'mvisor-ficha-datos';
-    [['Cliente', p.ficha.cliente],
-     ['Año',     p.ficha.anio],
-     ['Papel',   p.ficha.papel],
-     ['Piezas',  p.piezas.length]].forEach(function (f) {
+    /* Por `FichaDato.de`, igual que el escritorio y por el mismo motivo:
+       el hueco se enseña, no se deja en blanco. */
+    [['Cliente', FichaDato.de(p.ficha.cliente)],
+     ['Año',     FichaDato.de(p.ficha.anio)],
+     ['Papel',   FichaDato.de(p.ficha.papel)],
+     ['Piezas',  FichaDato.de(p.piezas.length)]].forEach(function (f) {
       var fila = document.createElement('div');
       var dt = document.createElement('dt'); dt.textContent = f[0];
       var dd = document.createElement('dd'); dd.textContent = f[1];

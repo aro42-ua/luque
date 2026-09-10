@@ -67,9 +67,11 @@ describeAsync('Visor — el envolvente de foco del diálogo', function () {
   var MODULOS = ['../js/reglas-contenido.js', '../js/datos.js', '../js/router.js',
                  '../js/visor-estado.js', '../js/visor-transicion.js',
                  '../js/visor-lupa.js',
-                 /* plataforma.js va ANTES de visor-ficha.js, que lo usa en
-                    `pintar()` para el botón del vídeo, igual que index.html. */
-                 '../js/plataforma.js', '../js/visor-ficha.js', '../js/visor-video.js',
+                 /* plataforma.js y ficha-dato.js van ANTES de visor-ficha.js,
+                    que los usa en `pintar()` -uno para el botón del vídeo y el
+                    otro para el hueco de las filas-, igual que index.html. */
+                 '../js/plataforma.js', '../js/ficha-dato.js',
+                 '../js/visor-ficha.js', '../js/visor-video.js',
                  '../js/visor-carga.js', '../js/visor-chrome.js',
                  '../js/visor-origen.js', '../js/visor-foco.js',
                  '../js/visor.js'];

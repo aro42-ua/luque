@@ -30,6 +30,16 @@ describe('MovilFicha — el marcado de la ficha técnica', function () {
     igual(caja.querySelector('.mvisor-ficha-titulo').textContent, 'Niebla');
   });
 
+  /* Y el hueco tambien es el mismo, por el mismo motivo: los cuatro
+     videoclips de Lidia no traen `cliente`, y en el movil la ficha ocupa la
+     pantalla entera, asi que una fila en blanco se ve todavia mas. */
+  prueba('un cliente que falta sale como el hueco', function () {
+    var p = proyecto(null);
+    delete p.ficha.cliente;
+    var dd = MovilFicha.de(p).querySelectorAll('.mvisor-ficha-datos dd');
+    igual(dd[0].textContent, '######');
+  });
+
   /* Los rótulos son los mismos que los del escritorio a propósito: es la
      misma ficha vista en otra pantalla, no otra ficha. */
   prueba('la ficha movil ensena las mismas cuatro filas', function () {

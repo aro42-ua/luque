@@ -414,6 +414,11 @@
        undefined y abrir un proyecto lanza un TypeError, con la suite entera
        en verde: tests/test.html carga sus propios scripts. -->
   <script src="js/plataforma.js"></script>
+  <!-- Va ANTES de visor-ficha.js y de movil-ficha.js, sus dos
+       consumidores: los dos lo llaman al pintar las filas de la ficha.
+       Sin esta línea `window.FichaDato` es undefined y abrir un proyecto
+       lanza un TypeError, con la suite entera en verde. -->
+  <script src="js/ficha-dato.js"></script>
   <script src="js/visor-ficha.js"></script>
   <script src="js/visor-video.js"></script>
   <script src="js/visor-carga.js"></script>
