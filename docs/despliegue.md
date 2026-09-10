@@ -393,12 +393,22 @@ lista el directorio padre y compara el nombre exacto contra lo que hay dentro.
 ## Antes de desplegar: el peso de las imágenes
 
 ```
-python tests/pesar_imagenes.py
+python -m http.server 8010
+python tests/pesar_imagenes.py --origen http://localhost:8010
 ```
 
 También desde la raíz, **antes de cada despliegue**. Baja por la red, así que
 tarda unos segundos: por eso no está en el arnés del navegador, que tiene que
 ser rápido y no fallar nunca por la conexión.
+
+**`--origen` no es opcional desde el contenido real.** Las URLs de
+`contenido.json` son relativas (`/img/...`), así que sin origen no hay nada que
+pedir; se dice en vez de fallar raro. Contra el servidor local mide las
+imágenes de `img/`, que son bit a bit las que se suben a R2. Para medir lo que
+hay publicado de verdad: `--origen https://lidialuque.com`.
+
+Medido el 2026-09-10 con los ocho proyectos reales: **1,14 MB de un
+presupuesto de 3**, código de salida 0.
 
 **Qué comprueba:** lo que pesa cada superficie. La galería tiene presupuesto
 —3 MB— porque se carga **entera** al entrar y es lo que espera quien llega por
@@ -411,6 +421,40 @@ cuando alguien abre un proyecto. Sale con código 1 si la galería se pasa.
 el auditor, ni una revisión completa de la rama lo vieron: todos miraban si el
 código era correcto, y lo era. Lo encontró el estudio abriendo la página. Esto
 es lo que faltaba.
+
+## Subir las imágenes derivadas a R2
+
+**Esto no lo ejecuta ninguna tarea ni ningún agente: es un acto manual de
+Ángel, con la sesión de wrangler ya iniciada.** Aquí está escrito el
+procedimiento, nada más.
+
+Con `img/` ya generado por `herramientas/derivar_imagenes.py` —195 archivos,
+43,7 MB—:
+
+```bash
+for f in img/*.jpg; do
+  llave="luque-contenido/img/$(basename "$f")"
+  npx wrangler r2 object put "$llave" --file "$f" --content-type image/jpeg
+done
+```
+
+**Con wrangler y no con `rclone`**, y no por gusto: wrangler reutiliza la
+sesión ya iniciada, mientras que `rclone` exigiría crear fichas de API S3 de
+R2, o sea **credenciales nuevas que guardar**. La regla de este repositorio es
+que aquí no entran credenciales.
+
+**Cuidado con una cosa, porque es fácil creer lo contrario.** El Worker
+rechaza con 409 una imagen cuya llave ya existe, en vez de pisarla
+(`guardarImagen`, en `worker/src/publicar.js`): protege al panel de perder una
+foto publicada cuando dos nombres distintos colapsan en la misma llave al
+sanearlos. **Ese 409 no cubre esta subida.** `wrangler r2 object put` habla
+con el bucket directamente y no pasa por el Worker, así que **sí sobrescribe,
+y en silencio**. Quien suba dos veces la misma llave con archivos distintos se
+queda con el segundo y sin aviso.
+
+En la práctica no muerde, porque las llaves las genera `llave()` a partir de
+la ruta del original y son estables: volver a subir escribe lo mismo encima de
+lo mismo. Muerde si se cambia una foto conservando su nombre.
 
 ## Los pasos que hace el estudio
 

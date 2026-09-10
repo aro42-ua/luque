@@ -4,29 +4,44 @@ Recogido al integrar la rama del visor y la galería filtrable (agosto de 2026).
 No son tareas pendientes urgentes: son cosas sabidas, decididas a conciencia o
 aplazadas, que conviene tener a mano antes de tocar el código.
 
-## Contenido de relleno
+## El contenido
 
 **El contenido ya no está en `js/datos.js`, sino en `contenido.json`.** `js/datos.js`
 pasó de contenerlo a custodiarlo: `js/contenido.js` pide el JSON, lo valida y se lo
 entrega con `Datos.establecer()`. Si el archivo no llega o no valida, la galería sale
 vacía con un aviso en pantalla (`Galeria.mostrarError`) en vez de callarse.
 
-Los doce proyectos siguen siendo de ejemplo: imágenes de picsum, títulos y fichas
-técnicas inventadas. Los proyectos de vídeo llevan `vimeo: null` hasta el bloque 4,
-así que se ven con su póster y sin reproducción posible. Es la conducta esperada
-hasta que entre el trabajo real del estudio.
+**El contenido ya no es de relleno: son los ocho proyectos de Lidia**, con sus 65
+piezas, entrados en el bloque del contenido real (spec y plan del 2026-09-10). Se
+acabaron los doce de picsum con fichas inventadas.
 
-Añadir un proyecto real consiste en añadir un objeto a la lista `proyectos` de
-`contenido.json` y nada más.
+El orden de la galería es el que Lidia numeró en sus `TEXTOS.docx`, no el
+alfabético, y por eso vive escrito a mano en `herramientas/proyectos.json`.
+
+`contenido.json` **no se edita a mano**: lo genera
+`herramientas/derivar_imagenes.py --contenido` mezclando los datos humanos de
+`herramientas/proyectos.json` con las fotos que hay en disco. Las 195 rutas se
+generan a propósito: una ruta mal escrita sigue siendo una ruta válida y la
+validación no la atrapa.
+
+**Dos categorías se quedan vacías.** `cortometraje` y `foto-stills` están
+declaradas en `CATEGORIAS` y no tienen ni un proyecto, así que pulsarlas da una
+rejilla en blanco. Está sin decidir qué debería verse; es la tercera de las tres
+preguntas que la spec dejó abiertas para Lidia.
 
 **Cada foto se guarda en tres medidas, y no es capricho.** Cada una se pide donde
 se ve, porque la diferencia entre la mayor y la menor es de casi cuarenta veces:
 
-| Campo | Medida | Dónde se ve | Peso |
+La medida es **el lado largo**, no una caja de proporción fija. El material real
+es 2:3, 3:2 y 16:9 a la vez: con una caja 4:5 las horizontales salían un 20% peor
+que las verticales sin ninguna razón. Los pesos son la media medida sobre las 65
+fotos reales.
+
+| Campo | Lado largo | Dónde se ve | Peso medio |
 |---|---|---|---|
-| `portada` | 1200×1500 | la galería, doce a la vez | 167 KB |
-| `piezas[].url` | 2400×3000 | la foto grande del visor y la lupa | 746 KB |
-| `piezas[].miniatura` | 200×250 | la tira del visor, a 52 px | 19 KB |
+| `portada` | 1500 | la galería, ocho a la vez | 159 KB |
+| `piezas[].url` | 3000 | la foto grande del visor y la lupa | 520 KB |
+| `piezas[].miniatura` | 250 | la tira del visor, a 52 px | 8 KB |
 
 `piezas[].url` es la única que se guarda a tamaño completo, y no se toca: la lupa
 necesita que la pieza sea bastante mayor que la pantalla para tener recorrido, y en
@@ -76,9 +91,9 @@ pueda ponerse delante (Access sólo cubre nombres de host de una zona propia,
 no `workers.dev`). El razonamiento completo está en `docs/despliegue.md`.
 
 Sigue **cerrada a los buscadores** por `robots.txt` y por la cabecera
-`X-Robots-Tag: noindex`, mientras el contenido siga siendo de relleno y las
-tipografías sigan siendo Trial. Las fotos, como ya se dice arriba, siguen
-siendo de picsum.
+`X-Robots-Tag: noindex`. De los dos motivos que la mantenían cerrada, el del
+contenido de relleno ya no vale: las fotos son las de Lidia. Queda el otro, y
+basta por sí solo: **las tipografías siguen siendo Trial**.
 
 **Las tres tipografías son versiones Trial y su licencia probablemente no
 cubre el uso público.** `ABCFavorit-Regular-Trial.otf`,
@@ -89,18 +104,23 @@ anunciar la web. Es deuda conocida, no un descuido.
 
 ## Una cosa que conviene saber
 
-**El código ya no depende de la red.** GSAP era la última librería y se eliminó al
-rehacer la entrada del hero: solo quedaba usándose para dos fundidos del preloader,
-que ahora son transiciones de CSS. Lo único que se sigue pidiendo fuera son las doce
-fotografías de relleno de picsum, así que abrir el archivo sin conexión da una web
-que funciona entera pero con todas las fotos rotas. Esa dependencia desaparece sola
-en cuanto entren los archivos reales del estudio.
+**El código ya no depende de la red, y desde el contenido real las fotos tampoco
+vienen de fuera.** GSAP era la última librería y se eliminó al rehacer la entrada
+del hero: solo quedaba usándose para dos fundidos del preloader, que ahora son
+transiciones de CSS. Las fotos de picsum eran lo último que se pedía fuera y ya no
+están: `contenido.json` apunta a `/img/...`, o sea al mismo origen —el bucket de R2
+en producción, y el directorio `img/` generado al probar en local—.
+
+Ojo con lo que eso NO arregla: **abrir `index.html` con doble clic sigue sin
+funcionar**, y ahora por otro motivo. Bajo `file://` el `fetch` de
+`contenido.json` no llega, así que la galería sale vacía con su aviso. Se prueba
+con `python -m http.server`, que además es como se prueba en un móvil de verdad.
 
 Con una excepción que conviene conocer: **sin conexión, un enlace directo a un
 proyecto deja el visor a medias.** `js/visor-transicion.js:48-49` espera a que la
 portada esté cargada (`img.complete` o su evento `load`) antes de volar la foto
-hasta el visor. Si la imagen de picsum no llega nunca, `volar()` no se ejecuta, así
-que abrir `#/bruma` sin conexión deja un diálogo abierto con opacidad 0 y el foco
+hasta el visor. Si la portada no llega nunca, `volar()` no se ejecuta, así
+que abrir `#/la-boquerona` sin servidor deja un diálogo abierto con opacidad 0 y el foco
 sin llegar a su botón de cerrar. Es anterior a rehacer la entrada del hero y queda
 fuera de su alcance —la especificación deja el visor explícitamente fuera—, y
 desaparece sola con las fotografías reales, igual que las fotos rotas.
@@ -192,11 +212,22 @@ ningún consumidor**: comprobado buscando `window.Brillo` y el nombre
 archivo y de sus pruebas — la única otra aparición es un comentario de
 `js/movil.js` que lo cita como ejemplo de argumento inyectado, no una
 llamada. No es un olvido de este bloque: sus esquinas adaptativas al brillo
-de la foto son trabajo del bloque 4g, y ya está explicado más abajo, en «El
-camino automático del brillo sigue sin verificarse», por qué hoy no podrían
-funcionar de todos modos con las fotos de picsum — ningún `<img>` del sitio
-las pide en modo CORS, así que el lienzo que necesita `Brillo.decidir` para
-medir se mancha antes de llegar a medir nada.
+de la foto son trabajo del bloque 4g.
+
+**Y desde el contenido real, `visor-video.js` está igual: sin ningún
+consumidor.** Los vídeos se alcanzan con el botón que construye
+`js/plataforma.js`, que abre YouTube o Vimeo en otra pestaña, y no con un
+`<video>` incrustado. La rama `tipo === 'video'` de `ReglasContenido.validar`
+sigue escrita y ya no tiene contenido que validar: los ocho proyectos son de
+`tipo: 'fotos'`.
+
+**Lo que sí cambió a mejor con el contenido real es el obstáculo del lienzo.**
+Hasta ahora, medir el brillo era imposible porque las fotos venían de picsum y
+ningún `<img>` las pedía en modo CORS. Las rutas de `contenido.json` son ahora
+relativas (`/img/...`), o sea **mismo origen**, y un lienzo con una imagen del
+mismo origen no se mancha. El bloque 4g se encuentra el camino despejado; lo
+que sigue sin comprobar es que la medición dé un número correcto sobre una
+foto de verdad.
 
 Los dos que se cablearon están escritos y probados desde el bloque 4c y no
 tuvieron que reescribirse: **son las piezas del visor móvil de dos ejes**,
@@ -526,8 +557,11 @@ la pone cuando llega. Sin ninguna de las dos, todo sigue como antes.
 tienen que ser la misma foto en la MISMA PROPORCIÓN. `.visor-escena img` usa
 `object-fit:contain` con `max-width/max-height:100%`, así que la caja pintada
 la decide la proporción de la imagen: si no coinciden, el relevo da un salto a
-mitad del vuelo. En el relleno coinciden (las dos 4:5). Quien genere los
-recortes de las fotos del estudio tiene que mantenerlo.
+mitad del vuelo. Desde el contenido real **lo garantiza la herramienta**:
+`herramientas/derivar_imagenes.py` escala por el lado largo y NO recorta, así
+que la portada y la pieza de una misma foto salen con la proporción del
+original, la misma para las dos. La condición se cumple por construcción, no
+por cuidado de quien genere los recortes.
 
 **Comprobado en el teléfono de Ángel el 2026-09-04:** el vuelo arranca en el
 acto y el relevo no se nota. Queda por tanto cerrado lo que la suite no podía
@@ -587,8 +621,10 @@ pieza tienen que ser la misma foto en la MISMA PROPORCIÓN. `.mvisor-foto`
 usa `object-fit:contain`, así que la caja pintada la decide la proporción de
 la imagen que hay dentro; si la portada y la pieza no comparten proporción,
 el cambio de una a otra da un salto visible a mitad del vuelo. En el
-contenido de relleno coinciden (las dos 4:5); quien genere los recortes de
-las fotos reales del estudio tiene que mantener esa igualdad.
+contenido real la igualdad la garantiza `herramientas/derivar_imagenes.py`,
+que escala por el lado largo y no recorta: las tres medidas de una foto salen
+con la proporción del original. Ver la misma condición explicada arriba para
+el visor de escritorio.
 
 **Las dos cosas del sistema operativo, en `css/luque.css`:**
 
@@ -667,7 +703,7 @@ acordarse de `index.html` a mano, porque la suite no se lo va a recordar.
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **400 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **464 comprobaciones**: la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -688,11 +724,27 @@ visor móvil de dos ejes: `tests/pruebas-movil-visor.js` (27 comprobaciones,
 `js/movil-visor.js`: `ordenDe`, `aplicar` con su guarda de lado y
 `siguienteRuta`) y `tests/pruebas-movil-hud.js` (11 comprobaciones,
 `js/movil-hud.js`: el contador, la categoría activa y el ocultado a los
-3000ms). Medido el 2026-09-05 con Chrome headless
-(`--virtual-time-budget=15000 --dump-dom`) contra `tests/test.html` servido
-por `python -m http.server`, con el servidor verificado por `curl` y por que
-su registro CRECIERA antes de medir: la línea final dice «400 pasan, 0
-fallan».
+3000ms). Y desde el contenido real, el botón que lleva al vídeo
+(`tests/pruebas-plataforma.js`), el hueco de la ficha
+(`tests/pruebas-ficha-dato.js`) y el `contenido.json` de verdad
+(`tests/pruebas-contenido-real.js`, que lo pide por `fetch` y lo pasa por su
+propia validación, así que necesita servidor).
+
+Medido el 2026-09-10 con Chrome headless (`--virtual-time-budget=15000
+--dump-dom`) contra `tests/test.html` servido por `python -m http.server`,
+con el registro CRECIENDO antes de medir: la línea final dice «464 pasan, 0
+fallan». La cuenta anterior, del 2026-09-05, era 400.
+
+**Y hay tres pruebas que NO están aquí, porque son Python y se lanzan a
+mano:** `tests/prueba_derivar.py` (las partes puras de la herramienta de
+derivación), `tests/prueba_auditar_rutas.py` y `tests/pesar_imagenes.py`, que
+mide contra un servidor de verdad y por eso necesita `--origen`.
+
+**Divergencia declarada, no arreglada:** el techo de 300 líneas por archivo no
+se respeta en `tests/`. `tests/pruebas-movil-visor.js` tiene 641,
+`tests/prueba-borrador.js` 523 y `tests/pruebas-panel.js` 422. Se decidió
+dejarlo: partir uno solo de los tres no arregla nada y el techo se pensó para
+el código del sitio, que sí lo cumple.
 
 ### La trampa del arnés que da PASA sin comprobar nada
 
@@ -939,19 +991,17 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   (línea 89), y las doce restantes sí reciben la medición como una función
   sintética. En ninguna de las dieciocho se toca un lienzo.
 
-  **Cuidado con el motivo que se ha venido dando**, porque medido no se
-  sostiene tal cual. Se ha escrito —en la cabecera de `js/brillo.js` y hasta
-  ahora también aquí— que las fotos de picsum vienen «sin
-  `Access-Control-Allow-Origin`». **Picsum sí lo manda**: pidiendo
-  `https://picsum.photos/seed/luque11/200/250` con una cabecera `Origin`,
-  responde `Access-Control-Allow-Origin: *`, tanto en el 302 como en la
-  respuesta final de `fastly.picsum.photos`. Lo que de verdad mancharía el
-  lienzo hoy es otra cosa: **ningún `<img>` del sitio pide la imagen en modo
-  CORS** —buscando `crossorigin` y `crossOrigin` en todos los `.js` y `.html`
-  del repositorio no sale ni una vez, ni como atributo del marcado ni como
-  propiedad puesta desde JavaScript—, y sin eso el navegador ni siquiera hace
-  la petición con CORS, así que el lienzo se mancha aunque el servidor lo
-  hubiera permitido.
+  **El obstáculo del lienzo desapareció con el contenido real, y conviene no
+  arrastrar el motivo viejo.** Todo este párrafo hablaba de CORS: que picsum
+  mandaba `Access-Control-Allow-Origin` pero que ningún `<img>` del sitio pedía
+  la imagen en modo CORS, y que por eso el lienzo se manchaba igual. Ya da
+  igual: las rutas de `contenido.json` son relativas (`/img/...`), o sea del
+  **mismo origen**, y una imagen del mismo origen no mancha el lienzo, con CORS
+  o sin él. La cabecera de `js/brillo.js` sigue contando la historia vieja y
+  hay que corregirla cuando el bloque 4g la toque.
+
+  Lo que sigue sin comprobarse es lo otro, y es lo importante: que la medición
+  dé un número correcto sobre una foto de verdad.
 
   Lo que eso deja abierto, y **no** he comprobado: si bastaría con poner
   `crossorigin="anonymous"` para poder medir ya, sin esperar a las fotos del
