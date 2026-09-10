@@ -21,6 +21,9 @@ de desde un tercero. 65 fotos por tres medidas cada una: 195 objetos, 43,7 MB.
 **Una ficha que dice lo que la artista cuenta**, no lo que el esquema de
 ejemplo suponía.
 
+**Un botón que lleva al vídeo donde esté publicado**, en la pastilla amarilla
+que el sitio ya usa, para los proyectos que apuntan a una plataforma externa.
+
 **Una herramienta de derivación** que convierte originales de cámara en las
 tres medidas de la web, para que esto se pueda repetir cada vez que Lidia
 publique obra nueva.
@@ -92,12 +95,17 @@ es lo que ella eligió contar de su propio trabajo.
 Un esquema que pide cuatro datos y recibe dos no es un esquema, es una ficha
 medio vacía. Se ajusta al material:
 
-| Campo | De dónde sale | Falta en |
-|---|---|---|
-| `cliente` | la publicación o el artista | Conejita Playboy |
-| `anio` | el año entre paréntesis | ninguno |
-| `papel` | el crédito de rodaje | ninguno |
-| `enlace` | la URL del vídeo | los cuatro editoriales |
+| Campo | De dónde sale | Falta en | Si falta |
+|---|---|---|---|
+| `cliente` | la publicación o el artista | Conejita Playboy | `######` |
+| `anio` | el año entre paréntesis | ninguno | `######` |
+| `papel` | el crédito de rodaje | ninguno | `######` |
+| `enlace` | la URL del vídeo | los cuatro editoriales | no se pinta el botón |
+
+`enlace` se comporta distinto que los otros tres a propósito, y por eso lleva su
+propia columna: los tres primeros son **datos** y un dato que falta se marca,
+mientras que `enlace` es **un control** y un control que no lleva a ninguna parte
+se omite en vez de enseñarse apagado. Ver «Los vídeos no se reproducen».
 
 **Se descartó conservar `camara` y `optica` vacíos** a la espera de que Lidia
 los rellene. Un campo que nadie ha pedido y nadie ha rellenado no es una puerta
@@ -107,12 +115,17 @@ qué llevan un año en blanco.
 
 **Consecuencia para el bloque 4g.** La spec del móvil justificaba la convención
 `######` diciendo que «hoy no hay ningún guion que sustituir: los 48 campos de
-ficha están rellenos». Deja de ser cierto en cuanto entra este bloque: Conejita
-Playboy no trae cliente y los cuatro editoriales no traen enlace. **La
-convención `######` pasa de hipotética a visible el primer día**, y es lo
-primero que se ve al abrir esas fichas.
+ficha están rellenos». Deja de ser cierto en cuanto entra este bloque:
+**Conejita Playboy no trae cliente**, así que la convención pasa de hipotética a
+visible el primer día.
 
-### Los vídeos no se reproducen: se enlazan
+Es **un** hueco, no muchos, y conviene decirlo con precisión: el `enlace` que
+falta en los cuatro editoriales no produce ninguno, porque un control ausente se
+omite en lugar de marcarse. Un hueco basta para que la convención tenga que
+existir y estar probada, pero no hay que exagerar el número: el que lea esto
+dentro de seis meses merece la cifra real.
+
+### Los vídeos no se reproducen: se enlazan con un botón propio
 
 Tres de los cuatro proyectos de videoclip traen enlace, y los tres a YouTube.
 El reproductor no los admite: `js/visor-video.js`, en su función de pintado,
@@ -121,7 +134,38 @@ de vídeo. Una página de YouTube puesta ahí no reproduce nada.
 
 Los cuatro proyectos de videoclip se publican como **galería de fotogramas**,
 que es exactamente lo que las carpetas traen —stills y fotogramas del rodaje—,
-con la URL del vídeo en el campo `enlace` de la ficha.
+y el vídeo se alcanza con **un botón que lleva a la plataforma donde está
+publicado**.
+
+**El botón es la pastilla amarilla que el sitio ya tiene.** No se inventa un
+lenguaje: `css/luque.css` la usa dos veces —la navbar fija del escritorio y las
+pastillas del HUD móvil— y el propio CSS razona por qué, con los 17,6:1 de
+contraste del negro sobre `--yellow`. Un botón nuevo con otro aspecto sería un
+tercer lenguaje en una web que tiene uno.
+
+Cuatro cosas que lo definen:
+
+- **Es un `<a>`, no un `<button>`.** Lleva a otro sitio; un botón promete una
+  acción dentro de la página. Con `<a>` funcionan el clic central, «abrir en
+  pestaña nueva» y el lector de pantalla, que anuncia enlace y no botón.
+- **Abre fuera**, con `target="_blank"` y `rel="noopener noreferrer"`. `noopener`
+  no es opcional: sin él la página de destino recibe una referencia a la
+  nuestra y puede redirigirla.
+- **Dice a dónde va**, y el nombre de la plataforma **se deduce del anfitrión de
+  la URL**, no se guarda en `contenido.json`. Un campo `plataforma` escrito a
+  mano puede contradecir al `enlace` que tiene al lado, y una frase que el dato
+  de al lado desmiente es el fallo característico de este proyecto. La etiqueta
+  queda «Ver en YouTube», o «Ver el vídeo» si el anfitrión no se reconoce.
+- **Sin logotipo de la plataforma.** La restricción global dice que no hay
+  recursos externos referenciados desde el CSS, porque bajo `file://` el
+  navegador los bloquea. Si hace falta una forma —una flecha de «sale fuera»—
+  va incrustada en el marcado y se colorea con `currentColor`, como el resto.
+
+El botón vive donde vive la ficha, y por tanto aparece **en el escritorio y en
+el móvil**: `js/visor-ficha.js` y `js/movil-ficha.js`. En un proyecto sin
+`enlace` no se pinta nada —ni el botón ni un hueco—, que es distinto de un campo
+de ficha vacío: un dato que falta se marca con `######`, pero un botón que no
+lleva a ninguna parte no se enseña apagado, se omite.
 
 **Se descartó incrustar un `<iframe>` de YouTube.** Sería lo más barato, pero
 mete un recurso de terceros en una web que hoy no tiene ninguno, con el rastreo
@@ -129,6 +173,10 @@ de Google detrás, y trae un reproductor con aspecto ajeno al del sitio.
 **Se descartó subirlos a Vimeo**, que conservaría el `<video>` nativo y el
 control del aspecto, porque exige que el estudio cree una cuenta y vuelva a
 subir los vídeos, y eso no está en la mano de este bloque.
+**Se descartó el enlace como fila de texto más de la ficha**, que era la primera
+propuesta: una URL de YouTube en una lista de datos técnicos se lee como un dato
+más y no como «aquí está la pieza». Es el trabajo de la artista; merece un
+control propio.
 
 **Consecuencia: `js/visor-video.js` se queda sin ningún consumidor**, igual que
 `Brillo`. En este proyecto eso no es un detalle: es exactamente la situación que
@@ -212,8 +260,9 @@ en los cuatro sitios que lo tocan:
 | Archivo | Qué cambia |
 |---|---|
 | `js/reglas-contenido.js` | la validación de los campos de ficha |
-| `js/visor-ficha.js` | las filas que pinta `pintar()` |
+| `js/visor-ficha.js` | las filas que pinta `pintar()`, y el botón del vídeo |
 | `js/movil-ficha.js` | lo mismo en el móvil |
+| `css/luque.css` | el botón, reutilizando la pastilla amarilla existente |
 | `panel/` | los campos del formulario de edición |
 
 `js/reglas-contenido.js` es el sitio correcto para la regla porque ya lo es:
@@ -245,6 +294,8 @@ bloque 4g.
 | Una llave de `img/` no existe en R2 | el Worker responde 404; no hay caída a estáticos para imágenes, sólo para `contenido.json` |
 | R2 no responde | 502 con texto propio, y queda registrado |
 | Un campo de ficha vacío | se escribe `######` y se anuncia «dato no disponible» (bloque 4g) |
+| Un proyecto sin `enlace` | el botón no se pinta, y no deja hueco |
+| Un `enlace` a un anfitrión desconocido | el botón dice «Ver el vídeo» en vez de nombrar la plataforma |
 | Una imagen derivada pasa de 5 MB | la API la rechaza con 413; hoy ninguna se acerca, la mayor son 1.668 KB |
 | Un original que Pillow no puede abrir | la herramienta lo informa y sigue con los demás; no aborta el lote |
 
@@ -262,6 +313,13 @@ Lo que se añade:
   y sin `enlace`, que son los dos campos que legítimamente faltan.
 - **Que una ficha con un campo vacío pinte `######`**, en escritorio y en móvil.
   Es la costura entre este bloque y el 4g.
+- **Que el botón del vídeo sólo se pinte cuando hay `enlace`**, y que no deje
+  hueco cuando no lo hay. Las dos mitades: un proyecto con enlace y otro sin él.
+- **Que el botón salga con `rel="noopener noreferrer"`.** Es una comprobación de
+  seguridad, no de estilo, y por eso se prueba en vez de confiarse a la revisión.
+- **Que el nombre de la plataforma se deduzca del anfitrión**: `youtu.be` y
+  `youtube.com` dan «Ver en YouTube», y un anfitrión desconocido cae en «Ver el
+  vídeo» sin romperse. La deducción es una función pura y se prueba sin DOM.
 - **Que las llaves derivadas no colisionen**: una prueba de la función de
   aplanado, con los seis nombres de portada repetidos como caso.
 - **Que la orientación EXIF se respeta**: un JPEG de prueba con la marca de
