@@ -159,10 +159,6 @@ window.Visor = (function () {
       raiz.style.opacity = '';
       var elLienzo = escena.querySelector('img, video');
       if (elLienzo) { elLienzo.style.transform = ''; elLienzo.style.filter = ''; elLienzo.style.transition = ''; }
-      window.VisorTransicion.CLAVES.forEach(function (c) {
-        var el = raiz.querySelector('.visor-esquina.' + c);
-        el.style.transition = ''; el.style.transform = ''; el.style.color = '';
-      });
       document.body.classList.remove('visor-abierto');
       window.VisorFicha.aplicar(raiz, false);
       window.VisorChrome.olvidarTira();
@@ -199,7 +195,6 @@ window.Visor = (function () {
                           (destino.width / actual.width) + ',' +
                           (destino.height / actual.height) + ')';
     elLienzo.style.filter = 'grayscale(35%) contrast(1.05)';
-    window.VisorTransicion.prepararEsquinasHacia(raiz, destino);
     raiz.style.opacity = '0';
 
     setTimeout(rematar, 640);
