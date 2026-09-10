@@ -14,6 +14,8 @@ describeAsync('panel.js', function () {
     '<ol id="lista"></ol>' +
     '<form id="nuevo">' +
     '<input id="titulo" type="text"><select id="categoria"></select>' +
+    '<input id="fichaCliente" type="text"><input id="fichaAnio" type="number">' +
+    '<input id="fichaPapel" type="text"><input id="fichaEnlace" type="url">' +
     '<button type="submit">Crear</button></form>' +
     '<button id="guardar" type="button">Guardar</button></main>';
 
@@ -68,6 +70,39 @@ describeAsync('panel.js', function () {
     ] };
   }
 
+  /* El estado de los ocho controles que toca `activarControles`
+     (panel.js:15-25), en este orden: título, categoría, los cuatro campos de
+     la ficha, el botón de crear y el de guardar. Se mira la lista entera y no
+     un par de ellos: un control que se quedara fuera de `activarControles`
+     seguiría activo delante de un `trabajo` que todavía es null. */
+  function estadoControles(d) {
+    var ids = ['titulo', 'categoria', 'fichaCliente', 'fichaAnio',
+               'fichaPapel', 'fichaEnlace'];
+    return ids.map(function (id) { return d.getElementById(id).disabled; })
+      .concat([d.querySelector('#nuevo button[type="submit"]').disabled,
+               d.getElementById('guardar').disabled]);
+  }
+
+  function ochoIguales(valor) {
+    return [valor, valor, valor, valor, valor, valor, valor, valor];
+  }
+
+  /* Rellena el formulario entero. Los campos que la prueba no nombre se
+     quedan vacíos, que es justo lo que hace el estudio con los opcionales. */
+  function rellenar(d, campos) {
+    d.getElementById('titulo').value = campos.titulo || '';
+    d.getElementById('categoria').value = campos.categoria || '';
+    d.getElementById('fichaCliente').value = campos.cliente || '';
+    d.getElementById('fichaAnio').value = campos.anio || '';
+    d.getElementById('fichaPapel').value = campos.papel || '';
+    d.getElementById('fichaEnlace').value = campos.enlace || '';
+  }
+
+  function enviar(w, d) {
+    d.getElementById('nuevo')
+      .dispatchEvent(new w.Event('submit', { cancelable: true }));
+  }
+
   function conPanel(doble, fn, confirmar) {
     return ArnesDom.conDocumento({
       html: HTML,
@@ -80,14 +115,8 @@ describeAsync('panel.js', function () {
 
   return conPanel(borradorFalso({ diferido: true }), function (w, d) {
 
-    /* Los cuatro controles que toca `activarControles`, no sólo tres: al
-       botón de crear (`#nuevo button[type="submit"]`) le faltaba comprobación
-       y quedaba fuera de esta lista. */
     prueba('arranca con los controles deshabilitados, antes de que llegue el borrador', function () {
-      igual([d.getElementById('titulo').disabled,
-             d.getElementById('categoria').disabled,
-             d.querySelector('#nuevo button[type="submit"]').disabled,
-             d.getElementById('guardar').disabled], [true, true, true, true]);
+      igual(estadoControles(d), ochoIguales(true));
     });
 
     /* No basta con el número de opciones: rellenarlo con el número correcto
@@ -117,13 +146,10 @@ describeAsync('panel.js', function () {
         /* El caso real: la sesión de Access caducó de un día para otro. Si los
            controles se quedaran activos, la primera pulsación reventaría contra
            un `trabajo` que sigue siendo null. */
-        /* El nombre es plural: los cuatro controles que toca
-           `activarControles` (panel.js:14-19), no sólo Guardar. */
+        /* El nombre es plural: todos los controles que toca
+           `activarControles`, no sólo Guardar. */
         prueba('y los controles se quedan apagados', function () {
-          igual([d.getElementById('titulo').disabled,
-                 d.getElementById('categoria').disabled,
-                 d.querySelector('#nuevo button[type="submit"]').disabled,
-                 d.getElementById('guardar').disabled], [true, true, true, true]);
+          igual(estadoControles(d), ochoIguales(true));
         });
       });
 
@@ -135,13 +161,10 @@ describeAsync('panel.js', function () {
       prueba('pinta una fila por proyecto', function () {
         igual(d.querySelectorAll('#lista li.fila').length, 2);
       });
-      /* Mismos cuatro controles que arriba: el nombre promete «los
-         controles», no sólo título y guardar. */
+      /* Los mismos controles que arriba: el nombre promete «los controles»,
+         no sólo título y guardar. */
       prueba('y activa los controles', function () {
-        igual([d.getElementById('titulo').disabled,
-               d.getElementById('categoria').disabled,
-               d.querySelector('#nuevo button[type="submit"]').disabled,
-               d.getElementById('guardar').disabled], [false, false, false, false]);
+        igual(estadoControles(d), ochoIguales(false));
       });
     });
 
@@ -150,9 +173,9 @@ describeAsync('panel.js', function () {
     // ---- Crear --------------------------------------------------------
 
     return conPanel(borradorFalso({ datos: dosProyectos() }), function (w, d) {
-      d.getElementById('titulo').value = 'Salitre';
-      d.getElementById('categoria').value = 'editorial';
-      d.getElementById('nuevo').dispatchEvent(new w.Event('submit', { cancelable: true }));
+      rellenar(d, { titulo: 'Salitre', categoria: 'editorial',
+                    anio: '2024', papel: 'Dirección de foto' });
+      enviar(w, d);
 
       prueba('crear añade una fila', function () {
         igual(d.querySelectorAll('#lista li.fila').length, 3);
@@ -161,17 +184,25 @@ describeAsync('panel.js', function () {
         cierto(d.getElementById('aviso').textContent.indexOf('Recuerda guardar') !== -1,
                d.getElementById('aviso').textContent);
       });
-      prueba('y vacía el campo para el siguiente', function () {
-        igual(d.getElementById('titulo').value, '');
+      /* El formulario entero, no sólo el título: si los campos de la ficha
+         se quedaran escritos, el siguiente proyecto nacería con el cliente y
+         el papel del anterior sin que nadie lo pidiera, y eso no da error en
+         ningún sitio — se publica y ya está. */
+      prueba('y vacía los campos para el siguiente', function () {
+        igual([d.getElementById('titulo').value,
+               d.getElementById('fichaCliente').value,
+               d.getElementById('fichaAnio').value,
+               d.getElementById('fichaPapel').value,
+               d.getElementById('fichaEnlace').value], ['', '', '', '', '']);
       });
     });
 
   }).then(function () {
 
     return conPanel(borradorFalso({ datos: dosProyectos() }), function (w, d) {
-      d.getElementById('titulo').value = 'Niebla';   // ya existe
-      d.getElementById('categoria').value = 'editorial';
-      d.getElementById('nuevo').dispatchEvent(new w.Event('submit', { cancelable: true }));
+      rellenar(d, { titulo: 'Niebla', categoria: 'editorial',   // ya existe
+                    anio: '2024', papel: 'Dirección de foto' });
+      enviar(w, d);
 
       prueba('un título que repite identificador no crea nada', function () {
         igual(d.querySelectorAll('#lista li.fila').length, 2);
@@ -183,6 +214,98 @@ describeAsync('panel.js', function () {
       prueba('y el aviso explica por qué', function () {
         igual(d.getElementById('aviso').textContent,
               'Ya hay un proyecto con el identificador «niebla».');
+      });
+    });
+
+  }).then(function () {
+
+    // ---- La ficha del proyecto nuevo ----------------------------------
+    /* `trabajo` vive dentro de la IIFE y no sale a ningún sitio, así que la
+       ficha del proyecto recién creado se mira donde de verdad importa: en lo
+       que se manda a guardar. */
+
+    var conFicha = borradorFalso({ datos: dosProyectos() });
+    return conPanel(conFicha, function (w, d) {
+      rellenar(d, { titulo: 'Salitre', categoria: 'videoclip',
+                    cliente: 'Sony Music', anio: '2024',
+                    papel: 'Dirección de foto',
+                    enlace: 'https://youtu.be/abc' });
+      enviar(w, d);
+      d.getElementById('guardar').click();
+      var nuevo = conFicha.guardadas[0].proyectos[2];
+
+      prueba('crear mete cliente, año, papel y enlace en la ficha', function () {
+        igual(nuevo.ficha, { cliente: 'Sony Music', anio: 2024,
+                             papel: 'Dirección de foto',
+                             enlace: 'https://youtu.be/abc' });
+      });
+      /* El año va como número y no como cadena porque así está escrito en
+         contenido.json, y una ficha del panel que no se parezca a las que ya
+         hay es una divergencia esperando a que alguien compare. */
+      prueba('y el año va como número, igual que en contenido.json', function () {
+        igual(typeof nuevo.ficha.anio, 'number');
+      });
+      /* El agujero que cierra esta tarea: desde que la validación exige año y
+         papel, un proyecto nacido con `ficha: {}` no se podía publicar nunca,
+         y no hay ninguna pantalla donde rellenarlos después. */
+      prueba('y la ficha ya no es la que impedía publicar', function () {
+        var problemas = w.ReglasContenido.validar({ proyectos: [nuevo] },
+                                                  w.ReglasContenido.CATEGORIAS);
+        igual(problemas.filter(function (t) {
+          return t.indexOf('ficha') !== -1;
+        }), []);
+      });
+    });
+
+  }).then(function () {
+
+    var sinOpcionales = borradorFalso({ datos: dosProyectos() });
+    return conPanel(sinOpcionales, function (w, d) {
+      rellenar(d, { titulo: 'Salitre', categoria: 'editorial',
+                    anio: '2024', papel: 'Estilismo' });
+      enviar(w, d);
+      d.getElementById('guardar').click();
+
+      /* `cliente` y `enlace` son opcionales: ReglasContenido.validar no los
+         exige. Dejarlos en blanco tiene que significar que no están, y no una
+         cadena vacía que diga que sí están sin decir nada. La comparación es
+         contra la ficha entera y no contra `ficha.cliente`: un `cliente: ''`
+         es indistinguible de la ausencia si sólo se mira si es falsy. */
+      prueba('un campo opcional en blanco no entra en la ficha', function () {
+        igual(sinOpcionales.guardadas[0].proyectos[2].ficha,
+              { anio: 2024, papel: 'Estilismo' });
+      });
+    });
+
+  }).then(function () {
+
+    return conPanel(borradorFalso({ datos: dosProyectos() }), function (w, d) {
+      rellenar(d, { titulo: 'Salitre', categoria: 'editorial', papel: 'Foto' });
+      enviar(w, d);
+
+      /* `required` en el formulario sólo frena el envío del navegador. Ésta es
+         la comprobación que impide crear un proyecto que nadie podrá publicar
+         ni arreglar, porque el panel no tiene pantalla para editar la ficha de
+         un proyecto que ya existe. */
+      prueba('sin año no se crea nada', function () {
+        igual(d.querySelectorAll('#lista li.fila').length, 2);
+      });
+      prueba('y el aviso dice qué falta', function () {
+        igual(d.getElementById('aviso').textContent,
+              'El año y el papel hacen falta para poder publicar.');
+      });
+    });
+
+  }).then(function () {
+
+    return conPanel(borradorFalso({ datos: dosProyectos() }), function (w, d) {
+      rellenar(d, { titulo: 'Salitre', categoria: 'editorial', anio: '2024' });
+      enviar(w, d);
+
+      prueba('sin papel tampoco', function () {
+        igual(d.querySelectorAll('#lista li.fila').length, 2);
+        igual(d.getElementById('aviso').textContent,
+              'El año y el papel hacen falta para poder publicar.');
       });
     });
 

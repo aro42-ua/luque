@@ -22,6 +22,25 @@
       <label for="categoria">Categoría</label>
       <select id="categoria" name="categoria"></select>
 
+      <label for="fichaCliente">Cliente (opcional)</label>
+      <input id="fichaCliente" name="cliente" type="text" autocomplete="off">
+
+      <!-- Año y papel llevan `required` porque ReglasContenido.validar los
+           exige: un proyecto sin ellos se guarda pero no se publica, y el
+           panel no tiene ninguna pantalla donde añadirlos después. El
+           `required` avisa aquí; la comprobación de verdad está en crear(). -->
+      <label for="fichaAnio">Año</label>
+      <input id="fichaAnio" name="anio" type="number" required>
+
+      <label for="fichaPapel">Papel</label>
+      <input id="fichaPapel" name="papel" type="text" autocomplete="off" required>
+
+      <!-- type="url" y no text: el navegador avisa de una dirección mal
+           escrita antes de que llegue a contenido.json. -->
+      <label for="fichaEnlace">Enlace al vídeo (opcional)</label>
+      <input id="fichaEnlace" name="enlace" type="url"
+             placeholder="https://youtu.be/…">
+
       <button type="submit">Crear</button>
     </form>
 

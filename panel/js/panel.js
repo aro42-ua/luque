@@ -1,6 +1,7 @@
 (function () {
   var trabajo = null;      // { version, proyectos }
   var elLista, elAviso, elTitulo, elCategoria, elCrear, elGuardar;
+  var elCliente, elAnio, elPapel, elEnlace;
 
   function avisar(texto) { elAviso.textContent = texto; }
 
@@ -14,6 +15,10 @@
   function activarControles(activo) {
     elTitulo.disabled = !activo;
     elCategoria.disabled = !activo;
+    elCliente.disabled = !activo;
+    elAnio.disabled = !activo;
+    elPapel.disabled = !activo;
+    elEnlace.disabled = !activo;
     elCrear.disabled = !activo;
     elGuardar.disabled = !activo;
   }
@@ -78,18 +83,48 @@
     enfocarTrasRepintar(foco);
   }
 
-  function crear(titulo, categoria) {
+  /* La ficha que escribe el formulario. `cliente` y `enlace` sólo entran si
+     el estudio los ha escrito: ReglasContenido.validar no los exige a
+     propósito —el porqué está escrito junto a esa comprobación, en
+     js/reglas-contenido.js—, y la forma de decir que un trabajo no tiene
+     cliente o no tiene vídeo es que la clave no esté. Guardar `cliente: ''`
+     sería una segunda forma de decir lo mismo, y a quien pregunte si la ficha
+     trae cliente le contestaría que sí.
+
+     El año va como número porque así está escrito en contenido.json. */
+  function fichaDelFormulario() {
+    var ficha = {};
+    var cliente = elCliente.value.trim();
+    if (cliente) ficha.cliente = cliente;
+    ficha.anio = Number(elAnio.value);
+    ficha.papel = elPapel.value.trim();
+    var enlace = elEnlace.value.trim();
+    if (enlace) ficha.enlace = enlace;
+    return ficha;
+  }
+
+  function crear(titulo, categoria, ficha) {
     if (!trabajo) return;
     var id = window.Identificador.desde(titulo);
     var ids = trabajo.proyectos.map(function (p) { return p.id; });
     var problema = window.Identificador.problema(id, ids, window.ReglasContenido.CATEGORIAS);
     if (problema) return avisar(problema);
 
+    /* El `required` del formulario ya frena al estudio, pero sólo por el
+       camino del navegador. Se comprueba también aquí porque lo que hay al
+       otro lado no tiene arreglo: sin año o sin papel el proyecto se guarda
+       en el borrador y la publicación lo rechaza con un 422, y el panel no
+       tiene ninguna pantalla donde rellenar la ficha de un proyecto que ya
+       existe. Sería crear algo que nadie puede publicar ni corregir. */
+    if (!ficha.anio || !ficha.papel) {
+      return avisar('El año y el papel hacen falta para poder publicar.');
+    }
+
     /* Nace sin piezas ni portada a propósito: las pone el bloque 3c. Hasta
        entonces el borrador no se podrá publicar, y eso es correcto —publicar
        valida, y un proyecto sin fotos no es publicable—. */
     trabajo.proyectos.push({ id: id, titulo: titulo, categoria: categoria,
-                             tipo: 'fotos', ficha: {}, piezas: [] });
+                             tipo: 'fotos', ficha: ficha, piezas: [] });
     repintar();
     avisar('Proyecto «' + titulo + '» creado. Recuerda guardar.');
   }
@@ -127,6 +162,10 @@
     elAviso = document.getElementById('aviso');
     elTitulo = document.getElementById('titulo');
     elCategoria = document.getElementById('categoria');
+    elCliente = document.getElementById('fichaCliente');
+    elAnio = document.getElementById('fichaAnio');
+    elPapel = document.getElementById('fichaPapel');
+    elEnlace = document.getElementById('fichaEnlace');
     elCrear = document.querySelector('#nuevo button[type="submit"]');
     elGuardar = document.getElementById('guardar');
 
@@ -142,8 +181,18 @@
 
     document.getElementById('nuevo').addEventListener('submit', function (e) {
       e.preventDefault();
-      crear(elTitulo.value.trim(), elCategoria.value);
+      crear(elTitulo.value.trim(), elCategoria.value, fichaDelFormulario());
+      /* Se vacía el formulario entero, no sólo el título. Si los campos de la
+         ficha se quedaran escritos, el siguiente proyecto nacería con el
+         cliente y el papel del anterior, y eso no da error en ningún sitio:
+         se publica y ya está. El precio es que un intento fallido —un
+         identificador repetido— también los borra, que es lo que el título ya
+         hacía antes de esta tarea. */
       elTitulo.value = '';
+      elCliente.value = '';
+      elAnio.value = '';
+      elPapel.value = '';
+      elEnlace.value = '';
     });
 
     elGuardar.addEventListener('click', guardar);
