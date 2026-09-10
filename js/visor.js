@@ -282,18 +282,30 @@ window.Visor = (function () {
 
     if (window.VisorVideo.alPulsarTecla(e)) return;
 
-    if (e.key === 'ArrowRight' && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.siguiente(estado); renderizar(); }
-    if (e.key === 'ArrowLeft'  && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.anterior(estado);  renderizar(); }
+    /* `irParada` no repinta si el estado no se ha movido: en los extremos de
+       la serie, `siguiente`/`anterior` devuelven el mismo objeto. Repintar
+       ahí reconstruía la misma <img> y la foto parpadeaba. */
+    if (e.key === 'ArrowRight' && !window.VisorVideo.activo()) { e.preventDefault(); irParada(window.VisorEstado.siguiente(estado)); }
+    if (e.key === 'ArrowLeft'  && !window.VisorVideo.activo()) { e.preventDefault(); irParada(window.VisorEstado.anterior(estado));  }
     if (e.key === 'Tab') window.VisorFoco.atrapar(raiz, e);   // quién es enfocable ahora: js/visor-foco.js
 
     window.VisorChrome.despertar();
   }
 
+  /* El único sitio por el que se cambia de pieza. Nace de que la rueda y las
+     flechas hacían lo mismo escrito dos veces, y las dos parpadeaban en los
+     extremos: la comprobación de "no se ha movido" tenía que ir en los dos
+     sitios o en ninguno. */
+  function irParada(tras) {
+    if (tras === estado) return;
+    estado = tras;
+    renderizar();
+  }
+
   function alRodar(e) {
     if (!estado.abierto || estado.lupa || window.VisorVideo.activo()) return;
-    estado = (e.deltaY > 0) ? window.VisorEstado.siguiente(estado)
-                            : window.VisorEstado.anterior(estado);
-    renderizar();
+    irParada((e.deltaY > 0) ? window.VisorEstado.siguiente(estado)
+                            : window.VisorEstado.anterior(estado));
     window.VisorChrome.despertar();
   }
 
