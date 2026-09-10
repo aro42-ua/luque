@@ -56,4 +56,54 @@ describe('Datos.establecer', function () {
     cierto(Datos.porId('no-existe') === null,
            'porId de un id que no existe tiene que dar null exacto');
   });
+
+  function proyectoValido(extra) {
+    var p = {
+      id: 'x', titulo: 'X', categoria: 'editorial', tipo: 'fotos',
+      portada: '/img/x-1500.jpg',
+      piezas: [{ url: '/img/x-3000.jpg' }],
+      ficha: { cliente: 'C', anio: 2026, papel: 'DoP' }
+    };
+    if (extra) { for (var k in extra) p.ficha[k] = extra[k]; }
+    return { proyectos: [p] };
+  }
+
+  prueba('una ficha con cliente, ano y papel vale', function () {
+    igual(ReglasContenido.validar(
+      proyectoValido(), ReglasContenido.CATEGORIAS).length, 0);
+  });
+
+  /* El papel es lo que la artista eligio contar de su trabajo: si falta, la
+     ficha no dice nada del proyecto. */
+  prueba('sin papel no vale', function () {
+    var d = proyectoValido();
+    delete d.proyectos[0].ficha.papel;
+    igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 1);
+  });
+
+  prueba('sin ano tampoco', function () {
+    var d = proyectoValido();
+    delete d.proyectos[0].ficha.anio;
+    igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 1);
+  });
+
+  /* Conejita Playboy no trae cliente, y es contenido legitimo: sale como
+     ###### en la ficha, no como un error de publicacion. */
+  prueba('sin cliente SI vale: sale como ###### y no es un fallo', function () {
+    var d = proyectoValido();
+    delete d.proyectos[0].ficha.cliente;
+    igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 0);
+  });
+
+  prueba('sin enlace tambien vale: es un control, no un dato', function () {
+    igual(ReglasContenido.validar(
+      proyectoValido(), ReglasContenido.CATEGORIAS).length, 0);
+  });
+
+  /* Sin la ficha entera no se puede pintar nada, y `p.ficha.papel` lanzaria. */
+  prueba('sin ficha no vale, y no revienta la validacion', function () {
+    var d = proyectoValido();
+    delete d.proyectos[0].ficha;
+    igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 1);
+  });
 });

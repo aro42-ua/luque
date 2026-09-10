@@ -8,8 +8,7 @@
       "ficha": {
         "cliente": "Personal",
         "anio": 2025,
-        "camara": "Alexa Mini",
-        "optica": "Zeiss Super Speed"
+        "papel": "Fotografia"
       },
       "tipo": "fotos",
       "portada": "https://picsum.photos/seed/luque11/1200/1500",
@@ -47,8 +46,7 @@
       "ficha": {
         "cliente": "Personal",
         "anio": 2024,
-        "camara": "Alexa Mini",
-        "optica": "Cooke S4"
+        "papel": "Fotografia"
       },
       "tipo": "fotos",
       "portada": "https://picsum.photos/seed/luque21/1200/1500",
@@ -82,8 +80,7 @@
       "ficha": {
         "cliente": "Personal",
         "anio": 2024,
-        "camara": "Sony FX3",
-        "optica": "Zeiss Super Speed"
+        "papel": "Fotografia"
       },
       "tipo": "fotos",
       "portada": "https://picsum.photos/seed/luque31/1200/1500",
@@ -125,8 +122,7 @@
       "ficha": {
         "cliente": "Vogue ES",
         "anio": 2025,
-        "camara": "Alexa Mini",
-        "optica": "Zeiss Super Speed"
+        "papel": "Fotografia"
       },
       "tipo": "fotos",
       "portada": "https://picsum.photos/seed/luque41/1200/1500",
@@ -172,8 +168,7 @@
       "ficha": {
         "cliente": "Neo2",
         "anio": 2025,
-        "camara": "Sony FX3",
-        "optica": "Sigma Art"
+        "papel": "Fotografia"
       },
       "tipo": "fotos",
       "portada": "https://picsum.photos/seed/luque51/1200/1500",
@@ -211,8 +206,7 @@
       "ficha": {
         "cliente": "Metal",
         "anio": 2023,
-        "camara": "Alexa Mini",
-        "optica": "Cooke S4"
+        "papel": "Fotografia"
       },
       "tipo": "fotos",
       "portada": "https://picsum.photos/seed/luque61/1200/1500",
@@ -246,8 +240,7 @@
       "ficha": {
         "cliente": "Amaia",
         "anio": 2025,
-        "camara": "Alexa Mini",
-        "optica": "Zeiss Super Speed"
+        "papel": "Fotografia"
       },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque7/1600/900",
@@ -260,8 +253,7 @@
       "ficha": {
         "cliente": "Rusowsky",
         "anio": 2024,
-        "camara": "Sony FX3",
-        "optica": "Sigma Art"
+        "papel": "Fotografia"
       },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque8/1600/900",
@@ -274,8 +266,7 @@
       "ficha": {
         "cliente": "Ralphie",
         "anio": 2024,
-        "camara": "Alexa Mini",
-        "optica": "Cooke S4"
+        "papel": "Fotografia"
       },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque9/1600/900",
@@ -288,8 +279,7 @@
       "ficha": {
         "cliente": "ECAM",
         "anio": 2025,
-        "camara": "Alexa Mini",
-        "optica": "Zeiss Super Speed"
+        "papel": "Fotografia"
       },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque10/1600/900",
@@ -302,8 +292,7 @@
       "ficha": {
         "cliente": "Autofinanciado",
         "anio": 2023,
-        "camara": "Sony FX3",
-        "optica": "Sigma Art"
+        "papel": "Fotografia"
       },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque11/1600/900",
@@ -316,8 +305,7 @@
       "ficha": {
         "cliente": "Canal Sur",
         "anio": 2022,
-        "camara": "Alexa Mini",
-        "optica": "Cooke S4"
+        "papel": "Fotografia"
       },
       "tipo": "video",
       "poster": "https://picsum.photos/seed/luque12/1600/900",
