@@ -274,7 +274,7 @@ describe('MovilVisor — qué pinta cada parada del eje', function () {
     }), { fichas: 1, fotos: 0 });
   });
 
-  prueba('la ficha lleva los cuatro campos y el recuento de piezas', function () {
+  prueba('la ficha lleva los tres campos y el recuento de piezas', function () {
     igual(conEscena(MV_CON_FOTOS, function (escena) {
       conLado('movil', function () {
         MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 'ficha' });
