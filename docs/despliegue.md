@@ -294,7 +294,7 @@ de los propios `.otf` descargables. `/.claude/launch.json` filtra además rutas
 locales del tipo `C:/Users/...`. `robots.txt` y `X-Robots-Tag` no sirven aquí:
 impiden **indexar**, no **acceder**.
 
-`_redirects` cierra `/docs/*`, `/.claude/*` y `/worker/*`. Funciona aunque el
+`_redirects` cierra `/docs/*`, `/.claude/*`, `/worker/*` y `/herramientas/*`. Funciona aunque el
 archivo exista: la documentación de Cloudflare dice que las reglas se aplican
 *sin importar si un recurso casa con la petición*, así que el
 redireccionamiento gana al archivo real. **Verificado contra el servidor real:**
@@ -308,6 +308,12 @@ y `wrangler.toml` con el nombre del bucket— y nadie volvió a abrir este archi
 hasta la revisión final. `git archive` lo subía con todo lo demás. **Añadir un
 directorio de primer nivel obliga a decidir aquí si se sirve o no**, porque el
 valor por omisión es servirlo.
+
+**Y pasó otra vez.** El bloque del contenido real creó `herramientas/` —la
+herramienta que deriva las tres medidas y `proyectos.json`— y tampoco volvió
+aquí; se cerró al ir a desplegar, no al crearlo. Dos veces con la misma piedra:
+la advertencia de arriba está escrita en mayúsculas en `_redirects` y aun así
+no basta. Quien añada el tercero, que empiece por este archivo.
 
 **Se devuelve un 302, no un 404, y no es una preferencia:** el archivo
 `_redirects` de Cloudflare **no admite el 404**. Los únicos códigos válidos
