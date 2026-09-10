@@ -109,6 +109,11 @@ window.MovilVisor = (function () {
     raiz.hidden = true;
     document.body.classList.remove('mvisor-abierto');
     escena.innerHTML = '';
+    /* El encuadre se apaga con el visor: la portada no lo lleva, y una clase
+       de brillo sobreviviendo al cierre teniria la siguiente foto con el
+       veredicto de la anterior. */
+    TRATAMIENTOS.forEach(function (c) { raiz.classList.remove(c); });
+    elFoto = null;
     document.removeEventListener('keydown', alTeclado);
     /* Devuelve el foco a quien lo tenía antes de abrir, y no si ese elemento
        ya salió del documento —la rejilla pudo repintarse mientras el visor
@@ -142,6 +147,8 @@ window.MovilVisor = (function () {
     base = null;
     punteros = {};
     pintarZoom();
+    tenirEncuadre();
+    if (elFoto) elFoto.addEventListener('load', tenirEncuadre);
 
     window.MovilAnimacion.aplicar(nodo, direccion);
     window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
@@ -261,6 +268,45 @@ window.MovilVisor = (function () {
      animacion CSS que tambien es un transform, y un estilo en linea puesto ahi
      se queda peleando con ella en cada parada. Sin ampliar no hay nada que
      escribir, asi que no se escribe. */
+  var TRATAMIENTOS = ['brillo-claro', 'brillo-oscuro', 'brillo-halo'];
+
+  /* La contramedida que la spec exige por escrito: «el fallo se registra».
+     Sin ella, el halo puede quedarse puesto meses en produccion porque nadie
+     note que la medicion nunca llego a funcionar, que es el riesgo que la
+     propia spec nombra al elegir el camino de degradacion.
+
+     Avisa UNA VEZ por sesion y no una por foto: el recorrido mide en cada
+     parada y en cada relevo de portada por pieza, asi que un aviso por medida
+     llenaria la consola de la misma linea y taparia lo demas. Y es la primera
+     llamada a `console` de todo `js/`, que hasta hoy no tenia ninguna: se
+     acepta porque el aviso es el requisito, no un apano de depuracion. */
+  var avisado = false;
+
+  function registrarBrillo(mensaje) {
+    if (avisado) return;
+    avisado = true;
+    if (window.console && console.warn) console.warn(mensaje);
+  }
+
+  /* La foto se mide DOS veces por parada y no una, y es a proposito: la escena
+     arranca con la portada que la rejilla ya tiene descargada y la releva por
+     la pieza entera cuando llega (ver `fotoDe`). Midiendo solo al principio,
+     una portada aun sin cargar dejaria el halo puesto para siempre en esa
+     parada; midiendo tambien en cada `load`, la primera medida es la de la
+     portada —que es la misma foto— y la segunda la confirma.
+
+     `pintar` limpia siempre los tres antes de poner uno: sin eso, pasar de una
+     foto clara a una oscura dejaria las dos clases puestas y ganaria la que el
+     CSS declare mas abajo, que es una forma silenciosa de tener el encuadre
+     equivocado. */
+  function tenirEncuadre() {
+    var tratamiento = elFoto
+      ? window.MovilBrillo.tratamientoDe(elFoto, registrarBrillo)
+      : 'halo';
+    TRATAMIENTOS.forEach(function (c) { raiz.classList.remove(c); });
+    raiz.classList.add('brillo-' + tratamiento);
+  }
+
   function pintarZoom() {
     if (!elFoto) return;
     elFoto.style.transform = window.MovilZoom.ampliado(zoom)

@@ -366,6 +366,20 @@
        aria-label="Visor de trabajos" hidden>
     <div class="mvisor-escena" id="movilVisorEscena"></div>
 
+    <!-- El encuadre de la camara, que es la imagen que la spec conserva del
+         lienzo viejo. Se tine segun el brillo de la foto: negro sobre foto
+         clara, amarillo sobre foto oscura, y amarillo con sombra —el halo—
+         cuando la medicion no se puede hacer. La clase la pone
+         `js/movil-visor.js` en la raiz; estos cuatro no se tocan nunca desde
+         el codigo.
+
+         `aria-hidden` porque no dicen nada que no diga ya la foto: para un
+         lector de pantalla son cuatro eles decorativas. -->
+    <span class="mvisor-esquina tl" aria-hidden="true"><i></i></span>
+    <span class="mvisor-esquina tr" aria-hidden="true"><i></i></span>
+    <span class="mvisor-esquina bl" aria-hidden="true"><i></i></span>
+    <span class="mvisor-esquina br" aria-hidden="true"><i></i></span>
+
     <!-- Pastillas amarillas con texto negro. Medido en la spec: el amarillo
          suelto sobre una foto clara da 1,07:1 de contraste y el negro suelto
          sobre una foto oscura ~1,2:1 — el mismo fallo cambiado de lado, y como
@@ -459,6 +473,11 @@
        TypeError. La suite no puede cazarlo porque tests/test.html carga sus
        scripts por su cuenta. -->
   <script src="js/movil-zoom.js"></script>
+  <!-- Van ANTES de movil-visor.js, que usa `MovilBrillo.tratamientoDe` en
+       `tenirEncuadre()` para teñir el encuadre de cuatro esquinas. Hasta esta
+       tarea sólo los cargaba tests/test.html. -->
+  <script src="js/brillo.js"></script>
+  <script src="js/movil-brillo.js"></script>
   <script src="js/movil-visor.js"></script>
   <!-- Va ANTES de movil-puerta.js, que lo usa en `entrada()`. Sin esta línea
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError

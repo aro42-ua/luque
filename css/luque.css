@@ -1447,6 +1447,61 @@ body.es-movil .mvisor-foto{
   -webkit-user-drag:none; user-select:none;
 }
 
+/* Las cuatro eles del encuadre, calcadas de `.visor-esquina` del escritorio:
+   el mismo dibujo con dos pseudoelementos y la misma vuelta con `scale`, para
+   que el visor de la camara se vea igual en los dos lados. Lo que cambia es de
+   donde sale el color, que aqui lo decide el brillo de la foto. */
+body.es-movil .mvisor-esquina{
+  position:absolute;
+  width:26px; height:26px;
+  z-index:1;
+  pointer-events:none;
+  color:var(--yellow);
+}
+body.es-movil .mvisor-esquina i{
+  position:absolute; inset:0;
+  display:block;
+}
+body.es-movil .mvisor-esquina i::before,
+body.es-movil .mvisor-esquina i::after{
+  content:'';
+  position:absolute;
+  background:currentColor;
+}
+body.es-movil .mvisor-esquina i::before{ top:0; left:0; width:100%; height:3px; }
+body.es-movil .mvisor-esquina i::after{  top:0; left:0; width:3px;  height:100%; }
+
+/* Los mismos 22px del escritorio, y por el mismo motivo que el HUD deja libre
+   la franja de los bordes: ahi manda el gesto de «atras» del navegador. */
+body.es-movil .mvisor-esquina.tl{ top:22px;    left:22px;  }
+body.es-movil .mvisor-esquina.tr{ top:22px;    right:22px; }
+body.es-movil .mvisor-esquina.bl{ bottom:22px; left:22px;  }
+body.es-movil .mvisor-esquina.br{ bottom:22px; right:22px; }
+
+body.es-movil .mvisor-esquina.tr i{ transform:scaleX(-1); }
+body.es-movil .mvisor-esquina.bl i{ transform:scaleY(-1); }
+body.es-movil .mvisor-esquina.br i{ transform:scale(-1,-1); }
+
+/* Los tres tratamientos. Sobre foto clara, negras; sobre foto oscura,
+   amarillas. El halo es el camino de degradacion que la spec exige: amarillo
+   con una sombra oscura tenue, legible sobre cualquier fondo. Feo al lado de
+   lo automatico, correcto siempre. */
+body.es-movil .mvisor.brillo-claro  .mvisor-esquina{ color:var(--black); }
+body.es-movil .mvisor.brillo-oscuro .mvisor-esquina{ color:var(--yellow); }
+body.es-movil .mvisor.brillo-halo   .mvisor-esquina{
+  color:var(--yellow);
+  filter:drop-shadow(0 0 2px rgba(0,0,0,.9));
+}
+
+/* El cambio de color se acompana, para que relevar la portada por la pieza
+   entera no de un parpadeo de esquinas. Quien haya pedido menos movimiento no
+   lo tiene. */
+body.es-movil .mvisor-esquina{ transition:color .3s ease; }
+
+@media (prefers-reduced-motion: reduce){
+  body.es-movil .mvisor-esquina{ transition:none; }
+}
+
 body.es-movil .mvisor-video{
   width:100%; aspect-ratio:16/9; border:0;
 }
