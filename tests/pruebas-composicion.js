@@ -16,27 +16,66 @@ describe('Composicion.disponer', function () {
     igual(pocos[2], muchos[2]);
   });
 
-  /* 136 y 116, no 120 y 100: la rejilla sigue midiendo 120 y 100, y lo que se
-     suma son los 8vw de margen por cada lado. Si alguien toca MARGEN tendrá
-     que tocar estos dos números, y eso es lo que se quiere —que el valor esté
-     fijado en algún sitio y no se pueda mover sin querer—. */
-  prueba('el lienzo es la rejilla más el margen: 136vw el amplio y 116 el compacto', function () {
+  /* 136 y 76, no 120 y 60: la rejilla mide 120 y 60, y lo que se suma son los
+     8vw de margen por cada lado. Si alguien toca MARGEN tendrá que tocar estos
+     dos números, y eso es lo que se quiere —que el valor esté fijado en algún
+     sitio y no se pueda mover sin querer—. */
+  prueba('el lienzo es la rejilla más el margen: 136vw el amplio y 76 el compacto', function () {
     igual(Composicion.tamano(12, 'amplio').ancho, 136);
-    igual(Composicion.tamano(12, 'compacto').ancho, 116);
+    igual(Composicion.tamano(12, 'compacto').ancho, 76);
   });
 
-  /* El compacto es el único que puede quedarse por debajo del ancho de la
-     pantalla, y ahí el paneo no lo centra: lo pega a la izquierda y deja media
-     pantalla vacía (`minX = Math.min(0, stageW - canvasW)` en
-     galeria-paneo.js). No es una preferencia estética: es la razón por la que
-     ese modo tiene 4 columnas y no 2. Si alguien vuelve a bajarlas, que falle
-     aquí y no en la pantalla de alguien. */
-  prueba('el lienzo compacto nunca es más estrecho que la pantalla', function () {
+  /* LO QUE SE ROMPIÓ EN PANTALLA: el compacto tenía la celda a 50 y el amplio
+     a 30, así que al pulsar una categoría del menú cada foto se multiplicaba
+     por 1,67 y las cajas crecían de golpe. Las dos celdas tienen que medir lo
+     mismo; el número exacto lo fijan las dos pruebas de al lado. */
+  prueba('filtrar no cambia el tamaño de las cajas: la celda es la misma en los dos modos', function () {
     for (var n = 1; n <= 40; n++) {
-      cierto(Composicion.tamano(n, 'compacto').ancho >= 100,
-             'con ' + n + ' proyectos el lienzo compacto se queda en '
-             + Composicion.tamano(n, 'compacto').ancho + 'vw');
+      var a = Composicion.disponer(n, 'amplio');
+      var c = Composicion.disponer(n, 'compacto');
+      for (var i = 0; i < n; i++) {
+        igual(c[i].w, a[i].w);
+      }
     }
+  });
+
+  /* Y lo que hace que la escala salga 1 clavada aunque el proyecto caiga en
+     otro hueco: pedir su variante. Es lo que usa `Galeria.aplicarFiltro`. */
+  prueba('con variantes, cada hueco se lleva la caja que se le pide', function () {
+    var todas = Composicion.disponer(6, 'amplio');
+    var revuelto = Composicion.disponer(3, 'compacto', [4, 0, 2]);
+    igual(revuelto[0].w, todas[4].w);
+    igual(revuelto[1].w, todas[0].w);
+    igual(revuelto[2].w, todas[2].w);
+  });
+
+  /* Las variantes no pueden romper lo que garantiza la construcción: el alto
+     de celda sale del máximo del ciclo y a lo ancho la caja más saliente ocupa
+     0,78 de su celda, así que CUALQUIER variante cabe en CUALQUIER hueco. Se
+     comprueba con los seis repartos peores —todos los huecos con la misma
+     caja, una por cada caja del ciclo— en vez de con uno cualquiera. */
+  prueba('con variantes repetidas nada se sale ni se solapa', function () {
+   for (var v = 0; v < 6; v++) {
+    for (var n = 2; n <= 40; n++) {
+      var variantes = [];
+      for (var k = 0; k < n; k++) variantes.push(v);
+      var rs = Composicion.disponer(n, 'compacto', variantes);
+      var t = Composicion.tamano(n, 'compacto');
+      rs.forEach(function (r) {
+        cierto(r.x >= 0 && r.x + r.w <= t.ancho + 0.001);
+        cierto(r.y >= 0 && r.y + r.w * 1.25 <= t.alto + 0.001);
+      });
+      for (var i = 0; i < rs.length; i++) {
+        for (var j = i + 1; j < rs.length; j++) {
+          var a = rs[i], b = rs[j];
+          cierto(a.x + a.w <= b.x + 0.001 || b.x + b.w <= a.x + 0.001 ||
+                 a.y + a.w * 1.25 <= b.y + 0.001 || b.y + b.w * 1.25 <= a.y + 0.001,
+                 'con ' + n + ' proyectos y la caja ' + v
+                 + ' repetida se solapan la ' + i + ' y la ' + j);
+        }
+      }
+    }
+   }
   });
 
   /* Lo que se pidió: las fotos a la mitad. Se comprueba sobre la caja más

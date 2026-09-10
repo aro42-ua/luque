@@ -709,6 +709,26 @@
   .navbar .nav-svg a.activa:hover,
   .navbar .nav-svg a.activa:focus-visible{ opacity:1; }
 
+  /* Celda de una categoría que hoy no tiene ni un proyecto. Se ve, porque la
+     barra es un SVG de cuatro celdas fijas y borrar una dejaría un hueco en el
+     dibujo, pero no se puede pulsar: pulsarla dejaba la galería en blanco.
+     `pointer-events:none` la saca del ratón y del `:hover`, y `Galeria` le
+     pone además `aria-disabled` para quien navegue con lector de pantalla.
+     El tabulador sí la alcanza —sigue siendo un `<a href>`— y por eso el
+     clic también se para en JavaScript: Intro sobre ella no debe filtrar.
+
+     Se atenúan LAS LETRAS y no el `<a>` entero, y esta es la diferencia que
+     se ve: cada celda del SVG lleva dentro, además de su palabra, los cuatro
+     corchetes que dibujan el marco de la barra, y los corchetes de una celda
+     se emparejan con los de la de al lado. Atenuando el `<a>` completo, esos
+     medios corchetes se iban con él y el marco quedaba a medio pintar —una
+     mitad negra y la otra lavada—, que no se lee como «esta categoría está
+     apagada» sino como que la barra se ha roto. Con el marco intacto, lo
+     único que baja de tono es la palabra, que es justo lo que se quiere
+     decir. */
+  .navbar .nav-svg a.vacia{ pointer-events:none; }
+  .navbar .nav-svg a.vacia g{ opacity:0.3; }
+
   /* Proyecto que no pertenece a la categoría filtrada */
   .proj{ transition:opacity 0.45s ease; }
   .proj.apagado{

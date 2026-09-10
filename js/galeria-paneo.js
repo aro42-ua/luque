@@ -2,19 +2,43 @@ window.GaleriaPaneo = (function () {
   var stage = null;
   var canvas = null;
   var stageW = 0, stageH = 0, canvasW = 0, canvasH = 0;
-  var minX = 0, minY = 0; // límites (siempre <= 0)
+  /* Límites del recorrido del lienzo. Cuando el lienzo es MÁS GRANDE que el
+     escenario —el caso normal— van de un negativo a 0, como siempre. Cuando
+     es más pequeño no hay recorrido: los dos extremos valen lo mismo, la
+     posición que lo deja centrado, y el lienzo se queda ahí.
+
+     Antes sólo existía `minX = Math.min(0, stageW - canvasW)`, o sea que un
+     lienzo más estrecho que la pantalla se quedaba clavado en 0 —pegado
+     arriba y a la izquierda, con el resto de la pantalla amarillo—. Era la
+     razón por la que la vista filtrada tenía que agrandar sus fotos para que
+     el lienzo no bajase de 100vw de ancho; con esto, ya no. */
+  var minX = 0, minY = 0, maxX = 0, maxY = 0;
   var curX = 0, curY = 0, targetX = 0, targetY = 0;
   var raf = null;
   var congelado = false;
 
   function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
 
+  // El punto medio del recorrido, que es donde el lienzo queda centrado tanto
+  // si sobra escenario como si sobra lienzo.
+  function reposoX(){ return (minX + maxX) / 2; }
+  function reposoY(){ return (minY + maxY) / 2; }
+
   function medir(){
     const r = stage.getBoundingClientRect();
+    /* Un escenario a 0x0 no es una medida: es que la galería todavía está en
+       `display:none` —con el hero delante, o cruzando el umbral de móvil—.
+       Medir contra él dejaba el lienzo en una posición inventada, y con los
+       límites centrados esa posición es media pantalla fuera. Se ignora y ya
+       volverá a medirse: `Galeria.activar()` mide al revelar la galería y
+       `Galeria.remedir()` al volver de móvil (ver js/galeria.js). */
+    if (r.width === 0 || r.height === 0) return;
     stageW = r.width; stageH = r.height; canvasW = canvas.offsetWidth; canvasH = canvas.offsetHeight;
-    minX = Math.min(0, stageW - canvasW); minY = Math.min(0, stageH - canvasH);
+    var sobraX = stageW - canvasW, sobraY = stageH - canvasH;
+    if (sobraX < 0) { minX = sobraX; maxX = 0; } else { minX = maxX = sobraX / 2; }
+    if (sobraY < 0) { minY = sobraY; maxY = 0; } else { minY = maxY = sobraY / 2; }
     // posición de reposo: lienzo centrado en el escenario
-    targetX = minX / 2; targetY = minY / 2;
+    targetX = reposoX(); targetY = reposoY();
     curX = targetX; curY = targetY;
     canvas.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
   }
@@ -30,8 +54,8 @@ window.GaleriaPaneo = (function () {
   // funciona igual con el lienzo filtrado y sin filtrar.
   function centrarEn(el) {
     var r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
-    targetX = clamp(targetX + (s.left + stageW / 2) - (r.left + r.width  / 2), minX, 0);
-    targetY = clamp(targetY + (s.top  + stageH / 2) - (r.top  + r.height / 2), minY, 0);
+    targetX = clamp(targetX + (s.left + stageW / 2) - (r.left + r.width  / 2), minX, maxX);
+    targetY = clamp(targetY + (s.top  + stageH / 2) - (r.top  + r.height / 2), minY, maxY);
     // Con movimiento reducido no hay paneo animado: se salta al objetivo.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       curX = targetX; curY = targetY;
@@ -95,17 +119,18 @@ window.GaleriaPaneo = (function () {
         const cxN = (px - 0.5) * 2;                       // -1..1
         const cyN = (py - 0.5) * 2;                       // -1..1
 
-        const restX = minX / 2, restY = minY / 2;
-        const rangeX = Math.abs(minX) / 2;
-        const rangeY = Math.abs(minY) / 2;
+        const restX = reposoX(), restY = reposoY();
+        const rangeX = (maxX - minX) / 2;
+        const rangeY = (maxY - minY) / 2;
 
-        // El lienzo se mueve en dirección OPUESTA al cursor
-        targetX = clamp(restX - cxN * rangeX * STRENGTH, minX, 0);
-        targetY = clamp(restY - cyN * rangeY * STRENGTH, minY, 0);
+        // El lienzo se mueve en dirección OPUESTA al cursor. Si en un eje no
+        // hay recorrido, su rango es 0 y el `clamp` lo deja donde reposa.
+        targetX = clamp(restX - cxN * rangeX * STRENGTH, minX, maxX);
+        targetY = clamp(restY - cyN * rangeY * STRENGTH, minY, maxY);
       });
 
       stage.addEventListener('mouseleave', () => {
-        targetX = minX / 2; targetY = minY / 2;
+        targetX = reposoX(); targetY = reposoY();
       });
     } else {
       // Fallback táctil: arrastre directo con inercia
@@ -122,8 +147,8 @@ window.GaleriaPaneo = (function () {
         if (congelado) return;
         if(!dragging) return;
         const dx = e.clientX - startPX, dy = e.clientY - startPY;
-        targetX = clamp(startTX + dx, minX, 0);
-        targetY = clamp(startTY + dy, minY, 0);
+        targetX = clamp(startTX + dx, minX, maxX);
+        targetY = clamp(startTY + dy, minY, maxY);
       });
       stage.addEventListener('pointerup',   () => { dragging = false; });
       stage.addEventListener('pointercancel', () => { dragging = false; });
