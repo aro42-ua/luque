@@ -5,7 +5,11 @@ NO toca los originales, NO sube nada. Escribe en img/, que esta en .gitignore
 porque son megas generados: se sirven desde R2 en produccion y desde este
 mismo directorio al probar en local.
 
-Uso:  python herramientas/derivar_imagenes.py <directorio-de-originales>
+Uso:  python herramientas/derivar_imagenes.py <originales>
+      python herramientas/derivar_imagenes.py <originales> --contenido
+
+Sin bandera deriva las imagenes a img/; con --contenido escribe
+contenido.json a partir de lo que ya hay en disco.
 
 Requiere Pillow. Es la unica dependencia del repositorio y vive aqui a
 proposito: `herramientas/` no se despliega nunca. El SITIO sigue sin ninguna.
@@ -119,6 +123,45 @@ def derivar_todo(raiz, meta, destino):
     return hechas
 
 
+def contenido(raiz, meta):
+    """Mezcla los datos humanos con lo que hay en disco.
+
+    Las rutas son RELATIVAS -/img/...- y no absolutas: asi el sitio funciona
+    servido por `python -m http.server` en la red local, que es como se prueba
+    en un movil real, y son mismo origen, que es lo que permite medir el brillo
+    (bloque 4g) sin que el lienzo se manche.
+    """
+    salida = []
+    for p in meta['proyectos']:
+        nombres, portada = fotos_de(raiz, p['carpeta'])
+        if not portada:
+            raise SystemExit('%s no tiene portada marcada' % p['carpeta'])
+        relativa = p['carpeta'].replace('/', os.sep)
+        k = lambda f: llave(os.path.join(relativa, f))
+        salida.append({
+            'id': p['id'], 'titulo': p['titulo'],
+            'categoria': p['categoria'], 'tipo': p['tipo'],
+            'ficha': p['ficha'],
+            'portada': '/img/%s-1500.jpg' % k(portada),
+            'piezas': [{'url': '/img/%s-3000.jpg' % k(f),
+                        'miniatura': '/img/%s-250.jpg' % k(f)}
+                       for f in nombres]
+        })
+    return {'version': 2, 'proyectos': salida}
+
+
+def escribir_contenido(raiz, meta):
+    """Escribe contenido.json en la raiz del repositorio, ya formateado."""
+    datos = contenido(raiz, meta)
+    destino = os.path.join(RAIZ_REPO, 'contenido.json')
+    with io.open(destino, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(datos, ensure_ascii=False, indent=2))
+        f.write(u'\n')
+    piezas = sum(len(p['piezas']) for p in datos['proyectos'])
+    sys.stdout.write('%d proyectos y %d piezas en %s\n'
+                     % (len(datos['proyectos']), piezas, destino))
+
+
 def main(argv):
     if len(argv) < 2:
         raise SystemExit(__doc__)
@@ -126,6 +169,12 @@ def main(argv):
     if not os.path.isdir(raiz):
         raise SystemExit('no existe el directorio de originales: %s' % raiz)
     meta = leer_meta()
+    # Con --contenido solo describe lo que ya hay en disco. Derivar
+    # tarda minuto y medio y describir es instantaneo; obligar a lo
+    # primero para conseguir lo segundo invita a no regenerar el JSON.
+    if '--contenido' in argv:
+        escribir_contenido(raiz, meta)
+        return
     destino = os.path.join(RAIZ_REPO, 'img')
     hechas = derivar_todo(raiz, meta, destino)
     sys.stdout.write('%d archivos derivados en %s\n' % (hechas, destino))
