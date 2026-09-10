@@ -337,6 +337,7 @@
         <p class="visor-ficha-cat" id="fichaCat"></p>
         <p class="visor-ficha-titulo" id="fichaTitulo"></p>
         <dl class="visor-ficha-datos" id="fichaDatos"></dl>
+        <div id="fichaEnlace" class="ficha-enlace"></div>
       </aside>
     </div>
 
@@ -408,6 +409,11 @@
   <script src="js/galeria.js"></script>
   <script src="js/visor-transicion.js"></script>
   <script src="js/visor-lupa.js"></script>
+  <!-- Va ANTES de visor-ficha.js, que lo usa en `pintar()` para construir el
+       botón que lleva al vídeo. Sin esta línea `window.Plataforma` es
+       undefined y abrir un proyecto lanza un TypeError, con la suite entera
+       en verde: tests/test.html carga sus propios scripts. -->
+  <script src="js/plataforma.js"></script>
   <script src="js/visor-ficha.js"></script>
   <script src="js/visor-video.js"></script>
   <script src="js/visor-carga.js"></script>

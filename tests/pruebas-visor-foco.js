@@ -50,7 +50,7 @@ describeAsync('Visor — el envolvente de foco del diálogo', function () {
   var PROYECTO = {
     id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'fotos',
     portada: PIXEL,
-    ficha: { cliente: 'Ninguno', anio: '2026', camara: '—', optica: '—' },
+    ficha: { cliente: 'Ninguno', anio: '2026', papel: 'Fotografía' },
     piezas: [{ url: PIXEL, miniatura: PIXEL },
              { url: PIXEL, miniatura: PIXEL },
              { url: PIXEL, miniatura: PIXEL }]
@@ -60,7 +60,10 @@ describeAsync('Visor — el envolvente de foco del diálogo', function () {
      DOM al definirse, así que basta con que estén todos antes de `init()`. */
   var MODULOS = ['../js/reglas-contenido.js', '../js/datos.js', '../js/router.js',
                  '../js/visor-estado.js', '../js/visor-transicion.js',
-                 '../js/visor-lupa.js', '../js/visor-ficha.js', '../js/visor-video.js',
+                 '../js/visor-lupa.js',
+                 /* plataforma.js va ANTES de visor-ficha.js, que lo usa en
+                    `pintar()` para el botón del vídeo, igual que index.html. */
+                 '../js/plataforma.js', '../js/visor-ficha.js', '../js/visor-video.js',
                  '../js/visor-carga.js', '../js/visor-chrome.js',
                  '../js/visor-origen.js', '../js/visor-foco.js',
                  '../js/visor.js'];

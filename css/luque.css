@@ -1571,3 +1571,30 @@ body.es-movil .mvisor :focus-visible{
 @media (prefers-reduced-motion: reduce){
   body.es-movil .mvisor-hud{ transition:none; }
 }
+
+/* La misma pastilla amarilla de la navbar y del HUD móvil, y a propósito: el
+   sitio tiene UN lenguaje visual y un botón con aspecto propio sería un
+   tercero. El contraste del negro sobre --yellow ya está razonado arriba.
+
+   Sin logotipo de la plataforma: la restricción global prohíbe recursos
+   externos desde el CSS, porque bajo file:// el navegador los bloquea. */
+.pastilla-enlace{
+  display:inline-block;
+  background:var(--yellow);
+  color:var(--black);
+  text-decoration:none;
+  padding:.5rem 1rem;
+  border-radius:999px;
+  font-weight:700;
+}
+
+.pastilla-enlace:hover,
+.pastilla-enlace:focus-visible{
+  background:var(--black);
+  color:var(--yellow);
+}
+
+/* El contenedor vacío no ocupa nada porque no tiene relleno ni altura propia,
+   y el margen va en el botón y no aquí: un margin-top en el contenedor
+   separaría igual con el botón ausente, que es el hueco que no queremos. */
+.ficha-enlace .pastilla-enlace{ margin-top:1rem; }

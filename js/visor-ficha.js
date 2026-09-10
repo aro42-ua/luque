@@ -1,5 +1,5 @@
 window.VisorFicha = (function () {
-  var elFicha, elInfo, elCerrar, elCat, elTitulo, elDatos;
+  var elFicha, elInfo, elCerrar, elCat, elTitulo, elDatos, elEnlace;
 
   // alAlternar: el manejador de js/visor.js que decide el estado y llama
   // de vuelta a aplicar(). Este módulo no conoce VisorEstado.
@@ -10,6 +10,7 @@ window.VisorFicha = (function () {
     elCat    = document.getElementById('fichaCat');
     elTitulo = document.getElementById('fichaTitulo');
     elDatos  = document.getElementById('fichaDatos');
+    elEnlace = document.getElementById('fichaEnlace');
     elInfo.addEventListener('click', alAlternar);
     // El mismo manejador que el botón «Ficha»: alAlternar decide el estado
     // mirándolo, así que desde el panel abierto lo cierra. Dos botones para
@@ -26,8 +27,7 @@ window.VisorFicha = (function () {
     var filas = [
       ['Cliente', proyecto.ficha.cliente],
       ['Año',     proyecto.ficha.anio],
-      ['Cámara',  proyecto.ficha.camara],
-      ['Óptica',  proyecto.ficha.optica],
+      ['Papel',   proyecto.ficha.papel],
       ['Piezas',  total]
     ];
     filas.forEach(function (f) {
@@ -37,6 +37,11 @@ window.VisorFicha = (function () {
       fila.appendChild(dt); fila.appendChild(dd);
       elDatos.appendChild(fila);
     });
+    /* Se vacía antes de pintar: sin esto, pasar de un videoclip a otro dejaba
+       los dos botones puestos, y el de arriba llevaba al vídeo anterior. */
+    elEnlace.innerHTML = '';
+    var boton = Plataforma.boton(proyecto.ficha.enlace);
+    if (boton) elEnlace.appendChild(boton);
   }
 
   // Aplica el estado (abierta/recogida) a la clase que mueve el panel y la
