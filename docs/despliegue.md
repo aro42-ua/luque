@@ -465,6 +465,13 @@ curl -s -o /dev/null -w "%{http_code} %{size_download} %{content_type}" "$u"
 
 Tiene que dar `200`, los bytes exactos del archivo local y `image/jpeg`.
 
+**Al volver a derivar, subir sólo lo que falta.** Una pasada nueva de la
+herramienta puede cambiar llaves —las piezas recortadas llevan `-r`— y regenera
+las 195; no hace falta subir las 195. Comprobar primero cada llave por HTTPS
+(`200` y los bytes exactos) y subir sólo las que no estén: así la subida es
+repetible y no pisa nada. Las llaves que dejan de nombrarse se quedan en el
+bucket; no hacen daño y borrarlas es otra decisión.
+
 **Con wrangler y no con `rclone`**, y no por gusto: wrangler reutiliza la
 sesión ya iniciada, mientras que `rclone` exigiría crear fichas de API S3 de
 R2, o sea **credenciales nuevas que guardar**. La regla de este repositorio es
