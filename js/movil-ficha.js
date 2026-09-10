@@ -2,7 +2,7 @@ window.MovilFicha = (function () {
 
   /* La ficha es el FONDO del eje vertical, no un panel que se despliega encima:
      por eso `js/movil-visor.js` la pinta en la misma escena y sustituye a la
-     foto. Las cinco filas son las mismas que enseña el escritorio en
+     foto. Las cuatro filas son las mismas que enseña el escritorio en
      `VisorFicha.pintar` (js/visor-ficha.js), y con los mismos rótulos, porque
      es la misma ficha vista en otra pantalla.
 
@@ -23,8 +23,7 @@ window.MovilFicha = (function () {
     lista.className = 'mvisor-ficha-datos';
     [['Cliente', p.ficha.cliente],
      ['Año',     p.ficha.anio],
-     ['Cámara',  p.ficha.camara],
-     ['Óptica',  p.ficha.optica],
+     ['Papel',   p.ficha.papel],
      ['Piezas',  p.piezas.length]].forEach(function (f) {
       var fila = document.createElement('div');
       var dt = document.createElement('dt'); dt.textContent = f[0];
@@ -33,6 +32,14 @@ window.MovilFicha = (function () {
       lista.appendChild(fila);
     });
     caja.appendChild(lista);
+
+    /* El mismo boton que el escritorio, del mismo sitio: `Plataforma.boton`
+       existe para que el `rel="noopener noreferrer"` no esté escrito dos
+       veces. Aquí no hace falta vaciar nada antes, a diferencia del
+       escritorio: la escena móvil se reconstruye entera en cada parada. */
+    var boton = Plataforma.boton(p.ficha.enlace);
+    if (boton) caja.appendChild(boton);
+
     return caja;
   }
 

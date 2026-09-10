@@ -228,7 +228,7 @@ describe('MovilVisor — qué pinta cada parada del eje', function () {
   var MV_CON_FOTOS = [{
     id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'foto',
     portadaUrl: 'portada-niebla.jpg',
-    ficha: { cliente: 'Estudio', anio: '2026', camara: 'Mamiya', optica: '80mm' },
+    ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de arte' },
     piezas: [{ url: 'pieza-1.jpg' }, { url: 'pieza-2.jpg' }]
   }];
 
@@ -283,7 +283,7 @@ describe('MovilVisor — qué pinta cada parada del eje', function () {
       var out = [];
       for (var i = 0; i < dts.length; i++) out.push(dts[i].textContent);
       return out;
-    }), ['Cliente', 'Año', 'Cámara', 'Óptica', 'Piezas']);
+    }), ['Cliente', 'Año', 'Papel', 'Piezas']);
   });
 
   /* Cambiar de parada VACÍA la escena antes de pintar. Sin esto, deslizar
@@ -314,7 +314,7 @@ describe('MovilVisor — el proyecto de vídeo', function () {
   var MV_VIDEO = [{
     id: 'oleaje', titulo: 'Oleaje', categoria: 'cortometraje', tipo: 'video',
     portadaUrl: 'poster-oleaje.jpg', vimeo: null,
-    ficha: { cliente: 'Estudio', anio: '2026', camara: 'Arri', optica: '35mm' },
+    ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de fotografía' },
     piezas: []
   }];
 
