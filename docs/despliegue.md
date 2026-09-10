@@ -1,10 +1,32 @@
 # Cómo se despliega
 
-La web está publicada en `https://luque.angelrubioortiz2005.workers.dev`. Dos
-piezas: un repositorio privado en GitHub, `aro42-ua/luque`, que guarda el
-código, y un **Worker de Cloudflare con recursos estáticos** — no un proyecto
-de Pages — que sirve el sitio. El despliegue es un comando de `wrangler` que
-hay que ejecutar a mano cada vez.
+La web está publicada en `https://lidialuque.com`. Dos piezas: un repositorio
+privado en GitHub, `aro42-ua/luque`, que guarda el código, y un **Worker de
+Cloudflare con recursos estáticos** — no un proyecto de Pages — que sirve el
+sitio. El despliegue es un comando de `wrangler` que hay que ejecutar a mano
+cada vez.
+
+## `workers.dev` está apagado a propósito, y no hay que volver a encenderlo
+
+El Worker se sigue llamando `luque` en Cloudflare, y hasta la Tarea 7 del
+bloque 3b también respondía en `https://luque.angelrubioortiz2005.workers.dev`.
+Esa dirección **ya no contesta**: `worker/estatico/wrangler.toml` fija
+`workers_dev = false` y `preview_urls = false`, a propósito.
+
+El motivo no es limpieza, es seguridad. Este mismo Worker sirve ahora `/panel`,
+la única superficie de **escritura** del sitio. Cloudflare Access sólo puede
+ponerse delante de un nombre de host de una zona propia —`lidialuque.com`— y
+**no** de `workers.dev`, que es un dominio de Cloudflare. Con `workers.dev`
+encendido, `/panel` seguiría alcanzable en
+`luque.angelrubioortiz2005.workers.dev/panel` sin Access delante: un agujero
+exacto en lo único que da permiso de escritura sobre el contenido del estudio.
+Las Preview URLs se apagaron por lo mismo: cada versión desplegada estrena su
+propio nombre de host, y ninguno estaría cubierto por la política de Access.
+
+**Si alguna vez compruebas la URL vieja y ves que no responde, ese es el
+comportamiento correcto — no un despliegue roto.** El arreglo no es volver a
+encender `workers.dev`: sería reabrir el agujero que la Tarea 7 de este bloque
+existe para cerrar. El sitio vive en `lidialuque.com`.
 
 ## Aviso: hubo una integración automática, y desplegó lo que no debía
 
@@ -69,9 +91,10 @@ a respuestas generadas por código de Worker.
 > enrutador de recursos estáticos exactamente como si este `fetch()` no
 > existiera, `_redirects` incluido.
 >
-> **Verificado con `wrangler dev` en local** (no contra el servidor real: la
-> rama no se ha desplegado todavía) con un directorio de recursos que incluía
-> `_redirects` y archivos de prueba bajo `docs/`, `.claude/` y `worker/`:
+> **Verificado con `wrangler dev` en local** (no contra el servidor real: al
+> escribirse esto la rama todavía no se había desplegado) con un directorio de
+> recursos que incluía `_redirects` y archivos de prueba bajo `docs/`,
+> `.claude/` y `worker/`:
 > `GET /docs/estado-conocido.md`, `GET /.claude/launch.json` y
 > `GET /worker/wrangler.toml` siguen devolviendo **302**. Y el propio
 > `/contenido.json` responde el archivo estático del repositorio mientras R2
@@ -147,7 +170,8 @@ repositorio: lo que se exporta y se sube **es** el sitio.
 
 `worker/estatico/index.js` (con su configuración en
 `worker/estatico/wrangler.toml`) es el `fetch()` de **este mismo Worker**, el
-que responde en `luque.angelrubioortiz2005.workers.dev`. No confundir con
+que responde en `lidialuque.com` (`workers.dev` está apagado a propósito — ver
+el aviso al principio de este documento). No confundir con
 `worker/src/index.js`, que es el Worker de la API (`luque-api`) — son dos
 Workers, dos despliegues, dos archivos de configuración, y sólo comparten el
 bucket de R2.
@@ -196,9 +220,9 @@ petición a `/contenido.json` se habría resuelto contra el archivo del
 repositorio directamente, y el código de este Worker no se habría llegado a
 ejecutar nunca para esa ruta, publicara lo que publicara el estudio.
 
-**Verificado con `wrangler dev` en local** (no contra el servidor real: la
-rama no se ha desplegado todavía), con R2 emulado y un `contenido.json`
-estático de prueba en el directorio de recursos:
+**Verificado con `wrangler dev` en local** (no contra el servidor real: al
+escribirse esto la rama todavía no se había desplegado), con R2 emulado y un
+`contenido.json` estático de prueba en el directorio de recursos:
 - Sin nada publicado en R2: `GET /contenido.json` devuelve el archivo del
   repositorio.
 - Tras `wrangler r2 object put luque-contenido/contenido.json --local ...`:
@@ -263,7 +287,7 @@ cabeceras fijan.
 
 El árbol que exporta `git archive` es exactamente lo versionado, así que
 **se sube todo lo versionado**, no sólo lo que enlaza `index.html`. Sin hacer
-nada, `https://luque.angelrubioortiz2005.workers.dev/docs/estado-conocido.md`
+nada, `https://lidialuque.com/docs/estado-conocido.md`
 devolvería 200 a cualquiera — y ese archivo dice en texto plano que las
 tipografías son versiones Trial sin licencia para uso público, a pocos clics
 de los propios `.otf` descargables. `/.claude/launch.json` filtra además rutas
@@ -275,8 +299,8 @@ archivo exista: la documentación de Cloudflare dice que las reglas se aplican
 *sin importar si un recurso casa con la petición*, así que el
 redireccionamiento gana al archivo real. **Verificado contra el servidor real:**
 `/docs/*` y `/.claude/*` devuelven 302 y sirven la portada, no el markdown ni el
-JSON. `/worker/*` se añadió en el bloque 3a y **está sin verificar contra el
-servidor**, porque la rama todavía no se ha desplegado.
+JSON. `/worker/*` se añadió en el bloque 3a y quedó verificado en la Tarea 7 del
+bloque 3b, ya contra `lidialuque.com`: también devuelve 302.
 
 **`/worker/*` es la lección que conviene no repetir.** El bloque 3a añadió un
 directorio de primer nivel entero —el código del Worker de la API, sus pruebas
@@ -302,11 +326,14 @@ navegadores y sería doloroso de revertir.
 sensible: son el arnés y sus pruebas, el mismo código que ya es público en el
 repositorio del sitio. A cambio, dejarlo accesible permite la verificación más
 valiosa del despliegue: abrir la ruta de pruebas en la URL real y comprobar que
-las 51 comprobaciones pasan **servidas desde Cloudflare**, con sus rutas, sus
+las comprobaciones pasan **servidas desde Cloudflare**, con sus rutas, sus
 tipos MIME y sus mayúsculas de verdad, y no sólo con doble clic en local. Es
 justo lo que ninguna prueba en la máquina de desarrollo puede demostrar.
-**Verificado:** las 51 pasan servidas desde
-`https://luque.angelrubioortiz2005.workers.dev`.
+**Verificado (antes de la Tarea 7 del bloque 3b, contra la URL de
+`workers.dev` que hoy está apagada):** las 51 pasaban servidas desde
+`https://luque.angelrubioortiz2005.workers.dev`. Falta repetir esta misma
+comprobación contra `https://lidialuque.com/tests/test` — ver «Verificado en
+producción» más abajo.
 
 Al pedir `/tests/test.html` (con la extensión) el servidor responde 307 hacia
 `/tests/test`, sin ella. Es la normalización de extensiones que hacen los
@@ -366,12 +393,22 @@ lista el directorio padre y compara el nombre exacto contra lo que hay dentro.
 ## Antes de desplegar: el peso de las imágenes
 
 ```
-python tests/pesar_imagenes.py
+python -m http.server 8010
+python tests/pesar_imagenes.py --origen http://localhost:8010
 ```
 
 También desde la raíz, **antes de cada despliegue**. Baja por la red, así que
 tarda unos segundos: por eso no está en el arnés del navegador, que tiene que
 ser rápido y no fallar nunca por la conexión.
+
+**`--origen` no es opcional desde el contenido real.** Las URLs de
+`contenido.json` son relativas (`/img/...`), así que sin origen no hay nada que
+pedir; se dice en vez de fallar raro. Contra el servidor local mide las
+imágenes de `img/`, que son bit a bit las que se suben a R2. Para medir lo que
+hay publicado de verdad: `--origen https://lidialuque.com`.
+
+Medido el 2026-09-10 con los ocho proyectos reales: **1,14 MB de un
+presupuesto de 3**, código de salida 0.
 
 **Qué comprueba:** lo que pesa cada superficie. La galería tiene presupuesto
 —3 MB— porque se carga **entera** al entrar y es lo que espera quien llega por
@@ -384,6 +421,40 @@ cuando alguien abre un proyecto. Sale con código 1 si la galería se pasa.
 el auditor, ni una revisión completa de la rama lo vieron: todos miraban si el
 código era correcto, y lo era. Lo encontró el estudio abriendo la página. Esto
 es lo que faltaba.
+
+## Subir las imágenes derivadas a R2
+
+**Esto no lo ejecuta ninguna tarea ni ningún agente: es un acto manual de
+Ángel, con la sesión de wrangler ya iniciada.** Aquí está escrito el
+procedimiento, nada más.
+
+Con `img/` ya generado por `herramientas/derivar_imagenes.py` —195 archivos,
+43,7 MB—:
+
+```bash
+for f in img/*.jpg; do
+  llave="luque-contenido/img/$(basename "$f")"
+  npx wrangler r2 object put "$llave" --file "$f" --content-type image/jpeg
+done
+```
+
+**Con wrangler y no con `rclone`**, y no por gusto: wrangler reutiliza la
+sesión ya iniciada, mientras que `rclone` exigiría crear fichas de API S3 de
+R2, o sea **credenciales nuevas que guardar**. La regla de este repositorio es
+que aquí no entran credenciales.
+
+**Cuidado con una cosa, porque es fácil creer lo contrario.** El Worker
+rechaza con 409 una imagen cuya llave ya existe, en vez de pisarla
+(`guardarImagen`, en `worker/src/publicar.js`): protege al panel de perder una
+foto publicada cuando dos nombres distintos colapsan en la misma llave al
+sanearlos. **Ese 409 no cubre esta subida.** `wrangler r2 object put` habla
+con el bucket directamente y no pasa por el Worker, así que **sí sobrescribe,
+y en silencio**. Quien suba dos veces la misma llave con archivos distintos se
+queda con el segundo y sin aviso.
+
+En la práctica no muerde, porque las llaves las genera `llave()` a partir de
+la ruta del original y son estables: volver a subir escribe lo mismo encima de
+lo mismo. Muerde si se cambia una foto conservando su nombre.
 
 ## Los pasos que hace el estudio
 
@@ -400,20 +471,129 @@ no Claude:
 - **`wrangler login`**, descrito en el paso 2 de más arriba. Abre el navegador
   para autenticar la sesión de despliegue; por eso lo tiene que hacer quien
   tiene las credenciales de la cuenta.
+- **Configurar Cloudflare Access**, desde el panel de Zero Trust y con la sesión
+  del estudio. Aquí hay una regla que se aprendió rompiéndola, y va justo debajo.
+
+## Access: UNA sola aplicación para `/api` y `/panel`
+
+**`lidialuque.com` tiene que estar cubierto por una única aplicación de Access,
+con las dos rutas dentro.** No dos aplicaciones, una por ruta.
+
+Se probó con dos —una para la API y otra para el panel— y **rompió el panel**.
+El motivo: `CF_Authorization` es **una sola cookie por host**. Al entrar en
+`/panel`, Access la reemitía para la aplicación del panel, con **el AUD del
+panel**; con eso la sesión de la API quedaba invalidada, y la primera llamada
+del panel a `/api/borrador` se iba contra Access en vez de contra el Worker.
+
+Lo que se ve cuando pasa, y por qué despista:
+
+> «No se ha podido cargar el contenido: no se ha podido contactar con el
+> servidor…»
+
+**Ese aviso, en el panel, no significa que la red falle.** Significa casi
+siempre que Access está mal configurado. Access redirige a
+`ffffffstudio.cloudflareaccess.com`, que es otro origen; el navegador bloquea
+esa redirección porque no lleva CORS, y `fetch` sólo llega a ver un `TypeError`
+idéntico al de un cable desenchufado. El panel no puede distinguirlos —por eso
+su mensaje nombra las dos causas—, pero quien despliega sí: **si el panel carga
+y la lista no, mira Access antes que el wifi.**
+
+Con una sola aplicación hay un solo AUD y una sola cookie, y `ACCESS_AUD` —el
+secreto del Worker de la API— sigue valiendo sin tocarlo.
 
 ## Verificado en producción
 
 **Todo lo de esta sección se comprobó ANTES de que este Worker tuviera
-código** — antes de la Tarea 6, Paso 4 del bloque 3a. Sigue siendo cierto para
-lo que prueba: el comportamiento de los recursos estáticos puros. Pero no
-cubre nada de lo nuevo — `/contenido.json` y `/img/*` desde R2, la caída de
-vuelta, `run_worker_first` — que sólo se ha verificado con `wrangler dev` en
-**local** (sección de arriba), no contra el servidor real. **Quien despliegue
-esta rama tiene que repetir ahí las comprobaciones de esa sección** antes de
-dar el paso por bueno.
+código** — antes de la Tarea 6, Paso 4 del bloque 3a — **y antes de que el
+sitio se mudara a `lidialuque.com`** — antes de la Tarea 7 del bloque 3b. Sigue
+siendo cierto para lo que prueba: el comportamiento de los recursos estáticos
+puros. Pero no cubre lo nuevo, y conviene separar qué está y qué no:
+
+- **`/contenido.json` y `/img/*` desde R2, la caída de vuelta al archivo
+  estático y `run_worker_first`: sólo verificados con `wrangler dev` en
+  local** (sección de arriba), nunca contra el servidor real.
+- **El dominio propio con Access delante sí está verificado en producción**,
+  en la Tarea 7 del bloque 3b: `lidialuque.com/panel` y `/api/*` cubiertos por
+  la misma aplicación de Access, un tercer correo rechazado, tokens falsificados
+  devueltos con 403, y el conflicto de versión reproducido con dos sesiones.
+
+### Despliegue del bloque 4 completo (2026-09-04)
+
+Versión `49189f00-7ae9-45ac-8a7c-7442052f40d8`, desde `main` en `9b07e82`, con
+`git archive` a un directorio temporal: 131 archivos, y comprobado antes de
+subir que no salían `.superpowers/`, `.worktrees/`, `.wrangler/` ni `.git/`.
+Auditor de rutas OK y `pesar_imagenes.py` OK (la galería pide 2,08 MB de un
+presupuesto de 3).
+
+**Es el primer despliegue con la experiencia móvil.** Antes de éste, lo
+publicado era el sitio del bloque 3b: `js/movil-hoja.js` daba **404** en
+producción. Ahora da 200, igual que `movil-puerta.js`, `movil-arrastre.js`,
+`movil-recorrido.js`, `visor-carga.js` y `visor-foco.js`.
+
+Repetido lo de siempre y todo en su sitio: `robots.txt` 200 y
+`x-robots-tag: noindex` en `/`; `docs/estado-conocido.md`, `.claude/launch.json`
+y `worker/estatico/wrangler.toml` en 302 a la portada; `/panel`,
+`/panel/css/panel.css` y `/api/borrador` en 302 a Access;
+`luque.angelrubioortiz2005.workers.dev/panel` en 404. Tipos MIME y caché
+correctos: `font/otf` con `31536000, immutable` y `nosniff` en las tipografías,
+`text/css` y `text/javascript` con `3600`, `application/json` en
+`contenido.json`.
+
+#### La suite NO se puede pasar entera desde producción, y es correcto
+
+Ejecutada contra `https://lidialuque.com/tests/test.html`: **298 pasan, 44
+fallan** — donde en local son 362 y 0.
+
+**Los 44 son, sin una sola excepción, los tres módulos del panel**:
+`Identificador`, `Orden` y `Lista`, más las 20 comprobaciones que ni llegan a
+registrarse. La causa está comprobada, no supuesta: `/panel/js/*.js` devuelve
+**302 al login de Access**, así que `tests/test.html` recibe la página de
+acceso en vez del JavaScript. Los archivos no protegidos —`tests/arnes.js`,
+`js/datos.js`— dan 200 y sus pruebas pasan.
+
+**Nada del sitio público falla servido desde Cloudflare.** Esto cierra la
+comprobación que quedaba pendiente desde agosto, y con un matiz que hay que
+saber: **no se puede cerrar del todo, por diseño**. `/tests/*` es accesible a
+propósito, pero `/panel/*` está tras Access a propósito también, y las pruebas
+del panel importan de ahí. La cifra que vale como «todo en verde» es la local;
+la de producción vale para lo que prueba, que es que el código del sitio
+público funciona servido de verdad. Si algún día en producción falla algo que
+NO sea del panel, eso sí es un problema.
+
+### Repetido contra `https://lidialuque.com` al fusionar el bloque 3b (2026-08-27)
+
+Tras `wrangler deploy` de `main` ya fusionada (versión
+`59bbaf63-d822-428e-9695-52ea411b84e6`), comprobado con `curl` contra el dominio
+real:
+
+- `/` → **200**, `Content-Type: text/html`, `Cache-Control: no-cache`,
+  `x-robots-tag: noindex`.
+- `/robots.txt` → **200**. Mudar de dominio no ha anunciado la web.
+- `/docs/estado-conocido.md`, `/.claude/launch.json` y
+  `/worker/estatico/wrangler.toml` → **302** a la portada. El último importa
+  más que los otros dos: es el archivo que lleva el nombre del bucket de R2.
+- `/panel` **y también `/panel/css/panel.css`** → **302** a
+  `ffffffstudio.cloudflareaccess.com`. Que el CSS redirija igual que el HTML es
+  la comprobación que hace falta: significa que Access cubre el subárbol entero
+  y no sólo la página.
+- `/api/borrador` → **302** al mismo Access. Los dos Workers conviven en el
+  dominio con la misma sesión, que es lo que evita el CORS entre panel y API.
+- `luque.angelrubioortiz2005.workers.dev/panel` → **404**. Sigue apagado.
+- `/contenido.json` → **200**, `application/json`, con `noindex`.
+- `/tests/test` → **200**.
+
+**Lo que sigue sin repetirse contra el dominio nuevo**, porque necesita un
+navegador o una lista de recursos que `curl` no recorre solo: que las 99 pruebas
+del arnés pasen servidas desde Cloudflare, las cabeceras de caché y los tipos
+MIME de CSS, JS y tipografías, y los 21 recursos locales de la portada.
+
+### Comprobaciones anteriores, contra la URL vieja
 
 Comprobado contra `https://luque.angelrubioortiz2005.workers.dev` después de
-desplegar:
+desplegar — **la URL que sirvió esta comprobación está retirada hoy**:
+`workers.dev` se apagó en la Tarea 7 del bloque 3b (ver el aviso al principio
+de este documento), así que estos puntos hay que volver a comprobarlos contra
+`https://lidialuque.com`:
 
 - `/docs/*` y `/.claude/*` devuelven 302 y sirven la portada, no el markdown
   ni los archivos de configuración.
@@ -422,8 +602,9 @@ desplegar:
   `31536000, immutable` más `nosniff` en las tipografías.
 - Tipos MIME correctos: `font/otf` en las tipografías, `text/css`,
   `text/javascript`, `image/svg+xml`.
-- Las 51 pruebas del arnés (`tests/test.html`) pasan con el código servido
-  desde Cloudflare.
+- Las 51 pruebas que tenía entonces el arnés (`tests/test.html`) pasaban con el
+  código servido desde Cloudflare. Hoy son 99: el bloque 3b añadió las del
+  panel, y esta comprobación está pendiente de repetirse.
 - Los 21 recursos locales que referencian `index.html` y `css/luque.css`
   devuelven los 21 un 200: nada roto por el despliegue.
 
@@ -439,6 +620,59 @@ herramientas de red del navegador puede bajarse el archivo.
 Esto no lo resuelve un desplegar: hay que comprar la licencia web en Dinamo o
 sustituir la tipografía, y hacerlo **antes de anunciar la web**. Mientras no
 esté resuelto, el sitio se despliega cerrado a los buscadores
-(`robots.txt` y la cabecera `X-Robots-Tag: noindex`) y sin dominio propio. Es
-deuda conocida, no un descuido, y queda anotada también en
-`docs/estado-conocido.md`.
+(`robots.txt` y la cabecera `X-Robots-Tag: noindex`). Desde la Tarea 7 del
+bloque 3b el sitio sí tiene dominio propio (`lidialuque.com`) — el cierre a
+buscadores no depende de eso, es deuda conocida aparte, no un descuido, y
+queda anotada también en `docs/estado-conocido.md`.
+
+## Despliegue del bloque 4f sin fusionar (2026-09-05)
+
+Versión `f8dc8786-04be-4031-8021-ad75552a032f`. **Es el primer despliegue que no
+sale de `main`**: el árbol viene de `git archive visor-movil-4f`, la rama del
+bloque 4f, para que Ángel pueda probar el visor móvil de dos ejes en su teléfono
+antes de decidir si el bloque entra en `main`.
+
+Conviene ser explícito sobre por qué esto no contradice la sección de arriba
+sobre Workers Builds. Lo que se desconectó el 2026-08-24 no fue «desplegar una
+rama», fue **desplegar sin que nadie lo decidiera**: cualquier empujón a GitHub
+publicaba, y así llegó al escaparate una rama sin fusionar y sin revisar. Aquí
+la rama trae sus seis tareas revisadas una a una, una revisión final de conjunto
+y 407 comprobaciones en verde, y el despliegue lo pidió el estudio en el momento
+y para un fin concreto. La condición que aquel día se escribió —«que ninguna
+rama a medias llegue al escaparate por el simple hecho de empujarla»— se sigue
+cumpliendo: empujar no despliega nada.
+
+Lo que sí deja esta decisión es una **divergencia temporal**: producción va por
+delante de `main`. Se cierra fusionando el bloque cuando la prueba en el móvil
+lo apruebe. Mientras dure, `main` no es lo que sirve `lidialuque.com`.
+
+Comprobado tras desplegar, contra el dominio real:
+
+- 136 archivos en el árbol exportado; ni `.superpowers/`, ni `.worktrees/`, ni
+  `.wrangler/` (`wrangler` subió 11 archivos, 123 ya estaban).
+- `js/movil-visor.js`, `js/movil-hud.js`, `js/movil-recorrido.js` y
+  `js/visor-foco.js` responden `200`.
+- El `index.html` publicado carga `js/movil-recorrido.js`, que es la etiqueta
+  que faltaba y que la suite no puede vigilar.
+- El sitio **sigue cerrado a buscadores**: `robots.txt` con `Disallow: /` y la
+  cabecera `x-robots-tag: noindex` en la respuesta.
+
+## La divergencia, cerrada (2026-09-09)
+
+La sección de arriba dejaba una divergencia abierta y hay que decir que ya no
+existe, porque una frase que el repositorio contradice es el fallo característico
+de este proyecto.
+
+Entre medias hubo un segundo despliegue desde la misma rama, versión
+`c02cde37-9019-430f-b47c-d5e2cc69f70b`, 140 archivos: la animación de entrada de
+la pieza al deslizar, que fue lo único que la prueba en el teléfono de Ángel
+encontró mal. Con ella la suite quedó en 422 comprobaciones.
+
+El bloque 4f está **fusionado en `main`**. `main` vuelve a contener todo lo que
+sirve `lidialuque.com`; el despliegue que hay en el escaparate salió del commit
+`4da242b`, que ahora está dentro de la historia de `main`. No hace falta volver
+a desplegar para cerrar la divergencia: el código servido y el fusionado son el
+mismo.
+
+Lo que sigue igual: **empujar a GitHub no despliega nada**. El despliegue es a
+mano y lo decide el estudio en el momento.

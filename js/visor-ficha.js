@@ -1,15 +1,21 @@
 window.VisorFicha = (function () {
-  var elFicha, elInfo, elCat, elTitulo, elDatos;
+  var elFicha, elInfo, elCerrar, elCat, elTitulo, elDatos, elEnlace;
 
   // alAlternar: el manejador de js/visor.js que decide el estado y llama
   // de vuelta a aplicar(). Este módulo no conoce VisorEstado.
   function init(alAlternar) {
     elFicha  = document.getElementById('visorFicha');
     elInfo   = document.getElementById('visorInfo');
+    elCerrar = document.getElementById('fichaCerrar');
     elCat    = document.getElementById('fichaCat');
     elTitulo = document.getElementById('fichaTitulo');
     elDatos  = document.getElementById('fichaDatos');
+    elEnlace = document.getElementById('fichaEnlace');
     elInfo.addEventListener('click', alAlternar);
+    // El mismo manejador que el botón «Ficha»: alAlternar decide el estado
+    // mirándolo, así que desde el panel abierto lo cierra. Dos botones para
+    // una acción, y una sola función que la hace.
+    elCerrar.addEventListener('click', alAlternar);
   }
 
   // Rellena el contenido del panel para el proyecto abierto. Se llama al
@@ -18,12 +24,15 @@ window.VisorFicha = (function () {
     elCat.textContent = proyecto.categoria.replace('-', ' ');
     elTitulo.textContent = proyecto.titulo;
     elDatos.innerHTML = '';
+    /* Por `FichaDato.de` y no en crudo: los cuatro videoclips no traen
+       `cliente`, y un `dd` vacío se lee como «la web está rota» en vez de
+       como «este dato no lo tenemos». La misma función la usa la ficha móvil,
+       que es esta misma ficha en otra pantalla. */
     var filas = [
-      ['Cliente', proyecto.ficha.cliente],
-      ['Año',     proyecto.ficha.anio],
-      ['Cámara',  proyecto.ficha.camara],
-      ['Óptica',  proyecto.ficha.optica],
-      ['Piezas',  total]
+      ['Cliente', FichaDato.de(proyecto.ficha.cliente)],
+      ['Año',     FichaDato.de(proyecto.ficha.anio)],
+      ['Papel',   FichaDato.de(proyecto.ficha.papel)],
+      ['Piezas',  FichaDato.de(total)]
     ];
     filas.forEach(function (f) {
       var fila = document.createElement('div');
@@ -32,6 +41,13 @@ window.VisorFicha = (function () {
       fila.appendChild(dt); fila.appendChild(dd);
       elDatos.appendChild(fila);
     });
+    /* Se vacía antes de pintar: `pintar` se llama en cada parada y el
+       contenedor es fijo, así que sin esto pasar de un videoclip a otro
+       dejaría los dos botones puestos, con el de arriba apuntando al
+       vídeo anterior. */
+    elEnlace.innerHTML = '';
+    var boton = Plataforma.boton(proyecto.ficha.enlace);
+    if (boton) elEnlace.appendChild(boton);
   }
 
   // Aplica el estado (abierta/recogida) a la clase que mueve el panel y la

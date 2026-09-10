@@ -50,9 +50,42 @@
     asegurarSalida().appendChild(linea);
   }
 
+  /* NO QUITES ESTE `replacer` PARA «SIMPLIFICAR». Es lo único que impide que
+     `igual` dé por buenas comparaciones que no lo son.
+
+     `JSON.stringify` no sabe escribir los números que no son finitos y los
+     convierte en `null`:
+
+         JSON.stringify(NaN)       -> "null"
+         JSON.stringify(Infinity)  -> "null"
+         JSON.stringify(-Infinity) -> "null"
+         JSON.stringify(null)      -> "null"
+
+     Con un `stringify` a secas, `igual(NaN, null)` PASA. Y eso pone en verde
+     justo la prueba que más importa: la que comprueba que una función devuelve
+     `null` cuando no hay resultado. Si el código empezara a devolver `NaN` por
+     una cuenta rota, la prueba seguiría en verde y nadie se enteraría — un NaN
+     no da error, sólo resultados equivocados (`Math.max(0, NaN)` es NaN, y
+     `splice(NaN, …)` lo trata como 0, así que reordena en silencio).
+
+     No es hipotético: una prueba de `Lista.indiceValido` escrita con `igual`
+     pasaba con la función devolviendo NaN, y sólo se descubrió al mutarla a
+     propósito para ver si la prueba caía. No cayó.
+
+     El `replacer` se aplica también dentro de arrays y objetos, que es donde
+     nadie miraría: `[NaN]` y `[null]` colisionaban igual.
+
+     Queda un hueco teórico: si alguien comparase contra la cadena literal
+     '<NaN>'. Nadie lo hace, y cerrarlo pediría un comparador propio en vez de
+     JSON. Hay pruebas en pruebas-arnes.js que caen si esto se revierte. */
+  function representar(clave, valor) {
+    if (typeof valor === 'number' && !isFinite(valor)) return '<' + String(valor) + '>';
+    return valor;
+  }
+
   function igual(actual, esperado, mensaje) {
-    var a = JSON.stringify(actual);
-    var e = JSON.stringify(esperado);
+    var a = JSON.stringify(actual, representar);
+    var e = JSON.stringify(esperado, representar);
     if (a !== e) {
       throw new Error((mensaje ? mensaje + ': ' : '') + 'esperaba ' + e + ' y recibió ' + a);
     }

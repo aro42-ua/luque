@@ -170,6 +170,41 @@ window.Galeria = (function () {
     window.GaleriaPaneo.medir();
   }
 
+  /* Volver a medir al cruzar el umbral de ancho, DESPUÉS de que `es-movil` se
+     haya quitado. `medir()` YA corre en cada `resize` de la ventana (el
+     `addEventListener('resize', medir)` del cuerpo de `GaleriaPaneo.init`,
+     `js/galeria-paneo.js`, sobre la línea 52) — no es la falta de llamadas
+     el problema.
+     Medido con Chrome real instrumentando los dos eventos: el `resize`
+     nativo se dispara ANTES que el `change` de `matchMedia` que quita
+     `es-movil`. Al volver de móvil a escritorio, ese `resize` llega con
+     `es-movil` todavía puesto, `.gallery` todavía en `display:none` y
+     `#spatialStage` a 0×0, así que ese `medir()` deja `minX = minY = 0` y el
+     lienzo en `translate3d(0,0,0)` — comprobado neutralizando esta función:
+     sin ella el paneo se queda clavado ahí. `remedir()` mide otra vez
+     DESPUÉS de que `Movil.init` ya haya quitado `es-movil`, deshaciendo esa
+     medida equivocada.
+
+     Sobre el `requestAnimationFrame`, y con la medición delante: NO se ha
+     encontrado ningún caso en que haga falta. Sustituirlo por una llamada
+     síncrona a `medir()` deja el mismo `transform` correcto en el recorrido
+     real (medido: `getBoundingClientRect` fuerza su propio recálculo de
+     layout, así que aquí no hay nada que esperar). Se conserva sólo por
+     cautela, para el caso en que alguien meta dentro algo que sí dependa de
+     que el navegador haya pintado — no porque hoy sea necesario.
+
+     Lo que sí está fijado es que esta línea PROGRAMA el fotograma en vez de
+     medir en el acto: lo cubre la tercera prueba de
+     `tests/pruebas-galeria.js`, que muere si se cambia por la llamada
+     síncrona («esperaba 1 y recibió 0», verificado mutando). Antes de esa
+     prueba esta rama no la cubría nadie: las otras dos se paran en la guarda
+     de abajo y esperan cero fotogramas, y un espía que cuenta cero sigue
+     contando cero aunque la línea espiada desaparezca. */
+  function remedir() {
+    if (!stage || !canvas) return;
+    requestAnimationFrame(function () { window.GaleriaPaneo.medir(); });
+  }
+
   function init() {
     construir();
 
@@ -225,6 +260,7 @@ window.Galeria = (function () {
     descongelar: descongelar,
     centrarEn: centrarEn,
     activar: activar,
+    remedir: remedir,
     mostrarError: mostrarError
   };
 })();

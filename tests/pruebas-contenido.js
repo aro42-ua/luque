@@ -2,6 +2,7 @@ describe('ReglasContenido.validar', function () {
   prueba('recibe las categorías en vez de buscarlas', function () {
     var datos = { proyectos: [ { id: 'x', titulo: 'X', categoria: 'inventada',
                                  tipo: 'fotos', portada: 'p.jpg',
+                                 ficha: { anio: 2026, papel: 'Fotografía' },
                                  piezas: [{ url: 'a.jpg' }] } ] };
     cierto(ReglasContenido.validar(datos, ['editorial']).length > 0);
     igual(ReglasContenido.validar(datos, ['inventada']), []);
@@ -14,7 +15,7 @@ describe('Contenido.validar', function () {
       version: 1,
       proyectos: [
         { id: 'bruma', titulo: 'Bruma', categoria: 'editorial', tipo: 'fotos',
-          portada: 'portada.jpg', ficha: {},
+          portada: 'portada.jpg', ficha: { anio: 2026, papel: 'Fotografía' },
           piezas: [{ url: 'a.jpg', miniatura: 'a-min.jpg' }] }
       ]
     };

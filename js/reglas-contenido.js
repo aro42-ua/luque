@@ -39,6 +39,22 @@
       vistos[p.id] = true;
       if (cats.indexOf(p.id) !== -1) problemas.push('el id choca con una categoría: ' + p.id);
       if (cats.indexOf(p.categoria) === -1) problemas.push(donde + ': categoría desconocida: ' + p.categoria);
+      /* La ficha es cliente / anio / papel / enlace desde que entro el
+         contenido real (spec 2026-09-10). `camara` y `optica` salieron porque
+         no aparecian en ninguno de los ocho proyectos de Lidia; `papel` entro
+         porque aparece en los ocho.
+
+         Se exigen `anio` y `papel` y NO `cliente` ni `enlace`, y la asimetria
+         es deliberada: los dos primeros los tiene todo trabajo, mientras que
+         Conejita Playboy no tiene cliente y los cuatro editoriales no tienen
+         enlace. Exigirlos convertiria contenido legitimo en un 422. */
+      var f = p.ficha;
+      if (!f || typeof f !== 'object') {
+        problemas.push(donde + ': sin ficha');
+      } else {
+        if (!f.anio)  problemas.push(donde + ': la ficha no trae año');
+        if (!f.papel) problemas.push(donde + ': la ficha no trae papel');
+      }
       if (p.tipo === 'fotos') {
         if (!p.piezas || !p.piezas.length) problemas.push(donde + ': sin piezas');
         /* La portada es su propia imagen, más pequeña: la galería enseña doce a

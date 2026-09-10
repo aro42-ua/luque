@@ -16,9 +16,38 @@ describe('Composicion.disponer', function () {
     igual(pocos[2], muchos[2]);
   });
 
-  prueba('el modo amplio da un lienzo de 240vw y el compacto de 100vw', function () {
-    igual(Composicion.tamano(12, 'amplio').ancho, 240);
-    igual(Composicion.tamano(12, 'compacto').ancho, 100);
+  /* 136 y 116, no 120 y 100: la rejilla sigue midiendo 120 y 100, y lo que se
+     suma son los 8vw de margen por cada lado. Si alguien toca MARGEN tendrá
+     que tocar estos dos números, y eso es lo que se quiere —que el valor esté
+     fijado en algún sitio y no se pueda mover sin querer—. */
+  prueba('el lienzo es la rejilla más el margen: 136vw el amplio y 116 el compacto', function () {
+    igual(Composicion.tamano(12, 'amplio').ancho, 136);
+    igual(Composicion.tamano(12, 'compacto').ancho, 116);
+  });
+
+  /* El compacto es el único que puede quedarse por debajo del ancho de la
+     pantalla, y ahí el paneo no lo centra: lo pega a la izquierda y deja media
+     pantalla vacía (`minX = Math.min(0, stageW - canvasW)` en
+     galeria-paneo.js). No es una preferencia estética: es la razón por la que
+     ese modo tiene 4 columnas y no 2. Si alguien vuelve a bajarlas, que falle
+     aquí y no en la pantalla de alguien. */
+  prueba('el lienzo compacto nunca es más estrecho que la pantalla', function () {
+    for (var n = 1; n <= 40; n++) {
+      cierto(Composicion.tamano(n, 'compacto').ancho >= 100,
+             'con ' + n + ' proyectos el lienzo compacto se queda en '
+             + Composicion.tamano(n, 'compacto').ancho + 'vw');
+    }
+  });
+
+  /* Lo que se pidió: las fotos a la mitad. Se comprueba sobre la caja más
+     grande del ciclo, que es la que no cabía entera bajo la barra. */
+  prueba('la caja más grande del amplio cabe holgada en una pantalla', function () {
+    var mayor = 0;
+    Composicion.disponer(12, 'amplio').forEach(function (r) {
+      if (r.w > mayor) mayor = r.w;
+    });
+    igual(mayor, 18.6);
+    cierto(mayor * 1.25 < 25, 'de alto tiene que quedarse muy por debajo de un alto de pantalla');
   });
 
   prueba('el lienzo crece con el número de proyectos', function () {
@@ -40,6 +69,32 @@ describe('Composicion.disponer', function () {
           cierto(r.y >= 0);
           cierto(r.x + r.w <= t.ancho + 0.001);
           cierto(r.y + r.w * 1.25 <= t.alto + 0.001);
+        });
+      }
+    });
+  });
+
+  /* La razón de ser del margen, y por qué se comprueba como propiedad y no
+     mirando el número: una foto PEGADA al borde del lienzo sólo está entera en
+     una única posición del paneo, así que hay que clavar el ratón en el píxel
+     justo. Con aire por los cuatro lados tiene un rango de posiciones válidas.
+
+     Se exige 5 y no 8 a propósito: 5 es un suelo, no el valor. Así, afinar
+     MARGEN de 8 a 10 —que es plausible si alguien vuelve a medir la holgura—
+     no rompe esta prueba, pero quitarlo de `disponer` o de `tamano` sí. El
+     valor exacto lo fija la prueba de los 136vw, más arriba. */
+  prueba('ninguna foto toca el borde: hay aire por los cuatro lados del lienzo', function () {
+    ['amplio', 'compacto'].forEach(function (modo) {
+      for (var n = 1; n <= 40; n++) {
+        var t = Composicion.tamano(n, modo);
+        Composicion.disponer(n, modo).forEach(function (r, i) {
+          var donde = modo + ', ' + n + ' proyectos, caja ' + i + ': ';
+          cierto(r.x >= 5, donde + 'pegada a la izquierda, x=' + r.x);
+          cierto(r.y >= 5, donde + 'pegada arriba, y=' + r.y);
+          cierto(t.ancho - (r.x + r.w) >= 5,
+                 donde + 'pegada a la derecha, sobran ' + (t.ancho - (r.x + r.w)));
+          cierto(t.alto - (r.y + r.w * 1.25) >= 5,
+                 donde + 'pegada abajo, sobran ' + (t.alto - (r.y + r.w * 1.25)));
         });
       }
     });

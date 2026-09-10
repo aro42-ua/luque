@@ -1,327 +1,376 @@
 {
-  "version": 1,
+  "version": 2,
   "proyectos": [
     {
-      "id": "niebla",
-      "titulo": "Niebla",
-      "categoria": "foto-stills",
-      "ficha": {
-        "cliente": "Personal",
-        "anio": 2025,
-        "camara": "Alexa Mini",
-        "optica": "Zeiss Super Speed"
-      },
-      "tipo": "fotos",
-      "portada": "https://picsum.photos/seed/luque11/1200/1500",
-      "piezas": [
-        {
-          "url": "https://picsum.photos/seed/luque11/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque11/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque12/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque12/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque13/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque13/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque14/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque14/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque15/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque15/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque16/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque16/200/250"
-        }
-      ]
-    },
-    {
-      "id": "arena",
-      "titulo": "Arena",
-      "categoria": "foto-stills",
-      "ficha": {
-        "cliente": "Personal",
-        "anio": 2024,
-        "camara": "Alexa Mini",
-        "optica": "Cooke S4"
-      },
-      "tipo": "fotos",
-      "portada": "https://picsum.photos/seed/luque21/1200/1500",
-      "piezas": [
-        {
-          "url": "https://picsum.photos/seed/luque21/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque21/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque22/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque22/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque23/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque23/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque24/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque24/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque25/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque25/200/250"
-        }
-      ]
-    },
-    {
-      "id": "vidrio",
-      "titulo": "Vidrio",
-      "categoria": "foto-stills",
-      "ficha": {
-        "cliente": "Personal",
-        "anio": 2024,
-        "camara": "Sony FX3",
-        "optica": "Zeiss Super Speed"
-      },
-      "tipo": "fotos",
-      "portada": "https://picsum.photos/seed/luque31/1200/1500",
-      "piezas": [
-        {
-          "url": "https://picsum.photos/seed/luque31/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque31/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque32/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque32/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque33/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque33/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque34/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque34/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque35/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque35/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque36/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque36/200/250"
-        },
-        {
-          "url": "https://picsum.photos/seed/luque37/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque37/200/250"
-        }
-      ]
-    },
-    {
-      "id": "bruma",
-      "titulo": "Bruma",
+      "id": "la-boquerona",
+      "titulo": "La Boquerona",
       "categoria": "editorial",
-      "ficha": {
-        "cliente": "Vogue ES",
-        "anio": 2025,
-        "camara": "Alexa Mini",
-        "optica": "Zeiss Super Speed"
-      },
       "tipo": "fotos",
-      "portada": "https://picsum.photos/seed/luque41/1200/1500",
+      "ficha": {
+        "cliente": "Harper's Bazaar",
+        "anio": 2026,
+        "papel": "DoP"
+      },
+      "portada": "/img/editorial-la-boquerona-esta-portada-1500.jpg",
       "piezas": [
         {
-          "url": "https://picsum.photos/seed/luque41/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque41/200/250"
+          "url": "/img/editorial-la-boquerona-esta-portada-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-esta-portada-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque42/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque42/200/250"
+          "url": "/img/editorial-la-boquerona-hb-ecuador-5-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-hb-ecuador-5-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque43/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque43/200/250"
+          "url": "/img/editorial-la-boquerona-img_5635-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-img_5635-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque44/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque44/200/250"
+          "url": "/img/editorial-la-boquerona-img_5636-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-img_5636-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque45/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque45/200/250"
+          "url": "/img/editorial-la-boquerona-img_5637-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-img_5637-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque46/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque46/200/250"
+          "url": "/img/editorial-la-boquerona-img_5643-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-img_5643-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque47/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque47/200/250"
+          "url": "/img/editorial-la-boquerona-img_5644-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-img_5644-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque48/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque48/200/250"
+          "url": "/img/editorial-la-boquerona-img_5648-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-img_5648-250.jpg"
+        },
+        {
+          "url": "/img/editorial-la-boquerona-img_5650-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-img_5650-250.jpg"
+        },
+        {
+          "url": "/img/editorial-la-boquerona-img_5654-3000.jpg",
+          "miniatura": "/img/editorial-la-boquerona-img_5654-250.jpg"
         }
       ]
     },
     {
-      "id": "salitre",
-      "titulo": "Salitre",
+      "id": "la-rosa-roja-de-zamarrilla",
+      "titulo": "La Rosa Roja de Zamarrilla",
       "categoria": "editorial",
-      "ficha": {
-        "cliente": "Neo2",
-        "anio": 2025,
-        "camara": "Sony FX3",
-        "optica": "Sigma Art"
-      },
       "tipo": "fotos",
-      "portada": "https://picsum.photos/seed/luque51/1200/1500",
+      "ficha": {
+        "cliente": "Overdue Magazine, Issue 08 «Myth»",
+        "anio": 2026,
+        "papel": "DoP"
+      },
+      "portada": "/img/editorial-la-rosa-roja-de-zamarrilla-esta-portada-1500.jpg",
       "piezas": [
         {
-          "url": "https://picsum.photos/seed/luque51/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque51/200/250"
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-esta-portada-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-esta-portada-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque52/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque52/200/250"
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_054-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_054-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque53/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque53/200/250"
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_057-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_057-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque54/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque54/200/250"
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_062-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_062-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque55/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque55/200/250"
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_064-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_064-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque56/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque56/200/250"
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_070-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_070-250.jpg"
+        },
+        {
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_074-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_074-250.jpg"
+        },
+        {
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_075-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_075-250.jpg"
+        },
+        {
+          "url": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_080-3000.jpg",
+          "miniatura": "/img/editorial-la-rosa-roja-de-zamarrilla-el_patio_080-250.jpg"
         }
       ]
     },
     {
-      "id": "oleaje",
-      "titulo": "Oleaje",
+      "id": "the-in-between",
+      "titulo": "The In-Between",
       "categoria": "editorial",
-      "ficha": {
-        "cliente": "Metal",
-        "anio": 2023,
-        "camara": "Alexa Mini",
-        "optica": "Cooke S4"
-      },
       "tipo": "fotos",
-      "portada": "https://picsum.photos/seed/luque61/1200/1500",
+      "ficha": {
+        "cliente": "New Wave Magazine",
+        "anio": 2025,
+        "papel": "Gaffer"
+      },
+      "portada": "/img/editorial-the-in-between-estaportada-1500.jpg",
       "piezas": [
         {
-          "url": "https://picsum.photos/seed/luque61/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque61/200/250"
+          "url": "/img/editorial-the-in-between-estaportada-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-estaportada-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque62/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque62/200/250"
+          "url": "/img/editorial-the-in-between-img_7458-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7458-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque63/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque63/200/250"
+          "url": "/img/editorial-the-in-between-img_7461-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7461-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque64/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque64/200/250"
+          "url": "/img/editorial-the-in-between-img_7466-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7466-250.jpg"
         },
         {
-          "url": "https://picsum.photos/seed/luque65/2400/3000",
-          "miniatura": "https://picsum.photos/seed/luque65/200/250"
+          "url": "/img/editorial-the-in-between-img_7470-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7470-250.jpg"
+        },
+        {
+          "url": "/img/editorial-the-in-between-img_7472-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7472-250.jpg"
+        },
+        {
+          "url": "/img/editorial-the-in-between-img_7475-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7475-250.jpg"
+        },
+        {
+          "url": "/img/editorial-the-in-between-img_7478-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7478-250.jpg"
+        },
+        {
+          "url": "/img/editorial-the-in-between-img_7480-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7480-250.jpg"
+        },
+        {
+          "url": "/img/editorial-the-in-between-img_7483-3000.jpg",
+          "miniatura": "/img/editorial-the-in-between-img_7483-250.jpg"
         }
       ]
     },
     {
-      "id": "reflejo",
-      "titulo": "Reflejo",
-      "categoria": "videoclip",
+      "id": "monstruacion",
+      "titulo": "Monstruación",
+      "categoria": "editorial",
+      "tipo": "fotos",
       "ficha": {
-        "cliente": "Amaia",
+        "cliente": "Fashion Film",
         "anio": 2025,
-        "camara": "Alexa Mini",
-        "optica": "Zeiss Super Speed"
+        "papel": "1AC"
       },
-      "tipo": "video",
-      "poster": "https://picsum.photos/seed/luque7/1600/900",
-      "vimeo": null
+      "portada": "/img/editorial-monstruacion-esta-portada-1500.jpg",
+      "piezas": [
+        {
+          "url": "/img/editorial-monstruacion-esta-portada-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-esta-portada-250.jpg"
+        },
+        {
+          "url": "/img/editorial-monstruacion-image00008-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-image00008-250.jpg"
+        },
+        {
+          "url": "/img/editorial-monstruacion-image00010-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-image00010-250.jpg"
+        },
+        {
+          "url": "/img/editorial-monstruacion-image00012-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-image00012-250.jpg"
+        },
+        {
+          "url": "/img/editorial-monstruacion-image00015-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-image00015-250.jpg"
+        },
+        {
+          "url": "/img/editorial-monstruacion-image00016-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-image00016-250.jpg"
+        },
+        {
+          "url": "/img/editorial-monstruacion-image00018-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-image00018-250.jpg"
+        },
+        {
+          "url": "/img/editorial-monstruacion-image00019-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-image00019-250.jpg"
+        },
+        {
+          "url": "/img/editorial-monstruacion-image00021-3000.jpg",
+          "miniatura": "/img/editorial-monstruacion-image00021-250.jpg"
+        }
+      ]
     },
     {
-      "id": "estatica",
-      "titulo": "Estática",
+      "id": "nuncaestuvetan-carmona",
+      "titulo": "Nuncaestuvetan · Carmona",
       "categoria": "videoclip",
+      "tipo": "fotos",
       "ficha": {
-        "cliente": "Rusowsky",
-        "anio": 2024,
-        "camara": "Sony FX3",
-        "optica": "Sigma Art"
+        "anio": 2026,
+        "papel": "Grabación y edición",
+        "enlace": "https://youtu.be/IcFvvXAZMqs"
       },
-      "tipo": "video",
-      "poster": "https://picsum.photos/seed/luque8/1600/900",
-      "vimeo": null
+      "portada": "/img/videoclip-nuncaestuvetan-carmona-esta-portada-1500.jpg",
+      "piezas": [
+        {
+          "url": "/img/videoclip-nuncaestuvetan-carmona-esta-portada-3000.jpg",
+          "miniatura": "/img/videoclip-nuncaestuvetan-carmona-esta-portada-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-nuncaestuvetan-carmona-img_3100-3000.jpg",
+          "miniatura": "/img/videoclip-nuncaestuvetan-carmona-img_3100-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-nuncaestuvetan-carmona-img_3101-3000.jpg",
+          "miniatura": "/img/videoclip-nuncaestuvetan-carmona-img_3101-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-nuncaestuvetan-carmona-img_3102-3000.jpg",
+          "miniatura": "/img/videoclip-nuncaestuvetan-carmona-img_3102-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-nuncaestuvetan-carmona-img_3106-3000.jpg",
+          "miniatura": "/img/videoclip-nuncaestuvetan-carmona-img_3106-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-nuncaestuvetan-carmona-img_3107-3000.jpg",
+          "miniatura": "/img/videoclip-nuncaestuvetan-carmona-img_3107-250.jpg"
+        }
+      ]
     },
     {
-      "id": "humo",
-      "titulo": "Humo",
+      "id": "tukatu-noche-absoluta",
+      "titulo": "TUKATU · Noche absoluta ft. Alandes",
       "categoria": "videoclip",
+      "tipo": "fotos",
       "ficha": {
-        "cliente": "Ralphie",
-        "anio": 2024,
-        "camara": "Alexa Mini",
-        "optica": "Cooke S4"
-      },
-      "tipo": "video",
-      "poster": "https://picsum.photos/seed/luque9/1600/900",
-      "vimeo": null
-    },
-    {
-      "id": "ceniza",
-      "titulo": "Ceniza",
-      "categoria": "cortometraje",
-      "ficha": {
-        "cliente": "ECAM",
         "anio": 2025,
-        "camara": "Alexa Mini",
-        "optica": "Zeiss Super Speed"
+        "papel": "Gaffer",
+        "enlace": "https://youtu.be/F32_IfzN84g"
       },
-      "tipo": "video",
-      "poster": "https://picsum.photos/seed/luque10/1600/900",
-      "vimeo": null
+      "portada": "/img/videoclip-tukatu-esta-portada-1500.jpg",
+      "piezas": [
+        {
+          "url": "/img/videoclip-tukatu-esta-portada-3000.jpg",
+          "miniatura": "/img/videoclip-tukatu-esta-portada-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-175518-3000.jpg",
+          "miniatura": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-175518-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-175602-3000.jpg",
+          "miniatura": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-175602-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-180117-3000.jpg",
+          "miniatura": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-180117-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-180905-3000.jpg",
+          "miniatura": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-180905-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-180929-3000.jpg",
+          "miniatura": "/img/videoclip-tukatu-captura-de-pantalla-2025-06-16-180929-250.jpg"
+        }
+      ]
     },
     {
-      "id": "raiz",
-      "titulo": "Raíz",
-      "categoria": "cortometraje",
+      "id": "momento-magico",
+      "titulo": "Momento mágico · TG&SOA",
+      "categoria": "videoclip",
+      "tipo": "fotos",
       "ficha": {
-        "cliente": "Autofinanciado",
-        "anio": 2023,
-        "camara": "Sony FX3",
-        "optica": "Sigma Art"
+        "anio": 2026,
+        "papel": "Grabación y edición del lyrics video",
+        "enlace": "https://youtu.be/uOMDWnIyQr0"
       },
-      "tipo": "video",
-      "poster": "https://picsum.photos/seed/luque11/1600/900",
-      "vimeo": null
+      "portada": "/img/videoclip-momento-magico-este-portada-1500.jpg",
+      "piezas": [
+        {
+          "url": "/img/videoclip-momento-magico-este-portada-3000.jpg",
+          "miniatura": "/img/videoclip-momento-magico-este-portada-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-momento-magico-img_6915-3000.jpg",
+          "miniatura": "/img/videoclip-momento-magico-img_6915-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-momento-magico-img_6918-3000.jpg",
+          "miniatura": "/img/videoclip-momento-magico-img_6918-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-momento-magico-img_6920-3000.jpg",
+          "miniatura": "/img/videoclip-momento-magico-img_6920-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-momento-magico-img_6923-3000.jpg",
+          "miniatura": "/img/videoclip-momento-magico-img_6923-250.jpg"
+        }
+      ]
     },
     {
-      "id": "litoral",
-      "titulo": "Litoral",
-      "categoria": "cortometraje",
+      "id": "conejita-playboy",
+      "titulo": "Conejita Playboy",
+      "categoria": "videoclip",
+      "tipo": "fotos",
       "ficha": {
-        "cliente": "Canal Sur",
-        "anio": 2022,
-        "camara": "Alexa Mini",
-        "optica": "Cooke S4"
+        "anio": 2026,
+        "papel": "Grabación y edición"
       },
-      "tipo": "video",
-      "poster": "https://picsum.photos/seed/luque12/1600/900",
-      "vimeo": null
+      "portada": "/img/videoclip-conejita-playboy-este-portada-1500.jpg",
+      "piezas": [
+        {
+          "url": "/img/videoclip-conejita-playboy-este-portada-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-este-portada-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.10_1.1.10-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.10_1.1.10-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.11_1.1.11-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.11_1.1.11-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.12_1.1.12-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.12_1.1.12-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.13_1.1.13-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.13_1.1.13-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.14_1.1.14-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.14_1.1.14-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.3_1.1.3-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.3_1.1.3-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.4_1.1.4-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.4_1.1.4-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.6_1.1.6-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.6_1.1.6-250.jpg"
+        },
+        {
+          "url": "/img/videoclip-conejita-playboy-1.1.7_1.1.7-3000.jpg",
+          "miniatura": "/img/videoclip-conejita-playboy-1.1.7_1.1.7-250.jpg"
+        }
+      ]
     }
   ]
 }

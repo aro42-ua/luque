@@ -17,20 +17,122 @@
 <div id="salida"></div>
 
 <script src="arnes.js"></script>
+<script src="arnes-dom.js"></script>
 <script src="../js/reglas-contenido.js"></script>
 <script src="../js/datos.js"></script>
 <script src="../js/contenido.js"></script>
 <script src="../js/router.js"></script>
 <script src="../js/composicion.js"></script>
 <script src="../js/visor-estado.js"></script>
+<!-- visor-carga.js no toca el DOM al cargarse: sólo define window.VisorCarga.
+     Se carga por pintar(), que sí construye la <img> de la escena; el arnés de
+     DOM le da su contenedor. Ver pruebas-visor-carga.js. -->
+<script src="../js/visor-carga.js"></script>
+<!-- Sólo por remedir(): su guarda no toca GaleriaPaneo, GaleriaTeclado ni
+     Composicion.disponer, así que no hace falta cargar el resto del
+     escenario espacial para probarla. Ver pruebas-galeria.js. -->
+<script src="../js/galeria.js"></script>
+<script src="../js/movil-recorrido.js"></script>
+<script src="../js/movil-gestos.js"></script>
+<script src="../js/movil-arrastre.js"></script>
+<script src="../js/brillo.js"></script>
+<script src="../js/movil.js"></script>
+<script src="../js/movil-hoja.js"></script>
+<!-- Va ANTES de movil-visor.js, que desde la ronda de arreglos de la revisión
+     final del bloque 4f usa `window.VisorFoco.atrapar` para el envolvente de
+     foco del diálogo móvil, con el mismo orden relativo que ya usa
+     index.html. Sin esta línea `window.VisorFoco` es undefined y el Tab
+     dentro del visor abierto lanza un TypeError. Ver
+     pruebas-movil-visor.js, sección «el foco del diálogo». -->
+<script src="../js/visor-foco.js"></script>
+<!-- Va ANTES de movil-visor.js, que lo usa en `pintar()` para construir la
+     ficha técnica. movil-ficha.js no toca el DOM al cargarse: sólo define
+     window.MovilFicha; sus pruebas van en pruebas-movil-ficha.js. -->
+<script src="../js/movil-ficha.js"></script>
+<!-- Va ANTES de movil-visor.js, que lo usa en `pintar()` para animar la
+     entrada de la pieza nueva. movil-animacion.js no toca el DOM al cargarse:
+     sólo define window.MovilAnimacion; sus pruebas van en
+     pruebas-movil-animacion.js. -->
+<script src="../js/movil-animacion.js"></script>
+<!-- movil-visor.js no toca el DOM al cargarse: sólo define window.MovilVisor.
+     `ordenDe` es pura y se prueba sola; lo que sí construye nodos —`aplicar`,
+     que pinta la escena— recibe su contenedor del arnés de DOM.
+     Ver pruebas-movil-visor.js. -->
+<script src="../js/movil-visor.js"></script>
+<!-- movil-hud.js no toca el DOM al cargarse: sólo define window.MovilHud.
+     `contador` y `OCULTAR_TRAS` se prueban solos; `pintar` e `init`, que sí
+     construyen nodos, reciben sus elementos del arnés de DOM.
+     Ver pruebas-movil-hud.js. -->
+<script src="../js/movil-hud.js"></script>
+<script src="../js/movil-puerta.js"></script>
 <script src="../js/hero.js"></script>
+<script src="../js/plataforma.js"></script>
+<!-- Lo llaman visor-ficha.js y movil-ficha.js al pintar las filas de la
+     ficha. Aquí el orden relativo NO importa y en index.html SÍ: ninguno
+     de los tres toca a los otros al cargarse -sólo definen su window.*-,
+     así que basta con que los tres estén antes de que alguien pinte.
+     Que index.html lo cargue antes que sus dos consumidores lo comprueba
+     pruebas-ficha-dato.js sobre la página real, no sobre este arnés. -->
+<script src="../js/ficha-dato.js"></script>
+<!-- Va DESPUÉS de plataforma.js, que `pintar` usa para construir el botón del
+     vídeo, con el mismo orden relativo que ya usa index.html. visor-ficha.js
+     no toca el DOM al cargarse: sólo define window.VisorFicha; `init` y
+     `pintar`, que sí lo tocan, reciben su marcado del arnés de DOM.
+     Ver pruebas-visor-ficha.js. -->
+<script src="../js/visor-ficha.js"></script>
+<script src="../panel/js/identificador.js"></script>
+<script src="../panel/js/orden.js"></script>
+<!-- lista.js no toca el DOM al cargarse: sólo define window.Lista. Se carga
+     por sus tres funciones sin DOM (indiceValido, calcularHasta,
+     dentroDeLaCaja) y también por `pintar`, que sí construye nodos: el arnés
+     de DOM le da un <ol> propio, así que no hace falta el panel entero. -->
+<script src="../panel/js/lista.js"></script>
 <script src="pruebas-arnes.js"></script>
+<script src="pruebas-arnes-dom.js"></script>
 <script src="pruebas-datos.js"></script>
 <script src="pruebas-contenido.js"></script>
+<script src="pruebas-plataforma.js"></script>
+<script src="pruebas-ficha-dato.js"></script>
 <script src="pruebas-router.js"></script>
+<script src="pruebas-router-ir.js"></script>
 <script src="pruebas-composicion.js"></script>
 <script src="pruebas-visor-estado.js"></script>
+<script src="pruebas-visor-carga.js"></script>
+<script src="pruebas-visor-ficha.js"></script>
+<script src="pruebas-galeria.js"></script>
+<script src="pruebas-movil-recorrido.js"></script>
+<script src="pruebas-movil-gestos.js"></script>
+<script src="pruebas-movil-arrastre.js"></script>
+<script src="pruebas-brillo.js"></script>
+<script src="pruebas-movil.js"></script>
+<script src="pruebas-movil-hoja-rejilla.js"></script>
+<script src="pruebas-movil-hoja-filtrar.js"></script>
+<script src="pruebas-movil-ficha.js"></script>
+<script src="pruebas-movil-animacion.js"></script>
+<script src="pruebas-movil-visor.js"></script>
+<script src="pruebas-movil-hud.js"></script>
+<script src="pruebas-movil-puerta.js"></script>
+<script src="pruebas-movil-puerta-async.js"></script>
 <script src="pruebas-hero.js"></script>
+<script src="pruebas-identificador.js"></script>
+<script src="pruebas-orden.js"></script>
+<script src="pruebas-lista.js"></script>
+<script src="pruebas-lista-pintar.js"></script>
+<!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
+     cuatro dependencias delante (reglas-contenido, identificador, orden,
+     lista): cinco scripts encadenados por conDocumento. Que UN script se
+     cargue y ejecute dentro del iframe bajo file:// está comprobado (ver
+     pruebas-arnes-dom.js); que la CADENA de panel.js haga lo mismo entera no
+     se ha podido comprobar con las herramientas de esta tarea — no es un
+     fallo conocido, es una comprobación pendiente. Si al abrir esto con
+     doble clic la sección "panel.js" no pinta nada, es la primera sospechosa. -->
+<script src="pruebas-panel.js"></script>
+<!-- Carga js/visor.js entero en un iframe, con el marcado del #visor sacado de
+     index.html en vivo y css/luque.css de verdad: el defecto que cubre —el
+     envolvente de foco del diálogo a anchura de móvil— no está en el JS solo ni
+     en el CSS solo, sino en el encuentro de los dos. Necesita servidor, igual
+     que la sección de abajo. -->
+<script src="pruebas-visor-foco.js"></script>
 <script src="pruebas-contenido-real.js"></script>
 <script>window.Arnes.resumen();</script>
 </body>

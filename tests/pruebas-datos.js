@@ -49,6 +49,65 @@ describe('Datos.establecer', function () {
     Datos.establecer([proyectoDeFotos('unico')]);
     igual(Datos.porId('unico').id, 'unico');
     igual(Datos.porCategoria('editorial').length, 1);
-    igual(Datos.porId('no-existe'), null);
+    /* Identidad estricta y no `igual`: «no hay proyecto» es un contrato de
+       identidad, no de cómo se serializa. `igual` ya distingue el NaN del
+       null desde que arnes.js lleva su `replacer`, así que aquí valdría; se
+       deja en `===` porque es lo que la función promete, literalmente. */
+    cierto(Datos.porId('no-existe') === null,
+           'porId de un id que no existe tiene que dar null exacto');
+  });
+
+  function proyectoValido(extra) {
+    var p = {
+      id: 'x', titulo: 'X', categoria: 'editorial', tipo: 'fotos',
+      portada: '/img/x-1500.jpg',
+      piezas: [{ url: '/img/x-3000.jpg' }],
+      ficha: { cliente: 'C', anio: 2026, papel: 'DoP' }
+    };
+    if (extra) { for (var k in extra) p.ficha[k] = extra[k]; }
+    return { proyectos: [p] };
+  }
+
+  prueba('una ficha con cliente, ano y papel vale', function () {
+    igual(ReglasContenido.validar(
+      proyectoValido(), ReglasContenido.CATEGORIAS).length, 0);
+  });
+
+  /* El papel es lo que la artista eligio contar de su trabajo: si falta, la
+     ficha no dice nada del proyecto. */
+  prueba('sin papel no vale', function () {
+    var d = proyectoValido();
+    delete d.proyectos[0].ficha.papel;
+    igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 1);
+  });
+
+  prueba('sin ano tampoco', function () {
+    var d = proyectoValido();
+    delete d.proyectos[0].ficha.anio;
+    igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 1);
+  });
+
+  /* Conejita Playboy no trae cliente, y es contenido legitimo: sale como
+     ###### en la ficha, no como un error de publicacion. */
+  prueba('sin cliente SI vale: sale como ###### y no es un fallo', function () {
+    var d = proyectoValido();
+    delete d.proyectos[0].ficha.cliente;
+    igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 0);
+  });
+
+  /* El enlace es un control, no un dato: la ficha base no lo trae y vale
+     (lo prueba la primera comprobacion de este bloque), y anadirlo tampoco
+     puede invalidarla. Esta comprueba el segundo caso, que es el nuevo. */
+  prueba('con enlace tambien vale: es un control, no un dato', function () {
+    igual(ReglasContenido.validar(
+      proyectoValido({ enlace: 'https://vimeo.com/1' }),
+      ReglasContenido.CATEGORIAS).length, 0);
+  });
+
+  /* Sin la ficha entera no se puede pintar nada, y `p.ficha.papel` lanzaria. */
+  prueba('sin ficha no vale, y no revienta la validacion', function () {
+    var d = proyectoValido();
+    delete d.proyectos[0].ficha;
+    igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 1);
   });
 });

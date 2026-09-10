@@ -14,7 +14,11 @@ Las piezas del visor NO tienen presupuesto y no deben tenerlo: son la calidad
 que un estudio de fotografia vende, se piden de una en una y solo cuando
 alguien abre un proyecto. Aqui solo se informan.
 
-Uso:  python tests/pesar_imagenes.py
+Las URLs del contenido son relativas -/img/...- desde que entro el
+contenido real, asi que hay que decir contra que origen se miden. En la
+practica, el `python -m http.server` con el que se prueba en local.
+
+Uso:  python tests/pesar_imagenes.py --origen http://localhost:8010
 Sale con codigo 1 si la galeria pasa del presupuesto.
 """
 import json
@@ -30,18 +34,29 @@ except ImportError:                    # py2
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTENIDO = os.path.join(RAIZ, 'contenido.json')
 
-# Lo que tarda una conexion mala en la entrada. 3 MB ya es generoso para doce
-# portadas; si se supera, casi seguro es que alguien enchufo las piezas.
+# Lo que tarda una conexion mala en la entrada. 3 MB ya es generoso para las
+# ocho portadas; si se supera, casi seguro es que alguien enchufo las piezas.
 PRESUPUESTO_GALERIA = 3 * 1024 * 1024
 
 MB = 1024.0 * 1024.0
 
 
+def absoluta(url, origen):
+    """Antepone el origen a una URL relativa y deja en paz a las absolutas.
+
+    El contenido real trae rutas relativas a proposito: asi el sitio funciona
+    servido en la red local, que es como se prueba en un movil de verdad.
+    """
+    if url.startswith('http://') or url.startswith('https://'):
+        return url
+    return origen.rstrip('/') + url
+
+
 def pesar(url):
     """Devuelve los bytes que anuncia la cabecera, sin bajarse el cuerpo.
 
-    picsum contesta 405 a HEAD, asi que hay que pedir GET; pero leyendo solo
-    Content-Length y cerrando, el cuerpo no llega a transferirse entero.
+    Se pide GET y no HEAD porque no todo servidor lo contesta -picsum daba 405-;
+    pero leyendo solo Content-Length y cerrando, el cuerpo no se transfiere.
     """
     try:
         respuesta = urlopen(Request(url), timeout=30)
@@ -56,7 +71,20 @@ def pesar(url):
         respuesta.close()
 
 
-def main():
+def origen_de(argv):
+    """Lee --origen. Sin el no hay nada que medir y se dice por que."""
+    if '--origen' in argv:
+        i = argv.index('--origen')
+        if i + 1 < len(argv):
+            return argv[i + 1]
+    return None
+
+
+def main(argv):
+    origen = origen_de(argv)
+    if origen is None:
+        print(__doc__)
+        return 2
     with open(CONTENIDO) as f:
         datos = json.load(f)
 
@@ -68,7 +96,7 @@ def main():
     for p in proyectos:
         url = p.get('poster') if p.get('tipo') == 'video' else p.get('portada')
         if url:
-            entrada.append((p['id'], url))
+            entrada.append((p['id'], absoluta(url, origen)))
 
     print('LA GALERIA (se carga entera al entrar)')
     total_entrada = 0
@@ -93,6 +121,8 @@ def main():
         suma = 0
         for i, pieza in enumerate(p.get('piezas', [])):
             url = pieza.get('miniatura')
+            if url:
+                url = absoluta(url, origen)
             if not url:
                 problemas.append('%s: la pieza n.o %d no trae miniatura' % (p['id'], i + 1))
                 continue
@@ -111,7 +141,7 @@ def main():
     mayor = (0, None)
     for p in proyectos:
         for pieza in p.get('piezas', []):
-            bytes_, error = pesar(pieza['url'])
+            bytes_, error = pesar(absoluta(pieza['url'], origen))
             if error:
                 continue
             if bytes_ > mayor[0]:
@@ -139,4 +169,4 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main(sys.argv))

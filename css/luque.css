@@ -608,8 +608,14 @@
      pero si se abrió con el ratón el anillo sería solo ruido visual. */
   .proj.sin-anillo:focus-visible{ outline:none; }
 
+  /* Contenedor de consulta para que .tag pueda medirse contra la caja y no
+     contra la pantalla: la caja cambia de tamaño con el modo (amplio o
+     filtrado) y con el ancho de la ventana, y una etiqueta en px no se entera.
+     `inline-size` es la variante segura aquí: el alto de .proj-inner viene del
+     padre (100% de un .proj con aspect-ratio), nunca del contenido. */
   .proj-inner{
     position:relative;
+    container-type:inline-size;
     width:100%; height:100%;
     overflow:hidden;
     border-radius:4px;
@@ -625,16 +631,30 @@
   }
   .proj:hover img{ transform:scale(1.07); }
 
+  /* La etiqueta iba en px fijos. Mientras las cajas medían 37vw no se notaba;
+     al partirlas por la mitad, «CORTOMETRAJE» pasó a ocupar el 78% del ancho
+     de su foto en un portátil, y a desbordarla del todo en un móvil —donde ya
+     rozaba el borde antes de tocar nada—. Ahora se mide contra la caja:
+       - cqw la ata al ancho de .proj-inner, así que encoge con la foto.
+       - El clamp le pone suelo y techo: nunca más grande que antes, y nunca
+         tan pequeña que no se lea.
+       - Los márgenes y el relleno van en em, luego siguen a la fuente.
+       - El max-width con recorte es el cinturón: pase lo que pase con las
+         categorías que meta el estudio, la etiqueta no se sale de la foto. */
   .proj .tag{
-    position:absolute; left:14px; bottom:14px;
+    position:absolute; left:1.2em; bottom:1.2em;
+    max-width:calc(100% - 2.4em);
     color:var(--yellow);
     font-weight:700;
-    font-size:0.72rem;
+    font-size:clamp(0.44rem, 4.6cqw, 0.72rem);
     text-transform:uppercase;
     letter-spacing:0.12em;
     background:rgba(0,0,0,0.55);
-    padding:4px 10px;
+    padding:0.35em 0.85em;
     border-radius:20px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
 
   /* ============================================================
@@ -932,6 +952,20 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 .visor-linea-marca i:first-child{ top:-11px; left:-5px; border-right:none; border-bottom:none; }
 .visor-linea-marca i:last-child{  top:2px;   left:-5px; border-right:none; border-top:none; }
 
+/* El panel cerrado sigue RENDERIZADO —`translateX(-100%)` lo saca de la vista
+   pero no del documento—, y `aria-hidden` NO saca del orden de tabulación. Sin
+   esto, el botón de cerrar es alcanzable con el tabulador estando el panel
+   fuera de la pantalla, y pulsarlo abre un panel que no se ve: es la misma
+   trampa que el bloque 4d cerró en la rejilla de la portada móvil.
+
+   El RETARDO de la transición es la mitad no evidente. `visibility` no
+   interpola, salta; sin retardarla hasta el final, el panel se volvería
+   invisible en el primer fotograma y su deslizamiento de salida —esos 0,45s
+   que la línea de al lado se molesta en animar— no se vería nunca. Con el
+   retardo, sale deslizándose y sólo entonces desaparece del tabulador.
+
+   La rama abierta pone el retardo a cero: al abrir tiene que ser visible YA,
+   o el deslizamiento de entrada tampoco se vería. */
 .visor-ficha{
   position:absolute; top:0; bottom:0; left:0;
   width:340px;
@@ -939,11 +973,20 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   color:var(--black);
   padding:32px 28px;
   transform:translateX(-100%);
-  transition:transform 0.45s cubic-bezier(.2,.7,.2,1);
+  visibility:hidden;
+  transition:transform 0.45s cubic-bezier(.2,.7,.2,1), visibility 0s 0.45s;
   z-index:4;
   overflow-y:auto;
 }
-.visor.ficha-abierta .visor-ficha{ transform:translateX(0); }
+.visor.ficha-abierta .visor-ficha{
+  transform:translateX(0);
+  visibility:visible;
+  transition:transform 0.45s cubic-bezier(.2,.7,.2,1), visibility 0s 0s;
+}
+
+/* En escritorio no existe: la cabecera se ve entera y un segundo control
+   para cerrar lo mismo es ruido. */
+.visor-ficha-cerrar{ display:none; }
 /* Desplaza la escena con un transform, no con left: left es layout y no
    debe animarse. 340px es el ancho de la ficha, así que el hueco que deja
    coincide con lo que ocuparía cambiar el left del 64px por defecto a 404px. */
@@ -993,6 +1036,316 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   /* La ficha cubre todo el ancho, así que la foto solo necesita
      desvanecerse: el desplazamiento exacto ya no se ve. */
   .visor.ficha-abierta .visor-escena{ transform:translateX(40px); opacity:0; }
+
+  .visor-ficha-cerrar{
+    display:block;
+    position:absolute; top:18px; right:18px;
+    /* Sin esto, `fichaCat` gana el punto donde se solapan: `opacity:0.55`
+       le abre su propio contexto de apilamiento aunque no esté posicionado,
+       y por orden de DOM ese contexto pinta por encima de este botón —medido
+       con `elementFromPoint` en el centro del botón, que devolvía `fichaCat`
+       hasta que se puso este z-index—. */
+    z-index:1;
+    width:44px; height:44px;
+    border:none; background:none; padding:0;
+    color:var(--black);
+    cursor:pointer;
+  }
+  .visor-ficha-cerrar svg{ width:100%; height:100%; fill:currentColor; }
+}
+
+/* ============================================================
+   EL INTERRUPTOR — ver js/movil.js
+============================================================ */
+.hoja{ display:none; }
+
+body.es-movil .hoja{ display:block; }
+body.es-movil .gallery,
+body.es-movil .hero,
+body.es-movil .navbar{ display:none !important; }
+
+/* ============================================================
+   PORTADA MÓVIL — la hoja
+============================================================ */
+body.es-movil .hoja{
+  position:fixed; inset:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  /* OBLIGATORIO. Sin esto, tirar hacia abajo desde lo alto dispara el
+     pull-to-refresh de Chrome de Android y la web se recarga en mitad del
+     recorrido. Por omisión la web se recarga: hay que apagarlo a propósito. */
+  overscroll-behavior-y:contain;
+  background:var(--yellow);
+  z-index:5;
+}
+
+/* Mientras el hero está delante, la rejilla no se desplaza por detrás.
+
+   `body.es-movil .hoja` (0,2,1) y no sólo `.hoja.con-hero` (0,2,0): medido con
+   `getComputedStyle` en Chrome headless, la regla de dos clases SOLA pierde
+   la partida por `overflow-y` contra la de arriba —tienen la MISMA
+   especificidad de clases, pero la de arriba suma el elemento `body` y eso ya
+   decide, aunque las dos reglas toquen la misma propiedad final con distinta
+   forma (`overflow-y` larga contra `overflow` corta)—: `getComputedStyle(
+   hoja).overflowY` daba `"auto"` con `con-hero` puesto, así que el hero NO
+   bloqueaba el scroll de la rejilla de detrás. Con el `body.es-movil` añadido
+   aquí, la especificidad sube a (0,3,1) y gana; vuelto a medir igual, ahora
+   da `"hidden"`. */
+body.es-movil .hoja.con-hero{ overflow:hidden; }
+
+/* Y mientras está delante, tampoco se TABULA por detrás.
+
+   `MovilPuerta.entrada` (js/movil-puerta.js) le pone `aria-hidden="true"` a la
+   rejilla, y eso la esconde del lector de pantalla pero NO del tabulador: son
+   dos cosas distintas y `aria-hidden` sólo hace la primera. Sin esta regla, con
+   la puerta puesta el primer Tab caía en el botón «Abrir el proyecto Niebla»
+   —medido: `BUTTON.hoja-boton`, dentro de un `aria-hidden="true"`, con
+   `DIV.hoja-hero` tapando el centro de la pantalla— y el Enter siguiente abría
+   ese proyecto sin que se hubiera visto nunca la portada. Doce botones
+   invisibles y pulsables. Y un elemento enfocable dentro de un
+   `aria-hidden="true"` incumple el 4.1.2 de WCAG por sí solo.
+
+   `visibility:hidden` y no `display:none`: la rejilla sigue ocupando su sitio y
+   la hoja conserva su altura desplazable. Medido cambiando una por otra con la
+   puerta puesta: con `visibility:hidden` la rejilla mide 1557px de alto y el
+   `scrollHeight` de la hoja vale 1557; con `display:none` la rejilla pasa a 0 y
+   el `scrollHeight` se desploma a 844, o sea que la hoja deja de tener nada que
+   desplazar mientras dura la puerta.
+
+   Medido con esta regla puesta: el primer Tab cae en `BODY`, y en cuanto se
+   cruza la puerta la rejilla vuelve a ser navegable con el tabulador. */
+body.es-movil .hoja.con-hero .hoja-rejilla{ visibility:hidden; }
+
+.hoja-rejilla{
+  list-style:none;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  /* 24px a los lados a propósito: ningún control puede caer en la franja de
+     unos 20px que el navegador se queda para su gesto de «atrás». Los 72 de
+     abajo dejan sitio al indicador de inicio de iOS. */
+  padding:24px 24px 72px;
+}
+
+.hoja-celda{ position:relative; }
+
+/* Hoy esta línea no hace falta, y conviene saberlo antes de tocarla: NINGUNA
+   regla de autor le da `display` a la celda —las únicas tres que la nombran en
+   esta hoja son `.hoja-celda{position:relative}`, ésta misma y
+   `.hoja-celda.sin-foto img`, y de esas sólo la última pone `display`, sobre la
+   imagen y no sobre la celda—, así que el `[hidden]` de la hoja del NAVEGADOR
+   gana él solo. Medido borrando esta regla en caliente sobre `#/foto-stills`
+   con nueve celdas ocultas: el `display` calculado sigue siendo `none` y el
+   `scrollHeight` de la hoja no se mueve (844 con ella y sin ella).
+
+   Está por lo que pasaría en cuanto alguien le diera `display` a la celda desde
+   aquí: una regla de AUTOR le gana a la del navegador por ORIGEN de cascada,
+   por poca especificidad que tenga, y entonces filtrar dejaría de esconder.
+   Medido también: quitando esta línea y añadiendo `.hoja-celda{display:block}`,
+   la celda oculta pasa a `display:block`; reponiéndola vuelve a `none`. Es un
+   blindaje, no una necesidad de hoy. */
+.hoja-celda[hidden]{ display:none; }
+
+.hoja-boton{
+  display:block; width:100%; padding:0; border:0;
+  position:relative; overflow:hidden;
+  background:var(--grey-dark);
+  /* La proporción la pone `MovilHoja.proporcion` celda a celda: es lo que hace
+     la rejilla irregular. El 1.25 es sólo el respaldo si faltara. */
+  aspect-ratio:1 / var(--proporcion, 1.25);
+  cursor:pointer;
+}
+
+.hoja-boton img{
+  display:block; width:100%; height:100%;
+  object-fit:cover;
+}
+
+/* La foto que no llega deja su marco oscuro con su número dentro: un hueco
+   numerado se lee como «falta esa», no como «la web está rota». */
+.hoja-celda.sin-foto img{ display:none; }
+
+/* Amarillo con sombra, y no una pastilla: aquí el número va sobre la foto,
+   así que la sombra es lo que lo sostiene sobre una foto clara. En el visor
+   —bloque 4e— el texto sí va en pastilla, porque allí hay que leer palabras
+   y no dos cifras. */
+.hoja-numero{
+  position:absolute; top:8px; left:10px;
+  font-size:1.45rem; font-weight:700; line-height:1;
+  letter-spacing:var(--kerning);
+  color:var(--yellow);
+  text-shadow:0 1px 5px rgba(0,0,0,0.85), 0 0 1px rgba(0,0,0,0.9);
+  pointer-events:none;
+}
+
+.hoja-boton:focus-visible{ outline:3px solid var(--black); outline-offset:3px; }
+
+/* ------------------------------------------------------------
+   LA HOJA QUE SE DESLIZA
+   Ocupa la pantalla entera por encima de la rejilla y se va al
+   deslizar hacia arriba: desde el bloque 4e la hoja sigue al dedo
+   mientras arrastra (js/movil-puerta.js), y `.fuera` no hace más que
+   continuar ese mismo movimiento hasta sacarla del todo por encima
+   del borde superior. Ya no hay fundido en la rama normal —una hoja
+   de papel no se transparenta al levantarla— y la transición sólo
+   mueve `transform`. Los 380ms de aquí son exactamente SALIDA_MS de
+   js/movil-puerta.js, que es lo que espera antes de quitar el nodo.
+   Lo que importa no es que sean iguales, sino que el deslizamiento no
+   dure MÁS que esa espera: si durara más, el nodo desaparecería de
+   golpe a mitad del recorrido. En movimiento reducido la salida vuelve
+   a ser un fundido corto (200ms, el bloque de más abajo) en vez de un
+   deslizamiento —quien pide menos movimiento no quiere ver la pantalla
+   entera desplazarse—, y esos 200ms también quedan por debajo de los
+   380, así que el nodo se retira después de terminar de fundirse,
+   nunca durante. Las dos ramas siguen midiendo 0.38s la normal y 0.2s
+   la reducida con `getComputedStyle`, pero ya no es la misma propiedad:
+   la normal transiciona `transform` y la reducida `opacity`.
+
+   Ésta va acotada a `body.es-movil`, y NO es la única de la sección: hay
+   cuatro acotadas contando ésta —`.hoja`, `.hoja.con-hero`,
+   `.hoja.con-hero .hoja-rejilla` y ésta—, más las dos del `@media` del final.
+   Se dice el número a propósito, porque la de `.hoja.con-hero .hoja-rejilla`
+   parece de sobra y no lo es: es la que saca del tabulador los botones que la
+   puerta tapa. Quitarle el `body.es-movil` es inofensivo —medido: la rejilla
+   sigue en `visibility:hidden` y el Tab sigue cayendo en `BODY`, porque no hay
+   ninguna otra regla que le dispute la propiedad—; lo que reabre la trampa es
+   BORRARLA, y entonces el primer Tab vuelve a caer en «Abrir el proyecto
+   Niebla». Las otras trece reglas de la sección van sueltas, y así se quedan:
+   el subárbol entero va con `display:none` en escritorio.
+
+   Lo que sí distingue a ésta, y por lo que se acotó, es que es la única del
+   bloque que planta un `position:fixed` con `inset:0` y `z-index:10` sobre un
+   fondo opaco, o sea la única que taparía la pantalla entera el día que algo
+   dejara `.hoja` visible en una ventana ancha. Hoy no puede pasar
+   —`.hoja{display:none}` apaga el subárbol y un `position:fixed` dentro de un
+   ancestro con `display:none` no pinta nada—, pero el coste de acotarla es un
+   selector y el de no hacerlo es un escritorio en amarillo.
+------------------------------------------------------------ */
+body.es-movil .hoja-hero{
+  position:fixed; inset:0; z-index:10;
+  background:var(--yellow);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:22px;
+  padding:0 24px;
+  transition:transform 380ms ease;
+  /* Sin esto el navegador se queda el gesto vertical antes de que llegue a
+     `pointermove`, y en Chrome de Android eso significa el «tirar para
+     recargar». El `overscroll-behavior-y:contain` que hay más arriba está en
+     `.hoja` y no cubre este caso.
+
+     `pinch-zoom` y no `none`, y la diferencia es de accesibilidad. `none`
+     declina TODOS los gestos del navegador sobre el elemento, y éste es
+     `position:fixed; inset:0`: la pantalla entera mientras la puerta está
+     puesta. Con `none`, quien necesite ampliar para leer no puede, y poder
+     ampliar no es un capricho. `pinch-zoom` a secas sigue bloqueando todo el
+     desplazamiento —lo único que el tirón de recarga necesita que se bloquee—
+     y devuelve sólo el pellizco de dos dedos. `pan-x pinch-zoom` haría lo
+     mismo por la mitad mala: le regalaría al navegador el gesto horizontal de
+     un dedo, y como aquí no hay nada que desplazar en horizontal, de eso sólo
+     puede salir que un arrastre torcido se lo quede el navegador y llegue un
+     `pointercancel`, que `js/movil-puerta.js` trata como un soltar.
+
+     AVISO, y va aquí porque es justo lo que no se puede dar por bueno: ESTE
+     CAMBIO NO ESTÁ VERIFICADO. `Input.synthesizePinchGesture` no mueve el
+     `pageScale` en Chrome headless bajo emulación —tampoco sobre una página
+     sin `touch-action` ninguno, o sea que el control también falla—, así que
+     aquí nadie ha visto ni que `none` apagara el pellizco ni que `pinch-zoom`
+     lo devuelva. Lo que SÍ está medido: que la superficie es la pantalla
+     entera (`[0,0,390,844]` a 390×844, y `elementFromPoint` en el centro
+     devuelve el hero); que sus tres ancestros están en `touch-action:auto`;
+     que el `<meta name="viewport">` del sitio no prohíbe ampliar —no lleva
+     `user-scalable=no` ni `maximum-scale`—, así que si el zoom está apagado
+     ahí, lo apaga esta declaración y sólo ella; que Chrome acepta el valor sin
+     coercionarlo a `none`; y que el arrastre de la hoja sale idéntico con los
+     tres valores, probado con toques reales. La mitad que falta sólo se ve en
+     un teléfono, y está anotada en la lista de comprobación de
+     docs/estado-conocido.md. */
+  touch-action:pinch-zoom;
+}
+
+/* Se sale por arriba entera, continuando el movimiento que el dedo empezó. Ya
+   no se desvanece: una hoja de papel no se transparenta al levantarla. */
+.hoja-hero.fuera{
+  transform:translateY(-100%);
+  pointer-events:none;
+}
+
+.hoja-hero .logo-mark{ width:min(76vw, 420px); height:auto; }
+
+.hoja-hero .roles{
+  text-align:center;
+  font-size:0.95rem; line-height:1.65;
+  display:flex; flex-direction:column;
+}
+
+/* El 0.6 de opacidad no es estético: con 0.5 el texto salía a 9,92px con un
+   color efectivo de rgb(133,133,5) sobre el amarillo, o sea 3,65:1, y el AA de
+   WCAG pide 4,5:1 —el alivio de «texto grande» empieza en 18,66px en negrita y
+   estas letras miden la mitad, así que no lo alcanza—. Con 0.6 el color
+   efectivo es rgb(108,108,6) y el contraste sube a 5,17:1. Medido aplicando la
+   fórmula de luminancia relativa de WCAG sobre la mezcla real del color con el
+   fondo, no estimado a ojo. */
+.hoja-pista{
+  font-size:0.62rem; font-weight:700;
+  letter-spacing:0.22em; text-transform:uppercase;
+  opacity:0.6;
+}
+
+/* CUÁL DE LAS DOS PISTAS VISIBLES SE VE.
+
+   El caso base —sin ninguna consulta— es la de ratón y teclado, y la del dedo
+   sólo aparece bajo `(pointer: coarse)`. El orden importa y no es
+   intercambiable: `pointer` tiene TRES valores, `coarse`, `fine` y `none`, y un
+   par de consultas `coarse`/`fine` dejaría a `none` —un aparato sin puntero
+   ninguno— sin ninguna frase. Con base + una sola excepción siempre se ve
+   exactamente una, valga lo que valga `pointer`.
+
+   Medido con `matchMedia` en Chrome: con métricas de móvil Y emulación táctil,
+   `(pointer: coarse)` da `true` y `(pointer: fine)` `false`; en escritorio a
+   1280 y en una ventana estrecha de 700 —el caso que motiva todo esto— da
+   `coarse:false` y `fine:true`. Ojo a la trampa de medición: `mobile:true` en
+   `setDeviceMetricsOverride` NO basta para que el puntero sea grueso; hace
+   falta `setTouchEmulationEnabled`, y sin él las tres emulaciones dan `fine` y
+   parece que la consulta no discrimina. El caso `pointer: none` no se pudo
+   producir en este entorno: que caiga en el caso base es por construcción
+   —razonado, no medido—, y por eso la frase base nombra una tecla y no sólo la
+   rueda. */
+.hoja-pista-dedo{ display:none; }
+
+@media (pointer: coarse){
+  .hoja-pista-raton{ display:none; }
+  .hoja-pista-dedo{ display:inline; }
+}
+
+/* La mitad de la pista que sólo se oye. Se saca de la pantalla sin salir del
+   árbol de accesibilidad. Ni `display:none` ni `visibility:hidden` valdrían
+   aquí: medido con `Accessibility.getFullAXTree`, la frase está en el árbol
+   entera y sin recortar, y desaparece de él en cuanto se le pone cualquiera de
+   las dos — que es justo lo contrario de lo que hace falta.
+
+   Esta frase nombra las TRES salidas —el dedo, la rueda y la tecla— y no una
+   sola, a diferencia de las dos visibles, que se reparten según el puntero: un
+   lector de pantalla no tiene por qué coincidir con el tipo de puntero que
+   traiga el aparato, así que aquí no se elige por él. Medido con
+   `Accessibility.getFullAXTree` en los dos casos —móvil con táctil y ventana
+   de 700px sin táctil—: el árbol devuelve UNA sola instrucción, la misma en
+   los dos, y las dos frases visibles no aparecen porque van con `aria-hidden`.
+
+   El `text-transform:none` no es cosmético, porque esto no se ve: el
+   `uppercase` de `.hoja-pista` se HEREDA y se cuela en el nombre accesible.
+   Medido: sin este reset el árbol devolvía la frase entera en versales, cuando
+   el HTML la escribe en minúsculas; con el reset devuelve «Desliza hacia
+   arriba, o baja con la rueda, o pulsa Intro, para ver los trabajos.», que es
+   literalmente lo que pone el marcado. Es la única cadena del sitio que existe
+   sólo para oírse, y a un lector de pantalla las versales no le aportan nada
+   —hay lectores que deletrean las palabras cortas en versales, «I-N-T-R-O»;
+   eso último es razonado, no medido: aquí no hay lector real—. Las dos mitades
+   visibles conservan su `uppercase`. */
+.hoja-pista-lectores{
+  position:absolute; width:1px; height:1px;
+  margin:-1px; padding:0; border:0;
+  clip-path:inset(50%); overflow:hidden; white-space:nowrap;
+  text-transform:none;
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -1002,4 +1355,248 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   .visor.viajando .visor-escena video{ transition:none; }
   .visor .visor-chrome{ transition:opacity 0.2s ease; }
   .visor-ficha, .visor-escena{ transition:none; }
+
+  /* El hero de la portada móvil va aquí dentro y no en un `@media` propio:
+     eran dos bloques con la condición idéntica y pegados el uno al otro.
+
+     El `body.es-movil` de la PRIMERA es load-bearing, y de la segunda no.
+
+     Las dos mediciones de aquí abajo se REHICIERON en el bloque 4e y no se
+     heredan del anterior: la transición cambió de propiedad, así que una
+     medición vieja ya no valdría. Se tomaron con la preferencia forzada de
+     verdad (Chrome con `--force-prefers-reduced-motion`; sin ese flag este
+     Chrome declara `no-preference` y el `@media` ni siquiera aplica, con lo
+     que desacotar no mide nada), desacotando una regla cada vez.
+
+     La de `transition` lo necesita: un `@media` NO añade especificidad, así que
+     un `.hoja-hero` a secas (0,1,0) perdería contra el
+     `body.es-movil .hoja-hero` (0,2,1) de arriba y la duración reducida se
+     perdería. Medido desacotando sólo ésta: la transición pasa de
+     `opacity 0.2s` a `transform 0.38s`, o sea gana entera la rama normal.
+
+     La de `transform` no lo necesita: `.hoja-hero.fuera` es (0,2,0), empata con
+     su gemela suelta de arriba y le gana por ORDEN de aparición, porque este
+     `@media` va después en el fichero. Medido desacotando sólo ésta: el
+     `transform` sigue saliendo `none`. Va acotada por simetría con la de
+     arriba, no porque haga falta.
+
+     El `opacity:0` de la segunda regla no compite con nada: la rama normal de
+     `.hoja-hero.fuera` no declara `opacity` desde el bloque 4e, así que aquí no
+     hay ninguna copia suelta a la que ganarle por especificidad ni por orden
+     — es la única regla de toda la hoja de estilos que la fija. Medido con las
+     transiciones apagadas, que es la única forma de leer el DESTINO y no el
+     fotograma que la transición está animando: con la preferencia puesta,
+     `.fuera` da `opacity: 0` y `transform: none`; sin ella, `opacity: 1` y
+     `translateY(-100%)` —la matriz sale con el alto entero de la ventana—. */
+  body.es-movil .hoja-hero{ transition:opacity 0.2s ease; }
+  /* El `opacity:0` se escribe AQUÍ desde el bloque 4e. Antes lo heredaba de
+     `.hoja-hero.fuera`, que ya no lo lleva porque la salida normal dejó de ser
+     un fundido. Sin esta línea, un teléfono con movimiento reducido se queda
+     con el hero VISIBLE y quieto hasta que el nodo se retira solo: una pantalla
+     muerta de 380ms que ninguna prueba de la suite ve. */
+  body.es-movil .hoja-hero.fuera{ transform:none; opacity:0; }
 }
+
+/* ── El visor móvil (bloque 4f) ─────────────────────────────────────────────
+   Sólo existe bajo `body.es-movil`. En escritorio el marcado está en el DOM
+   pero con `hidden`, igual que la rejilla de la portada: es lo que permite
+   cruzar el umbral de ancho sin reconstruir nada. */
+
+.mvisor{ display:none; }
+
+/* Dos cosas que no salen del código de este repositorio sino del
+   comportamiento de los móviles, y que sin ponerlas a propósito rompen el
+   recorrido en el dispositivo real aunque en un navegador de escritorio
+   encogido no se note.
+
+   `overscroll-behavior-y: contain` apaga el «tirar para recargar» de Chrome en
+   Android. El gesto «foto anterior» empieza deslizando hacia abajo desde
+   arriba, que es exactamente el gesto que recarga la página: sin esto, el
+   recorrido se interrumpe con una recarga a mitad.
+
+   `touch-action: none` le dice al navegador que no se quede con el
+   desplazamiento ni el zoom por su cuenta dentro del visor, porque aquí los
+   dos ejes los interpreta `js/movil-gestos.js`. Fuera del visor NO se pone: la
+   rejilla de la portada sí tiene que poder desplazarse con el dedo. */
+body.es-movil .mvisor{
+  display:block;
+  position:fixed; inset:0;
+  z-index:60;
+  background:var(--black);
+  overscroll-behavior-y:contain;
+  touch-action:none;
+}
+
+body.es-movil .mvisor[hidden]{ display:none; }
+
+/* La escena ocupa todo, y la foto se centra dentro sin recortarse.
+   `object-fit:contain` es lo que hace que la caja pintada la decida la
+   proporción de la imagen — de ahí la condición de la Tarea 2 sobre que la
+   portada y la pieza compartan proporción. Con `cover` no haría falta esa
+   condición, pero se recortarían las fotos del estudio. */
+body.es-movil .mvisor-escena{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+}
+
+body.es-movil .mvisor-foto{
+  max-width:100%; max-height:100%;
+  object-fit:contain;
+  /* La foto no se arrastra ni se selecciona: el dedo que la toca está
+     deslizando, y el «arrastrar imagen» del navegador se comería el gesto. */
+  -webkit-user-drag:none; user-select:none;
+}
+
+body.es-movil .mvisor-video{
+  width:100%; aspect-ratio:16/9; border:0;
+}
+
+/* La ficha es el fondo del eje vertical, así que ocupa la escena entera y no
+   flota encima de nada. */
+body.es-movil .mvisor-ficha{
+  padding:2rem 1.6rem;
+  max-width:34rem;
+  color:var(--yellow);
+}
+
+body.es-movil .mvisor-ficha-titulo{
+  font-size:1.6rem; line-height:1.1; margin:0 0 1.4rem;
+}
+
+body.es-movil .mvisor-ficha-datos div{
+  display:flex; justify-content:space-between; gap:1rem;
+  padding:.55rem 0;
+  border-bottom:1px solid rgba(255,255,0,.25);
+}
+
+body.es-movil .mvisor-ficha-datos dt{ opacity:.7; }
+body.es-movil .mvisor-ficha-datos dd{ margin:0; text-align:right; }
+
+/* La animación de entrada del bloque 4f (js/movil-animacion.js decide CUÁL de
+   las cuatro toca). 200ms y no los ~620ms del vuelo de escritorio
+   (css/luque.css, `.visor.viajando`): aquello es un vuelo desde la portada que
+   se hace una vez al abrir; esto se repite en cada deslizamiento dentro del
+   visor, así que tiene que sentirse inmediato y no demorar el gesto
+   siguiente. `ease-out` porque lo que importa es que LLEGUE con brío y frene
+   suave, no que arranque despacio. */
+body.es-movil .mvisor-entra-der,
+body.es-movil .mvisor-entra-izq,
+body.es-movil .mvisor-entra-abajo,
+body.es-movil .mvisor-entra-arriba{
+  animation-duration:.2s;
+  animation-timing-function:ease-out;
+}
+body.es-movil .mvisor-entra-der{    animation-name:mvisor-entra-der; }
+body.es-movil .mvisor-entra-izq{    animation-name:mvisor-entra-izq; }
+body.es-movil .mvisor-entra-abajo{  animation-name:mvisor-entra-abajo; }
+body.es-movil .mvisor-entra-arriba{ animation-name:mvisor-entra-arriba; }
+
+@keyframes mvisor-entra-der{    from{ transform:translateX(100%);  } to{ transform:none; } }
+@keyframes mvisor-entra-izq{    from{ transform:translateX(-100%); } to{ transform:none; } }
+@keyframes mvisor-entra-abajo{  from{ transform:translateY(100%);  } to{ transform:none; } }
+@keyframes mvisor-entra-arriba{ from{ transform:translateY(-100%); } to{ transform:none; } }
+
+/* ── El HUD ────────────────────────────────────────────────────────────────
+   El padding lateral de 24px NO es decorativo. En Safari de iOS, arrastrar
+   desde el borde izquierdo hacia dentro vuelve a la página anterior, y en
+   Chrome de Android ocurre en los dos bordes; no se puede desactivar desde la
+   web. Un control dentro de esa franja de ~20px sería imposible de pulsar sin
+   que el navegador se lleve el gesto. Los 24 dan margen sobre los 20. */
+body.es-movil .mvisor-hud{
+  position:absolute; inset:0;
+  padding:1rem 24px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  /* El HUD no intercepta el dedo: el deslizamiento tiene que pasar a través.
+     Los botones lo recuperan uno a uno, más abajo. */
+  pointer-events:none;
+  opacity:1;
+  transition:opacity .35s ease;
+}
+
+body.es-movil .mvisor-hud.dormido{ opacity:0; }
+
+body.es-movil .mvisor-hud-arriba,
+body.es-movil .mvisor-hud-abajo{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:.6rem;
+}
+
+/* Las pastillas: amarillo con texto negro, 17,6:1 de contraste pase lo que
+   pase con la foto, porque el fondo del texto deja de ser la foto. Medido en
+   la spec: el amarillo suelto sobre foto clara da 1,07:1 y el negro suelto
+   sobre foto oscura ~1,2:1 — el mismo fallo cambiado de lado. */
+body.es-movil .mvisor-cat,
+body.es-movil .mvisor-cerrar,
+body.es-movil .mvisor-titulo,
+body.es-movil .mvisor-contador,
+body.es-movil .mvisor-cat-opcion{
+  background:var(--yellow);
+  color:var(--black);
+  border:0;
+  padding:.4rem .8rem;
+  font:inherit;
+  line-height:1.2;
+  margin:0;
+}
+
+body.es-movil .mvisor-cat,
+body.es-movil .mvisor-cerrar,
+body.es-movil .mvisor-cat-opcion{
+  pointer-events:auto;
+  cursor:pointer;
+}
+
+body.es-movil .mvisor-cerrar{
+  font-size:1.3rem; line-height:1; padding:.35rem .7rem;
+}
+
+body.es-movil .mvisor-cats{
+  position:absolute; top:3rem; left:24px;
+  list-style:none; margin:0; padding:0;
+  display:flex; flex-direction:column; gap:.3rem;
+  pointer-events:auto;
+}
+
+body.es-movil .mvisor-cats[hidden]{ display:none; }
+
+body.es-movil .mvisor-titulo{ max-width:70%; }
+
+body.es-movil .mvisor :focus-visible{
+  outline:2px solid var(--yellow); outline-offset:4px;
+}
+
+/* Con movimiento reducido el HUD desaparece sin transición en vez de quedarse
+   puesto: lo que se pide es menos movimiento, no menos función. Es la misma
+   regla que el sitio ya aplica al centrado por teclado de la galería. */
+@media (prefers-reduced-motion: reduce){
+  body.es-movil .mvisor-hud{ transition:none; }
+}
+
+/* La misma pastilla amarilla de la navbar y del HUD móvil, y a propósito: el
+   sitio tiene UN lenguaje visual y un botón con aspecto propio sería un
+   tercero. El contraste del negro sobre --yellow ya está razonado arriba.
+
+   Sin logotipo de la plataforma: traerlo sería un recurso servido por
+   YouTube o Vimeo, y con él una petición desde la página de Lidia a un
+   tercero en cada visita. El nombre en texto dice lo mismo y no delata a
+   nadie. */
+.pastilla-enlace{
+  display:inline-block;
+  background:var(--yellow);
+  color:var(--black);
+  text-decoration:none;
+  padding:.5rem 1rem;
+  border-radius:999px;
+  font-weight:700;
+}
+
+.pastilla-enlace:hover,
+.pastilla-enlace:focus-visible{
+  background:var(--black);
+  color:var(--yellow);
+}
+
+/* El contenedor vacío no ocupa nada porque no tiene relleno ni altura propia,
+   y el margen va en el botón y no aquí: un margin-top en el contenedor
+   separaría igual con el botón ausente, que es el hueco que no queremos. */
+.ficha-enlace .pastilla-enlace{ margin-top:1rem; }

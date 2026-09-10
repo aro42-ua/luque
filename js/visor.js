@@ -42,6 +42,19 @@ window.Visor = (function () {
     });
 
     window.Router.alCambiar(function (ruta) {
+      /* La guarda de lado. Desde el bloque 4f hay DOS visores suscritos a la
+         misma ruta, y sin esto los dos abrirían el mismo trabajo a la vez.
+         Responde el del lado en que estamos y el otro se queda quieto; la
+         guarda simétrica está en `MovilVisor.aplicar`.
+
+         Que `Movil.actual()` ya tenga valor cuando esto corre no es
+         casualidad ni suerte: `index.html` llama a `Movil.init` ANTES de
+         `Router.init`, y `Router.init` avisa a sus suscriptores de forma
+         SÍNCRONA. Es la misma dependencia de orden de la que ya vive
+         `js/visor-origen.js`, y allí está explicada con la evidencia de lo
+         que pasaba cuando estaba al revés: un enlace en frío a un trabajo en
+         el móvil volaba desde un rectángulo fuera de pantalla. */
+      if (window.Movil.actual() === 'movil') return;
       if (ruta.tipo === 'proyecto') abrir(ruta.valor);
       else if (estado.abierto) cerrarSinTocarLaRuta();
     });
@@ -61,7 +74,7 @@ window.Visor = (function () {
     var p = window.Datos.porId(id); if (!p) return;
 
     abiertoConRaton = pendienteConRaton; pendienteConRaton = false; // se consume: solo para esta apertura
-    proyecto = p; elementoQueAbrio = window.Galeria.elementoDe(id);
+    proyecto = p; elementoQueAbrio = window.VisorOrigen.elemento(id);   // qué portada responde: js/visor-origen.js
     var esVideo = (p.tipo === 'video');
     estado = window.VisorEstado.abrir(estado, id, esVideo ? 1 : p.piezas.length);
     raiz.classList.toggle('video', esVideo);
@@ -271,7 +284,7 @@ window.Visor = (function () {
 
     if (e.key === 'ArrowRight' && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.siguiente(estado); renderizar(); }
     if (e.key === 'ArrowLeft'  && !window.VisorVideo.activo()) { e.preventDefault(); estado = window.VisorEstado.anterior(estado);  renderizar(); }
-    if (e.key === 'Tab') atraparFoco(e);
+    if (e.key === 'Tab') window.VisorFoco.atrapar(raiz, e);   // quién es enfocable ahora: js/visor-foco.js
 
     window.VisorChrome.despertar();
   }
@@ -282,15 +295,6 @@ window.Visor = (function () {
                             : window.VisorEstado.anterior(estado);
     renderizar();
     window.VisorChrome.despertar();
-  }
-
-  function atraparFoco(e) {
-    var focos = Array.prototype.filter.call(raiz.querySelectorAll('button:not([disabled]), [role="slider"]'),
-      function (el) { return el.offsetParent !== null; });   // offsetParent nulo con display:none: fuera la línea en modo foto
-    if (!focos.length) return;
-    var primero = focos[0], ultimo = focos[focos.length - 1];
-    if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
-    else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
   }
 
   function estaAbierto() { return estado && estado.abierto; }
