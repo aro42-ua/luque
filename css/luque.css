@@ -1576,8 +1576,10 @@ body.es-movil .mvisor :focus-visible{
    sitio tiene UN lenguaje visual y un botón con aspecto propio sería un
    tercero. El contraste del negro sobre --yellow ya está razonado arriba.
 
-   Sin logotipo de la plataforma: la restricción global prohíbe recursos
-   externos desde el CSS, porque bajo file:// el navegador los bloquea. */
+   Sin logotipo de la plataforma: traerlo sería un recurso servido por
+   YouTube o Vimeo, y con él una petición desde la página de Lidia a un
+   tercero en cada visita. El nombre en texto dice lo mismo y no delata a
+   nadie. */
 .pastilla-enlace{
   display:inline-block;
   background:var(--yellow);

@@ -37,8 +37,10 @@ window.VisorFicha = (function () {
       fila.appendChild(dt); fila.appendChild(dd);
       elDatos.appendChild(fila);
     });
-    /* Se vacía antes de pintar: sin esto, pasar de un videoclip a otro dejaba
-       los dos botones puestos, y el de arriba llevaba al vídeo anterior. */
+    /* Se vacía antes de pintar: `pintar` se llama en cada parada y el
+       contenedor es fijo, así que sin esto pasar de un videoclip a otro
+       dejaría los dos botones puestos, con el de arriba apuntando al
+       vídeo anterior. */
     elEnlace.innerHTML = '';
     var boton = Plataforma.boton(proyecto.ficha.enlace);
     if (boton) elEnlace.appendChild(boton);

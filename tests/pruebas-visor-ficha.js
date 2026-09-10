@@ -47,7 +47,11 @@ describe('VisorFicha — la ficha del escritorio', function () {
 
   /* Un control que no lleva a ninguna parte no se ensena apagado: se omite.
      Y no deja hueco, que es distinto de un dato ausente. */
-  prueba('sin enlace no hay boton ni hueco', function () {
+  /* El «ni hueco» no lo prueba esto, sino el CSS: el margen vive en
+     `.ficha-enlace .pastilla-enlace` y no en el contenedor, para que el
+     contenedor vacío no separe nada. Aquí sólo se comprueba que queda
+     vacío, que es la mitad que el DOM puede afirmar. */
+  prueba('sin enlace el contenedor queda vacio', function () {
     ArnesDom.conElemento(MARCADO, function (raiz) {
       preparar();
       VisorFicha.pintar(proyecto(null), 6);

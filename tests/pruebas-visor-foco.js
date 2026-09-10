@@ -50,7 +50,13 @@ describeAsync('Visor — el envolvente de foco del diálogo', function () {
   var PROYECTO = {
     id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'fotos',
     portada: PIXEL,
-    ficha: { cliente: 'Ninguno', anio: '2026', papel: 'Fotografía' },
+    /* Lleva `enlace` a propósito: el botón del vídeo es un `<a href>` visible
+       dentro del diálogo, o sea un elemento enfocable más en el ciclo. Este
+       fichero existe porque el envolvente de foco ya se rompió una vez al
+       añadir un control nuevo; sin el enlace en la fijación, el único sitio
+       que ejercita el ciclo con el marcado de verdad nunca vería el botón. */
+    ficha: { cliente: 'Ninguno', anio: '2026', papel: 'Fotografía',
+             enlace: 'https://vimeo.com/1' },
     piezas: [{ url: PIXEL, miniatura: PIXEL },
              { url: PIXEL, miniatura: PIXEL },
              { url: PIXEL, miniatura: PIXEL }]
