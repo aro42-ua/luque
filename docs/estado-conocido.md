@@ -1006,16 +1006,19 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   Lo que sigue sin comprobarse es lo otro, y es lo importante: que la medición
   dé un número correcto sobre una foto de verdad.
 
-  Lo que eso deja abierto, y **no** he comprobado: si bastaría con poner
-  `crossorigin="anonymous"` para poder medir ya, sin esperar a las fotos del
-  estudio. Requiere probarlo en un navegador de verdad, y hoy no hay nada que
-  probar: **ninguna llamada a `getImageData` llega a ejecutarse en el sitio**
-  —el nombre sale dos veces, en el comentario de cabecera de `decidir`
-  (`js/brillo.js`, sobre la línea 32) y en el de la prueba «un lienzo manchado
-  da el halo en vez de propagar la excepción» (`tests/pruebas-brillo.js`,
-  sobre la línea 71), y las dos son comentarios—, y al módulo no lo
-  llama nadie (ver la entrada siguiente). La corrección de la cabecera de
-  `js/brillo.js` queda para la ola que toque los `.js`.
+  Lo que eso deja abierto, y **no** he comprobado, es más estrecho de lo que
+  parecía cuando se escribió este párrafo: si haría falta `crossorigin`
+  para medir una foto que no fuera del mismo origen que el sitio. Hoy no hace
+  falta plantearlo con las fotos propias, porque el resto ya cambió: **la
+  llamada a `getImageData` ya se ejecuta de verdad en el sitio**, no sólo en
+  comentarios. `js/movil-brillo.js` (`medidorDe`) llama a
+  `ctx.getImageData(...)`, y esa llamada corre cada vez que
+  `js/movil-visor.js` invoca `tenirEncuadre()` sobre una foto cargada. Y al
+  módulo **sí lo llama alguien**: `js/movil-brillo.js` (`tratamientoDe`) le
+  pasa el resultado de medir a `Brillo.decidir` (ver la entrada siguiente,
+  que lo detalla). La cabecera de `js/brillo.js` ya está corregida —lo dice
+  el párrafo de tres líneas más arriba, en esta misma entrada—, así que no
+  queda pendiente para ninguna ola futura.
 
   Nada de esto cambia la conclusión, que es la contramedida que la spec pide
   por escrito (`docs/superpowers/specs/2026-08-28-movil-design.md`, sección
@@ -1131,6 +1134,14 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   sólo al soltar. No es un defecto de este bloque —construye lo puro, y lo
   continuo es cosa de quien pinta—, pero es lo primero que se va a echar en
   falta al empezar el bloque que cablea el móvil.
+
+  **Ese bloque ya llegó, y el acercamiento continuo se resolvió, pero no por
+  aquí.** El bloque 4g añadió `js/movil-zoom.js` (módulo puro, la distancia y
+  la escala) y el seguimiento de `pointermove` en `js/movil-visor.js`, que lo
+  llama en cada movimiento mientras hay dos dedos en pantalla —sin tocar
+  `movil-gestos.js`, que sigue exactamente como describe este párrafo—. Quien
+  lea sólo este párrafo hoy concluiría que el pellizco continuo todavía no
+  existe en el sitio; sí existe, sólo que vive en otro archivo.
 - **Lo que ninguna prueba de este bloque puede decir, y que sólo puede juzgar
   el estudio en un móvil de verdad:** si los umbrales de gesto tienen el tacto
   correcto —si 24px (`MovilGestos.UMBRAL`) es el punto justo entre «no me
