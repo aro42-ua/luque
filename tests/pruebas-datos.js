@@ -95,9 +95,13 @@ describe('Datos.establecer', function () {
     igual(ReglasContenido.validar(d, ReglasContenido.CATEGORIAS).length, 0);
   });
 
-  prueba('sin enlace tambien vale: es un control, no un dato', function () {
+  /* El enlace es un control, no un dato: la ficha base no lo trae y vale
+     (lo prueba la primera comprobacion de este bloque), y anadirlo tampoco
+     puede invalidarla. Esta comprueba el segundo caso, que es el nuevo. */
+  prueba('con enlace tambien vale: es un control, no un dato', function () {
     igual(ReglasContenido.validar(
-      proyectoValido(), ReglasContenido.CATEGORIAS).length, 0);
+      proyectoValido({ enlace: 'https://vimeo.com/1' }),
+      ReglasContenido.CATEGORIAS).length, 0);
   });
 
   /* Sin la ficha entera no se puede pintar nada, y `p.ficha.papel` lanzaria. */
