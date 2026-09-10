@@ -202,17 +202,18 @@ gestos de dedo. **El visor de escritorio sigue vivo e intacto**: la guarda de
 lado hace que los dos convivan suscritos a la misma ruta sin pisarse (ver la
 sección de abajo).
 
-**De los tres módulos puros del bloque 4c, dos ya están cableados y uno
-sigue sin consumidor.** `MovilRecorrido` y `MovilGestos` los usa
-`js/movil-visor.js`: `MovilVisor.siguienteRuta` le pasa el gesto que decide
-`MovilGestos.soltar` a `MovilRecorrido.mover`, y el `pointerdown`/`pointerup`/
-`pointercancel` de la raíz del visor los alimenta. `Brillo` sigue **sin
-ningún consumidor**: comprobado buscando `window.Brillo` y el nombre
-`Brillo` en todos los `.js` y `.html` del repositorio fuera de su propio
-archivo y de sus pruebas — la única otra aparición es un comentario de
-`js/movil.js` que lo cita como ejemplo de argumento inyectado, no una
-llamada. No es un olvido de este bloque: sus esquinas adaptativas al brillo
-de la foto son trabajo del bloque 4g.
+**De los tres módulos puros del bloque 4c, los tres ya están cableados.**
+`MovilRecorrido` y `MovilGestos` los usa `js/movil-visor.js`:
+`MovilVisor.siguienteRuta` le pasa el gesto que decide `MovilGestos.soltar` a
+`MovilRecorrido.mover`, y el `pointerdown`/`pointerup`/`pointercancel` de la
+raíz del visor los alimenta. `Brillo` **ya tiene consumidor**: el bloque 4g
+añadió `js/movil-brillo.js` (`window.MovilBrillo`), que le da la función
+`medir` que le faltaba desde el 4c —lee las cuatro esquinas de un lienzo de
+64px y le pasa el promedio a `Brillo.decidir`—, y `js/movil-visor.js` tiñe el
+encuadre con lo que devuelve `MovilBrillo.tratamientoDe`: `tenirEncuadre` pone
+una de las tres clases `brillo-claro`/`brillo-oscuro`/`brillo-halo` en la raíz
+del visor, y el CSS de `.mvisor-esquina` resuelve esa clase a negro, a
+amarillo o al halo.
 
 **Y desde el contenido real, `visor-video.js` está igual: sin ningún
 consumidor.** Los vídeos se alcanzan con el botón que construye
@@ -997,8 +998,10 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   la imagen en modo CORS, y que por eso el lienzo se manchaba igual. Ya da
   igual: las rutas de `contenido.json` son relativas (`/img/...`), o sea del
   **mismo origen**, y una imagen del mismo origen no mancha el lienzo, con CORS
-  o sin él. La cabecera de `js/brillo.js` sigue contando la historia vieja y
-  hay que corregirla cuando el bloque 4g la toque.
+  o sin él. La cabecera de `js/brillo.js` **ya está corregida** (Tarea 3 del
+  bloque 4g): ya no habla de CORS, dice por qué se mantiene la inyección de
+  `medir` ahora que el obstáculo del lienzo desapareció —`Brillo` sigue sin
+  tocar el DOM ni un lienzo, y quien mide es `js/movil-brillo.js`, no él.
 
   Lo que sigue sin comprobarse es lo otro, y es lo importante: que la medición
   dé un número correcto sobre una foto de verdad.
@@ -1020,21 +1023,52 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   riesgo de esto», sobre las líneas 98-101): el camino automático
   está sin verificar, y sin esta anotación el halo puede quedarse puesto meses
   en producción sin que nadie note que la medición nunca llegó a funcionar.
-- **Desde el bloque 4f esto ya no es cierto para dos de los tres: sólo
-  `brillo.js` sigue sin que lo cargue ni lo llame ningún código.** Hasta el
-  bloque 4f, `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` se
-  cargaban sólo desde `tests/test.html`. Ahora `index.html` nombra a
-  `js/movil-recorrido.js` y `js/movil-gestos.js`, y `js/movil-visor.js` los
-  llama de verdad: `MovilVisor.siguienteRuta` pasa por
-  `MovilRecorrido.mover`, y `pointerdown`/`pointerup`/`pointercancel` sobre la
-  raíz del visor alimentan `MovilGestos.presionar`/`soltar`. `brillo.js`
-  sigue sin ninguna mención fuera de su propio archivo y de sus pruebas
-  (comprobado buscando el nombre de archivo y el global `Brillo` en todos los
-  `.js` y `.html` del repositorio); la razón está más arriba, en la sección
-  del visor móvil, y en «El camino automático del brillo sigue sin
-  verificarse»: sus esquinas adaptativas son del bloque 4g, y hoy no podrían
-  funcionar de todos modos porque ningún `<img>` del sitio pide la foto en
-  modo CORS.
+- **Desde el bloque 4g esto ya no es cierto para ninguno de los tres: los tres
+  módulos puros están cargados y llamados.** Hasta el bloque 4f,
+  `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` se cargaban sólo desde
+  `tests/test.html`. Desde el 4f, `index.html` nombra a `js/movil-recorrido.js`
+  y `js/movil-gestos.js`, y `js/movil-visor.js` los llama de verdad:
+  `MovilVisor.siguienteRuta` pasa por `MovilRecorrido.mover`, y
+  `pointerdown`/`pointerup`/`pointercancel` sobre la raíz del visor alimentan
+  `MovilGestos.presionar`/`soltar`. Desde el 4g, `index.html` y
+  `tests/test.html` también nombran a `js/brillo.js` y a `js/movil-brillo.js`
+  (`window.MovilBrillo`), y `js/movil-visor.js` los llama: `tenirEncuadre` le
+  pide el tratamiento a `MovilBrillo.tratamientoDe`, que mide con `Brillo` por
+  debajo. El único módulo puro que sigue sin ninguna mención fuera de su
+  propio archivo y de sus pruebas es `visor-video.js` (comprobado buscando el
+  nombre de archivo y los globales `Brillo`/`MovilBrillo`/`VisorVideo` en
+  todos los `.js` y `.html` del repositorio), y ése no lo toca este bloque:
+  lo dejó así el contenido real al mandar los vídeos a la plataforma externa.
+- **Que `MovilBrillo.medir` dé el veredicto correcto sobre una foto de estudio,
+  en un teléfono de verdad, sigue sin comprobarse.** Las pruebas de
+  `tests/pruebas-movil-brillo.js` miden fotos fabricadas en un lienzo —blanco
+  puro y negro puro—, que confirman la aritmética de las cuatro esquinas y que
+  el camino del lienzo no lanza, no el criterio. Que una foto de estudio a
+  contraluz pida esquinas negras o amarillas sólo se sabe mirándola, y esa
+  comprobación no se ha podido hacer todavía: no existe `img/` ni en este
+  worktree ni en el repositorio principal —las fotos viven en R2 y sólo las
+  sirve el Worker del sitio desplegado—, así que en local toda foto de
+  `contenido.json` da 404 y el visor cae siempre al halo, que es el camino de
+  degradación funcionando bien, no la comprobación pendiente. Lo que sí se
+  comprobó a 375px de ancho es que las cuatro esquinas se ven en su sitio sin
+  cortarse, y que forzando a mano las clases `brillo-claro`/`brillo-oscuro` el
+  CSS resuelve a negro y a amarillo.
+- **Que las esquinas midan la foto y no las franjas sigue sin comprobarse, y
+  el riesgo es concreto.** La escena usa `object-fit: contain`, así que una
+  foto que no llene la pantalla deja franjas del fondo negro del visor justo
+  donde van las esquinas. `MovilBrillo.medir` lee las cuatro esquinas de la
+  FOTO —del `<canvas>` donde se redibuja—, no las de la pantalla, así que
+  sobre una franja de fondo negro el amarillo se leería bien y el negro se
+  perdería. Si en un teléfono de verdad se ve una esquina negra perdida sobre
+  la franja, la respuesta es medir contra el fondo cuando hay franja, y eso es
+  un cambio de comportamiento, no un ajuste de umbral.
+- **Que el pellizco se sienta bien en un dedo de verdad sigue sin
+  comprobarse.** Todo lo que ejercitan `tests/pruebas-movil-zoom.js` y el
+  arnés de `movil-visor.js` son eventos de puntero sintéticos: ningún gesto de
+  este bloque —pellizcar, pasear la foto ampliada, deslizar entre piezas— se
+  ha probado con un dedo real. El tope de 6× (`MovilZoom.maxEscala`) y que
+  soltar por debajo de 1× vuelva al encaje son decisiones tomadas sobre el
+  papel, no medidas sobre un teléfono.
 - **`MovilRecorrido.paradas` lee `piezas` como una cuenta, y en todo el resto
   del repositorio `piezas` es un array.** En `contenido.json`, en
   `Datos.PROYECTOS` y en lo que consume `Router.piezasPorId`
