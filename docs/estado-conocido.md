@@ -24,10 +24,27 @@ alfabético, y por eso vive escrito a mano en `herramientas/proyectos.json`.
 generan a propósito: una ruta mal escrita sigue siendo una ruta válida y la
 validación no la atrapa.
 
-**Dos categorías se quedan vacías.** `cortometraje` y `foto-stills` están
-declaradas en `CATEGORIAS` y no tienen ni un proyecto, así que pulsarlas da una
-rejilla en blanco. Está sin decidir qué debería verse; es la tercera de las tres
-preguntas que la spec dejó abiertas para Lidia.
+**Dos categorías se quedan vacías, y sus celdas del menú no se pulsan.**
+`cortometraje` y `foto-stills` están declaradas en `CATEGORIAS` y no tienen ni un
+proyecto. Pulsarlas dejaba la rejilla en blanco; ahora `Galeria.marcarVacias()`
+les quita el ratón y atenúa **sus letras** (`.navbar .nav-svg a.vacia g`), y un
+enlace escrito a mano a `#/cortometraje` se va a «todos» en vez de pintar el
+vacío. Que se atenúe el `<g>` y no el `<a>` entero no es un detalle: cada celda
+del SVG lleva dentro medio corchete del marco de la barra, así que bajarle la
+opacidad al `<a>` dejaba el marco a medio pintar y la barra parecía rota en vez
+de tener dos categorías apagadas. Se calcula
+del contenido, así que el día que entre un cortometraje la celda se enciende
+sola. Sigue sin decidirse si además deberían enseñar algo —un aviso, un «muy
+pronto»—: es la tercera de las tres preguntas que la spec dejó abiertas para
+Lidia, y esto es sólo el suelo para que no se vea rota mientras se decide.
+
+**Las celdas del menú apuntaban a la categoría equivocada.** El SVG de la barra
+dibuja, por orden, Editorial, Videoclip, Cortometraje y Foto Stills, pero los
+`data-cat` de sus `<a>` iban corridos un puesto: pulsar «Editorial» filtraba
+`foto-stills` —vacía, rejilla en blanco— y pulsar «Cortometraje» enseñaba los
+videoclips. Corregido en `index.html`. Si alguien vuelve a tocar ese SVG, que
+compruebe que cada `<a href>` es el de las letras que hay DENTRO de él: no hay
+prueba automática que lo ate, porque las letras son `<path>` y no texto.
 
 **Cada foto se guarda en tres medidas, y no es capricho.** Cada una se pide donde
 se ve, porque la diferencia entre la mayor y la menor es de casi cuarenta veces:
@@ -55,6 +72,22 @@ piezas, como ya decía la especificación.
 **La composición ya no está escrita a mano.** `js/composicion.js` la genera a partir
 del **orden de la lista**: reordenar los proyectos en `contenido.json` recompone la
 galería, sin tocar ni una coordenada. No hay `x`/`y` que mantener.
+
+**Filtrar ya no cambia el tamaño de las fotos.** El modo `compacto` tenía la celda
+a 50 vw y el `amplio` a 30, así que pulsar una categoría multiplicaba cada caja por
+1,67 y las fotos crecían de golpe. Ahora los dos modos comparten celda y `disponer`
+acepta un tercer argumento, `variantes`, con el que `Galeria.aplicarFiltro` le pide
+a cada hueco la MISMA caja del ciclo que el proyecto tenía sin filtrar: la escala
+que se aplica es 1 clavada y filtrar sólo recoloca.
+
+Aquella celda de 50 estaba puesta para que el lienzo filtrado no bajase de 100 vw
+de ancho, porque un lienzo más estrecho que la pantalla se quedaba pegado a la
+izquierda con media pantalla amarilla. Eso lo arregla `GaleriaPaneo.medir()`, que
+ahora **centra** el lienzo cuando es más pequeño que el escenario en vez de dejarlo
+en el origen: los límites del paneo pasaron de `[minX, 0]` a `[minX, maxX]`, que
+valen lo mismo cuando no hay recorrido. De paso, `medir()` ignora un escenario a
+0x0 —galería todavía en `display:none`—, porque con los límites centrados esa
+medida falsa dejaba el lienzo medio fuera de la pantalla en vez de sólo descolocado.
 
 **Las dos calles anchas del lienzo son conocidas y están aceptadas.** El ciclo de
 variantes tiene seis entradas y el modo amplio cuatro columnas; como comparten el
