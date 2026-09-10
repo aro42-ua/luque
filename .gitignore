@@ -12,3 +12,9 @@ Thumbs.db
 # "git add -A" rutinario acabaria publicando un .pyc en el sitio.
 __pycache__/
 *.pyc
+
+# Lo genera herramientas/derivar_imagenes.py: decenas de MB de imagenes
+# derivadas. En produccion se sirven desde R2 (el Worker fuerza /img/* contra
+# el bucket); aqui viven solo para poder probar el sitio en local antes de
+# subirlas.
+img/
