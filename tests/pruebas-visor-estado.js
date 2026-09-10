@@ -24,6 +24,35 @@ describe('VisorEstado', function () {
     igual(VisorEstado.anterior(abierto()).indice, 0);
   });
 
+  /* DEVUELVE EL MISMO OBJETO, y no uno nuevo con el mismo indice. No es una
+     sutileza: `js/visor.js` hacia `estado = siguiente(estado); renderizar();`
+     sin mirar, y `renderizar` vacia la escena con `innerHTML = ''` y vuelve a
+     construir la <img>. En la ultima pieza, pulsar la flecha derecha
+     reconstruia la MISMA foto desde cero y se veia PARPADEAR. La identidad es
+     lo que permite a quien llama saber que no hay nada que repintar; el modulo
+     ya usaba este idioma con el visor cerrado, mas abajo. */
+  prueba('en la ultima, siguiente devuelve el mismo objeto', function () {
+    var e = VisorEstado.irA(abierto(), 3);
+    cierto(VisorEstado.siguiente(e) === e, 'ha devuelto un objeto nuevo');
+  });
+
+  prueba('en la primera, anterior devuelve el mismo objeto', function () {
+    var e = abierto();
+    cierto(VisorEstado.anterior(e) === e, 'ha devuelto un objeto nuevo');
+  });
+
+  prueba('irA al indice en el que ya se esta devuelve el mismo objeto', function () {
+    var e = VisorEstado.irA(abierto(), 2);
+    cierto(VisorEstado.irA(e, 2) === e, 'ha devuelto un objeto nuevo');
+  });
+
+  /* Y cuando SI cambia, un objeto nuevo: el estado es inmutable y quien lo
+     tenga guardado no debe ver cambiar el suyo bajo los pies. */
+  prueba('cuando el indice cambia, el objeto es otro', function () {
+    var e = abierto();
+    cierto(VisorEstado.siguiente(e) !== e, 'ha devuelto el mismo objeto');
+  });
+
   prueba('irA recorta por debajo y por encima', function () {
     igual(VisorEstado.irA(abierto(), -5).indice, 0);
     igual(VisorEstado.irA(abierto(), 99).indice, 3);

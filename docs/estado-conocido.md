@@ -60,6 +60,16 @@ fotos reales.
 | `piezas[].url` | 3000 | la foto grande del visor y la lupa | 520 KB |
 | `piezas[].miniatura` | 250 | la tira del visor, a 52 px | 8 KB |
 
+**Quince piezas van recortadas, y con otra llave.** Son capturas de vídeo de los
+videoclips con bandas negras de lado a lado —vídeo vertical dentro de un cuadro
+16:9, sobre todo— que en el visor se veían como bordes negros. La herramienta
+las recorta del original (franja negra de lado a lado, umbral 32/255, mínimo
+4 px, y nunca más de la mitad de un eje) y la pieza sale con el sufijo `-r`
+en la llave: `/img/*` se sirve como inmutable con un año de caché, así que
+pisar la llave vieja no llegaría a quien ya la tuviera. Las llaves viejas
+siguen en el bucket sin que nada las nombre. Decidido por Ángel el 2026-09-11
+tras ver la hoja de contacto antes/después.
+
 `piezas[].url` es la única que se guarda a tamaño completo, y no se toca: la lupa
 necesita que la pieza sea bastante mayor que la pantalla para tener recorrido, y en
 un estudio de fotografía la calidad de lo que se mira es el producto.
@@ -174,7 +184,8 @@ resuelve contra el documento y se salía de la raíz del sitio). Las dos se veí
 perfectas sirviendo por HTTP.
 
 Si hace falta una forma, va incrustada en el marcado y se colorea con
-`currentColor`. Así están el cursor y las cuatro esquinas.
+`currentColor`. Así están el cursor y las esquinas del hero. (Las cuatro del
+visor de escritorio se quitaron el 2026-09-11, a petición de Ángel.)
 
 ## Detalles menores aplazados
 
@@ -188,7 +199,7 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
   `Esc` sobre un vídeo reinicia la reproducción.
 - Con ocho o más piezas y una ventana muy estrecha (375 px), la tira de miniaturas
   se envuelve y solapa unos 20 px con la foto.
-- El indicador de carga se dibuja por encima de la interfaz y de las esquinas.
+- El indicador de carga se dibuja por encima de la interfaz.
 - El paneo con ratón sigue interpolando aunque el sistema pida movimiento
   reducido; el centrado por teclado sí lo respeta.
 
@@ -245,7 +256,13 @@ ningún consumidor**: comprobado buscando `window.Brillo` y el nombre
 archivo y de sus pruebas — la única otra aparición es un comentario de
 `js/movil.js` que lo cita como ejemplo de argumento inyectado, no una
 llamada. No es un olvido de este bloque: sus esquinas adaptativas al brillo
-de la foto son trabajo del bloque 4g.
+de la foto eran trabajo del bloque 4g.
+
+**Y desde el 2026-09-11 ese destino ya no existe en escritorio.** Ángel pidió
+quitar las cuatro esquinas del visor, y se quitaron con todo lo que las
+animaba. Lo que el bloque 4g tenía que teñir según el brillo de la foto ya no
+está en la pantalla; `Brillo` se queda sin consumidor conocido hasta que se
+decida qué, si algo, se adapta al brillo (el visor móvil tiene su HUD).
 
 **Y desde el contenido real, `visor-video.js` está igual: sin ningún
 consumidor.** Los vídeos se alcanzan con el botón que construye
@@ -1065,9 +1082,10 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   (comprobado buscando el nombre de archivo y el global `Brillo` en todos los
   `.js` y `.html` del repositorio); la razón está más arriba, en la sección
   del visor móvil, y en «El camino automático del brillo sigue sin
-  verificarse»: sus esquinas adaptativas son del bloque 4g, y hoy no podrían
-  funcionar de todos modos porque ningún `<img>` del sitio pide la foto en
-  modo CORS.
+  verificarse»: sus esquinas adaptativas eran del bloque 4g. (Desde el
+  contenido real las fotos son del mismo origen y el lienzo ya no se mancha;
+  y desde el 2026-09-11 el visor de escritorio no tiene esquinas que teñir.
+  Las dos cosas están dichas más arriba, en la sección del visor móvil.)
 - **`MovilRecorrido.paradas` lee `piezas` como una cuenta, y en todo el resto
   del repositorio `piezas` es un array.** En `contenido.json`, en
   `Datos.PROYECTOS` y en lo que consume `Router.piezasPorId`

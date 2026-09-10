@@ -774,40 +774,6 @@
 
 body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
 
-.visor-esquina{
-  position:absolute;
-  width:26px; height:26px;
-  z-index:3;
-  pointer-events:none;
-  color:var(--yellow);
-}
-.visor-esquina i{
-  position:absolute; inset:0;
-  display:block;
-}
-.visor-esquina i::before,
-.visor-esquina i::after{
-  content:'';
-  position:absolute;
-  background:currentColor;
-}
-.visor-esquina i::before{ top:0; left:0; width:100%; height:3px; }
-.visor-esquina i::after{  top:0; left:0; width:3px;  height:100%; }
-
-.visor-esquina.tl{ top:22px;    left:22px;  }
-.visor-esquina.tr{ top:22px;    right:22px; }
-.visor-esquina.bl{ bottom:22px; left:22px;  }
-.visor-esquina.br{ bottom:22px; right:22px; }
-
-.visor-esquina.tr i{ transform:scaleX(-1); }
-.visor-esquina.bl i{ transform:scaleY(-1); }
-.visor-esquina.br i{ transform:scale(-1,-1); }
-
-.visor.viajando .visor-esquina{
-  transition:transform 0.62s cubic-bezier(.2,.7,.2,1),
-             color 0.62s cubic-bezier(.2,.7,.2,1);
-}
-
 .visor.viajando .visor-escena img,
 .visor.viajando .visor-escena video{
   transition:transform 0.62s cubic-bezier(.2,.7,.2,1),
@@ -831,7 +797,17 @@ body.visor-abierto .navbar{ opacity:0; pointer-events:none; }
   transform-origin:0 0;
 }
 
-.visor.lupa .visor-escena{ overflow:hidden; touch-action:none; }
+/* flex-start en los dos ejes, y no es estética: `js/visor-lupa.js` trata x=0
+   como "la foto pegada al borde izquierdo" y calcula desde ahí el centrado
+   inicial y los límites del arrastre. Con la escena centrada, una foto a
+   tamaño natural ya quedaba desplazada por layout —medido: offsetLeft -344,
+   offsetTop -1150 con 2000×3000 en 1312×700— y la lupa sumaba encima el mismo
+   translate: la vista arrancaba en la mitad inferior-derecha y la mitad
+   superior-izquierda era inalcanzable. Lo fija tests/pruebas-visor-lupa.js. */
+.visor.lupa .visor-escena{
+  overflow:hidden; touch-action:none;
+  justify-content:flex-start; align-items:flex-start;
+}
 
 .visor.lupa .visor-escena img{
   max-width:none; max-height:none;
@@ -1370,7 +1346,6 @@ body.es-movil .hoja-hero{
 
 @media (prefers-reduced-motion: reduce){
   .visor{ transition:opacity 0.2s ease; }
-  .visor.viajando .visor-esquina,
   .visor.viajando .visor-escena img,
   .visor.viajando .visor-escena video{ transition:none; }
   .visor .visor-chrome{ transition:opacity 0.2s ease; }
