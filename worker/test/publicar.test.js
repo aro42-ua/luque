@@ -9,6 +9,16 @@ import { generarPar, firmarToken, silenciarRegistro } from './apoyo-token.js';
 
 const CATEGORIAS = ['foto-stills', 'editorial', 'videoclip', 'cortometraje'];
 
+/* Todos los proyectos de aquí abajo llevan `ficha` con año y papel porque el
+   bloque del contenido real los hizo obligatorios en `js/reglas-contenido.js`,
+   y estas fixtures son de antes: sin ficha, un borrador que la prueba llama
+   «valido» daba 422 y cuatro pruebas fallaban en main por algo que no tenía
+   nada que ver con publicar. Se le pone ficha a las once, no sólo a las que
+   fallaban, para que las inválidas fallen únicamente por lo que cada prueba
+   quiere probar —la categoría inventada, el hueco en la lista— y no de
+   rebote. `cliente` y `enlace` se dejan fuera a propósito: las reglas no los
+   exigen, y una fixture que trae más de lo necesario oculta esa asimetría. */
+
 /* La lista estuvo escrita tres veces: aquí, en `worker/src/index.js` y en
    `js/datos.js`. Una divergencia haría que el Worker rechace con 422 contenido
    que el navegador da por bueno, o al revés — el fallo del bloque 2 que motivó
@@ -24,6 +34,7 @@ test('el Worker usa la misma lista de categorías que el navegador', () => {
 
 test('un borrador valido no da problemas', () => {
   const b = { version: 3, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg', miniatura: 'm.jpg' }] } ] };
   assert.deepEqual(problemasDelBorrador(b, CATEGORIAS), []);
 });
@@ -34,6 +45,7 @@ test('un borrador sin proyectos no se publica', () => {
 
 test('usa las mismas reglas que el navegador', () => {
   const b = { version: 1, proyectos: [ { id: 'x', titulo: 'X', categoria: 'inventada',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   assert.ok(problemasDelBorrador(b, CATEGORIAS).join(' ').includes('categoría desconocida'));
 });
@@ -52,6 +64,7 @@ test('un nombre de archivo no puede escaparse de su carpeta', () => {
    `CATEGORIAS` roto es un fallo de configuración, no un borrador inválido. */
 test('si las categorías no llegan bien, falla en vez de callar', () => {
   const b = { version: 1, proyectos: [ { id: 'x', titulo: 'X', categoria: 'editorial',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   assert.throws(() => problemasDelBorrador(b, undefined), /categorías/);
   assert.throws(() => problemasDelBorrador(b, null), /categorías/);
@@ -94,6 +107,7 @@ function almacenFalso(inicial) {
 
 test('publicar copia el borrador válido sobre el contenido', async () => {
   const b = { version: 2, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = almacenFalso(b);
 
@@ -107,6 +121,7 @@ test('publicar copia el borrador válido sobre el contenido', async () => {
    completo — lo que hay al otro lado es la web pública. */
 test('publicar no escribe nada si el borrador no es válido', async () => {
   const b = { version: 1, proyectos: [ { id: 'x', titulo: 'X', categoria: 'inventada',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = almacenFalso(b);
 
@@ -127,6 +142,7 @@ test('un borrador vacío (nunca guardado) tampoco se publica', async () => {
    el operador nunca dio por bueno. */
 test('publicar una versión que no es la guardada choca y no escribe', async () => {
   const b = { version: 7, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = almacenFalso(b);
 
@@ -157,6 +173,7 @@ const peticionPublicar = (consulta) =>
 
 test('POST /api/publicar con un borrador inválido da 422 y no publica', async () => {
   const b = { version: 1, proyectos: [ { id: 'x', titulo: 'X', categoria: 'inventada',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = { ...entornoBase, ...almacenFalso(b) };
 
@@ -181,6 +198,7 @@ test('POST /api/publicar con un hueco en proyectos da 422, no 500', async () => 
 
 test('POST /api/publicar con un borrador válido da 200 y publica', async () => {
   const b = { version: 5, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = { ...entornoBase, ...almacenFalso(b) };
 
@@ -196,6 +214,7 @@ test('POST /api/publicar con un borrador válido da 200 y publica', async () => 
    R2 a mano. Se normaliza al leer, y el `"3"` no se propaga a contenido.json. */
 test('un borrador guardado con la versión como cadena se puede publicar', async () => {
   const b = { version: '3', proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = { ...entornoBase, ...almacenFalso(b) };
 
@@ -208,6 +227,7 @@ test('un borrador guardado con la versión como cadena se puede publicar', async
 
 test('POST /api/publicar sin decir la versión da 400', async () => {
   const b = { version: 5, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
 
   for (const consulta of ['', '?version=', '?version=abc', '?version=-1']) {
@@ -220,6 +240,7 @@ test('POST /api/publicar sin decir la versión da 400', async () => {
 
 test('POST /api/publicar con una versión vieja da 409, igual que guardar', async () => {
   const b = { version: 7, proyectos: [ { id: 'bruma', titulo: 'Bruma', categoria: 'editorial',
+    ficha: { anio: 2025, papel: 'DoP' },
     tipo: 'fotos', portada: 'p.jpg', piezas: [{ url: 'a.jpg' }] } ] };
   const entorno = { ...entornoBase, ...almacenFalso(b) };
 
