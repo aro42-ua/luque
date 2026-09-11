@@ -24,6 +24,15 @@ window.MovilVisor = (function () {
      viene a cuento. */
   var direccionPendiente = null;
 
+  /* La última parada que NO era la ficha, para que el botón de ficha devuelva
+     a donde estabas y no al principio. Se olvida al cambiar de proyecto: la
+     pieza 3 de un trabajo no es la pieza 3 de otro, y en un proyecto de vídeo
+     no existe.
+
+     Vive aquí y no en `MovilRecorrido` porque aquél es puro y no guarda nada
+     entre llamadas; se le pasa como argumento. */
+  var piezaRecordada = null;
+
   /* Quién tenía el foco justo antes de abrir —normalmente el botón de la
      rejilla que se tocó—, para devolvérselo al cerrar. No se pregunta a
      `js/visor-origen.js`, que hace lo mismo para el escritorio: aquél
@@ -44,10 +53,12 @@ window.MovilVisor = (function () {
     elCerrar = refs.cerrar;
     orden = ordenDe(proyectos);
     aqui = null;
+    piezaRecordada = null;
     window.MovilHud.init({
       raiz:     refs.hud,
       cat:      refs.cat,
       cats:     refs.cats,
+      ficha:    refs.ficha,
       cerrar:   refs.cerrar,
       titulo:   refs.titulo,
       contador: refs.contador
@@ -59,6 +70,22 @@ window.MovilVisor = (function () {
       else window.Router.ir('categoria', categoria);
     }, function () {
       window.Router.ir('todos', null);
+    }, function () {
+      /* El botón no pinta: navega, igual que un deslizamiento, y el suscriptor
+         de siempre repinta. Es lo que impide que la pantalla diga una cosa y la
+         URL otra.
+
+         La dirección se pone a mano porque pulsar no es un dedo, pero la ficha
+         está ABAJO del eje y eso el recorrido ya lo enseñó en cada gesto: ir a
+         la ficha entra como si se hubiera deslizado «arriba» y volver como
+         «abajo». Sin esto la parada aparecería de golpe y el botón
+         contradiría el modelo espacial del eje. */
+      if (!aqui) return;
+      var destino = window.MovilRecorrido.alternarFicha(aqui, orden, piezaRecordada);
+      if (destino.pieza === aqui.pieza) return;
+      direccionPendiente = (destino.pieza === 'ficha') ? 'arriba' : 'abajo';
+      var ruta = window.MovilRecorrido.aRuta(destino);
+      window.Router.ir(ruta.tipo, ruta.valor, ruta.pieza);
     });
     engancharGestos();
   }
@@ -78,6 +105,8 @@ window.MovilVisor = (function () {
     var abriendo = (aqui === null);
     if (abriendo) elFocoDeAntes = document.activeElement;
 
+    if (!aqui || aqui.proyecto !== nuevo.proyecto) piezaRecordada = null;
+    if (nuevo.pieza !== 'ficha') piezaRecordada = nuevo.pieza;
     aqui = nuevo;
     raiz.hidden = false;
     /* `mvisor-abierto` es un gancho de estado que HOY ningún CSS usa. Se
@@ -106,6 +135,7 @@ window.MovilVisor = (function () {
   function cerrar() {
     if (!aqui) return;
     aqui = null;
+    piezaRecordada = null;
     raiz.hidden = true;
     document.body.classList.remove('mvisor-abierto');
     escena.innerHTML = '';

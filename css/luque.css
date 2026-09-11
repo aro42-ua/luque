@@ -1524,7 +1524,8 @@ body.es-movil .mvisor-cat,
 body.es-movil .mvisor-cerrar,
 body.es-movil .mvisor-titulo,
 body.es-movil .mvisor-contador,
-body.es-movil .mvisor-cat-opcion{
+body.es-movil .mvisor-cat-opcion,
+body.es-movil .mvisor-ficha-boton{
   background:var(--yellow);
   color:var(--black);
   border:0;
@@ -1536,7 +1537,8 @@ body.es-movil .mvisor-cat-opcion{
 
 body.es-movil .mvisor-cat,
 body.es-movil .mvisor-cerrar,
-body.es-movil .mvisor-cat-opcion{
+body.es-movil .mvisor-cat-opcion,
+body.es-movil .mvisor-ficha-boton{
   pointer-events:auto;
   cursor:pointer;
 }

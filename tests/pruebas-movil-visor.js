@@ -10,13 +10,25 @@
    trabajos, sin una sola excepción en consola. Por eso la conversión vive en
    una función con nombre y con prueba, y no suelta dentro de `init`. */
 
+/* Los tres llevan `ficha` porque el eje vertical siempre acaba en ella y
+   `MovilFicha.de` (js/movil-ficha.js) la lee sin guarda, igual que
+   `VisorFicha.pintar` en el escritorio: un proyecto de `contenido.json` la
+   trae siempre. Sin este campo, cualquier prueba de este fichero que llegue a
+   la parada `'ficha'` revienta con «Cannot read properties of undefined
+   (reading 'cliente')». Valores distintos en cada uno para que una prueba que
+   lea la ficha pintada no pueda confundir un proyecto con otro. Sin `enlace`:
+   `Plataforma.boton` devuelve `null` sin él y la ficha se pinta igual, que es
+   lo que hoy hacen los ocho proyectos reales de `contenido.json`. */
 var MV_PROYECTOS = [
   { id: 'niebla',  titulo: 'Niebla',  categoria: 'editorial',
-    tipo: 'foto',  piezas: [{ url: 'a' }, { url: 'b' }, { url: 'c' }] },
+    tipo: 'foto',  piezas: [{ url: 'a' }, { url: 'b' }, { url: 'c' }],
+    ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de arte' } },
   { id: 'oleaje',  titulo: 'Oleaje',  categoria: 'cortometraje',
-    tipo: 'video', piezas: [] },
+    tipo: 'video', piezas: [],
+    ficha: { cliente: 'Marca Norte', anio: '2025', papel: 'Dirección de fotografía' } },
   { id: 'salitre', titulo: 'Salitre', categoria: 'editorial',
-    tipo: 'video' }
+    tipo: 'video',
+    ficha: { cliente: 'Casa Salitre', anio: '2024', papel: 'Producción' } }
 ];
 
 /* El marcado de las ocho referencias que `MovilVisor.init` exige desde la
@@ -26,6 +38,7 @@ var MV_PROYECTOS = [
 var MV_MARCADO =
   '<div><div id="mvRaiz" hidden><div id="mvEscena"></div>' +
   '<div id="mvHud"><button id="mvCat"></button><ul id="mvCats"></ul>' +
+  '<button id="mvFicha" aria-pressed="false"></button>' +
   '<button id="mvCerrar"></button><p id="mvTitulo"></p>' +
   '<span id="mvContador"></span></div></div></div>';
 
@@ -36,6 +49,7 @@ function mvRefsDesde(caja) {
     hud:      caja.querySelector('#mvHud'),
     cat:      caja.querySelector('#mvCat'),
     cats:     caja.querySelector('#mvCats'),
+    ficha:    caja.querySelector('#mvFicha'),
     cerrar:   caja.querySelector('#mvCerrar'),
     titulo:   caja.querySelector('#mvTitulo'),
     contador: caja.querySelector('#mvContador')
@@ -637,5 +651,77 @@ describe('MovilVisor — la animación de entrada tras un deslizamiento', functi
         return refs.escena.firstChild.className;
       });
     }), 'mvisor-foto');
+  });
+});
+
+/* El botón de ficha cableado: lo que se fija aquí no es a dónde lleva —eso es
+   de `MovilRecorrido.alternarFicha` y tiene sus propias pruebas— sino que
+   `MovilVisor` recuerde la pieza correcta y llame al router con ella. */
+describe('MovilVisor — el botón de ficha', function () {
+
+  function conRuta(ruta, fn) {
+    return conVisorSobre(MV_PROYECTOS, function (refs) {
+      var antesMovil = window.Movil, antesRouter = window.Router;
+      var ido = [];
+      window.Movil = { actual: function () { return 'movil'; } };
+      window.Router = { ir: function (t, v, p) { ido.push([t, v, p]); } };
+      try {
+        MovilVisor.aplicar(ruta);
+        return fn(refs, ido);
+      } finally {
+        window.Movil = antesMovil;
+        window.Router = antesRouter;
+      }
+    });
+  }
+
+  function enProyecto(valor, pieza) {
+    return { tipo: 'proyecto', valor: valor, pieza: pieza };
+  }
+
+  prueba('desde la pieza 2, el botón pide la ficha', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
+      refs.ficha.click();
+      return ido;
+    }), [['proyecto', 'niebla', 'ficha']]);
+  });
+
+  /* La razón de ser de `piezaRecordada`: volver donde estabas y no al
+     principio. Se llega a la ficha por el router, igual que llegaría un
+     deslizamiento, para que la prueba recorra el mismo camino que el dedo. */
+  prueba('desde la ficha, el botón vuelve a la pieza de la que saliste', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
+      MovilVisor.aplicar(enProyecto('niebla', 'ficha'));
+      refs.ficha.click();
+      return ido;
+    }), [['proyecto', 'niebla', 2]]);
+  });
+
+  /* El enlace en frío: se entra directamente por la ficha, así que no hay
+     pieza que recordar y se cae a la primera. */
+  prueba('entrando por la ficha, el botón lleva a la primera pieza', function () {
+    igual(conRuta(enProyecto('niebla', 'ficha'), function (refs, ido) {
+      refs.ficha.click();
+      return ido;
+    }), [['proyecto', 'niebla', 1]]);
+  });
+
+  /* Lo que recuerda es de ESTE proyecto. Sin olvidar al cambiar, salir de la
+     pieza 3 de `niebla`, pasar a `oleaje` y pedir su ficha te devolvería a una
+     pieza 3 que en `oleaje` no existe. */
+  prueba('cambiar de proyecto olvida la pieza recordada', function () {
+    igual(conRuta(enProyecto('niebla', 3), function (refs, ido) {
+      MovilVisor.aplicar(enProyecto('oleaje', null));
+      MovilVisor.aplicar(enProyecto('oleaje', 'ficha'));
+      refs.ficha.click();
+      return ido;
+    }), [['proyecto', 'oleaje', null]]);
+  });
+
+  prueba('el botón no hace nada con el visor cerrado', function () {
+    igual(conRuta({ tipo: 'todos', valor: null, pieza: null }, function (refs, ido) {
+      refs.ficha.click();
+      return ido;
+    }), []);
   });
 });
