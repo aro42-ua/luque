@@ -1407,19 +1407,33 @@ body.es-movil .hoja-hero{
    `overscroll-behavior-y: contain` apaga el «tirar para recargar» de Chrome en
    Android. El gesto «foto anterior» empieza deslizando hacia abajo desde
    arriba, que es exactamente el gesto que recarga la página: sin esto, el
-   recorrido se interrumpe con una recarga a mitad.
+   recorrido se interrumpe con una recarga a mitad. Ésta NO se interseca con
+   los ancestros —cada elemento decide la suya por su cuenta—, así que se
+   queda aquí, en el contenedor de todo el visor.
 
-   `touch-action: none` le dice al navegador que no se quede con el
-   desplazamiento ni el zoom por su cuenta dentro del visor, porque aquí los
-   dos ejes los interpreta `js/movil-gestos.js`. Fuera del visor NO se pone: la
-   rejilla de la portada sí tiene que poder desplazarse con el dedo. */
+   `touch-action` en cambio SÍ se interseca con el de todos los ancestros de
+   un punto, y por eso ya NO se pone `none` aquí. Antes estaba aquí, en
+   `.mvisor`, y eso apagaba también el `pan-x` de `.mvisor-tira`: el
+   `touch-action` efectivo de un dedo es la INTERSECCIÓN del suyo con el de
+   cada antecesor, así que `none` arriba anula cualquier `pan-x` de abajo,
+   sin que nada lo avise. Medido sobre `#/la-boquerona` a 375×812: con el
+   `none` aquí, la cadena hacia la tira daba `pan-x ∩ auto ∩ auto ∩ none =
+   none`, y la tira —574px de pista en un marco de 327— no se podía desplazar
+   con el dedo: sólo se alcanzaban unas 5 de las 10 piezas.
+
+   Se reparte en su lugar un `none` por cada descendiente que SÍ recibe el
+   dedo —`.mvisor-escena`, `.mvisor-hud-arriba`, `.mvisor-hud-pie`, más abajo
+   en este mismo fichero—, dejando `pan-x` sólo en `.mvisor-tira`. Los que se
+   quedan en `auto` aquí (`.mvisor`, `.mvisor-hud`, `.mvisor-hud-abajo`) son
+   todos `pointer-events:none`, así que el dedo nunca aterriza en ellos y su
+   `auto` no llega a decidir nada; ver el comentario de `.mvisor-tira`, más
+   abajo, para la cadena completa. */
 body.es-movil .mvisor{
   display:block;
   position:fixed; inset:0;
   z-index:60;
   background:var(--black);
   overscroll-behavior-y:contain;
-  touch-action:none;
 }
 
 body.es-movil .mvisor[hidden]{ display:none; }
@@ -1429,9 +1443,14 @@ body.es-movil .mvisor[hidden]{ display:none; }
    proporción de la imagen — de ahí la condición de la Tarea 2 sobre que la
    portada y la pieza compartan proporción. Con `cover` no haría falta esa
    condición, pero se recortarían las fotos del estudio. */
+/* `touch-action:none` propio: desde que `.mvisor` ya no lo pone (ver el
+   comentario de arriba), la escena es la que recibe el dedo del pellizco y
+   del paseo, que sigue interpretando `js/movil-gestos.js` a mano y no el
+   navegador. */
 body.es-movil .mvisor-escena{
   position:absolute; inset:0;
   display:flex; align-items:center; justify-content:center;
+  touch-action:none;
 }
 
 body.es-movil .mvisor-foto{
@@ -1526,10 +1545,15 @@ body.es-movil .mvisor-hud{
 body.es-movil .mvisor-hud.dormido{ opacity:0; }
 body.es-movil .mvisor-hud.dormido *{ pointer-events:none; }
 
+/* `touch-action:none` propio, por la misma razón que `.mvisor-escena`: las
+   pastillas de arriba (a través de esta fila) y el título/contador (a través
+   de la de abajo) SÍ reciben el dedo —son `pointer-events:auto`—, así que su
+   `none` ya no lo hereda de `.mvisor`. */
 body.es-movil .mvisor-hud-arriba,
 body.es-movil .mvisor-hud-pie{
   display:flex; align-items:flex-start; justify-content:space-between;
   gap:.6rem;
+  touch-action:none;
 }
 
 /* La fila de abajo pasa a ser una columna: la tira encima, el título y el
@@ -1588,13 +1612,19 @@ body.es-movil .mvisor :focus-visible{
    Tres reglas del visor la dejarían muerta, y las tres se contradicen AQUÍ y
    sólo aquí:
 
-   - `.mvisor` lleva `touch-action:none` para que los dos ejes los interprete
-     js/movil-gestos.js. Eso apaga también el desplazamiento de la tira.
-     `pan-x` devuelve un solo eje y deja el resto declinado.
    - `.mvisor-hud` es `pointer-events:none` para que el deslizamiento lo
      atraviese; cada control lo recupera por su cuenta, y la tira también.
    - `overscroll-behavior-x:contain` para que llegar al final de la tira no se
      encadene con el gesto de «atrás» del navegador.
+   - El `touch-action:none` que interpreta el resto del visor —repartido hoy
+     entre `.mvisor-escena`, `.mvisor-hud-arriba` y `.mvisor-hud-pie`, ver el
+     comentario de `.mvisor` más arriba— se devuelve aquí como `pan-x`: la
+     tira es la ÚNICA parada de la cadena de ancestros que no lleva `none`,
+     así que es la única cuyo `touch-action` efectivo no acaba en `none ∩
+     algo = none`. El `touch-action` de un dedo se interseca con el de TODOS
+     sus ancestros; un solo `none` en cualquier punto de la cadena habría
+     bastado para anular este `pan-x`, sin avisar y sin que la suite —que no
+     ve CSS computado— pudiera atraparlo.
 
    La barra de desplazamiento se esconde en los dos motores: en un teléfono no
    se usa con el ratón y ocuparía alto sobre la foto. */
