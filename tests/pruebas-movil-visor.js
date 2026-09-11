@@ -487,13 +487,23 @@ describe('MovilVisor — el foco del diálogo (VisorFoco)', function () {
      Por eso estas dos pruebas calculan el último del DOM en vez de nombrarlo:
      lo que fijan es que el Tab DA LA VUELTA, no quién está al final. Nombrarlo
      las rompía cada vez que el HUD ganaba un control, que es lo que pasó al
-     entrar la tira.
+     entrar la tira. */
 
-     El selector es el mismo que usa `VisorFoco.enfocables` (js/visor-foco.js):
-     si difiriera, esta prueba podría mirar un `ultimo` distinto del que de
-     verdad atrapa el foco y pasar en verde por la razón equivocada. */
   function ultimoEnfocable(raiz) {
-    var todos = raiz.querySelectorAll('button:not([disabled]), [role="slider"]');
+    /* El MISMO selector y el MISMO filtro que `VisorFoco.enfocables`
+       (js/visor-foco.js), y no sólo el selector: aquella función además
+       descarta lo que no se ve, y un ayudante que se saltara ese filtro
+       coincidiría con ella por casualidad de los datos y no por
+       construcción. El día que un control enfocable-por-selector quede
+       oculto —la tira sin pintar, un botón dentro de un contenedor
+       `hidden`—, esta prueba fijaría como «último» un nodo que el
+       atrapa-foco real nunca trata como tal. */
+    var todos = Array.prototype.filter.call(
+      raiz.querySelectorAll('button:not([disabled]), [role="slider"]'),
+      function (el) {
+        return el.offsetParent !== null &&
+               getComputedStyle(el).visibility !== 'hidden';
+      });
     return todos[todos.length - 1];
   }
 
