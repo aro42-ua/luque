@@ -86,6 +86,10 @@
 <script src="../js/visor-ficha.js"></script>
 <script src="../panel/js/identificador.js"></script>
 <script src="../panel/js/orden.js"></script>
+<!-- rutas.js es puro: sólo define window.Rutas. Lee el fragmento y dice qué
+     pantalla del panel toca. No se confunde con js/router.js, que enruta la
+     web pública. Ver pruebas-rutas-panel.js. -->
+<script src="../panel/js/rutas.js"></script>
 <!-- lista.js no toca el DOM al cargarse: sólo define window.Lista. Se carga
      por sus tres funciones sin DOM (indiceValido, calcularHasta,
      dentroDeLaCaja) y también por `pintar`, que sí construye nodos: el arnés
@@ -123,6 +127,7 @@
 <script src="pruebas-hero.js"></script>
 <script src="pruebas-identificador.js"></script>
 <script src="pruebas-orden.js"></script>
+<script src="pruebas-rutas-panel.js"></script>
 <script src="pruebas-lista.js"></script>
 <script src="pruebas-lista-pintar.js"></script>
 <!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con

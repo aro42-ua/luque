@@ -272,7 +272,6 @@ Arranca el arnés (`python -m http.server 8000` desde la raíz del worktree y ab
 
 ```js
 window.Rutas = (function () {
-  var LISTA = { pantalla: 'lista', id: null };
 
   /* Devuelve siempre un objeto nuevo: quien lo reciba puede guardárselo sin
      miedo a que la siguiente llamada le cambie el de antes por debajo. */
@@ -315,7 +314,7 @@ window.Rutas = (function () {
     return '#/';
   }
 
-  return { leer: leer, hacia: hacia, LISTA: LISTA };
+  return { leer: leer, hacia: hacia };
 })();
 ```
 
