@@ -840,7 +840,12 @@ existe para que la prueba siga demostrando algo si algún día la tira saliera
 del ciclo. Nombrar el último era fijar un dato incidental del marcado, y esas
 dos pruebas se rompían cada vez que el HUD ganaba un control.
 
-**Comprobación visual hecha, a 375×812 sobre `#/la-boquerona`:** las 10
+**Comprobación hecha en un NAVEGADOR DE ESCRITORIO con el viewport emulado
+a 375×812, no en un teléfono**, sobre `#/la-boquerona`. Se dice con todas
+las letras porque este documento avisa dos veces de lo que esa diferencia
+cuesta: lo medido aquí son cajas, clases computadas y `elementFromPoint`,
+que sí se pueden dar por buenos; el tacto del dedo y los gestos del sistema
+no, y siguen enteros en la lista de más abajo. Lo medido: las 10
 miniaturas salen, la actual con contorno `rgb(255,255,0)` y las demás con el
 contorno transparente. Pulsar la octava navega a `#/la-boquerona/8`, el
 contador pasa a `08/10`, la marca se mueve y **la tira NO se reconstruye** (el
