@@ -291,8 +291,9 @@ h1{
 }
 
 /* Dos columnas en ancho, una en el teléfono (ver el @media del final). Los
-   dos campos anchos llevan `span 2`, que sobre una rejilla de una columna no
-   hace nada, así que en el móvil no hay nada que deshacer. */
+   dos campos anchos llevan `span 2` aquí y lo PIERDEN en el @media: un span
+   sobre una rejilla de una columna no es inofensivo, crea una columna
+   implícita. El porqué, medido, está junto a esa regla. */
 .ficha{
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -410,6 +411,16 @@ h1{
 .celda--marca-antes{ box-shadow: inset 3px 0 0 var(--yellow); }
 .celda--marca-despues{ box-shadow: inset -3px 0 0 var(--yellow); }
 
+/* Sobre la portada, la marca de inserción y el anillo tienen que verse a la
+   vez: dos `box-shadow` de la misma especificidad no se suman, la posterior
+   sustituye a la anterior, así que aquí se escriben juntas. */
+.celda--portada.celda--marca-antes{
+  box-shadow: inset 3px 0 0 var(--yellow), 0 0 0 3px var(--yellow), 0 0 0 6px var(--black);
+}
+.celda--portada.celda--marca-despues{
+  box-shadow: inset -3px 0 0 var(--yellow), 0 0 0 3px var(--yellow), 0 0 0 6px var(--black);
+}
+
 /* La unica animacion de esta pantalla. La apaga la regla de movimiento
    reducido de mas abajo, que es global: un parpadeo al arrastrar treinta
    fotos es justo lo que molesta a quien la tiene puesta. */
@@ -513,6 +524,11 @@ h1{
 @media (max-width: 600px){
   .panel{ padding: 1.5rem 1rem 4rem; }
   .ficha{ grid-template-columns: 1fr; }
+  /* `span 2` sobre una rejilla de una columna NO es inofensivo: obliga a crear
+     una segunda columna implícita, que se dimensiona por el contenido —los
+     <input> miden ~220px como mínimo— y la ficha vuelve a dos columnas y
+     desborda. Medido a 375px: «222px 222px». Se quita el span en el móvil. */
+  .campo--ancho{ grid-column: auto; }
   /* Dos columnas a 375px son celdas de ~160px, donde caben «Portada» y
      «Quitar» uno al lado del otro a 44px de alto. */
   .fotos{ grid-template-columns: repeat(2, 1fr); }
