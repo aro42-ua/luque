@@ -41,7 +41,7 @@ var MV_MARCADO =
   '<button id="mvFicha" aria-pressed="false"></button>' +
   '<button id="mvCerrar"></button><p id="mvTitulo"></p>' +
   '<span id="mvContador"></span>' +
-  '<nav id="mvTira" hidden></nav>' +
+  '<nav id="mvTira" class="mvisor-tira" hidden></nav>' +
   '</div></div></div>';
 
 function mvRefsDesde(caja) {
@@ -774,5 +774,65 @@ describe('MovilVisor — el botón de ficha', function () {
       refs.tira.querySelectorAll('button')[2].click();
       return ido;
     }), [['proyecto', 'niebla', 3]]);
+  });
+
+  /* La guarda «ya estoy aquí», igual que la del botón de ficha (arriba en
+     este mismo describe): pulsar la miniatura de la pieza en la que ya
+     estás no puede llegar al router como «avisar», porque eso repinta la
+     escena entera —vacía, recrea la <img> desde la portada, relanza la
+     animación— sobre la foto que ya se estaba mirando. */
+  prueba('pulsar la miniatura de la pieza actual no navega', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
+      refs.tira.querySelectorAll('button')[1].click();
+      return ido;
+    }), []);
+  });
+});
+
+/* El caso real de la spec: desplazar la tira con el dedo es justo lo que
+   hace que el navegador se quede el gesto y dispare `pointercancel`. Sin
+   filtrar por origen, ese `pointercancel` (o el `pointerup` de un toque
+   corriente sobre la tira) llega a `soltarEn`, que no distingue soltar de
+   que el sistema te quite el gesto, y con recorrido de sobra navega a otra
+   pieza aunque el dedo nunca soltó sobre la foto. */
+describe('MovilVisor — los dedos de la tira no entran en la máquina de gestos', function () {
+
+  function conRuta(ruta, fn) {
+    return conVisorSobre(MV_PROYECTOS, function (refs) {
+      var antesMovil = window.Movil, antesRouter = window.Router;
+      var ido = [];
+      window.Movil = { actual: function () { return 'movil'; } };
+      window.Router = { ir: function (t, v, p) { ido.push([t, v, p]); } };
+      try {
+        MovilVisor.aplicar(ruta);
+        return fn(refs, ido);
+      } finally {
+        window.Movil = antesMovil;
+        window.Router = antesRouter;
+      }
+    });
+  }
+
+  prueba('pointerdown + pointerup sobre un botón de la tira, con recorrido que en la foto navegaría, no llega al router', function () {
+    igual(conRuta({ tipo: 'proyecto', valor: 'niebla', pieza: 2 }, function (refs, ido) {
+      var boton = refs.tira.querySelectorAll('button')[0];
+      boton.dispatchEvent(new PointerEvent('pointerdown',
+        { pointerId: 1, clientX: 200, clientY: 100, bubbles: true }));
+      boton.dispatchEvent(new PointerEvent('pointerup',
+        { pointerId: 1, clientX: 120, clientY: 100, bubbles: true }));
+      return ido;
+    }), []);
+  });
+
+  /* El caso real: `pointercancel` en vez de `pointerup`. */
+  prueba('pointerdown + pointercancel sobre un botón de la tira tampoco llega al router', function () {
+    igual(conRuta({ tipo: 'proyecto', valor: 'niebla', pieza: 2 }, function (refs, ido) {
+      var boton = refs.tira.querySelectorAll('button')[0];
+      boton.dispatchEvent(new PointerEvent('pointerdown',
+        { pointerId: 1, clientX: 200, clientY: 100, bubbles: true }));
+      boton.dispatchEvent(new PointerEvent('pointercancel',
+        { pointerId: 1, clientX: 120, clientY: 100, bubbles: true }));
+      return ido;
+    }), []);
   });
 });

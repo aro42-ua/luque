@@ -92,6 +92,12 @@ window.MovilVisor = (function () {
        cablear: la tira sigue puesta mientras cambias de parada. */
     window.MovilTira.init(refs.tira, function (n) {
       if (!aqui) return;
+      /* Guarda «ya estoy aquí», igual que la del botón de ficha más arriba:
+         sin ella, pulsar la miniatura de la pieza que ya se está viendo
+         llega al router como «avisar», que repinta la escena entera —la
+         vacía, recrea la <img> arrancando otra vez por la portada, relanza
+         la animación— sobre la foto que ya estaba puesta. */
+      if (n === aqui.pieza) return;
       window.Router.ir('proyecto', aqui.proyecto, n);
     });
     engancharGestos();
@@ -352,17 +358,36 @@ window.MovilVisor = (function () {
      el gesto —una llamada entrante, el gesto de «atrás» del navegador desde el
      borde— y sin tratarlo el contador de dedos de `MovilGestos` se quedaría en
      uno para siempre, dejando el visor sordo hasta recargar. */
+  /* Los dedos que bajan sobre la tira no entran en la maquina de gestos: ni en
+     `punteros`, que es el mapa del pellizco, ni en `MovilGestos`. La tira la
+     desplaza el navegador por su cuenta (`touch-action:pan-x`), y desplazarla
+     es justo lo que hace que se quede el gesto y dispare `pointercancel`; sin
+     este filtro ese `pointercancel` llega a `soltarEn`, que no distingue
+     soltar de que te quiten el gesto, y navega. El defecto es anterior a la
+     tira —esta documentado en docs/estado-conocido.md con su repro— pero la
+     tira lo pasaba de raro a cotidiano.
+
+     Se filtra por ORIGEN y no con `stopPropagation` en el `pointerdown`:
+     aquello dejaria pasar el `pointerup` y el contador de dedos se
+     descuadraria, que es peor que el problema que arregla. */
+  var deLaTira = {};
+
   function engancharGestos() {
     gesto = window.MovilGestos.inicial();
     zoom = window.MovilZoom.inicial();
 
     raiz.addEventListener('pointerdown', function (e) {
+      if (e.target.closest && e.target.closest('.mvisor-tira')) {
+        deLaTira[e.pointerId] = true;
+        return;
+      }
       punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
       gesto = window.MovilGestos.presionar(gesto, { x: e.clientX, y: e.clientY });
       refrescarPar();
     });
 
     raiz.addEventListener('pointermove', function (e) {
+      if (deLaTira[e.pointerId]) return;
       var antes = punteros[e.pointerId];
       if (!antes) return;                 /* un dedo que no se poso aqui */
       var ahora = { x: e.clientX, y: e.clientY };
@@ -383,9 +408,15 @@ window.MovilVisor = (function () {
       }
     });
 
-    raiz.addEventListener('pointerup', function (e) { soltarEn(e); });
+    raiz.addEventListener('pointerup', function (e) {
+      if (deLaTira[e.pointerId]) { delete deLaTira[e.pointerId]; return; }
+      soltarEn(e);
+    });
 
-    raiz.addEventListener('pointercancel', function (e) { soltarEn(e); });
+    raiz.addEventListener('pointercancel', function (e) {
+      if (deLaTira[e.pointerId]) { delete deLaTira[e.pointerId]; return; }
+      soltarEn(e);
+    });
   }
 
   function soltarEn(e) {
