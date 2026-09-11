@@ -98,7 +98,7 @@ window.Lista = (function () {
      para quien use ratón, pero el camino principal siguen siendo estos
      botones: sin ratón se tiene que poder hacer todo, y con lector de
      pantalla también. */
-  function fila(p, indice, total, alMover, alBorrar) {
+  function fila(p, indice, total, alMover, alBorrar, alAbrir) {
     var li = document.createElement('li');
     li.className = 'fila';
     li.dataset.id = p.id;
@@ -108,6 +108,17 @@ window.Lista = (function () {
     var nombre = document.createElement('span');
     nombre.className = 'fila-titulo';
     nombre.textContent = p.titulo + ' · ' + (ETIQUETAS[p.categoria] || p.categoria);
+
+    /* «Abrir» va el primero de los cuatro porque es lo que se hace casi
+       siempre: mover y borrar son excepciones, y el orden de tabulación
+       debería poner delante lo frecuente. */
+    var abrir = document.createElement('button');
+    abrir.type = 'button';
+    abrir.className = 'fila-boton';
+    abrir.textContent = 'Abrir';
+    abrir.setAttribute('aria-label', 'Abrir ' + p.titulo);
+    abrir.dataset.accion = 'abrir';
+    abrir.addEventListener('click', function () { alAbrir(p.id); });
 
     var subir = document.createElement('button');
     subir.type = 'button';
@@ -180,6 +191,7 @@ window.Lista = (function () {
     });
 
     li.appendChild(nombre);
+    li.appendChild(abrir);
     li.appendChild(subir);
     li.appendChild(bajar);
     li.appendChild(borrar);
@@ -213,7 +225,7 @@ window.Lista = (function () {
     if (alternativo) alternativo.focus();
   }
 
-  function pintar(contenedor, proyectos, alMover, alBorrar) {
+  function pintar(contenedor, proyectos, alMover, alBorrar, alAbrir) {
     vigilarSalidaDeLaLista(contenedor);
     contenedor.innerHTML = '';
     // Los nodos viejos desaparecen con el innerHTML de arriba: ninguna
@@ -221,7 +233,7 @@ window.Lista = (function () {
     origenArrastre = null;
     filaMarcada = null;
     proyectos.forEach(function (p, i) {
-      contenedor.appendChild(fila(p, i, proyectos.length, alMover, alBorrar));
+      contenedor.appendChild(fila(p, i, proyectos.length, alMover, alBorrar, alAbrir));
     });
   }
 

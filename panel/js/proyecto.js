@@ -134,5 +134,23 @@ window.Proyecto = (function () {
     };
   }
 
-  return { pintar: pintar, fichaDel: fichaDel, problemasDe: problemasDe };
+  /* Los nodos que `pintar` necesita, recogidos una sola vez. Vive aquí y no en
+     panel.js por dos razones: es este archivo el que sabe qué nodos le hacen
+     falta —si mañana añade un campo, se entera aquí y no allí—, y panel.js
+     lleva encima el arranque de tres pantallas y no tiene sitio de sobra.
+     Recibe el documento en vez de leer el global para poder recogerlo también
+     desde un iframe, que es como lo prueba el arnés. */
+  function recoger(d) {
+    var nodos = { titulo: 'pTitulo', aviso: 'pAviso', nombre: 'pNombre',
+                  categoria: 'pCategoria', cliente: 'pCliente', anio: 'pAnio',
+                  papel: 'pPapel', enlace: 'pEnlace', soltar: 'pSoltar',
+                  archivos: 'pArchivos', progreso: 'pProgreso', fotos: 'pFotos',
+                  problemas: 'pProblemas' };
+    var els = {};
+    Object.keys(nodos).forEach(function (k) { els[k] = d.getElementById(nodos[k]); });
+    return els;
+  }
+
+  return { pintar: pintar, recoger: recoger,
+           fichaDel: fichaDel, problemasDe: problemasDe };
 })();

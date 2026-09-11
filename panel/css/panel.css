@@ -254,6 +254,62 @@ h1{
 }
 
 /* ============================================================
+   LA PANTALLA DE UN PROYECTO (bloque 3c)
+============================================================ */
+
+.fotos{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: .75rem;
+  list-style: none;
+  padding: 0;
+}
+
+.celda{
+  border: 1px solid #333;
+  padding: .4rem;
+}
+
+/* La portada se distingue con el amarillo del sitio, que es el unico color
+   que el panel usa para decir «esto». */
+.celda--portada{ border-color: var(--yellow); }
+
+/* La misma proporcion y el mismo recorte que la galeria: lo que se ve aqui es
+   lo que se vera en el lienzo, y elegir portada mirando otra cosa seria
+   elegir a ciegas. */
+.celda-img{
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+}
+
+/* De que lado caeria la foto al soltarla. En la lista la marca es horizontal
+   porque es vertical; aqui es al reves. */
+.celda--marca-antes{ box-shadow: inset 3px 0 0 var(--yellow); }
+.celda--marca-despues{ box-shadow: inset -3px 0 0 var(--yellow); }
+
+/* La unica animacion de esta pantalla. La apaga la regla de movimiento
+   reducido de mas abajo, que es global: un parpadeo al arrastrar treinta
+   fotos es justo lo que molesta a quien la tiene puesta. */
+.celda--arrastrando{ opacity: .4; transition: opacity .12s; }
+
+/* El borde discontinuo dice que ahi se puede soltar sin tener que leerlo, y
+   el selector de archivos de dentro dice que tambien se puede sin raton. */
+.soltar{
+  border: 1px dashed #555;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.soltar--encima{ border-color: var(--yellow); }
+.soltar-pista{ opacity: .7; font-size: .9em; }
+
+/* Vacio no ocupa: `:not(:empty)` evita un hueco rojo permanente debajo de la
+   rejilla en los proyectos que no tienen ningun problema. */
+.problemas:not(:empty){ color: #FF5555; }
+
+/* ============================================================
    MOVIMIENTO REDUCIDO
 ============================================================ */
 @media (prefers-reduced-motion: reduce){

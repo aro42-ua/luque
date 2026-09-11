@@ -2,6 +2,9 @@
   var trabajo = null;      // { version, proyectos }
   var elLista, elAviso, elTitulo, elCategoria, elCrear, elGuardar;
   var elCliente, elAnio, elPapel, elEnlace;
+  /* Las secciones por nombre, el índice del proyecto abierto, y una copia en
+     texto de lo último que el servidor confirmó. */
+  var pantallas, elsProyecto, abierto = null, guardado = null;
 
   function avisar(texto) { elAviso.textContent = texto; }
 
@@ -65,8 +68,65 @@
       trabajo.proyectos = trabajo.proyectos.filter(function (p) { return p.id !== id; });
       repintar(focoTrasBorrar(indice));
       avisar('Proyecto borrado. Recuerda guardar.');
-    });
+    }, function (id) { ir('proyecto', id); });
     enfocarTrasRepintar(foco);
+  }
+
+  /* Lo que el aviso de salir necesita saber. Se compara contra una copia de lo
+     último que el servidor confirmó, y no con un booleano: un booleano diría
+     que hay cambios después de tocar algo y devolverlo a como estaba, y el
+     estudio se llevaría un aviso de salida por un cambio que no existe. */
+  function hayCambios() {
+    return !!trabajo && JSON.stringify(trabajo) !== guardado;
+  }
+
+  function buscar(id) {
+    for (var i = 0; i < trabajo.proyectos.length; i++) {
+      if (trabajo.proyectos[i].id === id) return i;
+    }
+    return -1;
+  }
+
+  function pintarProyecto(indice, foco) {
+    abierto = indice;
+    window.Proyecto.pintar(elsProyecto, trabajo.proyectos[indice], {
+      alCambiar: function (nuevo, focoFotos) {
+        trabajo.proyectos[indice] = nuevo;
+        pintarProyecto(indice, focoFotos);
+        avisar('Cambiado. Recuerda guardar.');
+      },
+      alSubir: function (archivos) {
+        window.Subir.aqui(elsProyecto, trabajo.proyectos[indice], archivos,
+          function (nuevo, texto) {
+            trabajo.proyectos[indice] = nuevo;
+            pintarProyecto(indice);
+            avisar(texto);
+          });
+      }
+    });
+    window.Fotos.enfocar(elsProyecto.fotos, foco);
+  }
+
+  function ir(pantalla, id) {
+    if (!trabajo) return;
+    if (pantalla === 'proyecto') {
+      var indice = buscar(id);
+      /* Un id que no está no puede dejar en pantalla el encabezado de otro
+         proyecto: se vuelve a la lista y se dice cuál se buscaba. */
+      if (indice === -1) {
+        window.Pantallas.mostrar(pantallas, 'pantallaLista');
+        location.hash = window.Rutas.hacia('lista');
+        repintar();
+        return avisar('No hay ningún proyecto con el identificador «' + id + '».');
+      }
+      window.Pantallas.mostrar(pantallas, 'pantallaProyecto');
+      location.hash = window.Rutas.hacia('proyecto', id);
+      return pintarProyecto(indice);
+    }
+    abierto = null;
+    window.Pantallas.mostrar(pantallas, 'pantallaLista');
+    location.hash = window.Rutas.hacia('lista');
+    repintar();
   }
 
   /* La ficha que escribe el formulario. `cliente` y `enlace` sólo entran si
@@ -139,6 +199,7 @@
           + 'los necesitas.');
       }
       trabajo.version = resultado.version;
+      guardado = JSON.stringify(trabajo);
       avisar('Guardado.');
     });
   }
@@ -183,11 +244,42 @@
 
     elGuardar.addEventListener('click', guardar);
 
+    pantallas = { pantallaLista: document.getElementById('pantallaLista'),
+                  pantallaProyecto: document.getElementById('pantallaProyecto') };
+    elsProyecto = window.Proyecto.recoger(document);
+    document.getElementById('pVolver')
+      .addEventListener('click', function () { ir('lista'); });
+
+    /* El aviso de salir con cambios sin guardar. No se puede escribir el
+       texto: los navegadores enseñan el suyo desde hace años, y lo único que
+       se controla es si aparece o no. */
+    window.addEventListener('beforeunload', function (e) {
+      if (!hayCambios()) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    window.addEventListener('hashchange', function () {
+      var destino = window.Rutas.leer(location.hash);
+      ir(destino.pantalla, destino.id);
+    });
+
+    /* La costura para las pruebas, y de paso para la consola: panel.js es una
+       IIFE que no devuelve nada, así que sin esto no hay forma de pedirle
+       desde fuera que cambie de pantalla —habría que simular eventos de
+       hashchange, que es probar el navegador y no el panel—. */
+    window.Panel = { ir: ir, hayCambios: hayCambios };
+
     window.Borrador.cargar(function (datos, error) {
       if (error) return avisar(error);
       trabajo = datos;
+      guardado = JSON.stringify(trabajo);
       activarControles(true);
-      repintar();
+      /* Se arranca donde diga el fragmento, no siempre en la lista: recargar
+         con #/proyecto/bruma tiene que volver al mismo sitio, que es lo que
+         hace compartible la dirección. */
+      var destino = window.Rutas.leer(location.hash);
+      ir(destino.pantalla, destino.id);
     });
   }
 
