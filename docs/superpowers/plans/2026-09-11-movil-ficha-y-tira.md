@@ -76,7 +76,7 @@ La función pura que decide a qué parada lleva el botón. No toca el DOM, no co
   - `recordada`: `number|null|undefined` — la última parada que no era la ficha
   - Devuelve un `{proyecto, pieza}` nuevo. Si el proyecto no está en `orden`, devuelve `estado` tal cual.
 
-- [ ] **Paso 1: Escribir las pruebas que fallan**
+- [x] **Paso 1: Escribir las pruebas que fallan**
 
 Al FINAL de `tests/pruebas-movil-recorrido.js`, dentro del `describe` que ya existe (justo antes del `});` final del fichero), añadir:
 
@@ -136,12 +136,12 @@ Al FINAL de `tests/pruebas-movil-recorrido.js`, dentro del `describe` que ya exi
   });
 ```
 
-- [ ] **Paso 2: Ejecutar para verificar que fallan**
+- [x] **Paso 2: Ejecutar para verificar que fallan**
 
 Recargar `http://localhost:8000/tests/test.html`.
 Esperado: siete líneas nuevas en rojo en la sección `MovilRecorrido`, todas con `MovilRecorrido.alternarFicha is not a function`.
 
-- [ ] **Paso 3: Escribir la implementación mínima**
+- [x] **Paso 3: Escribir la implementación mínima**
 
 En `js/movil-recorrido.js`, después de la función `mover` y antes del `return`, añadir:
 
@@ -169,12 +169,12 @@ En `js/movil-recorrido.js`, después de la función `mover` y antes del `return`
 
 Y añadir `alternarFicha: alternarFicha,` al objeto que devuelve el módulo, después de `mover: mover` (añadiendo la coma que haga falta).
 
-- [ ] **Paso 4: Ejecutar para verificar que pasan**
+- [x] **Paso 4: Ejecutar para verificar que pasan**
 
 Recargar `http://localhost:8000/tests/test.html`.
 Esperado: las siete en verde, y el total sube de 491 a **498 pasan, 0 fallan**.
 
-- [ ] **Paso 5: Commit**
+- [x] **Paso 5: Commit**
 
 ```bash
 git add js/movil-recorrido.js tests/pruebas-movil-recorrido.js
@@ -202,7 +202,7 @@ Va entera porque el botón no sirve de nada a medias: el marcado, el módulo que
   - `elementos` gana una clave obligatoria: `ficha`, el `<button>`.
   - `MovilVisor.init(refs, proyectos)` — `refs` gana la clave `ficha`. Pasa de ocho referencias a nueve.
 
-- [ ] **Paso 1: Escribir las pruebas que fallan — el HUD**
+- [x] **Paso 1: Escribir las pruebas que fallan — el HUD**
 
 En `tests/pruebas-movil-hud.js`, en `HUD_MARCADO`, añadir el botón **después** de la línea de `hudCats` y antes de la de `hudCerrar`:
 
@@ -263,12 +263,12 @@ Luego, al final del mismo `describe`, añadir:
   });
 ```
 
-- [ ] **Paso 2: Ejecutar para verificar que fallan**
+- [x] **Paso 2: Ejecutar para verificar que fallan**
 
 Recargar `http://localhost:8000/tests/test.html`.
 Esperado: rojo en la sección `MovilHud` (las cuatro nuevas), y además **la sección `MovilVisor` en rojo**, porque `MovilVisor.init` llama a `MovilHud.init` sin el cuarto callback y sin `refs.ficha`. Los dos rojos son esperados; el primero lo cierra el Paso 3 y el segundo el Paso 6.
 
-- [ ] **Paso 3: Escribir la implementación — el HUD**
+- [x] **Paso 3: Escribir la implementación — el HUD**
 
 En `js/movil-hud.js`, sustituir la línea de las variables de callback por:
 
@@ -307,7 +307,7 @@ En `pintar`, después de la línea del contador, añadir:
     refs.ficha.setAttribute('aria-pressed', pieza === 'ficha' ? 'true' : 'false');
 ```
 
-- [ ] **Paso 4: Escribir las pruebas que fallan — el visor**
+- [x] **Paso 4: Escribir las pruebas que fallan — el visor**
 
 En `tests/pruebas-movil-visor.js`, en `MV_MARCADO`, añadir el botón después de `<ul id="mvCats"></ul>` y antes de `<button id="mvCerrar"></button>`:
 
@@ -397,11 +397,11 @@ describe('MovilVisor — el botón de ficha', function () {
 });
 ```
 
-- [ ] **Paso 5: Ejecutar para verificar que fallan**
+- [x] **Paso 5: Ejecutar para verificar que fallan**
 
 Recargar. Esperado: la sección `MovilHud` ya en verde (el Paso 3 la cerró), y las cinco nuevas de `MovilVisor` en rojo — la primera porque `MovilHud.init` recibe `alFicha` en `undefined` y pulsar lanza `alFicha is not a function`.
 
-- [ ] **Paso 6: Escribir la implementación — el visor**
+- [x] **Paso 6: Escribir la implementación — el visor**
 
 En `js/movil-visor.js`, junto a la declaración de `direccionPendiente`, añadir:
 
@@ -467,11 +467,11 @@ y pasa a terminar así:
     });
 ```
 
-- [ ] **Paso 7: Ejecutar para verificar que pasan**
+- [x] **Paso 7: Ejecutar para verificar que pasan**
 
 Recargar. Esperado: **507 pasan, 0 fallan** (498 + 4 del HUD + 5 del visor).
 
-- [ ] **Paso 8: El marcado y el estilo**
+- [x] **Paso 8: El marcado y el estilo**
 
 En `index.html`, dentro de `.mvisor-hud-arriba`, entre el `<ul id="movilVisorCats">` y el botón de cerrar:
 
@@ -499,7 +499,7 @@ En `css/luque.css`, añadir `.mvisor-ficha-boton` a las DOS listas de selectores
 body.es-movil .mvisor-ficha-boton,
 ```
 
-- [ ] **Paso 9: Comprobar en el navegador**
+- [x] **Paso 9: Comprobar en el navegador**
 
 Abrir `http://localhost:8000/` con la ventana estrechada por debajo de 860px y recargar. Tocar un trabajo, y comprobar a ojo:
 - La pastilla «Ficha» sale entre la categoría y la ✕, con el mismo aspecto amarillo.
@@ -507,7 +507,7 @@ Abrir `http://localhost:8000/` con la ventana estrechada por debajo de 860px y r
 - Volver a pulsarla devuelve a la misma pieza de la que saliste.
 - Las tres pastillas de arriba no se pisan.
 
-- [ ] **Paso 10: Commit**
+- [x] **Paso 10: Commit**
 
 ```bash
 git add index.html css/luque.css js/movil-hud.js js/movil-visor.js tests/pruebas-movil-hud.js tests/pruebas-movil-visor.js
@@ -531,7 +531,7 @@ El módulo solo, sin cablear. Construye la tira, marca la pieza actual y la cent
   - `MovilTira.init(elRaiz, alElegirPieza)` — `elRaiz` es un `<nav>`; `alElegirPieza` es `function (numero)` con el número de pieza **desde 1**.
   - `MovilTira.pintar(proyecto, pieza)` — `proyecto` es el objeto de `contenido.json` (necesita `id` y `piezas[]` con `miniatura` y `url`); `pieza` es `number|null|'ficha'`.
 
-- [ ] **Paso 1: Escribir las pruebas que fallan**
+- [x] **Paso 1: Escribir las pruebas que fallan**
 
 Crear `tests/pruebas-movil-tira.js` con:
 
@@ -674,7 +674,7 @@ describe('MovilTira', function () {
 });
 ```
 
-- [ ] **Paso 2: Enganchar el fichero nuevo a la suite**
+- [x] **Paso 2: Enganchar el fichero nuevo a la suite**
 
 En `tests/test.html`, añadir el módulo justo después de la línea de `../js/movil-animacion.js` (sobre la 56):
 
@@ -688,11 +688,11 @@ y las pruebas después de la línea de `pruebas-movil-animacion.js` (sobre la 11
 <script src="pruebas-movil-tira.js"></script>
 ```
 
-- [ ] **Paso 3: Ejecutar para verificar que fallan**
+- [x] **Paso 3: Ejecutar para verificar que fallan**
 
 Recargar. Esperado: diez líneas en rojo bajo el titular `MovilTira`, con `MovilTira is not defined`.
 
-- [ ] **Paso 4: Escribir la implementación**
+- [x] **Paso 4: Escribir la implementación**
 
 Crear `js/movil-tira.js`:
 
@@ -794,11 +794,11 @@ window.MovilTira = (function () {
 })();
 ```
 
-- [ ] **Paso 5: Ejecutar para verificar que pasan**
+- [x] **Paso 5: Ejecutar para verificar que pasan**
 
 Recargar. Esperado: **517 pasan, 0 fallan** (507 + 10).
 
-- [ ] **Paso 6: Commit**
+- [x] **Paso 6: Commit**
 
 ```bash
 git add js/movil-tira.js tests/pruebas-movil-tira.js tests/test.html
@@ -821,7 +821,7 @@ El marcado, el estilo y las reglas del CSS que hay que contradecir para que el d
 - Consume: `MovilTira.init(elRaiz, alElegirPieza)` y `MovilTira.pintar(proyecto, pieza)` de la Tarea 3.
 - Produce: `MovilVisor.init(refs, proyectos)` — `refs` gana la clave `tira`. Pasa de nueve referencias a diez.
 
-- [ ] **Paso 1: Escribir las pruebas que fallan**
+- [x] **Paso 1: Escribir las pruebas que fallan**
 
 En `tests/pruebas-movil-visor.js`, en `MV_MARCADO`, añadir la tira **dentro** del HUD, después del `<span id="mvContador"></span>`:
 
@@ -855,11 +855,11 @@ Y en el `describe('MovilVisor — el botón de ficha', ...)` que creó la Tarea 
   });
 ```
 
-- [ ] **Paso 2: Ejecutar para verificar que fallan**
+- [x] **Paso 2: Ejecutar para verificar que fallan**
 
 Recargar. Esperado: las dos nuevas en rojo — la primera porque la tira tiene cero botones, la segunda con un TypeError al pulsar sobre `undefined`.
 
-- [ ] **Paso 3: Escribir el cableado**
+- [x] **Paso 3: Escribir el cableado**
 
 En `js/movil-visor.js`, dentro de `init`, después de la llamada a `window.MovilHud.init(...)` y antes de `engancharGestos();`:
 
@@ -879,11 +879,11 @@ En `pintar`, después de la línea de `window.MovilHud.pintar(...)`:
     window.MovilTira.pintar(p, aqui.pieza);
 ```
 
-- [ ] **Paso 4: Ejecutar para verificar que pasan**
+- [x] **Paso 4: Ejecutar para verificar que pasan**
 
 Recargar. Esperado: **519 pasan, 0 fallan**.
 
-- [ ] **Paso 5: El marcado**
+- [x] **Paso 5: El marcado**
 
 En `index.html`, sustituir el bloque `.mvisor-hud-abajo` entero por:
 
@@ -919,7 +919,7 @@ Y el `<script>`, ANTES de `js/movil-visor.js`. El comentario que hay hoy justo e
   <script src="js/movil-visor.js"></script>
 ```
 
-- [ ] **Paso 6: El estilo**
+- [x] **Paso 6: El estilo**
 
 En `css/luque.css`, en la regla que empieza `body.es-movil .mvisor-hud-arriba,` (sobre la línea 1513), cambiar el segundo selector de `.mvisor-hud-abajo` a `.mvisor-hud-pie`, y añadir justo debajo:
 
@@ -1004,7 +1004,7 @@ body.es-movil .mvisor-tira button[aria-current="true"]{
 }
 ```
 
-- [ ] **Paso 7: Comprobar en el navegador**
+- [x] **Paso 7: Comprobar en el navegador**
 
 Recargar `http://localhost:8000/tests/test.html` — siguen **519 pasan, 0 fallan**; el CSS no lo ve la suite.
 
@@ -1015,7 +1015,7 @@ Abrir `http://localhost:8000/` estrechado bajo 860px, tocar un trabajo y comprob
 - A los 3 segundos el HUD se duerme y **tocar donde estaba una miniatura despierta el HUD en vez de abrir esa pieza**.
 - En un proyecto de vídeo no sale tira. Hoy los ocho proyectos son de fotos, así que esto no se puede ver sin falsear `piezas: []` en `contenido.json` a mano y deshacerlo después. Lo cubre `tests/pruebas-movil-tira.js`; si se prefiere no tocar el contenido, se deja para cuando el estudio suba los vídeos.
 
-- [ ] **Paso 8: Commit**
+- [x] **Paso 8: Commit**
 
 ```bash
 git add index.html css/luque.css js/movil-visor.js tests/pruebas-movil-visor.js
@@ -1031,7 +1031,7 @@ git commit -m "Cablear la tira de miniaturas en el visor movil"
 **Ficheros:**
 - Modificar: `docs/estado-conocido.md`
 
-- [ ] **Paso 1: Medir**
+- [x] **Paso 1: Medir**
 
 ```bash
 wc -l js/movil-visor.js js/movil-tira.js js/movil-hud.js js/movil-recorrido.js
@@ -1039,11 +1039,11 @@ wc -l js/movil-visor.js js/movil-tira.js js/movil-hud.js js/movil-recorrido.js
 
 Apuntar el número de `js/movil-visor.js`: el plan lo esperaba en torno a 420, y el que va al documento es el real.
 
-- [ ] **Paso 2: Contar las pruebas**
+- [x] **Paso 2: Contar las pruebas**
 
 Recargar `http://localhost:8000/tests/test.html` y apuntar la línea final. Se esperan **519 pasan, 0 fallan**, frente a las 491 de antes del bloque.
 
-- [ ] **Paso 3: Escribir**
+- [x] **Paso 3: Escribir**
 
 En la sección «Estructura» de `docs/estado-conocido.md`, donde hoy dice que la única excepción al techo de 300 líneas es `js/visor.js` con 303, añadir a continuación (sustituyendo `NNN` por el número medido en el Paso 1):
 
@@ -1129,7 +1129,7 @@ juzgar quien lo mire en un teléfono de verdad:
 
 En la sección «Cómo se prueba», actualizar el número de comprobaciones —dice 468 y ya antes de este bloque eran 491— al medido en el Paso 2, y nombrar el fichero de pruebas nuevo (`tests/pruebas-movil-tira.js`).
 
-- [ ] **Paso 4: Commit**
+- [x] **Paso 4: Commit**
 
 ```bash
 git add docs/estado-conocido.md
