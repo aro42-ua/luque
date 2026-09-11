@@ -56,7 +56,6 @@
     <section id="pantallaProyecto" hidden>
       <button id="pVolver" type="button">‹ Volver a los proyectos</button>
       <h2 id="pTitulo"></h2>
-      <p id="pAviso" role="status" aria-live="polite" class="aviso"></p>
 
       <label for="pNombre">Título</label>
       <input id="pNombre" type="text" autocomplete="off">
@@ -88,6 +87,16 @@
       <p id="pProgreso" role="status" aria-live="polite"></p>
       <ol id="pFotos" class="fotos"></ol>
       <p id="pProblemas" class="problemas"></p>
+
+      <!-- La barra fija al pie. El aviso vive aquí y no arriba: en un
+           teléfono, mientras se ordena la rejilla, un «Cambiado. Recuerda
+           guardar.» en la cabecera queda fuera de la vista. Y el botón es el
+           mismo guardar() que el de la lista: panel.js los apaga y los
+           enciende a la vez (`guardarActivo`). -->
+      <div class="proyecto-barra">
+        <p id="pAviso" role="status" aria-live="polite" class="aviso"></p>
+        <button id="pGuardar" type="button">Guardar</button>
+      </div>
     </section>
 
     <section id="pantallaPublicar" hidden>
