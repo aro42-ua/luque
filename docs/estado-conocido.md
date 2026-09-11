@@ -779,10 +779,109 @@ faltaba. Es una propiedad de cómo está montado el arnés, no un descuido
 puntual: cualquier bloque futuro que cablee un módulo nuevo tiene que
 acordarse de `index.html` a mano, porque la suite no se lo va a recordar.
 
+## El botón de ficha y la tira (bloque de la ficha y la tira)
+
+**La ficha ya se puede pedir.** Hasta este bloque `js/movil-ficha.js` existía y
+se pintaba, pero la única forma de llegar era deslizar hasta el final del eje
+vertical: diez gestos en `la-boquerona`. Ahora hay una pastilla «Ficha» en el
+HUD que llama a `MovilRecorrido.alternarFicha`, la función pura que decide a
+qué parada lleva en cada sentido. **Quien recuerda la pieza de la que saliste
+es `MovilVisor` (`piezaRecordada`), no `MovilRecorrido`**, que es puro y la
+recibe como argumento.
+
+La guarda que menos se ve y más importa de `alternarFicha`: `indexOf('ficha')`
+NO es -1, porque 'ficha' es una parada del eje como cualquier otra. Sin tratar
+ese caso aparte, una recordada de 'ficha' devolvería la ficha estando ya en la
+ficha y el botón quedaría muerto. Tiene prueba propia.
+
+**La tira de miniaturas vive en `js/movil-tira.js` y no comparte código con la
+del escritorio.** Aquélla (`construirTira`, en `js/visor.js`) se despierta con
+`mouseenter` y mide con el ratón encima, que en un dedo no existe.
+
+**Tres reglas del CSS del visor la habrían dejado muerta**, y las tres se
+contradicen en `.mvisor-tira` y sólo ahí: el `touch-action:none` de `.mvisor`
+(se devuelve `pan-x`), el `pointer-events:none` de `.mvisor-hud` (se devuelve
+`auto`) y el encadenado del desplazamiento con el gesto de «atrás» al llegar al
+final (`overscroll-behavior-x:contain`).
+
+**Y destapó un defecto que ya estaba:** `.mvisor-hud.dormido` sólo ponía
+`opacity:0`, así que las pastillas del HUD dormido se podían pulsar sin verse.
+Con una tira de miniaturas eso pasaba de rareza a trampa. Corregido con
+`body.es-movil .mvisor-hud.dormido *{ pointer-events:none; }` — **en los
+descendientes, no en el contenedor**: el contenedor ya lo tenía en `none` y un
+hijo con `auto` lo recibe igual por mucho que el padre diga lo contrario. Con
+el toque fuera de alcance cae en la raíz del visor, que es quien despierta el
+HUD.
+
+**`MovilTira.pintar` se llama en CADA parada pero sólo reconstruye al cambiar
+de proyecto.** No es una optimización opcional: reconstruir en cada
+deslizamiento tiraría las diez `<img>` ya descargadas para volver a pedirlas, y
+perdería el desplazamiento horizontal que el dedo hubiera dejado puesto. Lo
+fija `tests/pruebas-movil-tira.js` por identidad de nodo, que es lo único que
+distingue «sigue siendo el mismo botón» de «es otro botón igual».
+
+**`MovilTira.centrar` escribe `scrollLeft` y no usa `scrollIntoView`**, a
+propósito: aquél sólo puede mover la tira, y éste puede además desplazar el
+documento entero. Dentro de un visor a pantalla completa eso se ve como que la
+página salta sola.
+
+**La tira metió sus botones en el ciclo del tabulador del visor, y eso rompió
+dos pruebas preexistentes del atrapa-foco.** Las dos
+(`tests/pruebas-movil-visor.js`, bloque «MovilVisor — el foco del diálogo
+(VisorFoco)») clavaban `refs.cerrar` como «el último control», y con la tira
+dentro del HUD, tras el botón de cerrar, el último pasó a ser la última
+miniatura. **Se decidió que los botones de la tira SÍ tienen que estar en el
+ciclo** —son la única forma de saltar a una pieza con teclado, y sacarlos
+habría sido una regresión de accesibilidad—, así que lo que se arregló fueron
+las pruebas: ahora calculan el último del DOM en vez de nombrarlo, con el
+mismo selector Y el mismo filtro de visibilidad que `VisorFoco.enfocables`
+(`js/visor-foco.js:52-59`), y con una aserción extra (`ultimoNoEsCerrar`) que
+existe para que la prueba siga demostrando algo si algún día la tira saliera
+del ciclo. Nombrar el último era fijar un dato incidental del marcado, y esas
+dos pruebas se rompían cada vez que el HUD ganaba un control.
+
+**Comprobación visual hecha, a 375×812 sobre `#/la-boquerona`:** las 10
+miniaturas salen, la actual con contorno `rgb(255,255,0)` y las demás con el
+contorno transparente. Pulsar la octava navega a `#/la-boquerona/8`, el
+contador pasa a `08/10`, la marca se mueve y **la tira NO se reconstruye** (el
+nodo del primer botón es el mismo). `touch-action:pan-x`,
+`overscroll-behavior-x:contain`, y `scrollWidth > clientWidth`, o sea que hay
+recorrido que desplazar. **Con el HUD dormido**, `elementFromPoint` sobre una
+miniatura devuelve `.mvisor-escena`: el toque atraviesa el HUD y cae en la
+raíz del visor, que es quien lo despierta. **Con el HUD despierto** devuelve
+la `<img>` de la miniatura. O sea que el defecto preexistente del
+`opacity:0` queda cerrado y medido. El botón de ficha: ida y vuelta desde la
+pieza 4 devuelve a la pieza 4, `aria-pressed` alterna, y las tres pastillas de
+arriba no se pisan (24-109, 181-246, 317-351 a 375px de ancho, con los 24px de
+margen a los bordes intactos).
+
+### Lo que la suite no puede certificar de este bloque
+
+No hay pruebas de CSS computado ni de gesto táctil, así que esto sólo lo puede
+juzgar quien lo mire en un teléfono de verdad:
+
+1. Que `touch-action:pan-x` baste para que Chrome de Android desplace la tira
+   con el dedo, estando dentro de un contenedor con `touch-action:none`.
+2. Que arrastrar la tira no se cuele como cambio de proyecto. El cable que
+   debería impedirlo NO es un `stopPropagation` —la spec lo proponía y al
+   escribir el plan se decidió dejarlo fuera; el porqué está en el propio plan,
+   en su apartado final—. Si en el teléfono resulta que sí se cuela, el arreglo
+   es añadirlo al `pointerdown` de la tira.
+3. Si una tira de miniaturas sobre la foto se siente útil o se siente como que
+   tapa el trabajo. Es un estudio de fotografía: los píxeles que tapan la foto
+   se pagan caros, y esta decisión es de Lidia y de Ángel.
+4. Que el botón de ficha esté donde la mano lo busca, y que las tres pastillas
+   de arriba no se aprieten en un teléfono estrecho.
+
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **468 comprobaciones** (medido el 2026-09-11, tras
-retirar las 18 de `brillo.js`): la lógica pura (el enrutado,
+`tests/test.html` ejecuta **519 comprobaciones** (medido tras el bloque de la
+ficha y la tira). El 468 de este párrafo —medido el 2026-09-11 tras retirar
+las 18 de `brillo.js`— ya estaba obsoleto antes de que ese bloque tocara nada:
+la suite arrancó en 491, no en 468, así que la diferencia con las 519 no la
+trae este bloque entero; lo que sí trae son 28, entre `tests/pruebas-movil-tira.js`
+y el resto del cableado del botón de ficha. No restes 519−468 y creas que
+salen 51: la cuenta de 468 llevaba tiempo sin actualizarse. La lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -803,7 +902,10 @@ visor móvil de dos ejes: `tests/pruebas-movil-visor.js` (27 comprobaciones,
 `js/movil-visor.js`: `ordenDe`, `aplicar` con su guarda de lado y
 `siguienteRuta`) y `tests/pruebas-movil-hud.js` (11 comprobaciones,
 `js/movil-hud.js`: el contador, la categoría activa y el ocultado a los
-3000ms). Y desde el contenido real, el botón que lleva al vídeo
+3000ms). Y desde el bloque de la ficha y la tira, `tests/pruebas-movil-tira.js`
+(`js/movil-tira.js`: pintar, reconstruir sólo al cambiar de proyecto, centrar
+la miniatura activa) y las pruebas nuevas de `alternarFicha` sobre
+`js/movil-recorrido.js`. Y desde el contenido real, el botón que lleva al vídeo
 (`tests/pruebas-plataforma.js`), el hueco de la ficha
 (`tests/pruebas-ficha-dato.js`) y el `contenido.json` de verdad
 (`tests/pruebas-contenido-real.js`, que lo pide por `fetch` y lo pasa por su
@@ -1274,7 +1376,19 @@ falta y no se acorta más sin perder esa explicación. No se sacó a otro
 archivo porque son tres líneas y el resto del fichero es del visor de
 escritorio, no del móvil; queda anotado aquí para que la próxima mano que
 toque `js/visor.js` sepa que ya no hay margen y cualquier añadido nuevo
-tiene que sacar algo primero. `contenido.json` es el único sitio donde vive
+tiene que sacar algo primero.
+
+**Y desde el bloque de la ficha y la tira, `js/movil-visor.js`: 428.** Ya
+estaba en 390 antes de este bloque —el pellizco del 4g lo dejó así— y el
+cableado de los dos controles nuevos lo sube. Se decidió **no partirlo en este
+bloque**: la spec lo declara fuera de alcance y sacó la tira a
+`js/movil-tira.js` precisamente para no añadirle más. Quien lo toque a
+continuación tiene que partirlo antes de añadir nada; el candidato evidente es
+el pellizco —`zoom`, `base`, `punteros`, `refrescarPar`, `medidasDelPaseo`,
+`pintarZoom`—, que son unas ochenta líneas con estado propio y ninguna
+relación con el router.
+
+`contenido.json` es el único sitio donde vive
 el contenido, y `js/datos.js` el único que lo custodia en memoria.
 `js/router.js` es la única fuente de verdad sobre qué está abierto: la galería y
 el visor reaccionan a él y no se llaman entre sí.
