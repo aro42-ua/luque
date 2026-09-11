@@ -193,9 +193,12 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 
 - ~~La rueda del ratón no está limitada en el visor: un gesto de trackpad puede
   avanzar más de una pieza.~~ **Cerrado el 2026-09-11**: `js/visor-rueda.js`
-  lee la rueda por gestos —un paso por gesto, umbral de 50 px acumulados,
-  silencio de 150 ms— e ignora el pellizco (`ctrlKey`) y el desplazamiento
-  horizontal. Medido antes del arreglo: 20 eventos de una inercia saltaban
+  lee la rueda por gestos: en el trackpad, un paso por gesto —umbral de 50 px
+  acumulados, silencio de 150 ms—; en el ratón, **una pieza por muesca,
+  siempre** (un evento de 80 px o más, o `deltaMode` líneas/páginas; decisión
+  de Ángel). Ignora el pellizco (`ctrlKey`) y el desplazamiento horizontal.
+  Precio conocido: un manotazo muy fuerte al trackpad puede empezar por encima
+  de 80 px y contar como muesca. Medido antes del arreglo: 20 eventos de una inercia saltaban
   nueve piezas, y un pellizco de zoom en el trackpad pasaba de pieza solo.
 - La ficha técnica muestra «Piezas: 1» en proyectos de vídeo.
 - Al cerrar el visor, el nodo `<video>` permanece en la escena oculta, pausado.
