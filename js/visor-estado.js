@@ -31,7 +31,14 @@ window.VisorEstado = (function () {
 
   function irA(estado, indice) {
     if (!estado.abierto) return estado;
-    return copiaCon(estado, { indice: recortar(indice, estado.total) });
+    var destino = recortar(indice, estado.total);
+    /* Si no se mueve, se devuelve EL MISMO objeto. Es lo que permite a quien
+       llama distinguir "no ha pasado nada" de "hay algo nuevo que pintar":
+       `js/visor.js` repintaba igual, y como `renderizar` vacía la escena y
+       reconstruye la <img>, pulsar la flecha derecha en la última pieza hacía
+       PARPADEAR la misma foto. Mismo idioma que la guarda de arriba. */
+    if (destino === estado.indice) return estado;
+    return copiaCon(estado, { indice: destino });
   }
 
   /* La serie NO da la vuelta: al llegar a la última pieza el avance se

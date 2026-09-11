@@ -294,7 +294,7 @@ de los propios `.otf` descargables. `/.claude/launch.json` filtra además rutas
 locales del tipo `C:/Users/...`. `robots.txt` y `X-Robots-Tag` no sirven aquí:
 impiden **indexar**, no **acceder**.
 
-`_redirects` cierra `/docs/*`, `/.claude/*` y `/worker/*`. Funciona aunque el
+`_redirects` cierra `/docs/*`, `/.claude/*`, `/worker/*` y `/herramientas/*`. Funciona aunque el
 archivo exista: la documentación de Cloudflare dice que las reglas se aplican
 *sin importar si un recurso casa con la petición*, así que el
 redireccionamiento gana al archivo real. **Verificado contra el servidor real:**
@@ -308,6 +308,12 @@ y `wrangler.toml` con el nombre del bucket— y nadie volvió a abrir este archi
 hasta la revisión final. `git archive` lo subía con todo lo demás. **Añadir un
 directorio de primer nivel obliga a decidir aquí si se sirve o no**, porque el
 valor por omisión es servirlo.
+
+**Y pasó otra vez.** El bloque del contenido real creó `herramientas/` —la
+herramienta que deriva las tres medidas y `proyectos.json`— y tampoco volvió
+aquí; se cerró al ir a desplegar, no al crearlo. Dos veces con la misma piedra:
+la advertencia de arriba está escrita en mayúsculas en `_redirects` y aun así
+no basta. Quien añada el tercero, que empiece por este archivo.
 
 **Se devuelve un 302, no un 404, y no es una preferencia:** el archivo
 `_redirects` de Cloudflare **no admite el 404**. Los únicos códigos válidos
@@ -434,9 +440,37 @@ Con `img/` ya generado por `herramientas/derivar_imagenes.py` —195 archivos,
 ```bash
 for f in img/*.jpg; do
   llave="luque-contenido/img/$(basename "$f")"
-  npx wrangler r2 object put "$llave" --file "$f" --content-type image/jpeg
+  npx wrangler r2 object put "$llave" --file "$f" --content-type image/jpeg --remote
 done
 ```
+
+**`--remote` NO ES OPCIONAL, y omitirlo no da ningún error.** Sin él,
+`wrangler r2 object put` escribe en el almacén LOCAL simulado —`.wrangler/`, al
+lado del `wrangler.toml` que se use— y el bucket no se entera. La subida dice
+«Upload complete» las 195 veces.
+
+Lo peor no es eso: **`wrangler r2 object get` también es local por omisión**, así
+que una verificación que lea de vuelta lo que se acaba de escribir sale perfecta
+comparando la copia local consigo misma. Pasó el 2026-09-10: 195 archivos
+«subidos» y «verificados byte a byte», y en R2 no había ni uno. Lo delató el
+sitio real, que seguía contestando 404.
+
+**La verificación buena es por HTTPS contra el dominio**, porque mide lo que
+recibe un navegador de verdad y no puede salir bien por accidente:
+
+```bash
+u=https://lidialuque.com/img/<llave>.jpg
+curl -s -o /dev/null -w "%{http_code} %{size_download} %{content_type}" "$u"
+```
+
+Tiene que dar `200`, los bytes exactos del archivo local y `image/jpeg`.
+
+**Al volver a derivar, subir sólo lo que falta.** Una pasada nueva de la
+herramienta puede cambiar llaves —las piezas recortadas llevan `-r`— y regenera
+las 195; no hace falta subir las 195. Comprobar primero cada llave por HTTPS
+(`200` y los bytes exactos) y subir sólo las que no estén: así la subida es
+repetible y no pisa nada. Las llaves que dejan de nombrarse se quedan en el
+bucket; no hacen daño y borrarlas es otra decisión.
 
 **Con wrangler y no con `rclone`**, y no por gusto: wrangler reutiliza la
 sesión ya iniciada, mientras que `rclone` exigiría crear fichas de API S3 de
@@ -542,7 +576,9 @@ correctos: `font/otf` con `31536000, immutable` y `nosniff` en las tipografías,
 #### La suite NO se puede pasar entera desde producción, y es correcto
 
 Ejecutada contra `https://lidialuque.com/tests/test.html`: **298 pasan, 44
-fallan** — donde en local son 362 y 0.
+fallan** — donde en local son 362 y 0. (Repetida el 2026-09-10 tras el
+despliegue del contenido real: **393 pasan, 44 fallan**, donde en local son 464
+y 0. Los 44 son los mismos y por lo mismo.)
 
 **Los 44 son, sin una sola excepción, los tres módulos del panel**:
 `Identificador`, `Orden` y `Lista`, más las 20 comprobaciones que ni llegan a
@@ -676,3 +712,35 @@ mismo.
 
 Lo que sigue igual: **empujar a GitHub no despliega nada**. El despliegue es a
 mano y lo decide el estudio en el momento.
+
+## El contenido real, en el escaparate (2026-09-10)
+
+**Desplegado el commit `775f32a` de `main`**, versión
+`2f0a6291-3fc1-4e9f-bb81-89e1bb04af81`, 150 archivos. Es el primer despliegue
+con el trabajo de Lidia: se acabaron los doce proyectos de picsum.
+
+Antes del despliegue, las **195 imágenes derivadas subidas a R2 con `--remote`**,
+y ahí está la lección de esta ronda, escrita arriba en su sección: la primera
+tanda se subió sin ese flag, fue a parar al almacén local y **la verificación
+salió perfecta leyendo esa misma copia local**. En R2 no había nada. Lo delató el
+sitio real con un 404.
+
+Comprobado después contra `https://lidialuque.com`, que es lo único que no se
+puede engañar solo:
+
+- **Las 195 imágenes**: `200`, los bytes exactos del archivo local y
+  `image/jpeg`, una por una. Cero discrepancias.
+- **`/contenido.json`**: 8 proyectos y 65 piezas, en el orden de Lidia.
+- **La galería**: las ocho portadas cargan con su tamaño real, medido en el
+  navegador con `naturalWidth`, no mirando una captura.
+- **El arnés**: 393 pasan, 44 fallan. Los 44 son, otra vez, los tres módulos del
+  panel tras Access; **nada del sitio público falla**.
+- **Las rutas cerradas**: `/docs/*`, `/.claude/*`, `/worker/*` y el nuevo
+  `/herramientas/*` dan 302.
+
+`/herramientas/*` se cerró **al ir a desplegar y no al crearlo**, que es tarde.
+Es la segunda vez que un directorio de primer nivel se cuela hasta aquí; la
+advertencia en mayúsculas de `_redirects` no bastó.
+
+Sigue **cerrada a los buscadores**, y ahora por un solo motivo: las tipografías
+siguen siendo Trial. El del contenido de relleno dejó de valer.

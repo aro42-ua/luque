@@ -25,10 +25,6 @@ var MV_PROYECTOS = [
    necesitan igual, letra por letra. */
 var MV_MARCADO =
   '<div><div id="mvRaiz" hidden><div id="mvEscena"></div>' +
-  '<span class="mvisor-esquina tl" aria-hidden="true"><i></i></span>' +
-  '<span class="mvisor-esquina tr" aria-hidden="true"><i></i></span>' +
-  '<span class="mvisor-esquina bl" aria-hidden="true"><i></i></span>' +
-  '<span class="mvisor-esquina br" aria-hidden="true"><i></i></span>' +
   '<div id="mvHud"><button id="mvCat"></button><ul id="mvCats"></ul>' +
   '<button id="mvCerrar"></button><p id="mvTitulo"></p>' +
   '<span id="mvContador"></span></div></div></div>';

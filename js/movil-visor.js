@@ -109,15 +109,6 @@ window.MovilVisor = (function () {
     raiz.hidden = true;
     document.body.classList.remove('mvisor-abierto');
     escena.innerHTML = '';
-    /* El encuadre se apaga con el visor: la portada no lo lleva, y una clase
-       de brillo sobreviviendo al cierre teniria la siguiente foto con el
-       veredicto de la anterior. */
-    TRATAMIENTOS.forEach(function (c) { raiz.classList.remove(c); });
-    /* Sin esto el oyente sobrevive a la foto huerfana: su `load` puede llegar
-       con el visor ya cerrado y `raiz.hidden`, y `tenirEncuadre` volveria a
-       poner una clase de brillo justo despues de que esta funcion las quitara
-       todas, dejando falsa la invariante que se acaba de escribir arriba. */
-    if (elFoto) elFoto.removeEventListener('load', tenirEncuadre);
     elFoto = null;
     document.removeEventListener('keydown', alTeclado);
     /* Devuelve el foco a quien lo tenía antes de abrir, y no si ese elemento
@@ -139,12 +130,6 @@ window.MovilVisor = (function () {
     var direccion = direccionPendiente;
     direccionPendiente = null;
 
-    /* La foto de la parada anterior puede seguir cargando cuando se abandona
-       —el recorrido no espera a nadie—, y su oyente de `load` sigue enganchado
-       si no se quita aqui: ver el comentario de `cerrar` sobre por que esto
-       importa incluso dentro de una misma sesion del visor. */
-    if (elFoto) elFoto.removeEventListener('load', tenirEncuadre);
-
     escena.innerHTML = '';
     var nodo = (aqui.pieza === 'ficha') ? window.MovilFicha.de(p) :
                (aqui.pieza === null)    ? videoDe(p) : fotoDe(p, aqui.pieza);
@@ -158,8 +143,6 @@ window.MovilVisor = (function () {
     base = null;
     punteros = {};
     pintarZoom();
-    tenirEncuadre();
-    if (elFoto) elFoto.addEventListener('load', tenirEncuadre);
 
     window.MovilAnimacion.aplicar(nodo, direccion);
     window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
@@ -304,59 +287,6 @@ window.MovilVisor = (function () {
     base = zoom;
     d0 = window.MovilZoom.distancia(par[0], par[1]);
     tope = window.MovilZoom.maxEscala(elFoto.naturalWidth, elFoto.clientWidth);
-  }
-
-  var TRATAMIENTOS = ['brillo-claro', 'brillo-oscuro', 'brillo-halo'];
-
-  /* La contramedida que la spec exige por escrito: «el fallo se registra».
-     Sin ella, el halo puede quedarse puesto meses en produccion porque nadie
-     note que la medicion nunca llego a funcionar, que es el riesgo que la
-     propia spec nombra al elegir el camino de degradacion.
-
-     Avisa UNA VEZ por sesion y no una por foto: el recorrido mide en cada
-     parada y en cada relevo de portada por pieza, asi que un aviso por medida
-     llenaria la consola de la misma linea y taparia lo demas. Y es la primera
-     llamada a `console` de todo `js/`, que hasta hoy no tenia ninguna: se
-     acepta porque el aviso es el requisito, no un apano de depuracion. */
-  var avisado = false;
-
-  function registrarBrillo(mensaje) {
-    if (avisado) return;
-    avisado = true;
-    if (window.console && console.warn) console.warn(mensaje);
-  }
-
-  /* La foto se mide DOS veces por parada y no una, y es a proposito: la escena
-     arranca con la portada que la rejilla ya tiene descargada y la releva por
-     la pieza entera cuando llega (ver `fotoDe`). Midiendo solo al principio,
-     una portada aun sin cargar dejaria el halo puesto para siempre en esa
-     parada; midiendo tambien en cada `load`, la primera medida es la de la
-     portada —que es la misma foto— y la segunda la confirma.
-
-     `pintar` limpia siempre los tres antes de poner uno: sin eso, pasar de una
-     foto clara a una oscura dejaria las dos clases puestas y ganaria la que el
-     CSS declare mas abajo, que es una forma silenciosa de tener el encuadre
-     equivocado.
-
-     La llamada SINCRONA que hace `pintar` justo despues del `appendChild` mide
-     una `<img>` que, salvo que ya estuviera en cache, todavia no esta
-     `complete`: eso hace que `medidorDe` lance a proposito («la foto todavia
-     no esta cargada») y sin esta guarda esa medicion benigna consumiria el
-     unico aviso de la sesion, dejando sin registrar el fallo de verdad que la
-     spec quiere cazar —un `SecurityError` de lienzo manchado— y el mensaje en
-     consola diciendo «esto no deberia pasar» sobre algo que pasa siempre.
-     Midiendo con `elFoto.complete` en el momento de la llamada: si es `false`
-     el halo es el estado PROVISIONAL correcto, no un fallo, y no se registra
-     nada; si es `true` —la llamada del oyente de `load`, o esta misma llamada
-     si la portada ya estaba en cache— cualquier fallo de aqui en adelante es
-     el que la spec pide registrar. */
-  function tenirEncuadre() {
-    var completa = elFoto && elFoto.complete;
-    var tratamiento = elFoto
-      ? window.MovilBrillo.tratamientoDe(elFoto, completa ? registrarBrillo : null)
-      : 'halo';
-    TRATAMIENTOS.forEach(function (c) { raiz.classList.remove(c); });
-    raiz.classList.add('brillo-' + tratamiento);
   }
 
   /* El transform se QUITA al volver al encaje en vez de escribir la identidad,

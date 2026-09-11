@@ -10,6 +10,8 @@ window.Cursor = (function () {
   var mouseX = 0, mouseY = 0;
   var curX = 0, curY = 0, curW = DEFAULT_SIZE, curH = DEFAULT_SIZE;
   var started = false;
+  // true mientras el cursor regresa al ratón tras soltar un encuadre
+  var volviendo = false;
 
   // Estado actual: 'default' | 'nav-hover' | 'bbox'
   var state = 'default';
@@ -18,29 +20,47 @@ window.Cursor = (function () {
   var PROJ_SELECTOR = '.proj';
 
   function raf(){
-    let targetW, targetH, targetX, targetY;
-
     if (state === 'bbox' && bboxImg){
       // [NUEVO] Bounding box exacto de la imagen del proyecto,
       // recalculado cada frame (la galería espacial puede seguir
       // desplazándose bajo el cursor mientras está enfocada).
       const r = bboxImg.getBoundingClientRect();
-      targetX = r.left;
-      targetY = r.top;
-      targetW = r.width;
-      targetH = r.height;
+      // El encuadre sí se interpola: es un enganche a un marco, no un
+      // seguimiento del ratón, y el morph es el efecto que se busca.
+      curX += (r.left  - curX) * LERP;
+      curY += (r.top   - curY) * LERP;
+      curW += (r.width  - curW) * LERP;
+      curH += (r.height - curH) * LERP;
+      volviendo = true;
     } else {
-      targetW = (state === 'nav-hover') ? NAV_HOVER_SIZE : DEFAULT_SIZE;
-      targetH = targetW;
-      // en modo normal, (mouseX,mouseY) es el CENTRO del cursor
-      targetX = mouseX - targetW / 2;
-      targetY = mouseY - targetH / 2;
-    }
+      // El tamaño sigue interpolándose (34px <-> 50px al entrar en el
+      // navbar) para que no pegue un salto.
+      const targetW = (state === 'nav-hover') ? NAV_HOVER_SIZE : DEFAULT_SIZE;
+      curW += (targetW - curW) * LERP;
+      curH += (targetW - curH) * LERP;
+      if (Math.abs(targetW - curW) < 0.5){ curW = targetW; curH = targetW; }
 
-    curX += (targetX - curX) * LERP;
-    curY += (targetY - curY) * LERP;
-    curW += (targetW - curW) * LERP;
-    curH += (targetH - curH) * LERP;
+      // La POSICIÓN, en cambio, no se interpola: interpolarla es lo que
+      // hacía que el cursor fuese por detrás del ratón al navegar. Se
+      // centra sobre el puntero con el ancho REAL de este frame, así el
+      // cambio de tamaño no lo descoloca.
+      const destX = mouseX - curW / 2;
+      const destY = mouseY - curH / 2;
+
+      if (volviendo){
+        // Única excepción: al soltar el encuadre el cursor está sobre la
+        // foto, lejos del ratón. Vuelve interpolando y a partir de ahí
+        // ya sigue al puntero exacto.
+        curX += (destX - curX) * LERP;
+        curY += (destY - curY) * LERP;
+        if (Math.abs(destX - curX) < 0.5 && Math.abs(destY - curY) < 0.5){
+          volviendo = false;
+        }
+      } else {
+        curX = destX;
+        curY = destY;
+      }
+    }
 
     cursorEl.style.width  = curW + 'px';
     cursorEl.style.height = curH + 'px';

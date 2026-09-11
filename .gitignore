@@ -1,4 +1,8 @@
 .superpowers/
+
+# Indice y memorias del servidor MCP de Serena. Es cache de herramienta, se
+# regenera solo y cambia en cada sesion: nada de esto es el sitio.
+.serena/
 .DS_Store
 Thumbs.db
 .claude/settings.local.json

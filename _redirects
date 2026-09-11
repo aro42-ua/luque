@@ -31,12 +31,23 @@
 # Los redireccionamientos estaticos van antes que los dinamicos, como pide la
 # documentacion. Los estaticos cubren la ruta del directorio sin barra final,
 # que el asterisco no llega a casar.
+#
+# herramientas/ se cierra por lo mismo, y es la SEGUNDA vez que este archivo se
+# olvida al crear un directorio de primer nivel: el bloque del contenido real lo
+# anadio -la herramienta que deriva las tres medidas y proyectos.json- y no
+# volvio aqui. No hay credenciales dentro, pero es utillaje de construccion que
+# no pinta nada en un sitio publico, y proyectos.json es la fuente desde la que
+# se genera contenido.json: verlo invita a editarlo por la web, que no es como
+# se edita. Se cierra igual que docs/ y worker/, sin sacarlo del despliegue, para
+# que el arbol desplegado siga siendo exactamente lo versionado.
 /docs / 302
 /.claude / 302
 /worker / 302
+/herramientas / 302
 /docs/* / 302
 /.claude/* / 302
 /worker/* / 302
+/herramientas/* / 302
 
 # /tests/* se queda ACCESIBLE a proposito. No es un olvido: no contiene nada
 # sensible —el arnes y sus pruebas— y la verificacion del despliegue necesita

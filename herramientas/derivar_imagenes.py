@@ -14,13 +14,24 @@ contenido.json a partir de lo que ya hay en disco.
 Requiere Pillow. Es la unica dependencia del repositorio y vive aqui a
 proposito: `herramientas/` no se despliega nunca. El SITIO sigue sin ninguna.
 """
-import io, json, os, re, sys, unicodedata
+import glob, io, json, os, re, sys, unicodedata
 from PIL import Image, ImageOps
 
 # El lado largo, no una caja de proporcion fija. Ver la spec, seccion "La
 # medida es el lado largo": el material real es 2:3, 3:2 y 16:9, y con una
 # caja 4:5 las horizontales salian un 20% peor que las verticales.
 MEDIDAS = [(1500, 82), (3000, 82), (250, 80)]
+
+# Las franjas negras. Quince capturas de video de los videoclips traen bandas
+# negras de lado a lado -video vertical metido en un cuadro 16:9, sobre todo-,
+# y dentro del visor se ven como bordes negros. Se recortan del ORIGINAL al
+# derivar, y la pieza recortada sale con OTRA llave (sufijo -r): el Worker sirve
+# /img/* como inmutable con un ano de cache, asi que pisar la llave vieja no
+# llegaria a quien ya la tuviera guardada.
+UMBRAL_NEGRO = 32     # de 255: por debajo, el pixel cuenta como negro
+FRANJA_MINIMA = 4     # px: menos que esto es compresion, no una banda
+RESTO_MINIMO = 0.5    # la caja tiene que conservar al menos la mitad por eje
+SUFIJO_RECORTE = '-r'
 EXTENSIONES = ('.jpg', '.jpeg', '.png')
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
@@ -63,13 +74,53 @@ def medidas_de(tamano, lado):
     return (int(round(ancho * escala)), int(round(alto * escala)))
 
 
-def derivar(origen, destino, lado, calidad):
-    with Image.open(origen) as im:
-        # La orientacion EXIF no es opcional: sin esto la mitad de los
-        # verticales salen tumbados, porque la camara guarda el sensor en
-        # horizontal y anota "girala" en el EXIF.
-        im = ImageOps.exif_transpose(im)
+def franjas_negras(im):
+    """Cuantas filas/columnas seguidas desde cada borde son negras DE LADO A
+    LADO. Con que un solo pixel de la fila supere el umbral, la franja acaba."""
+    g = im.convert('L')
+    w, h = g.size
+
+    def cuenta(lado):
+        n = 0
+        for i in range(h if lado in ('arriba', 'abajo') else w):
+            caja = {'arriba': (0, i, w, i + 1), 'abajo': (0, h - 1 - i, w, h - i),
+                    'izq': (i, 0, i + 1, h), 'der': (w - 1 - i, 0, w - i, h)}[lado]
+            if max(g.crop(caja).getdata()) > UMBRAL_NEGRO:
+                break
+            n += 1
+        return n
+
+    return {l: cuenta(l) for l in ('arriba', 'abajo', 'izq', 'der')}
+
+
+def caja_sin_franjas(im):
+    """La caja (izq, arriba, der, abajo) que deja fuera las franjas negras.
+
+    Una franja de menos de FRANJA_MINIMA no cuenta. Y si el recorte se comiera
+    mas de la mitad de un eje -un fotograma casi negro, un fundido-, no se
+    recorta nada: mejor la foto tal cual que un sello de veinte pixeles.
+    """
+    w, h = im.size
+    f = {k: (v if v >= FRANJA_MINIMA else 0) for k, v in franjas_negras(im).items()}
+    caja = (f['izq'], f['arriba'], w - f['der'], h - f['abajo'])
+    ancho, alto = caja[2] - caja[0], caja[3] - caja[1]
+    if ancho < w * RESTO_MINIMO or alto < h * RESTO_MINIMO:
+        return (0, 0, w, h)
+    return caja
+
+
+def abrir_derecha(origen):
+    """El original con la orientacion EXIF aplicada. Sin esto la mitad de los
+    verticales salen tumbados: la camara guarda el sensor en horizontal y anota
+    "girala" en el EXIF."""
+    return ImageOps.exif_transpose(Image.open(origen))
+
+
+def derivar(origen, destino, lado, calidad, caja=None):
+    with abrir_derecha(origen) as im:
         icc = im.info.get('icc_profile')
+        if caja:
+            im = im.crop(caja)
         if im.mode not in ('RGB', 'L'):
             im = im.convert('RGB')
         im = im.resize(medidas_de(im.size, lado), Image.LANCZOS)
@@ -95,6 +146,13 @@ def fotos_de(raiz, carpeta):
     return portadas + resto, portadas[0] if portadas else None
 
 
+def se_recorta(nombre, proyecto):
+    """Si a esta foto se le quitan las franjas. `sin_recorte` en proyectos.json
+    es la lista de las que Lidia quiere enteras aunque tengan franja: los
+    rotulos de Conejita Playboy, donde el recorte se llevaba parte del titulo."""
+    return nombre not in proyecto.get('sin_recorte', [])
+
+
 def leer_meta():
     """Los datos humanos de los ocho, escritos UNA vez y a mano."""
     with io.open(os.path.join(AQUI, 'proyectos.json'), encoding='utf-8') as f:
@@ -108,19 +166,45 @@ def derivar_todo(raiz, meta, destino):
     """
     if not os.path.isdir(destino):
         os.makedirs(destino)
+    # img/ es exactamente la salida de UNA pasada. Un archivo de una pasada
+    # anterior que se quedara ahi -una pieza que hoy se recorta y ayer no-
+    # enganaria a `contenido()`, que decide la llave mirando el disco.
+    for viejo in glob.glob(os.path.join(destino, '*.jpg')):
+        os.remove(viejo)
     hechas = 0
     for p in meta['proyectos']:
         nombres, _ = fotos_de(raiz, p['carpeta'])
         relativa = p['carpeta'].replace('/', os.sep)
+        recortadas = 0
         for nombre in nombres:
             k = llave(os.path.join(relativa, nombre))
             origen = os.path.join(raiz, relativa, nombre)
+            # La caja se calcula UNA vez por foto, no una por medida: la
+            # exploracion fila a fila del original es lo caro.
+            with abrir_derecha(origen) as im:
+                caja = caja_sin_franjas(im)
+                recortada = se_recorta(nombre, p) and caja != (0, 0) + im.size
+            if recortada:
+                k += SUFIJO_RECORTE
+                recortadas += 1
             for lado, calidad in MEDIDAS:
                 derivar(origen, os.path.join(destino, '%s-%d.jpg' % (k, lado)),
-                        lado, calidad)
+                        lado, calidad, caja if recortada else None)
                 hechas += 1
-        sys.stdout.write('%-34s %2d fotos\n' % (p['id'], len(nombres)))
+        sys.stdout.write('%-34s %2d fotos, %d recortadas\n'
+                         % (p['id'], len(nombres), recortadas))
     return hechas
+
+
+def llave_en_disco(k):
+    """La llave con la que la foto esta de verdad en img/: con -r si esa pasada
+    la recorto. Se mira el disco y no se recalcula, porque contenido.json
+    describe lo que hay, y lo que hay lo decidio `derivar_todo`."""
+    if os.path.exists(os.path.join(RAIZ_REPO, 'img', k + SUFIJO_RECORTE + '-3000.jpg')):
+        return k + SUFIJO_RECORTE
+    if not os.path.exists(os.path.join(RAIZ_REPO, 'img', k + '-3000.jpg')):
+        raise SystemExit('%s no esta derivada en img/: deriva antes de describir' % k)
+    return k
 
 
 def contenido(raiz, meta):
@@ -137,7 +221,7 @@ def contenido(raiz, meta):
         if not portada:
             raise SystemExit('%s no tiene portada marcada' % p['carpeta'])
         relativa = p['carpeta'].replace('/', os.sep)
-        k = lambda f: llave(os.path.join(relativa, f))
+        k = lambda f: llave_en_disco(llave(os.path.join(relativa, f)))
         salida.append({
             'id': p['id'], 'titulo': p['titulo'],
             'categoria': p['categoria'], 'tipo': p['tipo'],
