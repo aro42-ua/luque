@@ -111,6 +111,10 @@
      de lista.js y edicion.js, que usa: la aritmética del arrastre se reutiliza
      de lista.js en vez de escribirla dos veces. Ver pruebas-fotos.js. -->
 <script src="../panel/js/fotos.js"></script>
+<!-- proyecto.js no toca el DOM al cargarse: sólo define window.Proyecto. Va
+     DESPUÉS de fotos.js, edicion.js y lista.js (de donde saca ETIQUETAS), que
+     usa al pintar. Ver pruebas-proyecto.js. -->
+<script src="../panel/js/proyecto.js"></script>
 <script src="pruebas-arnes.js"></script>
 <script src="pruebas-arnes-dom.js"></script>
 <script src="pruebas-datos.js"></script>
@@ -150,6 +154,7 @@
 <script src="pruebas-lista.js"></script>
 <script src="pruebas-lista-pintar.js"></script>
 <script src="pruebas-fotos.js"></script>
+<script src="pruebas-proyecto.js"></script>
 <!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
      cuatro dependencias delante (reglas-contenido, identificador, orden,
      lista): cinco scripts encadenados por conDocumento. Que UN script se
