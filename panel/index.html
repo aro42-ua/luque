@@ -9,6 +9,11 @@
 <body>
 
   <main class="panel">
+    <!-- Tres pantallas en una sola página: el Worker de recursos estáticos
+         sirve panel/index.html y nada más, así que cualquier otra ruta daría
+         404 al recargar. Cuál se ve lo decide Pantallas.mostrar a partir del
+         fragmento; el `hidden` de aquí es el estado de arranque. -->
+    <section id="pantallaLista">
     <h1>Proyectos</h1>
 
     <p id="aviso" role="status" aria-live="polite" class="aviso"></p>
@@ -45,6 +50,60 @@
     </form>
 
     <button id="guardar" type="button">Guardar</button>
+    <button id="irAPublicar" type="button">Publicar…</button>
+    </section>
+
+    <section id="pantallaProyecto" hidden>
+      <button id="pVolver" type="button">‹ Volver a los proyectos</button>
+      <h2 id="pTitulo"></h2>
+      <p id="pAviso" role="status" aria-live="polite" class="aviso"></p>
+
+      <label for="pNombre">Título</label>
+      <input id="pNombre" type="text" autocomplete="off">
+
+      <label for="pCategoria">Categoría</label>
+      <select id="pCategoria"></select>
+
+      <label for="pCliente">Cliente (opcional)</label>
+      <input id="pCliente" type="text" autocomplete="off">
+
+      <label for="pAnio">Año</label>
+      <input id="pAnio" type="number">
+
+      <label for="pPapel">Papel</label>
+      <input id="pPapel" type="text" autocomplete="off">
+
+      <label for="pEnlace">Enlace al vídeo (opcional)</label>
+      <input id="pEnlace" type="url" placeholder="https://vimeo.com/…">
+
+      <!-- El selector de archivos va SIEMPRE, no sólo como alternativa a
+           soltar: la especificación lo pide («toda subida ofrece un selector
+           de archivos además de soltar») y soltar no existe con teclado. -->
+      <div id="pSoltar" class="soltar">
+        <label for="pArchivos">Añadir fotos</label>
+        <input id="pArchivos" type="file" accept="image/*" multiple>
+        <p class="soltar-pista">También puedes soltarlas aquí.</p>
+      </div>
+
+      <p id="pProgreso" role="status" aria-live="polite"></p>
+      <ol id="pFotos" class="fotos"></ol>
+      <p id="pProblemas" class="problemas"></p>
+    </section>
+
+    <section id="pantallaPublicar" hidden>
+      <button id="qVolver" type="button">‹ Volver a los proyectos</button>
+      <h2>Publicar</h2>
+      <!-- La frase va en el marcado y no en el JS porque no cambia nunca, y
+           porque es lo que hay que leer antes que ninguna otra cosa de esta
+           pantalla: es la única del panel donde una pulsación cambia lo que
+           ven los clientes. -->
+      <p class="publicar-que-es">Publicar copia lo guardado sobre la web que
+        ven los clientes. No se puede deshacer desde aquí.</p>
+      <p id="qCambios" class="publicar-cambios"></p>
+      <p id="qFalta" class="problemas"></p>
+      <p id="qAviso" role="status" aria-live="polite" class="aviso"></p>
+      <button id="qPublicar" type="button">Publicar ahora</button>
+    </section>
   </main>
 
   <!-- Orden importante: panel.js lee window.ReglasContenido.CATEGORIAS al
@@ -56,8 +115,21 @@
   <script src="../js/reglas-contenido.js"></script>
   <script src="js/identificador.js"></script>
   <script src="js/orden.js"></script>
+  <script src="js/nuevo.js"></script>
+  <script src="js/cambios.js"></script>
+  <script src="js/rutas.js"></script>
+  <script src="js/edicion.js"></script>
+  <script src="js/imagenes.js"></script>
+  <script src="js/subida.js"></script>
   <script src="js/borrador.js"></script>
   <script src="js/lista.js"></script>
+  <script src="js/fotos.js"></script>
+  <script src="js/proyecto.js"></script>
+  <script src="js/subir.js"></script>
+  <script src="js/pantallas.js"></script>
+  <script src="js/publicacion.js"></script>
+  <script src="js/pantalla-publicar.js"></script>
+  <script src="js/publicar.js"></script>
   <script src="js/panel.js"></script>
 </body>
 </html>

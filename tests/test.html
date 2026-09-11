@@ -86,11 +86,52 @@
 <script src="../js/visor-ficha.js"></script>
 <script src="../panel/js/identificador.js"></script>
 <script src="../panel/js/orden.js"></script>
+<!-- rutas.js es puro: sólo define window.Rutas. Lee el fragmento y dice qué
+     pantalla del panel toca. No se confunde con js/router.js, que enruta la
+     web pública. Ver pruebas-rutas-panel.js. -->
+<script src="../panel/js/rutas.js"></script>
+<!-- edicion.js es puro: sólo define window.Edicion. Va DESPUÉS de orden.js,
+     que usa para mover piezas. Ver pruebas-edicion.js. -->
+<script src="../panel/js/edicion.js"></script>
+<!-- imagenes.js no toca el DOM al cargarse: sólo define window.Imagenes.
+     `caber` y `MEDIDAS` se prueban solas; `reducir`, que sí construye un
+     canvas, se ejercita con un PNG en un data: URI. Ver pruebas-imagenes.js. -->
+<script src="../panel/js/imagenes.js"></script>
+<!-- subida.js se carga aquí sólo por sus dos piezas sin red, `nombre` y
+     `sello`. `subir`, que sí habla con el Worker, se ejercita dentro de un
+     iframe con fetch doblado — de ahí que pruebas-subida.js vuelva a
+     cargarlo allí. Ver pruebas-subida.js. -->
+<script src="../panel/js/subida.js"></script>
 <!-- lista.js no toca el DOM al cargarse: sólo define window.Lista. Se carga
      por sus tres funciones sin DOM (indiceValido, calcularHasta,
      dentroDeLaCaja) y también por `pintar`, que sí construye nodos: el arnés
      de DOM le da un <ol> propio, así que no hace falta el panel entero. -->
 <script src="../panel/js/lista.js"></script>
+<!-- fotos.js no toca el DOM al cargarse: sólo define window.Fotos. Va DESPUÉS
+     de lista.js y edicion.js, que usa: la aritmética del arrastre se reutiliza
+     de lista.js en vez de escribirla dos veces. Ver pruebas-fotos.js. -->
+<script src="../panel/js/fotos.js"></script>
+<!-- proyecto.js no toca el DOM al cargarse: sólo define window.Proyecto. Va
+     DESPUÉS de fotos.js, edicion.js y lista.js (de donde saca ETIQUETAS), que
+     usa al pintar. Ver pruebas-proyecto.js. -->
+<script src="../panel/js/proyecto.js"></script>
+<!-- subir.js es el pegamento entre Subida y Edicion, y el aviso de lo que
+     entro y lo que no. Se carga por `contar`, que es pura. -->
+<script src="../panel/js/subir.js"></script>
+<!-- pantallas.js es puro: sólo define window.Pantallas. -->
+<script src="../panel/js/pantallas.js"></script>
+<!-- cambios.js es puro: sólo define window.Cambios. Compara el borrador con
+     lo publicado y dice qué cambiaría. Ver pruebas-cambios.js. -->
+<script src="../panel/js/cambios.js"></script>
+<!-- pantalla-publicar.js no toca el DOM al cargarse: sólo define
+     window.PantallaPublicar. Sólo pinta —la red es de publicacion.js—, así que
+     se prueba entera sin doblar nada. Ver pruebas-pantalla-publicar.js. -->
+<script src="../panel/js/pantalla-publicar.js"></script>
+<!-- nuevo.js (el formulario de crear, salido de panel.js en el 3d) y
+     publicar.js (el estado de la pantalla de publicar). Los dos se ejercitan
+     desde fuera, a través del panel, en pruebas-panel.js. -->
+<script src="../panel/js/nuevo.js"></script>
+<script src="../panel/js/publicar.js"></script>
 <script src="pruebas-arnes.js"></script>
 <script src="pruebas-arnes-dom.js"></script>
 <script src="pruebas-datos.js"></script>
@@ -123,8 +164,17 @@
 <script src="pruebas-hero.js"></script>
 <script src="pruebas-identificador.js"></script>
 <script src="pruebas-orden.js"></script>
+<script src="pruebas-rutas-panel.js"></script>
+<script src="pruebas-edicion.js"></script>
+<script src="pruebas-imagenes.js"></script>
+<script src="pruebas-subida.js"></script>
 <script src="pruebas-lista.js"></script>
 <script src="pruebas-lista-pintar.js"></script>
+<script src="pruebas-fotos.js"></script>
+<script src="pruebas-proyecto.js"></script>
+<script src="pruebas-cambios.js"></script>
+<script src="pruebas-publicacion.js"></script>
+<script src="pruebas-pantalla-publicar.js"></script>
 <!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
      cuatro dependencias delante (reglas-contenido, identificador, orden,
      lista): cinco scripts encadenados por conDocumento. Que UN script se
