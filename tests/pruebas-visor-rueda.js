@@ -35,10 +35,22 @@ describe('VisorRueda — un paso por gesto', function () {
     igual(rafaga([[ev(100), 0]]), [1]);
   });
 
-  /* Un giro de muñeca suelta varias muescas en pocos milisegundos; en un
-     visor de fotos eso es UN gesto. Separadas por más del silencio, son tres. */
-  prueba('tres muescas en 80ms son un giro de muñeca: un paso', function () {
-    igual(rafaga([[ev(100), 0], [ev(100), 40], [ev(100), 80]]), [1]);
+  /* Ángel lo decidió el 2026-09-11: una pieza por muesca SIEMPRE, vayan
+     rápidas o no. La agrupación por gesto es para el trackpad, no para el
+     ratón. */
+  prueba('tres muescas en 80ms son tres pasos', function () {
+    igual(rafaga([[ev(100), 0], [ev(100), 40], [ev(100), 80]]), [1, 1, 1]);
+  });
+
+  /* Lo que distingue una muesca de un delta de trackpad es el tamaño: el
+     ratón habla en saltos de 100, el trackpad en unidades. Un salto grande
+     que llega EN MEDIO de una ráfaga de deltas pequeños ya bloqueada es parte
+     de esa ráfaga -un pico de la inercia-, no una muesca. */
+  prueba('un pico grande dentro de una ráfaga bloqueada no salta', function () {
+    var evs = [];
+    for (var i = 0; i < 20; i++) evs.push([ev(3), i * 16]);
+    evs.push([ev(90), 20 * 16]);
+    igual(rafaga(evs), [1]);
   });
 
   prueba('tres muescas separadas por el silencio son tres pasos', function () {
