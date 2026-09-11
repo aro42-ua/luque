@@ -158,6 +158,16 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 - El indicador de carga se dibuja por encima de la interfaz y de las esquinas.
 - El paneo con ratón sigue interpolando aunque el sistema pida movimiento
   reducido; el centrado por teclado sí lo respeta.
+- **En el visor móvil, `pointercancel` decide intención y navega.** `soltarEn`
+  (`js/movil-visor.js`) no distingue soltar de que te quiten el gesto, así que
+  el sistema llevándose el dedo cuenta como un deslizamiento terminado.
+  Reproducido: `pointerdown` en (300,400), `pointermove` a (300,200),
+  `pointercancel` en (300,200) → el router recibe la pieza 2. Donde se nota es
+  en el caso que la propia spec anticipa —el gesto de «atrás» del navegador
+  desde el borde—, que da **doble navegación**: la del navegador y la del
+  visor. Viene del bloque 4f, no del 4g; el comentario que hay junto a los
+  oyentes sólo razona sobre el contador de dedos, no sobre esto. Lo cierra un
+  `soltarEn(e, cancelado)` que reinicie el gesto sin decidir intención.
 
 ## Sin resolver: la barra tapa fotos, y la regla evidente es la contraria
 
