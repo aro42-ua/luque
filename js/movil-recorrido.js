@@ -113,11 +113,32 @@ window.MovilRecorrido = (function () {
     return estado;
   }
 
+  /* El atajo del botón de ficha. La ficha es la ÚLTIMA parada del eje, así que
+     llegar a ella deslizando cuesta tantos gestos como piezas tenga el
+     proyecto: diez en `la-boquerona`. Esto la pone a un toque, en los dos
+     sentidos.
+
+     `recordada` llega de fuera porque este módulo es puro y no guarda nada
+     entre llamadas; quien la recuerda es `MovilVisor`.
+
+     La guarda contra `recordada === 'ficha'` no es paranoia: `indexOf('ficha')`
+     NO es -1, porque 'ficha' es una parada del eje como cualquier otra. Sin
+     ella, volver de la ficha devolvería la ficha y el botón quedaría muerto
+     justo en el sitio donde más hace falta. */
+  function alternarFicha(estado, orden, recordada) {
+    var ps = paradasDe(orden, estado.proyecto);
+    if (!ps) return estado;
+    if (estado.pieza !== 'ficha') return en(estado.proyecto, 'ficha');
+    var valida = recordada !== 'ficha' && ps.indexOf(recordada) !== -1;
+    return en(estado.proyecto, valida ? recordada : ps[0]);
+  }
+
   return {
     paradas: paradas,
     inicial: inicial,
     desdeRuta: desdeRuta,
     aRuta: aRuta,
-    mover: mover
+    mover: mover,
+    alternarFicha: alternarFicha
   };
 })();

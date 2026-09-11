@@ -222,4 +222,58 @@ describe('MovilRecorrido', function () {
     MovilRecorrido.desdeRuta({ tipo: 'proyecto', valor: 'uno', pieza: 2 }, propio);
     igual(propio, copia, 'el orden original ha cambiado');
   });
+
+  // ---- El botón de ficha ------------------------------------------
+
+  /* El botón de la Tarea 2 no decide nada por su cuenta: le pregunta aquí.
+     La función es pura y recibe la pieza recordada como argumento, porque
+     este módulo no guarda nada entre llamadas — quien recuerda es
+     `MovilVisor`. */
+
+  prueba('desde una pieza, el botón lleva a la ficha', function () {
+    igual(MovilRecorrido.alternarFicha(en('bruma', 3), ORDEN, null),
+          en('bruma', 'ficha'));
+  });
+
+  prueba('desde la ficha, el botón vuelve a la pieza recordada', function () {
+    igual(MovilRecorrido.alternarFicha(en('bruma', 'ficha'), ORDEN, 3),
+          en('bruma', 3));
+  });
+
+  /* El caso del enlace en frío a `#/bruma/ficha`: nunca hubo pieza anterior,
+     así que no hay nada que recordar. Se cae a la primera parada, que es lo
+     que ya hace `desdeRuta` con una pieza que no existe: conserva el
+     proyecto, que es lo que el enlace sí traía bien. */
+  prueba('sin pieza recordada vuelve a la primera parada', function () {
+    igual(MovilRecorrido.alternarFicha(en('bruma', 'ficha'), ORDEN, null),
+          en('bruma', 1));
+  });
+
+  /* `bruma` tiene 8 piezas. Una recordada de 9 sería basura —de una lista
+     anterior, de una URL a mano— y llevaría a una parada que no existe. */
+  prueba('una recordada que no es parada de ese proyecto se ignora', function () {
+    igual(MovilRecorrido.alternarFicha(en('bruma', 'ficha'), ORDEN, 9),
+          en('bruma', 1));
+  });
+
+  /* `indexOf('ficha')` NO es -1: 'ficha' es una parada del eje. Sin la guarda
+     explícita, una recordada de 'ficha' devolvería la ficha estando ya en la
+     ficha y el botón no haría nada, que es exactamente el callejón sin
+     salida que este bloque viene a arreglar. */
+  prueba('una recordada de «ficha» no deja el botón muerto', function () {
+    igual(MovilRecorrido.alternarFicha(en('bruma', 'ficha'), ORDEN, 'ficha'),
+          en('bruma', 1));
+  });
+
+  /* En un proyecto de vídeo la primera parada es `null` —el propio vídeo—, no
+     la pieza 1, que no existe. */
+  prueba('en un vídeo, volver de la ficha lleva al vídeo', function () {
+    igual(MovilRecorrido.alternarFicha(en('reflejo', 'ficha'), ORDEN, null),
+          en('reflejo', null));
+  });
+
+  prueba('un proyecto que no está en el orden no se mueve', function () {
+    igual(MovilRecorrido.alternarFicha(en('fantasma', 2), ORDEN, null),
+          en('fantasma', 2));
+  });
 });

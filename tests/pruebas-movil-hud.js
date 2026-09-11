@@ -54,6 +54,7 @@ describe('MovilHud — qué se enseña en cada parada', function () {
     '  <div id="hudRaiz">' +
     '    <button id="hudCat" type="button"></button>' +
     '    <ul id="hudCats"></ul>' +
+    '    <button id="hudFicha" type="button" aria-pressed="false"></button>' +
     '    <button id="hudCerrar" type="button"></button>' +
     '    <p id="hudTitulo"></p>' +
     '    <span id="hudContador"></span>' +
@@ -78,11 +79,15 @@ describe('MovilHud — qué se enseña en cada parada', function () {
         raiz:     caja.querySelector('#hudRaiz'),
         cat:      caja.querySelector('#hudCat'),
         cats:     caja.querySelector('#hudCats'),
+        ficha:    caja.querySelector('#hudFicha'),
         cerrar:   caja.querySelector('#hudCerrar'),
         titulo:   caja.querySelector('#hudTitulo'),
         contador: caja.querySelector('#hudContador')
       };
-      MovilHud.init(refs, function () {}, function () {});
+      var avisos = [];
+      MovilHud.init(refs, function () {}, function () {},
+                    function () { avisos.push('ficha'); });
+      refs.avisos = avisos;
       try { return fn(refs); } finally { window.Datos = antes; }
     });
   }
@@ -139,5 +144,39 @@ describe('MovilHud — qué se enseña en cada parada', function () {
       return { visible: MovilHud.visible(),
                clase: refs.raiz.classList.contains('dormido') };
     }), { visible: true, clase: false });
+  });
+
+  /* El botón se llama «Ficha» siempre; lo que cambia es `aria-pressed`, igual
+     que el desplegable de al lado usa `aria-expanded`. Cambiar el rótulo
+     haría bailar el ancho de la pastilla en cada parada. */
+  prueba('en una pieza, el botón de ficha no está pulsado', function () {
+    igual(conHud(function (refs) {
+      MovilHud.pintar(HUD_PROYECTO, 2, 3);
+      return refs.ficha.getAttribute('aria-pressed');
+    }), 'false');
+  });
+
+  prueba('en la ficha, el botón de ficha está pulsado', function () {
+    igual(conHud(function (refs) {
+      MovilHud.pintar(HUD_PROYECTO, 'ficha', 3);
+      return refs.ficha.getAttribute('aria-pressed');
+    }), 'true');
+  });
+
+  /* Un proyecto de vídeo para en `null`, que no es la ficha. */
+  prueba('en el vídeo, el botón de ficha no está pulsado', function () {
+    igual(conHud(function (refs) {
+      MovilHud.pintar(HUD_PROYECTO, null, 0);
+      return refs.ficha.getAttribute('aria-pressed');
+    }), 'false');
+  });
+
+  /* El HUD no decide a dónde lleva el botón: avisa, y `MovilVisor` decide. */
+  prueba('pulsar el botón de ficha avisa a quien cableó el HUD', function () {
+    igual(conHud(function (refs) {
+      MovilHud.pintar(HUD_PROYECTO, 2, 3);
+      refs.ficha.click();
+      return refs.avisos;
+    }), ['ficha']);
   });
 });
