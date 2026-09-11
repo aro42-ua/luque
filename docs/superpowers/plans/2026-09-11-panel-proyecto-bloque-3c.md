@@ -3,1052 +3,545 @@
 > **Para quien lo ejecute:** SUB-SKILL OBLIGATORIA: usa
 > `superpowers:subagent-driven-development` (recomendada) o
 > `superpowers:executing-plans` para implementarlo tarea a tarea. Los pasos
-> llevan casilla (`- [ ]`) para ir marcándolos.
+> llevan casilla (`- [ ]`) para ir marcándolos. Antes de decir «hecho»:
+> `superpowers:verification-before-completion`.
 
-**Objetivo:** la segunda pantalla del panel. La fotógrafa abre un proyecto de
-la lista, corrige su ficha, **sube fotos** —que el navegador reduce a las tres
-medidas de la web antes de mandarlas—, las ordena, elige cuál es la portada y
-quita las que sobren. Con eso un proyecto creado en el bloque 3b deja de nacer
-impublicable: tiene forma de recibir sus fotos.
+**Objetivo:** la segunda pantalla del panel. Se abre un proyecto y se ve su
+ficha, su portada y sus fotos: se suben arrastrando o con el selector, se
+ordenan, se elige cuál es la portada y se quitan. Las fotos se reducen **en el
+navegador** antes de subir, en las tres medidas que la web usa.
 
-**Arquitectura:** la misma aplicación estática de `/panel` (bloque 3b), que
-gana un enrutador de fragmento propio —`#/`, `#/proyecto/<id>`, `#/publicar`—
-para repartir tres pantallas sobre un solo estado en memoria (`trabajo`). Las
-imágenes se reducen con un `<canvas>` en el navegador y se suben una a una por
-`POST /api/imagen` (bloque 3a). La lógica que se puede probar sin red ni DOM
-—medidas, nombres de archivo, las ediciones de un proyecto, las rutas— vive en
-módulos puros; lo que toca la red o la pantalla, aparte.
-
-**Tecnologías:** HTML, CSS y JavaScript servidos tal cual, sin compilar. ES5 y
-`window.Nombre` en `panel/js/` (decisión 1 del bloque 3b). Arnés de siempre
-(`tests/test.html`), incluidos sus dos niveles de DOM (`ArnesDom.conElemento` y
-`ArnesDom.conDocumento`).
+**Arquitectura:** la misma aplicación estática de `/panel`, detrás de Access,
+hablando con la API del bloque 3a. Lo que cambia es que ahora hay **más de una
+pantalla**, y eso pide un enrutador propio.
 
 **Especificación:** `docs/superpowers/specs/2026-08-17-panel-contenido-design.md`
-—léela entera, con **Correcciones tras implementar los bloques 1 y 2**— y, para
-las medidas de las imágenes, la sección «Cada foto se guarda en tres medidas»
-de `docs/estado-conocido.md`, que **corrige** a la especificación: la medida es
-el **lado largo** (1500 / 3000 / 250), no una caja de proporción fija.
+— léela entera, incluidas **Correcciones tras implementar los bloques 1 y 2**
+(la corrección 2 es la que dice que son tres medidas y no dos).
 
 **Lo que ya existe y este bloque consume:**
 
 | Pieza | Qué hace |
 |---|---|
-| `POST /api/imagen?nombre=…` con el cuerpo binario | guarda bajo `img/<nombre>` y devuelve `{url: "/img/<nombre>"}`. **409** si ya existe (nunca pisa), **413** si pasa de 5 MB, **415** si no es jpg/png/webp/avif/gif, **400** sin nombre o nombre de más de 200 caracteres. Sólo ASCII `[a-zA-Z0-9._-]` sobrevive en el nombre. |
-| `GET` / `PUT /api/borrador` | ya los usa `panel/js/borrador.js`; no cambian. |
-| `window.Identificador.desde(titulo)` | el saneado del título; aquí se reutiliza para el nombre de archivo. |
-| `window.Orden.mover(lista, desde, hasta)` | lista nueva con el elemento movido; aquí ordena las fotos. |
-| `window.ReglasContenido.validar(datos, categorias)` | avisa en pantalla de lo que le falta a un proyecto para publicarse. |
-| `window.Lista`, `panel/js/panel.js` | la lista y el arranque del bloque 3b, con sus 21 pruebas en `tests/pruebas-panel.js`. |
+| `GET /api/borrador` | devuelve `{version, proyectos}` |
+| `PUT /api/borrador` | guarda; **409** si la versión no es la guardada |
+| `POST /api/imagen?nombre=N` | guarda los bytes en R2 y devuelve `{url}`. **409** si ese nombre ya existe —nunca pisa—, **413** si pasa de 5 MB, **415** si no es jpg/png/webp/avif/gif |
+| `window.Borrador.cargar/guardar` | el cliente de esa API, con sus mensajes en castellano |
+| `window.Orden.mover(lista, desde, hasta)` | mover un elemento de sitio, devolviendo lista nueva |
+| `window.Identificador.desde(titulo)` | sanear un texto a `a-z0-9-` |
+| `window.Lista.pintar(...)` | la lista de proyectos, con su arrastre y sus botones |
+| `window.ReglasContenido.validar` | las reglas que aplica el Worker antes de publicar |
 
 ## Restricciones globales
 
 - **Ningún archivo de `js/`, `panel/js/` ni `worker/` pasa de 300 líneas.**
-  Criterio de aceptación 11. `panel/js/panel.js` está en 209 y crece aquí: la
-  Tarea 7 le saca una función antes de añadirle otras.
-- **`panel/js/` en ES5 estricto y patrón `window.Nombre`**: nada de `let`,
-  `const`, funciones flecha ni módulos. Métodos de tiempo de ejecución modernos
-  (`createImageBitmap`, `canvas.toBlob`, `Promise`, `fetch`) sí valen, igual que
-  `normalize` en el bloque 3b: son API, no sintaxis.
-- **Todo lo que se hace arrastrando se puede hacer con teclado.** Criterio 6.
-  Ordenar fotos, elegir portada, quitar y subir tienen botón o control propio;
-  arrastrar es un atajo.
-- **Ninguna imagen subida supera su cota y ninguna sale deformada.** Criterio 7,
-  con la corrección de `estado-conocido.md`: lado largo 1500 (portada), 3000
-  (pieza) y 250 (miniatura), proporción original siempre.
-- **Una subida que falla no arrastra a las demás.** Criterio 10: cada archivo
-  se sube por separado y el panel dice cuáles quedaron fuera.
-- **Borrar no borra de R2.** Quitar una foto de un proyecto deja sus tres
-  archivos en el bucket, como decide la especificación. Aquí no hay `DELETE`.
-- El panel se parece a LUQUE! y se comporta como una herramienta: cursor del
-  sistema, anillos de foco visibles, `prefers-reduced-motion` respetado.
-- Comentarios, textos de interfaz y mensajes **en castellano**. Nada de
-  credenciales en el repositorio.
-- **Node lo pone nvm para Windows en `C:\nvm4w\nodejs`** (v24.21.0,
-  comprobado el 2026-09-11). El PATH del sistema lo referencia como
-  `%NVM_HOME%` y `%NVM_SYMLINK%`, y una terminal abierta antes de instalarlo
-  no las resuelve: si `node` no aparece, antepón esa carpeta al PATH de la
-  sesión. Este plan no toca `worker/` ni `panel/js/borrador.js`, así que sus
-  pruebas de Node (`cd worker && node --test`, `node tests/prueba-borrador.js`)
-  no cambian; todo lo nuevo se prueba en el arnés del navegador. Se corren
-  igualmente al final (Tarea 9) como comprobación de que nada se movió.
+  Criterio de aceptación 11. `panel/js/panel.js` va por 209 y este bloque le
+  añade trabajo: la Tarea 5 existe para que no lo cruce.
+- **`panel/js/` va en ES5 estricto y patrón `window.Nombre`.** El arnés
+  (`tests/test.html`) carga scripts planos y lee globales; con módulos ES haría
+  falta un segundo arnés o un paso de compilación, y no hay ninguno de los dos.
+- **Todo lo que se hace arrastrando se puede hacer con teclado.** Criterio de
+  aceptación 6. Vale para la rejilla de fotos igual que valió para la lista.
+- **Ninguna imagen sale deformada.** Criterio de aceptación 7: las medidas son
+  cotas, y la proporción original se conserva siempre.
+- Se respeta `prefers-reduced-motion`.
+- Comentarios, textos de interfaz y mensajes de error **en castellano**.
+- **No se copia `js/reglas-contenido.js` al panel.** Se carga desde `../js/`,
+  como ya hace `panel/index.html`. Duplicarlo reabriría el agujero del 3a.
+- Los módulos que hablan por red (`subida.js`) **se prueban en el arnés del
+  navegador doblando `fetch` dentro del iframe de `ArnesDom.conDocumento`**, no
+  con Node. El Worker tiene sus propias pruebas y no es lo que se prueba aquí.
+
+**Aviso sobre cómo se mide el arnés.** Desde este bloque, el arnés reduce
+imágenes de verdad, y `canvas.toBlob` **no avanza bajo
+`--virtual-time-budget`**: Chrome sin cabeza salta los temporizadores pero no
+espera al trabajo del canvas, así que las secciones de `imagenes.js` y
+`subida.js` parecen colgadas y el recuento final no llega a pintarse. No es un
+fallo del código —en un navegador abierto pasan— sino de la forma de medir. Se
+mide abriendo `tests/test.html` en un navegador de verdad, o conduciéndolo en
+tiempo real (Playwright, esperando a que aparezca el recuento). Subir el
+presupuesto de tiempo virtual no lo arregla.
 
 ---
 
-## Cuatro decisiones, razonadas
+## Siete decisiones, razonadas
 
-### 1. Tres medidas por foto, siempre, y cada pieza recuerda su portada
+### 1. Tres medidas por foto, por el lado largo
 
-La portada de un proyecto es «una de las piezas, elegida» (spec). Para poder
-elegirla **después** de subir —y cambiar de opinión— hace falta la medida de
-1500 de **cada** foto, no sólo de la que se elija al subir: el archivo original
-se queda en el disco de la fotógrafa y el panel no lo vuelve a ver.
+`herramientas/derivar_imagenes.py` ya generó así las 65 piezas del contenido
+real, y lo que sube el panel tiene que ser indistinguible de lo que subió el
+script: si no, la web tendría dos clases de fotografía según quién la puso.
 
-Así que cada foto sube en sus tres medidas y la pieza guarda las tres rutas:
+| Medida | Cota del lado largo | Dónde se ve |
+|---|---|---|
+| portada | 1500 px | la galería, doce a la vez |
+| pieza | 3000 px | el visor, y es lo único a calidad completa |
+| miniatura | 250 px | la tira del visor, a 52 px |
 
-```json
-{ "url": "/img/bruma-img-0001-l2k9x-3000.jpg",
-  "miniatura": "/img/bruma-img-0001-l2k9x-250.jpg",
-  "portada": "/img/bruma-img-0001-l2k9x-1500.jpg" }
-```
+Calidad JPEG **0,82**, la misma del script. Y **por el lado largo**, no por
+alto: una foto apaisada y una vertical caben las dos en su cota sin que ninguna
+se deforme, que es el criterio de aceptación 7.
 
-`piezas[].portada` es **nuevo** y aditivo: la galería lee `url` y `miniatura`,
-`ReglasContenido.validar` no rechaza claves de más, y el Worker publica el
-borrador tal cual. Marcar la portada del proyecto es copiar la `portada` de la
-pieza elegida a `proyecto.portada`. Las 65 piezas que entraron con
-`herramientas/derivar_imagenes.py` no traen esa clave, pero la herramienta
-escribió las tres medidas de cada foto con los mismos sufijos `-1500`/`-3000`/
-`-250`, así que para ellas se deduce del sufijo (`Edicion.portadaDe`). Es la
-misma convención escrita en los dos sitios que la producen, y queda anotada en
-`estado-conocido.md` en la Tarea 10.
+La reducción la hace `createImageBitmap(archivo, { imageOrientation: 'from-image' })`
+y luego `canvas.toBlob`. El `imageOrientation` no es un adorno: sin él, una foto
+con orientación EXIF —cualquiera hecha con el móvil de lado— se sube tumbada, y
+el estudio no tiene forma de arreglarlo desde el panel.
 
-El precio: unos 160 KB más de subida por foto. Aceptado.
+### 2. Cada pieza subida guarda también su `portada`
 
-### 2. Los nombres llevan un sello para no chocar con el 409
+Las piezas del contenido real son `{url, miniatura}`. Las que suba el panel
+serán `{url, miniatura, portada}`: un campo nuevo y **aditivo**, que nadie más
+lee y que no invalida nada ya guardado.
 
-`POST /api/imagen` **rechaza** en vez de pisar. Sin más, subir dos veces
-`IMG_0001.jpg` —o volver a subir una foto que se quitó, cuyos archivos siguen
-en R2— daría un 409 y el panel tendría que inventar otro nombre. Se evita de
-raíz: la raíz del nombre es `<id-proyecto>-<nombre-saneado>-<sello>`, con el
-sello en base 36 del instante de la subida. Ver `Subida.nombres`.
+Hace falta porque elegir la portada es elegir *una pieza*, y de una pieza hay
+que poder sacar su versión de 1500 px. Para las 65 antiguas, que no lo traen,
+`Edicion.portadaDe` lo deduce del sufijo: `-3000.jpg` → `-1500.jpg`. Deducirlo
+siempre habría sido más corto, pero ata el panel a que el nombre del archivo
+nunca cambie; guardarlo cuando se sabe y deducirlo sólo cuando no, deja esa
+atadura como lo que es: una compatibilidad con lo viejo, no un contrato.
 
-### 3. Una sola página con tres pantallas, no tres páginas
+### 3. El nombre en R2 lleva un sello, porque el Worker no pisa
 
-`trabajo` vive en memoria con cambios sin guardar. Si la pantalla de un
-proyecto fuera otra página, navegar perdería lo no guardado o exigiría guardar
-en cada cambio de pantalla. Se queda una página con un enrutador de fragmento
-mínimo (`panel/js/rutas.js`) y tres `<section>` que se muestran y esconden. La
-tercera ruta, `#/publicar`, la rellena el bloque 3d; aquí queda declarada para
-que la pantalla de la lista ya la enlace.
+`POST /api/imagen` contesta **409** si la llave ya existe, a propósito: dejar
+pasar la segunda subida perdería una imagen ya publicada. La consecuencia es que
+el panel no puede mandar dos veces el mismo nombre, y sí lo haría —subir dos
+veces `portada.jpg` desde dos proyectos es lo más normal del mundo—.
 
-### 4. Tipo `video` con identificador de Vimeo: no se implementa
+    <id>-<archivo saneado>-<sello base36>-<medida>.jpg
+    bruma-portada-m8q3x1-3000.jpg
 
-La especificación describía proyectos de `tipo: 'video'` con `vimeo` y póster.
-El bloque del contenido real (2026-09-10) lo dejó atrás: los ocho proyectos son
-`tipo: 'fotos'` y el vídeo es **un enlace en la ficha** (`ficha.enlace`) que
-abre `js/plataforma.js` en otra pestaña. La pantalla de este bloque edita eso
-—el enlace— y nada más. El bloque 4 (el vídeo por Vimeo) decidirá si el tipo
-`video` vuelve; hasta entonces no se le da pantalla a algo que la web no usa.
+El sello sale de `Date.now()` más un azar corto. No es criptográfico ni falta:
+sólo tiene que evitar el choque de dos subidas del mismo estudio, y ante un 409
+la salida es reintentar con otro sello, que es exactamente lo que hace
+`Subida.subir`.
+
+### 4. Una sola página, tres pantallas por fragmento
+
+`#/` la lista, `#/proyecto/<id>` un proyecto, `#/publicar` (bloque 3d). Un
+fragmento y no rutas de verdad porque el Worker de recursos estáticos sirve
+`panel/index.html` y nada más: cualquier otra ruta daría 404 al recargar.
+
+`panel/js/rutas.js` lee el fragmento y `panel/js/pantallas.js` decide qué se
+enseña. `panel.js` expone `window.Panel = { ir, hayCambios }` como costura para
+las pruebas: sin ella no hay forma de pedirle desde fuera que cambie de pantalla
+—es una IIFE que no devuelve nada— y las pruebas tendrían que simular eventos de
+`hashchange`, que es probar el navegador.
+
+### 5. El vídeo no se implementa aquí
+
+`tipo: 'video'` es del bloque 4. En este bloque el vídeo es `ficha.enlace`, que
+ya existe desde el 3b y ya se edita. La rejilla de fotos se enseña para
+`tipo: 'fotos'`, que es lo que crea el panel.
+
+### 6. Los cambios no se guardan solos
+
+Editar la ficha o mover una foto cambia el borrador **en memoria**; guardar
+sigue siendo explícito, como en el 3b. Y salir de la pantalla con cambios sin
+guardar avisa: `window.Panel.hayCambios` es lo que lo sabe.
+
+Autoguardar sería más cómodo y peor: cada pulsación sería un PUT, cada PUT sube
+la versión, y dos sesiones abiertas se estarían mandando conflictos todo el rato
+por cambios que nadie ha terminado de hacer.
+
+### 7. Qué se queda fuera
+
+- **Publicar** y el resumen de cambios: bloque 3d.
+- **Borrar de R2.** Quitar una foto de un proyecto la quita del borrador; los
+  bytes se quedan huérfanos en el bucket, a propósito, para que un descuido sea
+  recuperable. Lo dice la especificación, y no hay ruta `DELETE /api/imagen`.
+- **Recortar, girar o retocar.** El panel reduce y sube; lo demás es Lightroom.
+- **Reordenar proyectos desde esta pantalla.** Eso es la lista, y ya está hecho.
 
 ---
 
 ## Estructura de archivos
 
-| Archivo | De qué responde |
-|---|---|
-| `panel/js/rutas.js` | Leer el fragmento de la URL y escribirlo. **Puro.** |
-| `panel/js/imagenes.js` | `medidas` (puro) y `derivar`: las tres medidas de un archivo con un `<canvas>`. |
-| `panel/js/subida.js` | `nombres` (puro) y subir a `/api/imagen`, uno a uno, con sus finales. |
-| `panel/js/edicion.js` | Las ediciones de un proyecto —ficha, añadir, quitar, mover, portada—. **Puro**, devuelve copias. |
-| `panel/js/fotos.js` | Pintar la rejilla de fotos con sus botones y el arrastre. |
-| `panel/js/proyecto.js` | La pantalla: formulario de la ficha, zona de subida, rejilla. |
-| `panel/js/pantallas.js` | Mostrar una `<section>` y esconder las demás, llevando el foco. |
-| `panel/js/lista.js` | Gana el enlace «Editar» y el retorno de foco que estaba en `panel.js`. |
-| `panel/js/panel.js` | El arranque, el estado, la lista y ahora el enrutado. |
-| `panel/index.html`, `panel/css/panel.css` | Marcado y estilos de las tres pantallas. |
-| `tests/pruebas-rutas.js`, `-imagenes.js`, `-subida.js`, `-edicion.js`, `-fotos.js` | Nuevas, en el arnés. |
-| `tests/pruebas-lista-pintar.js`, `tests/pruebas-panel.js`, `tests/test.html` | Se amplían. |
-| `docs/estado-conocido.md`, `docs/despliegue.md` | Lo que este bloque deja sabido. |
+| Archivo | De qué responde | Puro |
+|---|---|---|
+| `panel/js/rutas.js` | Leer el fragmento y decir qué pantalla es | sí |
+| `panel/js/edicion.js` | Mover, quitar y marcar portada sobre un proyecto | sí |
+| `panel/js/imagenes.js` | Las tres medidas, la cota y la reducción con canvas | mitad |
+| `panel/js/subida.js` | Nombres, `POST /api/imagen`, reintento y fallos | no |
+| `panel/js/fotos.js` | Pintar la rejilla y sus acciones | no |
+| `panel/js/proyecto.js` | La pantalla entera de un proyecto | no |
+| `panel/js/pantallas.js` | Qué pantalla se enseña y cuál se esconde | no |
+
+`panel/js/lista.js` recibe `enfocar`, que hoy vive en `panel.js` (Tarea 5).
 
 ---
 
-### Tarea 1: Las rutas del panel
+### Tarea 1: El fragmento dice qué pantalla es
 
 **Archivos:**
-- Crear: `panel/js/rutas.js`, `tests/pruebas-rutas.js`
+- Crear: `panel/js/rutas.js`, `tests/pruebas-rutas-panel.js`
 - Modificar: `tests/test.html`
 
 **Interfaces:**
-- Produce: `window.Rutas.leer(hash)` → `{pantalla: 'lista'}` |
-  `{pantalla: 'proyecto', id}` | `{pantalla: 'publicar'}`, y
-  `window.Rutas.a(pantalla, id)` → cadena con `#` delante.
+- Produce: `window.Rutas.leer(hash)` → `{pantalla, id}`.
+  `window.Rutas.hacia(pantalla, id)` → la cadena de fragmento.
 - Consume: nada.
+
+**Por qué importa.** Es lo único que convierte una cadena que escribe cualquiera
+en la barra de direcciones en una decisión del panel. Un fragmento raro no puede
+dejar la pantalla en blanco: se cae a la lista, que siempre existe.
 
 - [ ] **Paso 1: Las pruebas que fallan**
 
-Crea `tests/pruebas-rutas.js`:
+Crea `tests/pruebas-rutas-panel.js`:
 
 ```js
-/* El enrutador del panel, que no es el de la web: js/router.js resuelve
-   categorías y piezas, éste sólo reparte tres pantallas. Vive aparte a
-   propósito —el panel no comparte código con la galería— y es puro para que
-   se pueda probar sin tocar location. */
+/* Se llama pruebas-rutas-panel.js y no pruebas-rutas.js para que no se
+   confunda con el enrutador de la web pública (js/router.js), que resuelve
+   otro problema —categorías y proyectos del lienzo— y ya tiene dos archivos
+   de pruebas. */
 describe('Rutas.leer', function () {
-  prueba('sin fragmento, o con la raíz, es la lista', function () {
-    igual(Rutas.leer(''), { pantalla: 'lista' });
-    igual(Rutas.leer('#'), { pantalla: 'lista' });
-    igual(Rutas.leer('#/'), { pantalla: 'lista' });
-    igual(Rutas.leer(undefined), { pantalla: 'lista' });
+  prueba('el fragmento vacío es la lista', function () {
+    igual(Rutas.leer(''), { pantalla: 'lista', id: null });
+    igual(Rutas.leer('#'), { pantalla: 'lista', id: null });
+    igual(Rutas.leer('#/'), { pantalla: 'lista', id: null });
   });
 
-  prueba('#/proyecto/<id> abre ese proyecto', function () {
+  prueba('un proyecto trae su id', function () {
     igual(Rutas.leer('#/proyecto/bruma'), { pantalla: 'proyecto', id: 'bruma' });
   });
 
-  /* El id sale de Identificador.desde y es ASCII, pero la URL la puede
-     escribir alguien a mano: si viene codificada, se descodifica. */
-  prueba('descodifica el id por si llega escapado', function () {
-    igual(Rutas.leer('#/proyecto/la%2Dboquerona'), { pantalla: 'proyecto', id: 'la-boquerona' });
+  prueba('publicar no trae id', function () {
+    igual(Rutas.leer('#/publicar'), { pantalla: 'publicar', id: null });
   });
 
-  prueba('#/publicar es la pantalla de publicar', function () {
-    igual(Rutas.leer('#/publicar'), { pantalla: 'publicar' });
+  /* La barra final la añaden los navegadores y algunos gestores de enlaces al
+     copiar. Que «#/publicar/» dejara la pantalla en blanco sería un fallo que
+     sólo aparece al compartir una dirección. */
+  prueba('la barra final sobra y no cambia nada', function () {
+    igual(Rutas.leer('#/publicar/'), { pantalla: 'publicar', id: null });
+    igual(Rutas.leer('#/proyecto/bruma/'), { pantalla: 'proyecto', id: 'bruma' });
   });
 
-  prueba('lo que no se entiende cae a la lista, no revienta', function () {
-    igual(Rutas.leer('#/otra-cosa'), { pantalla: 'lista' });
-    igual(Rutas.leer('#/proyecto/'), { pantalla: 'lista' });
-    igual(Rutas.leer('#/proyecto/a/b'), { pantalla: 'lista' });
+  /* Un id vacío no es un proyecto: no hay ninguno que buscar, y enseñar la
+     pantalla de proyecto sin proyecto sería una pantalla rota. */
+  prueba('un proyecto sin id se cae a la lista', function () {
+    igual(Rutas.leer('#/proyecto'), { pantalla: 'lista', id: null });
+    igual(Rutas.leer('#/proyecto/'), { pantalla: 'lista', id: null });
+  });
+
+  prueba('lo que no se reconoce se cae a la lista', function () {
+    igual(Rutas.leer('#/inventado'), { pantalla: 'lista', id: null });
+    igual(Rutas.leer('#/proyecto/a/b'), { pantalla: 'lista', id: null });
+    igual(Rutas.leer(null), { pantalla: 'lista', id: null });
+  });
+
+  /* El id llega codificado si alguien copia la dirección desde el navegador.
+     Sin descodificar, un id con caracteres escapados no casaría con ninguno
+     del borrador y la pantalla diría «no existe» de un proyecto que sí está.
+     Los ids que genera Identificador.desde son a-z0-9- y nunca se escapan,
+     así que esto cubre lo que llega de fuera, no lo que produce el panel. */
+  prueba('el id llega descodificado', function () {
+    igual(Rutas.leer('#/proyecto/bru%2Dma'), { pantalla: 'proyecto', id: 'bru-ma' });
+  });
+
+  /* Un porcentaje suelto hace lanzar a decodeURIComponent. Que el panel
+     entero reviente por una dirección mal pegada sería desproporcionado. */
+  prueba('un escape mal formado no revienta', function () {
+    igual(Rutas.leer('#/proyecto/%'), { pantalla: 'lista', id: null });
   });
 });
 
-describe('Rutas.a', function () {
-  prueba('escribe las tres formas, y Rutas.leer las entiende de vuelta', function () {
-    igual(Rutas.a('lista'), '#/');
-    igual(Rutas.a('publicar'), '#/publicar');
-    igual(Rutas.a('proyecto', 'bruma'), '#/proyecto/bruma');
-    igual(Rutas.leer(Rutas.a('proyecto', 'bruma')), { pantalla: 'proyecto', id: 'bruma' });
+describe('Rutas.hacia', function () {
+  prueba('compone los tres destinos', function () {
+    igual(Rutas.hacia('lista'), '#/');
+    igual(Rutas.hacia('proyecto', 'bruma'), '#/proyecto/bruma');
+    igual(Rutas.hacia('publicar'), '#/publicar');
   });
 
-  prueba('una pantalla desconocida lleva a la lista', function () {
-    igual(Rutas.a('inventada'), '#/');
+  /* Ida y vuelta: lo que compone `hacia` lo tiene que entender `leer`. Es la
+     comprobación que impide que las dos se separen con el tiempo. */
+  prueba('lo que compone hacia lo entiende leer', function () {
+    igual(Rutas.leer(Rutas.hacia('proyecto', 'bruma')),
+          { pantalla: 'proyecto', id: 'bruma' });
+    igual(Rutas.leer(Rutas.hacia('publicar')),
+          { pantalla: 'publicar', id: null });
   });
 });
 ```
 
-En `tests/test.html`, **antes** de `<script src="../panel/js/lista.js">`
-(la Tarea 7 hace que `lista.js` lo use):
+Añade a `tests/test.html`, junto a los demás:
 
 ```html
 <script src="../panel/js/rutas.js"></script>
 ```
-
-y junto a `pruebas-orden.js`:
-
 ```html
-<script src="pruebas-rutas.js"></script>
+<script src="pruebas-rutas-panel.js"></script>
 ```
 
 - [ ] **Paso 2: Comprueba que falla**
 
-Sirve la raíz del repositorio y abre el arnés:
-
-```bash
-python -m http.server 8000
-```
-
-`http://localhost:8000/tests/test.html`. Esperado: la sección «Rutas.leer»
-en rojo con `Rutas is not defined`.
+Arranca el arnés (`python -m http.server 8000` desde la raíz del worktree y abre
+`http://localhost:8000/tests/test.html`). Esperado: `Rutas is not defined`.
 
 - [ ] **Paso 3: Escribe `panel/js/rutas.js`**
 
 ```js
 window.Rutas = (function () {
-  /* Tres pantallas sobre un solo estado en memoria. Es un fragmento y no una
-     página por pantalla porque `trabajo` guarda cambios sin guardar: navegar
-     entre páginas los perdería, o exigiría guardar en cada cambio de vista. */
-  function leer(hash) {
-    var camino = String(hash || '').replace(/^#\/?/, '');
-    if (!camino) return { pantalla: 'lista' };
-    if (camino === 'publicar') return { pantalla: 'publicar' };
-    var m = /^proyecto\/([^\/]+)$/.exec(camino);
-    if (m) {
-      try {
-        return { pantalla: 'proyecto', id: decodeURIComponent(m[1]) };
-      } catch (e) {
-        /* Un %-escape roto lanza URIError: se trata como ruta desconocida. */
-      }
+
+  /* Devuelve siempre un objeto nuevo: quien lo reciba puede guardárselo sin
+     miedo a que la siguiente llamada le cambie el de antes por debajo. */
+  function lista() { return { pantalla: 'lista', id: null }; }
+
+  /* decodeURIComponent lanza con un escape mal formado («%», «%zz»). Un
+     fragmento mal pegado no puede tirar el panel entero, así que se trata
+     como lo que es: una dirección que no se reconoce. */
+  function descodificar(trozo) {
+    try {
+      return decodeURIComponent(trozo);
+    } catch (e) {
+      return null;
     }
-    return { pantalla: 'lista' };
   }
 
-  function a(pantalla, id) {
+  function leer(hash) {
+    var texto = String(hash == null ? '' : hash);
+    /* Se quitan el «#» y la «/» de delante, y también la de detrás: los
+       navegadores y los gestores de enlaces añaden barras finales al copiar
+       una dirección, y no significan nada distinto. */
+    var cuerpo = texto.replace(/^#/, '').replace(/^\//, '').replace(/\/$/, '');
+    if (!cuerpo) return lista();
+
+    var trozos = cuerpo.split('/');
+    if (trozos[0] === 'publicar' && trozos.length === 1) {
+      return { pantalla: 'publicar', id: null };
+    }
+    if (trozos[0] === 'proyecto' && trozos.length === 2) {
+      var id = descodificar(trozos[1]);
+      if (!id) return lista();
+      return { pantalla: 'proyecto', id: id };
+    }
+    return lista();
+  }
+
+  function hacia(pantalla, id) {
     if (pantalla === 'proyecto') return '#/proyecto/' + encodeURIComponent(id);
     if (pantalla === 'publicar') return '#/publicar';
     return '#/';
   }
 
-  return { leer: leer, a: a };
+  return { leer: leer, hacia: hacia };
 })();
 ```
 
 - [ ] **Paso 4: Comprueba que pasa**
 
-Recarga el arnés: las siete nuevas en verde, el recuento total sube en siete y
-ninguna anterior cambia.
+Arnés otra vez: las **diez** nuevas en verde y las anteriores intactas.
 
 - [ ] **Paso 5: Commit**
 
 ```bash
-git add panel/js/rutas.js tests/pruebas-rutas.js tests/test.html
-git commit -m "Leer y escribir las rutas de las tres pantallas del panel"
+git add panel/js/rutas.js tests/
+git commit -m "Leer del fragmento qué pantalla del panel toca"
 ```
 
 ---
 
-### Tarea 2: Las medidas de una imagen, y reducirla en el navegador
-
-**Archivos:**
-- Crear: `panel/js/imagenes.js`, `tests/pruebas-imagenes.js`
-- Modificar: `tests/test.html`
-
-**Interfaces:**
-- Produce:
-  - `window.Imagenes.LADOS` → `{portada: 1500, pieza: 3000, miniatura: 250}`.
-  - `window.Imagenes.medidas(ancho, alto, lado)` → `{ancho, alto}` que cabe en
-    `lado` de lado largo, sin ampliar nunca. **Puro.**
-  - `window.Imagenes.esImagen(archivo)` → booleano por el `type` del `File`.
-  - `window.Imagenes.derivar(archivo, alTerminar)` → `alTerminar({portada,
-    pieza, miniatura}, null)` con tres `Blob` JPEG, o `alTerminar(null,
-    'texto en castellano')`. Nunca lanza.
-- Consume: nada.
-
-**Por qué el lado largo y no la caja.** `estado-conocido.md` lo midió: el
-material real es 2:3, 3:2 y 16:9 a la vez, y con una caja 4:5 las horizontales
-salían un 20% peor sin motivo. `herramientas/derivar_imagenes.py` usa
-`MEDIDAS = [(1500, 82), (3000, 82), (250, 80)]` por el lado largo; el panel
-tiene que producir lo mismo, porque una foto subida desde aquí y una derivada
-con la herramienta se ven en los mismos sitios.
-
-- [ ] **Paso 1: Las pruebas que fallan**
-
-Crea `tests/pruebas-imagenes.js`:
-
-```js
-describe('Imagenes.medidas', function () {
-  prueba('reduce por el lado largo conservando la proporción', function () {
-    igual(Imagenes.medidas(6000, 4000, 3000), { ancho: 3000, alto: 2000 });
-    igual(Imagenes.medidas(4000, 6000, 3000), { ancho: 2000, alto: 3000 });
-    igual(Imagenes.medidas(3840, 2160, 1500), { ancho: 1500, alto: 844 });
-  });
-
-  /* Ampliar no mejora nada y pesa más: una foto más pequeña que la cota se
-     queda como está. */
-  prueba('no amplía lo que ya cabe', function () {
-    igual(Imagenes.medidas(800, 600, 1500), { ancho: 800, alto: 600 });
-    igual(Imagenes.medidas(250, 250, 250), { ancho: 250, alto: 250 });
-  });
-
-  prueba('nunca da cero: una tira muy alargada conserva al menos un píxel', function () {
-    igual(Imagenes.medidas(10000, 2, 250), { ancho: 250, alto: 1 });
-  });
-
-  prueba('las tres cotas son las del sitio, por el lado largo', function () {
-    igual(Imagenes.LADOS, { portada: 1500, pieza: 3000, miniatura: 250 });
-  });
-});
-
-describe('Imagenes.esImagen', function () {
-  prueba('mira el tipo del archivo', function () {
-    cierto(Imagenes.esImagen({ type: 'image/jpeg' }));
-    cierto(Imagenes.esImagen({ type: 'image/png' }));
-    cierto(!Imagenes.esImagen({ type: 'text/plain' }));
-    cierto(!Imagenes.esImagen({ type: '' }));
-    cierto(!Imagenes.esImagen(null));
-  });
-});
-
-/* Lo que sí toca el navegador: un lienzo de verdad, un File de verdad. Se
-   fabrica una imagen con canvas, se deriva, y se vuelven a medir los blobs
-   que salen. Es asíncrono, así que va en describeAsync. */
-describeAsync('Imagenes.derivar', function () {
-  function archivo(ancho, alto, nombre, tipo) {
-    return new Promise(function (ok) {
-      var c = document.createElement('canvas');
-      c.width = ancho; c.height = alto;
-      var ctx = c.getContext('2d');
-      ctx.fillStyle = '#c00'; ctx.fillRect(0, 0, ancho, alto);
-      c.toBlob(function (b) { ok(new File([b], nombre, { type: tipo })); }, tipo);
-    });
-  }
-  function medir(blob) {
-    return createImageBitmap(blob).then(function (m) {
-      var r = { ancho: m.width, alto: m.height };
-      m.close();
-      return r;
-    });
-  }
-  function derivar(f) {
-    return new Promise(function (ok) {
-      Imagenes.derivar(f, function (d, e) { ok({ derivadas: d, error: e }); });
-    });
-  }
-
-  return archivo(1800, 1200, 'foto.png', 'image/png').then(derivar).then(function (r) {
-    prueba('devuelve las tres medidas y ningún error', function () {
-      igual(r.error, null);
-      igual(Object.keys(r.derivadas).sort(), ['miniatura', 'pieza', 'portada']);
-    });
-    prueba('las tres salen como JPEG', function () {
-      igual([r.derivadas.portada.type, r.derivadas.pieza.type, r.derivadas.miniatura.type],
-            ['image/jpeg', 'image/jpeg', 'image/jpeg']);
-    });
-    return Promise.all([medir(r.derivadas.portada), medir(r.derivadas.pieza), medir(r.derivadas.miniatura)]);
-  }).then(function (m) {
-    prueba('la portada cabe en 1500 de lado largo, en proporción', function () {
-      igual(m[0], { ancho: 1500, alto: 1000 });
-    });
-    prueba('la pieza no se amplía: 1800 cabe en 3000 y se queda', function () {
-      igual(m[1], { ancho: 1800, alto: 1200 });
-    });
-    prueba('la miniatura cabe en 250, en proporción', function () {
-      igual(m[2], { ancho: 250, alto: 167 });
-    });
-  }).then(function () {
-    return derivar(new File(['hola'], 'nota.txt', { type: 'text/plain' }));
-  }).then(function (r) {
-    prueba('un archivo que no es imagen da error en castellano y ninguna derivada', function () {
-      igual(r.derivadas, null);
-      cierto(r.error.indexOf('nota.txt') !== -1 && r.error.indexOf('no es una imagen') !== -1, r.error);
-    });
-  });
-});
-```
-
-En `tests/test.html`, junto a `rutas.js`:
-
-```html
-<script src="../panel/js/imagenes.js"></script>
-```
-
-y junto a `pruebas-rutas.js`:
-
-```html
-<script src="pruebas-imagenes.js"></script>
-```
-
-- [ ] **Paso 2: Comprueba que falla**
-
-Recarga el arnés. Esperado: `Imagenes is not defined`.
-
-- [ ] **Paso 3: Escribe `panel/js/imagenes.js`**
-
-```js
-window.Imagenes = (function () {
-  /* Las tres medidas de la web, por el LADO LARGO y no por una caja fija: el
-     material real es 2:3, 3:2 y 16:9 a la vez, y con una caja 4:5 las
-     horizontales salían un 20% peor (estado-conocido.md). Son las mismas que
-     escribe herramientas/derivar_imagenes.py (MEDIDAS) y tienen que seguir
-     siéndolo: una foto subida desde el panel y una derivada con la
-     herramienta se ven en los mismos sitios. */
-  var LADOS = { portada: 1500, pieza: 3000, miniatura: 250 };
-  var CALIDAD = 0.82;   // la misma que la herramienta (82)
-
-  /* Reduce hasta que el lado largo quepa en `lado`, conservando la proporción.
-     Nunca amplía: inventar píxeles no mejora nada y pesa más. */
-  function medidas(ancho, alto, lado) {
-    var mayor = Math.max(ancho, alto);
-    if (!(mayor > lado)) return { ancho: ancho, alto: alto };
-    var factor = lado / mayor;
-    return { ancho: Math.max(1, Math.round(ancho * factor)),
-             alto: Math.max(1, Math.round(alto * factor)) };
-  }
-
-  function esImagen(archivo) {
-    return !!archivo && typeof archivo.type === 'string' && archivo.type.indexOf('image/') === 0;
-  }
-
-  function nombreDe(archivo) { return archivo && archivo.name ? archivo.name : 'el archivo'; }
-
-  /* Decodifica respetando la orientación EXIF: la cámara guarda el sensor en
-     horizontal y anota «gírala», y sin `from-image` la mitad de las
-     verticales saldrían tumbadas. Es lo que hace `abrir_derecha` en la
-     herramienta. Devuelve algo que `drawImage` acepte. */
-  function decodificar(archivo, alTerminar) {
-    if (!esImagen(archivo)) {
-      return alTerminar(null, '«' + nombreDe(archivo) + '» no es una imagen.');
-    }
-    var noSePudo = 'No se ha podido leer «' + nombreDe(archivo) + '».';
-    if (typeof window.createImageBitmap === 'function') {
-      window.createImageBitmap(archivo, { imageOrientation: 'from-image' })
-        .then(function (mapa) { alTerminar(mapa, null); },
-              function () { alTerminar(null, noSePudo); });
-      return;
-    }
-    var url = URL.createObjectURL(archivo);
-    var img = new Image();
-    img.onload = function () { URL.revokeObjectURL(url); alTerminar(img, null); };
-    img.onerror = function () { URL.revokeObjectURL(url); alTerminar(null, noSePudo); };
-    img.src = url;
-  }
-
-  function anchoDe(imagen) { return imagen.naturalWidth || imagen.width; }
-  function altoDe(imagen) { return imagen.naturalHeight || imagen.height; }
-
-  function reducir(imagen, lado, alTerminar) {
-    var m = medidas(anchoDe(imagen), altoDe(imagen), lado);
-    var lienzo = document.createElement('canvas');
-    lienzo.width = m.ancho;
-    lienzo.height = m.alto;
-    var ctx = lienzo.getContext('2d');
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(imagen, 0, 0, m.ancho, m.alto);
-    lienzo.toBlob(function (blob) { alTerminar(blob); }, 'image/jpeg', CALIDAD);
-  }
-
-  /* Las tres medidas de un archivo, como blobs JPEG: {portada, pieza,
-     miniatura}. `alTerminar(derivadas, error)`; nunca lanza. Se decodifica
-     una vez y se reduce tres veces desde el original, no en cadena: reducir
-     la miniatura desde la pieza ya reducida acumularía dos remuestreos. */
-  function derivar(archivo, alTerminar) {
-    decodificar(archivo, function (imagen, error) {
-      if (error) return alTerminar(null, error);
-      var claves = Object.keys(LADOS), salida = {}, i = 0;
-      (function siguiente() {
-        if (i === claves.length) {
-          if (imagen.close) imagen.close();   // libera el ImageBitmap
-          return alTerminar(salida, null);
-        }
-        var clave = claves[i++];
-        reducir(imagen, LADOS[clave], function (blob) {
-          if (!blob) return alTerminar(null, 'No se ha podido reducir «' + nombreDe(archivo) + '».');
-          salida[clave] = blob;
-          siguiente();
-        });
-      })();
-    });
-  }
-
-  return { LADOS: LADOS, CALIDAD: CALIDAD, medidas: medidas, esImagen: esImagen, derivar: derivar };
-})();
-```
-
-- [ ] **Paso 4: Comprueba que pasa**
-
-Recarga el arnés: las once nuevas en verde (cuatro de `medidas`, una de
-`esImagen`, seis de `derivar`). Si «la miniatura cabe en 250» da `{250, 167}`
-contra otro alto, revisa `Math.round`: 1200 × 250 / 1800 = 166,67.
-
-- [ ] **Paso 5: Commit**
-
-```bash
-git add panel/js/imagenes.js tests/pruebas-imagenes.js tests/test.html
-git commit -m "Reducir una foto en el navegador a las tres medidas de la web"
-```
-
----
-
-### Tarea 3: Subir las tres medidas, con sus finales
-
-**Archivos:**
-- Crear: `panel/js/subida.js`, `tests/pruebas-subida.js`
-- Modificar: `tests/test.html`
-
-**Interfaces:**
-- Produce:
-  - `window.Subida.nombres(idProyecto, nombreArchivo, sello)` →
-    `{portada, pieza, miniatura}` con los tres nombres de archivo. **Puro.**
-  - `window.Subida.subirDerivadas(nombres, derivadas, alTerminar)` →
-    `alTerminar({url, miniatura, portada}, null)` o `alTerminar(null, texto)`.
-  - `window.Subida.subir(idProyecto, archivo, alTerminar)` → deriva y sube.
-  - `window.Subida.subirVarios(idProyecto, archivos, alCadaUno, alTerminar)`
-    → uno detrás de otro; `alCadaUno(archivo, pieza, error)` según termina
-    cada uno y `alTerminar(fallos)` con `[{nombre, motivo}]`.
-- Consume: `Identificador.desde`, `Imagenes.derivar`, `POST /api/imagen`.
-
-**Los finales que hay que distinguir**, porque el Worker ya los distingue:
-
-| Del servidor | Qué pasó | Qué debe leer quien sube |
-|---|---|---|
-| **200** `{url}` | guardada | nada: la pieza se añade al proyecto |
-| **409 / 413 / 415 / 400** `{error}` | el Worker la rechazó y dice por qué, en castellano | su `error`, tal cual |
-| cuerpo que no es JSON | la sesión de Access caducó y llegó la página de entrada | «la sesión ha caducado…» |
-| red caída | ni siquiera llegó | «no se ha podido contactar con el servidor» |
-
-Los mensajes del motor («Failed to fetch») no salen a la pantalla: van al
-registro, como hace `borrador.js`.
-
-- [ ] **Paso 1: Las pruebas que fallan**
-
-Crea `tests/pruebas-subida.js`:
-
-```js
-describe('Subida.nombres', function () {
-  prueba('la raíz es id-nombre-sello y los sufijos son los de la herramienta', function () {
-    igual(Subida.nombres('bruma', 'IMG_0001.JPG', 'l2k9x'), {
-      portada: 'bruma-img-0001-l2k9x-1500.jpg',
-      pieza: 'bruma-img-0001-l2k9x-3000.jpg',
-      miniatura: 'bruma-img-0001-l2k9x-250.jpg'
-    });
-  });
-
-  /* nombreSeguro en el Worker convertiría cualquier no-ASCII en un guion y
-     dejaría «Monstruaci-n»; se sanea aquí con la misma regla que el id. */
-  prueba('sanea el nombre como un identificador: sin acentos, espacios ni mayúsculas', function () {
-    igual(Subida.nombres('bruma', 'Sesión final (2).jpeg', 's').pieza, 'bruma-sesion-final-2-s-3000.jpg');
-  });
-
-  prueba('un nombre sin nada aprovechable se llama foto', function () {
-    igual(Subida.nombres('bruma', '¡¿!.jpg', 's').pieza, 'bruma-foto-s-3000.jpg');
-  });
-
-  /* El Worker corta a 200 caracteres el nombre entero. */
-  prueba('recorta un nombre larguísimo y no deja un guion colgando', function () {
-    var largo = new Array(50).join('abcde-') + 'z.jpg';   // más de 200 caracteres
-    var n = Subida.nombres('bruma', largo, 's').pieza;
-    cierto(n.length < 120, 'mide ' + n.length);
-    cierto(n.indexOf('--') === -1 && n.indexOf('bruma-abcde') === 0, n);
-  });
-
-  prueba('todo sale como .jpg, sea cual sea la extensión de entrada', function () {
-    igual(Subida.nombres('bruma', 'a.png', 's').miniatura, 'bruma-a-s-250.jpg');
-    igual(Subida.nombres('bruma', 'sin-extension', 's').miniatura, 'bruma-sin-extension-s-250.jpg');
-  });
-});
-
-/* Lo que habla con la red. `conDocumento` pone `fetch` en la ventana del
-   iframe ANTES de cargar subida.js, así que el módulo real llama al doble sin
-   saberlo: es la misma técnica que usa pruebas-panel.js con Borrador, y
-   evita necesitar Node como tests/prueba-borrador.js. */
-describeAsync('Subida.subirDerivadas', function () {
-  var MODULOS = ['../panel/js/identificador.js', '../panel/js/imagenes.js', '../panel/js/subida.js'];
-  var NOMBRES = { portada: 'p-1500.jpg', pieza: 'p-3000.jpg', miniatura: 'p-250.jpg' };
-  function derivadas() {
-    return { portada: new Blob(['P'], { type: 'image/jpeg' }),
-             pieza: new Blob(['G'], { type: 'image/jpeg' }),
-             miniatura: new Blob(['m'], { type: 'image/jpeg' }) };
-  }
-  function respuesta(estado, texto) {
-    return Promise.resolve({ status: estado, text: function () { return Promise.resolve(texto); } });
-  }
-  /* `contestar(nombre)` decide qué devuelve el servidor a cada nombre. */
-  function servidor(contestar) {
-    var registro = [];
-    var doble = function (url, opciones) {
-      var nombre = decodeURIComponent(String(url).split('nombre=')[1]);
-      registro.push({ nombre: nombre, metodo: opciones.method, tipo: opciones.headers['content-type'],
-                      cuerpo: opciones.body });
-      return contestar(nombre);
-    };
-    doble.registro = registro;
-    return doble;
-  }
-  function subir(doble, fn) {
-    return ArnesDom.conDocumento({ globales: { fetch: doble }, scripts: MODULOS }, function (w) {
-      return new Promise(function (ok) {
-        w.Subida.subirDerivadas(NOMBRES, derivadas(), function (pieza, error) {
-          ok({ pieza: pieza, error: error });
-        });
-      }).then(function (r) { fn(r, w); });
-    });
-  }
-
-  var bien = servidor(function (nombre) {
-    return respuesta(200, JSON.stringify({ url: '/img/' + nombre }));
-  });
-  return subir(bien, function (r) {
-    prueba('sube las tres medidas por POST, como image/jpeg, y devuelve la pieza', function () {
-      igual(r.error, null);
-      igual(r.pieza, { url: '/img/p-3000.jpg', miniatura: '/img/p-250.jpg', portada: '/img/p-1500.jpg' });
-      igual(bien.registro.map(function (x) { return x.nombre; }), ['p-3000.jpg', 'p-250.jpg', 'p-1500.jpg']);
-      igual(bien.registro.map(function (x) { return x.metodo + ' ' + x.tipo; }),
-            ['POST image/jpeg', 'POST image/jpeg', 'POST image/jpeg']);
-    });
-    prueba('el cuerpo que manda es el blob, no otra cosa', function () {
-      cierto(bien.registro[0].cuerpo instanceof Blob && bien.registro[0].cuerpo.size === 1);
-    });
-  }).then(function () {
-    var rechaza = servidor(function (nombre) {
-      return nombre === 'p-250.jpg'
-        ? respuesta(409, JSON.stringify({ error: 'ya hay una imagen guardada como p-250.jpg: elige otro nombre' }))
-        : respuesta(200, JSON.stringify({ url: '/img/' + nombre }));
-    });
-    return subir(rechaza, function (r) {
-      prueba('si el Worker rechaza una medida, no hay pieza y se enseña SU mensaje', function () {
-        igual(r.pieza, null);
-        igual(r.error, 'ya hay una imagen guardada como p-250.jpg: elige otro nombre');
-      });
-      prueba('y no sigue subiendo las medidas que quedaban', function () {
-        igual(rechaza.registro.length, 2);
-      });
-    });
-  }).then(function () {
-    var sesion = servidor(function () { return respuesta(200, '<!doctype html><title>Sign in</title>'); });
-    return subir(sesion, function (r) {
-      prueba('un cuerpo que no es JSON es la sesión caducada, y se dice', function () {
-        igual(r.pieza, null);
-        cierto(r.error.indexOf('sesión') !== -1, r.error);
-        cierto(!/unexpected|token|json/i.test(r.error), 'nada del motor en pantalla: ' + r.error);
-      });
-    });
-  }).then(function () {
-    var caida = servidor(function () { return Promise.reject(new TypeError('Failed to fetch')); });
-    return subir(caida, function (r) {
-      prueba('la red caída da el aviso nuestro, no el TypeError', function () {
-        igual(r.pieza, null);
-        cierto(r.error.indexOf('no se ha podido contactar') !== -1, r.error);
-        cierto(r.error.indexOf('Failed') === -1, r.error);
-      });
-    });
-  });
-});
-
-describeAsync('Subida.subirVarios', function () {
-  var MODULOS = ['../panel/js/identificador.js', '../panel/js/imagenes.js', '../panel/js/subida.js'];
-  function imagen(nombre) {
-    return new Promise(function (ok) {
-      var c = document.createElement('canvas'); c.width = 20; c.height = 10;
-      c.getContext('2d').fillRect(0, 0, 20, 10);
-      c.toBlob(function (b) { ok(new File([b], nombre, { type: 'image/png' })); }, 'image/png');
-    });
-  }
-  return Promise.all([imagen('a.png'), imagen('b.png')]).then(function (archivos) {
-    var pedidos = [];
-    var doble = function (url) {
-      var nombre = decodeURIComponent(String(url).split('nombre=')[1]);
-      pedidos.push(nombre);
-      /* La segunda foto falla en su miniatura; la primera y el archivo de
-         texto no llegan a tocar la red por motivos distintos. */
-      var estado = nombre.indexOf('bruma-b-') === 0 && /-250\.jpg$/.test(nombre) ? 413 : 200;
-      var cuerpo = estado === 200 ? { url: '/img/' + nombre } : { error: 'la imagen supera el tamaño máximo de 5 MB' };
-      return Promise.resolve({ status: estado, text: function () { return Promise.resolve(JSON.stringify(cuerpo)); } });
-    };
-    var lote = archivos.concat([new File(['x'], 'nota.txt', { type: 'text/plain' })]);
-    return ArnesDom.conDocumento({ globales: { fetch: doble }, scripts: MODULOS }, function (w) {
-      var vistos = [];
-      return new Promise(function (ok) {
-        w.Subida.subirVarios('bruma', lote, function (archivo, pieza, error) {
-          vistos.push({ nombre: archivo.name, hayPieza: !!pieza, error: error });
-        }, ok);
-      }).then(function (fallos) {
-        prueba('avisa de cada archivo según termina, con su pieza o su motivo', function () {
-          igual(vistos.map(function (v) { return v.nombre + ':' + v.hayPieza; }), ['a.png:true', 'b.png:false', 'nota.txt:false']);
-          cierto(vistos[1].error.indexOf('5 MB') !== -1, vistos[1].error);
-          cierto(vistos[2].error.indexOf('no es una imagen') !== -1, vistos[2].error);
-        });
-        prueba('y al final dice cuáles quedaron fuera, y sólo ésos', function () {
-          igual(fallos.map(function (f) { return f.nombre; }), ['b.png', 'nota.txt']);
-        });
-        /* Criterio 10: la que falla no arrastra a las demás. */
-        prueba('un fallo no impide que se intenten las siguientes', function () {
-          cierto(pedidos.filter(function (n) { return n.indexOf('bruma-a-') === 0; }).length === 3, pedidos.join(' '));
-        });
-        prueba('la raíz del nombre lleva el id del proyecto y el archivo saneado', function () {
-          cierto(/^bruma-a-[a-z0-9]+-3000\.jpg$/.test(pedidos[0]), pedidos[0]);
-        });
-      });
-    });
-  });
-});
-```
-
-En `tests/test.html`, tras `imagenes.js`:
-
-```html
-<script src="../panel/js/subida.js"></script>
-```
-
-y tras `pruebas-imagenes.js`:
-
-```html
-<script src="pruebas-subida.js"></script>
-```
-
-- [ ] **Paso 2: Comprueba que falla**
-
-Recarga. Esperado: `Subida is not defined` en la primera sección y las dos
-`describeAsync` caídas enteras.
-
-- [ ] **Paso 3: Escribe `panel/js/subida.js`**
-
-```js
-window.Subida = (function () {
-  var RUTA = '/api/imagen';
-
-  /* Cuántos caracteres del nombre original sobreviven en la llave. El Worker
-     corta a 200 el nombre entero (TOPE_NOMBRE); con el id del proyecto, el
-     sello y el sufijo de medida alrededor, 60 deja margen de sobra. */
-  var TOPE_BASE = 60;
-
-  /* Las tres llaves de una foto comparten raíz, y la raíz lleva:
-       - el id del proyecto, para poder leer el bucket por proyectos;
-       - el nombre del archivo pasado por Identificador.desde —sin acentos,
-         espacios ni mayúsculas—, porque nombreSeguro en el Worker convertiría
-         cualquier no-ASCII en un guion;
-       - un sello (quien llama pasa Date.now().toString(36)), porque el Worker
-         responde 409 antes que pisar una imagen: sin sello, subir dos veces
-         «IMG_0001.jpg», o volver a subir una que se quitó, chocaría.
-     Los sufijos -1500/-3000/-250 son los mismos que escribe
-     herramientas/derivar_imagenes.py: Edicion.portadaDe cuenta con ellos para
-     las piezas antiguas. Todo sale .jpg porque el lienzo escribe JPEG. */
-  function nombres(idProyecto, nombreArchivo, sello) {
-    var sinExtension = String(nombreArchivo || '').replace(/\.[^.]+$/, '');
-    var base = window.Identificador.desde(sinExtension).slice(0, TOPE_BASE).replace(/-+$/, '') || 'foto';
-    var raiz = idProyecto + '-' + base + '-' + sello;
-    return { portada: raiz + '-1500.jpg', pieza: raiz + '-3000.jpg', miniatura: raiz + '-250.jpg' };
-  }
-
-  /* Los mismos dos avisos que borrador.js, y por el mismo motivo: lo que
-     llega del motor está en inglés y no dice nada a quien sube fotos. */
-  var SIN_RED = 'no se ha podido contactar con el servidor';
-  var SESION = 'la sesión ha caducado: vuelve a entrar en otra pestaña y repite la subida';
-
-  /* Marca «este mensaje lo escribimos nosotros»: es lo único que se enseña.
-     Cualquier otra excepción sale como SIN_RED y su detalle al registro. */
-  function Legible(mensaje) { this.mensaje = mensaje; }
-
-  function leer(r) {
-    return r.text().then(function (texto) {
-      try {
-        return { estado: r.status, cuerpo: JSON.parse(texto) };
-      } catch (e) {
-        console.error('Subida: el servidor respondió ' + r.status + ' con algo que no es JSON: '
-          + String(texto).slice(0, 200));
-        throw new Legible(SESION);
-      }
-    });
-  }
-
-  /* Sube UN blob con su nombre. alTerminar(url, error). */
-  function subirUna(nombre, blob, alTerminar) {
-    fetch(RUTA + '?nombre=' + encodeURIComponent(nombre), {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'content-type': 'image/jpeg' },
-      body: blob
-    })
-      .then(leer)
-      .then(function (res) {
-        var cuerpo = res.cuerpo || {};
-        if (res.estado === 200 && cuerpo.url) return cuerpo.url;
-        /* El Worker ya explica en castellano el 409, el 413, el 415 y el
-           400: se enseña tal cual, que es la única frase que dice qué pasó. */
-        console.error('Subida: POST ' + nombre + ' respondió ' + res.estado + ': ' + cuerpo.error);
-        throw new Legible(cuerpo.error || 'el servidor respondió ' + res.estado);
-      })
-      .then(
-        function (url) { alTerminar(url, null); },
-        /* Dos argumentos y no .catch(): que un fallo dentro de alTerminar no
-           vuelva a llamarlo con un error de red inventado (borrador.js, C1). */
-        function (e) {
-          if (e instanceof Legible) return alTerminar(null, e.mensaje);
-          console.error('Subida: la petición no llegó a completarse: ' + (e && e.message));
-          alTerminar(null, SIN_RED);
-        }
-      );
-  }
-
-  /* Las tres medidas ya derivadas, en este orden: pieza, miniatura, portada.
-     Si una falla, las ya subidas quedan huérfanas en R2, igual que las de un
-     proyecto borrado: es recuperable y limpiar es una acción aparte (spec). */
-  function subirDerivadas(nombres, derivadas, alTerminar) {
-    var claves = ['pieza', 'miniatura', 'portada'], urls = {}, i = 0;
-    (function siguiente() {
-      if (i === claves.length) {
-        return alTerminar({ url: urls.pieza, miniatura: urls.miniatura, portada: urls.portada }, null);
-      }
-      var clave = claves[i++];
-      subirUna(nombres[clave], derivadas[clave], function (url, error) {
-        if (error) return alTerminar(null, error);
-        urls[clave] = url;
-        siguiente();
-      });
-    })();
-  }
-
-  /* Un archivo entero: derivar y subir. alTerminar(pieza, error). */
-  function subir(idProyecto, archivo, alTerminar) {
-    window.Imagenes.derivar(archivo, function (derivadas, error) {
-      if (error) return alTerminar(null, error);
-      subirDerivadas(nombres(idProyecto, archivo.name, Date.now().toString(36)), derivadas, alTerminar);
-    });
-  }
-
-  /* Varios archivos, UNO DETRÁS DE OTRO. alCadaUno(archivo, pieza, error)
-     según termina cada uno —quien llama añade la pieza al proyecto en el
-     acto, así que un fallo en el tercero no se lleva los dos primeros—, y al
-     final alTerminar(fallos) con [{nombre, motivo}]. Criterio 10. */
-  function subirVarios(idProyecto, archivos, alCadaUno, alTerminar) {
-    var lista = [].slice.call(archivos), fallos = [], i = 0;
-    (function siguiente() {
-      if (i === lista.length) return alTerminar(fallos);
-      var archivo = lista[i++];
-      subir(idProyecto, archivo, function (pieza, error) {
-        if (error) fallos.push({ nombre: archivo.name, motivo: error });
-        alCadaUno(archivo, pieza, error);
-        siguiente();
-      });
-    })();
-  }
-
-  return { RUTA: RUTA, nombres: nombres, subirDerivadas: subirDerivadas,
-           subir: subir, subirVarios: subirVarios };
-})();
-```
-
-- [ ] **Paso 4: Comprueba que pasa**
-
-Recarga: cinco de `nombres`, seis de `subirDerivadas`, cuatro de
-`subirVarios`, todas en verde. Y:
-
-```bash
-wc -l panel/js/subida.js
-python tests/auditar_rutas.py
-```
-
-- [ ] **Paso 5: Commit**
-
-```bash
-git add panel/js/subida.js tests/pruebas-subida.js tests/test.html
-git commit -m "Subir las tres medidas de cada foto, una a una y diciendo cual fallo"
-```
-
----
-
-### Tarea 4: Las ediciones de un proyecto, puras
+### Tarea 2: Editar las piezas de un proyecto
 
 **Archivos:**
 - Crear: `panel/js/edicion.js`, `tests/pruebas-edicion.js`
 - Modificar: `tests/test.html`
 
 **Interfaces:**
-- Produce `window.Edicion` con, todas devolviendo un **proyecto nuevo**:
-  - `aplicarFicha(p, campos)` con `campos = {titulo, categoria, cliente, anio,
-    papel, enlace}` (cadenas del formulario).
-  - `anadirPieza(p, pieza)`, `quitarPieza(p, indice)`, `moverPieza(p, desde,
-    hasta)`, `marcarPortada(p, indice)`.
-  - `portadaDe(pieza)` → ruta de la medida de 1500; `esPortada(p, pieza)`.
-  - `reemplazar(proyectos, p)` → lista nueva con `p` en el sitio del que tenga
-    su id.
-  - `avisosDe(p)` → lo que le falta a ese proyecto para publicarse, sin el
-    prefijo del id.
-- Consume: `Orden.mover`, `ReglasContenido.validar`.
+- Produce: `window.Edicion.portadaDe(pieza)`,
+  `Edicion.indiceDePortada(proyecto)`, `Edicion.mover(proyecto, desde, hasta)`,
+  `Edicion.quitar(proyecto, indice)`, `Edicion.marcarPortada(proyecto, indice)`,
+  `Edicion.anadir(proyecto, piezas)`. Todas devuelven **proyecto nuevo**.
+- Consume: `window.Orden.mover`.
 
-**Por qué copias y no mutación.** Lo mismo que `Orden.mover`: `panel.js`
-compara el trabajo contra lo último guardado para saber si hay cambios
-pendientes (Tarea 8), y eso deja de funcionar en cuanto alguien toca el objeto
-guardado.
+**Por qué es lógica pura y no un detalle de la interfaz.** Aquí vive la regla
+que puede corromper el contenido en silencio: **quitar la pieza que era la
+portada**. Si no se recalcula, el proyecto se queda con una `portada` que apunta
+a una imagen que ya no está entre sus piezas —válida para
+`ReglasContenido.validar`, que sólo mira que haya `portada`—, se publica, y la
+galería enseña una foto que el visor ya no tiene.
 
 - [ ] **Paso 1: Las pruebas que fallan**
 
 Crea `tests/pruebas-edicion.js`:
 
 ```js
-describe('Edicion', function () {
+describe('Edicion.portadaDe', function () {
+  prueba('usa la portada guardada si la pieza la trae', function () {
+    igual(Edicion.portadaDe({ url: '/img/x-3000.jpg', portada: '/img/otra-1500.jpg' }),
+          '/img/otra-1500.jpg');
+  });
+
+  /* Las 65 piezas del contenido real son {url, miniatura} y nada más: se
+     subieron con herramientas/derivar_imagenes.py, antes de que el panel
+     supiera subir. Para ellas la portada se deduce del sufijo. */
+  prueba('deduce el -1500 del -3000 en las piezas antiguas', function () {
+    igual(Edicion.portadaDe({ url: '/img/editorial-la-boquerona-esta-portada-3000.jpg' }),
+          '/img/editorial-la-boquerona-esta-portada-1500.jpg');
+  });
+
+  /* Sólo el sufijo final, y sólo si está: un «-3000» en medio del nombre es
+     parte del nombre, no la medida. */
+  prueba('sólo sustituye el sufijo del final', function () {
+    igual(Edicion.portadaDe({ url: '/img/serie-3000-metros-3000.jpg' }),
+          '/img/serie-3000-metros-1500.jpg');
+  });
+
+  prueba('sin nada de donde deducir, devuelve null', function () {
+    igual(Edicion.portadaDe({ url: '/img/suelta.jpg' }), null);
+    igual(Edicion.portadaDe(null), null);
+  });
+});
+
+describe('Edicion.indiceDePortada', function () {
   function proyecto() {
-    return { id: 'bruma', titulo: 'Bruma', categoria: 'editorial', tipo: 'fotos',
-             ficha: { anio: 2025, papel: 'DoP' },
-             portada: '/img/bruma-a-1500.jpg',
-             piezas: [{ url: '/img/bruma-a-3000.jpg', miniatura: '/img/bruma-a-250.jpg', portada: '/img/bruma-a-1500.jpg' },
-                      { url: '/img/bruma-b-3000.jpg', miniatura: '/img/bruma-b-250.jpg', portada: '/img/bruma-b-1500.jpg' }] };
+    return { portada: '/img/b-1500.jpg', piezas: [
+      { url: '/img/a-3000.jpg' }, { url: '/img/b-3000.jpg' }] };
   }
-  var nueva = { url: '/img/bruma-c-3000.jpg', miniatura: '/img/bruma-c-250.jpg', portada: '/img/bruma-c-1500.jpg' };
 
-  prueba('aplicarFicha cambia título, categoría y ficha, y no el id', function () {
-    var n = Edicion.aplicarFicha(proyecto(), { titulo: '  Bruma marina ', categoria: 'videoclip',
-      cliente: 'Vogue', anio: '2026', papel: 'Gaffer', enlace: 'https://youtu.be/x' });
-    igual(n.id, 'bruma');
-    igual(n.titulo, 'Bruma marina');
-    igual(n.categoria, 'videoclip');
-    igual(n.ficha, { cliente: 'Vogue', anio: 2026, papel: 'Gaffer', enlace: 'https://youtu.be/x' });
+  prueba('encuentra la pieza que es la portada', function () {
+    igual(Edicion.indiceDePortada(proyecto()), 1);
   });
 
-  /* Las mismas reglas que el formulario de crear (panel.js): lo opcional en
-     blanco no entra, el año es número. */
-  prueba('lo que se deja en blanco no entra en la ficha, y el año va como número', function () {
-    var n = Edicion.aplicarFicha(proyecto(), { titulo: 'B', categoria: 'editorial', cliente: '', anio: '2024', papel: 'DoP', enlace: '  ' });
-    igual(n.ficha, { anio: 2024, papel: 'DoP' });
-    igual(typeof n.ficha.anio, 'number');
+  prueba('una portada que no es de ninguna pieza da -1', function () {
+    igual(Edicion.indiceDePortada({ portada: '/img/z-1500.jpg', piezas: [] }), -1);
   });
 
-  prueba('un año en blanco o que no es número se queda fuera, para que validar lo diga', function () {
-    igual(Edicion.aplicarFicha(proyecto(), { titulo: 'B', categoria: 'editorial', anio: '', papel: 'DoP' }).ficha, { papel: 'DoP' });
-    igual(Edicion.aplicarFicha(proyecto(), { titulo: 'B', categoria: 'editorial', anio: 'ayer', papel: 'DoP' }).ficha, { papel: 'DoP' });
+  prueba('sin portada da -1', function () {
+    igual(Edicion.indiceDePortada({ piezas: [{ url: '/img/a-3000.jpg' }] }), -1);
+  });
+});
+
+describe('Edicion.mover', function () {
+  function proyecto() {
+    return { portada: '/img/c-1500.jpg', piezas: [
+      { url: '/img/a-3000.jpg' }, { url: '/img/b-3000.jpg' }, { url: '/img/c-3000.jpg' }] };
+  }
+
+  prueba('cambia el orden de las piezas', function () {
+    igual(Edicion.mover(proyecto(), 2, 0).piezas.map(function (p) { return p.url; }),
+          ['/img/c-3000.jpg', '/img/a-3000.jpg', '/img/b-3000.jpg']);
   });
 
-  prueba('ninguna edición toca el proyecto que recibe', function () {
+  /* Mover no es elegir: la portada sigue siendo la misma fotografía aunque
+     ahora esté en otro sitio. */
+  prueba('la portada sigue siendo la misma foto', function () {
+    igual(Edicion.mover(proyecto(), 2, 0).portada, '/img/c-1500.jpg');
+  });
+
+  prueba('no toca el proyecto que recibe', function () {
     var p = proyecto();
-    Edicion.aplicarFicha(p, { titulo: 'Otro', categoria: 'videoclip', anio: '1', papel: 'x' });
-    Edicion.anadirPieza(p, nueva);
-    Edicion.quitarPieza(p, 0);
-    Edicion.moverPieza(p, 0, 1);
-    Edicion.marcarPortada(p, 1);
-    igual(p, proyecto());
+    Edicion.mover(p, 2, 0);
+    igual(p.piezas[0].url, '/img/a-3000.jpg');
+  });
+});
+
+describe('Edicion.quitar', function () {
+  function proyecto() {
+    return { portada: '/img/b-1500.jpg', piezas: [
+      { url: '/img/a-3000.jpg' }, { url: '/img/b-3000.jpg' }, { url: '/img/c-3000.jpg' }] };
+  }
+
+  prueba('quita la pieza que se le dice', function () {
+    igual(Edicion.quitar(proyecto(), 0).piezas.map(function (p) { return p.url; }),
+          ['/img/b-3000.jpg', '/img/c-3000.jpg']);
   });
 
-  prueba('anadirPieza la pone al final', function () {
-    var n = Edicion.anadirPieza(proyecto(), nueva);
-    igual(n.piezas.length, 3);
-    igual(n.piezas[2], nueva);
-    igual(n.portada, '/img/bruma-a-1500.jpg', 'la portada no cambia si ya había');
+  prueba('quitar otra no toca la portada', function () {
+    igual(Edicion.quitar(proyecto(), 0).portada, '/img/b-1500.jpg');
   });
 
-  prueba('la primera foto de un proyecto sin portada se hace portada sola', function () {
-    var p = proyecto(); p.piezas = []; delete p.portada;
-    igual(Edicion.anadirPieza(p, nueva).portada, '/img/bruma-c-1500.jpg');
+  /* El fallo que este módulo existe para impedir: sin recalcular, el proyecto
+     se queda con una portada que ya no es de ninguna pieza. `validar` la da
+     por buena —sólo mira que haya portada— y la web enseña una foto que el
+     visor ya no tiene. */
+  prueba('quitar la portada la pasa a la primera que quede', function () {
+    igual(Edicion.quitar(proyecto(), 1).portada, '/img/a-1500.jpg');
   });
 
-  prueba('quitarPieza quita esa y sólo esa', function () {
-    var n = Edicion.quitarPieza(proyecto(), 0);
-    igual(n.piezas.map(function (x) { return x.url; }), ['/img/bruma-b-3000.jpg']);
+  prueba('quitar la última pieza deja el proyecto sin portada', function () {
+    var uno = { portada: '/img/a-1500.jpg', piezas: [{ url: '/img/a-3000.jpg' }] };
+    var r = Edicion.quitar(uno, 0);
+    igual(r.piezas, []);
+    igual(r.portada, null);
   });
 
-  /* Sin esto, quitar la foto de portada dejaría el proyecto apuntando a una
-     imagen que ya no es suya: se publicaría y la galería la enseñaría igual. */
-  prueba('quitar la portada pasa la portada a la primera que quede', function () {
-    igual(Edicion.quitarPieza(proyecto(), 0).portada, '/img/bruma-b-1500.jpg');
+  prueba('un índice que no existe no cambia nada', function () {
+    igual(Edicion.quitar(proyecto(), 9).piezas.length, 3);
+    igual(Edicion.quitar(proyecto(), -1).piezas.length, 3);
   });
 
-  prueba('quitar la última foto deja el proyecto sin portada', function () {
-    var n = Edicion.quitarPieza(Edicion.quitarPieza(proyecto(), 0), 0);
-    igual(n.piezas, []);
-    cierto(!('portada' in n), 'la clave tiene que desaparecer, no quedarse en null');
+  prueba('no toca el proyecto que recibe', function () {
+    var p = proyecto();
+    Edicion.quitar(p, 1);
+    igual(p.piezas.length, 3);
+  });
+});
+
+describe('Edicion.marcarPortada', function () {
+  function proyecto() {
+    return { portada: '/img/a-1500.jpg', piezas: [
+      { url: '/img/a-3000.jpg' },
+      { url: '/img/b-3000.jpg', portada: '/img/b-1500.jpg' }] };
+  }
+
+  prueba('la portada pasa a ser la de esa pieza', function () {
+    igual(Edicion.marcarPortada(proyecto(), 1).portada, '/img/b-1500.jpg');
   });
 
-  prueba('quitar un índice que no existe no cambia nada', function () {
-    igual(Edicion.quitarPieza(proyecto(), 7), proyecto());
+  prueba('un índice que no existe no cambia nada', function () {
+    igual(Edicion.marcarPortada(proyecto(), 9).portada, '/img/a-1500.jpg');
   });
 
-  prueba('moverPieza usa Orden.mover', function () {
-    igual(Edicion.moverPieza(proyecto(), 0, 1).piezas.map(function (x) { return x.url; }),
-          ['/img/bruma-b-3000.jpg', '/img/bruma-a-3000.jpg']);
+  /* Una pieza de la que no se puede sacar portada no se puede marcar: dejar
+     `portada: null` haría impublicable el proyecto sin decir por qué. */
+  prueba('una pieza sin portada deducible no se marca', function () {
+    var raro = { portada: '/img/a-1500.jpg', piezas: [
+      { url: '/img/a-3000.jpg' }, { url: '/img/suelta.jpg' }] };
+    igual(Edicion.marcarPortada(raro, 1).portada, '/img/a-1500.jpg');
+  });
+});
+
+describe('Edicion.anadir', function () {
+  prueba('añade al final', function () {
+    var p = { portada: '/img/a-1500.jpg', piezas: [{ url: '/img/a-3000.jpg' }] };
+    igual(Edicion.anadir(p, [{ url: '/img/b-3000.jpg' }]).piezas.length, 2);
   });
 
-  prueba('marcarPortada copia la portada de esa pieza al proyecto', function () {
-    var n = Edicion.marcarPortada(proyecto(), 1);
-    igual(n.portada, '/img/bruma-b-1500.jpg');
-    cierto(Edicion.esPortada(n, n.piezas[1]));
-    cierto(!Edicion.esPortada(n, n.piezas[0]));
+  /* La primera foto de un proyecto recién creado es su portada sin que nadie
+     lo pida: un proyecto sin portada no se publica, y pedir un clic más para
+     algo que no tiene alternativa sería un trámite. */
+  prueba('la primera foto de un proyecto vacío se hace portada', function () {
+    var p = { portada: null, piezas: [] };
+    var r = Edicion.anadir(p, [{ url: '/img/a-3000.jpg', portada: '/img/a-1500.jpg' },
+                               { url: '/img/b-3000.jpg', portada: '/img/b-1500.jpg' }]);
+    igual(r.portada, '/img/a-1500.jpg');
   });
 
-  /* Las 65 piezas que entraron con la herramienta no traen `portada`, pero
-     la herramienta escribió -1500 para cada una con la misma raíz. */
-  prueba('portadaDe deduce el -1500 de una pieza antigua por el sufijo', function () {
-    igual(Edicion.portadaDe({ url: '/img/editorial-la-boquerona-img_5635-3000.jpg' }),
-          '/img/editorial-la-boquerona-img_5635-1500.jpg');
-    igual(Edicion.portadaDe({ url: '/img/x-3000.jpg', portada: '/img/otra.jpg' }), '/img/otra.jpg', 'si la trae, manda');
+  prueba('si ya había portada, no se cambia', function () {
+    var p = { portada: '/img/a-1500.jpg', piezas: [{ url: '/img/a-3000.jpg' }] };
+    igual(Edicion.anadir(p, [{ url: '/img/b-3000.jpg', portada: '/img/b-1500.jpg' }]).portada,
+          '/img/a-1500.jpg');
   });
 
-  prueba('una url sin sufijo conocido hace de portada ella misma', function () {
-    igual(Edicion.portadaDe({ url: '/img/foto.jpg' }), '/img/foto.jpg');
-  });
-
-  prueba('reemplazar cambia el proyecto con ese id y respeta el orden', function () {
-    var lista = [{ id: 'a', titulo: 'A' }, { id: 'b', titulo: 'B' }];
-    igual(Edicion.reemplazar(lista, { id: 'b', titulo: 'Be' }), [{ id: 'a', titulo: 'A' }, { id: 'b', titulo: 'Be' }]);
-    igual(lista[1].titulo, 'B', 'la lista original no se toca');
-  });
-
-  prueba('avisosDe dice qué falta para publicar, sin el prefijo del id', function () {
-    var p = proyecto(); p.piezas = []; delete p.portada; p.ficha = { papel: 'DoP' };
-    igual(Edicion.avisosDe(p), ['la ficha no trae año', 'sin piezas', 'sin portada']);
-    igual(Edicion.avisosDe(proyecto()), []);
+  prueba('añadir nada no cambia nada', function () {
+    var p = { portada: '/img/a-1500.jpg', piezas: [{ url: '/img/a-3000.jpg' }] };
+    igual(Edicion.anadir(p, []).piezas.length, 1);
   });
 });
 ```
 
-En `tests/test.html`, tras `subida.js` (necesita `orden.js` y
-`reglas-contenido.js`, que ya van antes):
+Añade a `tests/test.html`:
 
 ```html
 <script src="../panel/js/edicion.js"></script>
 ```
-
-y tras `pruebas-subida.js`:
-
 ```html
 <script src="pruebas-edicion.js"></script>
 ```
+
+`edicion.js` va **después** de `orden.js`, que ya está en el arnés: lo usa para
+mover.
 
 - [ ] **Paso 2: Comprueba que falla**
 
@@ -1057,137 +550,974 @@ Esperado: `Edicion is not defined`.
 - [ ] **Paso 3: Escribe `panel/js/edicion.js`**
 
 ```js
+/* Las reglas de editar las piezas de un proyecto, sin DOM y sin red. Aquí vive
+   lo que puede corromper el contenido en silencio —quitar la pieza que era la
+   portada—, así que aquí es donde se puede probar entero. */
 window.Edicion = (function () {
-  /* Todo devuelve un proyecto NUEVO y no toca el que recibe, por lo mismo que
-     Orden.mover: panel.js compara el trabajo contra lo último guardado para
-     saber si hay cambios pendientes. Son datos llanos —lo que va al JSON—,
-     así que copiar por JSON es exacto. */
-  function copia(p) { return JSON.parse(JSON.stringify(p)); }
 
-  /* La portada de una pieza es su medida de 1500 de lado largo. Las que sube
-     el panel la traen escrita (Subida.subirDerivadas); las 65 que entraron
-     con herramientas/derivar_imagenes.py no, pero la herramienta escribió las
-     tres medidas de cada foto con los mismos sufijos, así que se deduce. Si
-     la url no lleva sufijo conocido, la propia pieza hace de portada: más
-     pesada, pero válida. */
+  /* Las piezas que sube el panel traen su propia `portada`, que es un campo
+     nuevo y aditivo. Las 65 del contenido real no la traen: se subieron con
+     herramientas/derivar_imagenes.py y son {url, miniatura}. Para ésas se
+     deduce del sufijo, que el script escribió con la medida del lado largo.
+
+     Se prefiere guardarla y deducir sólo cuando falta, en vez de deducir
+     siempre: deducir siempre ataría el panel a que el nombre del archivo no
+     cambie nunca, y esto es compatibilidad con lo viejo, no un contrato. */
   function portadaDe(pieza) {
     if (!pieza) return null;
     if (pieza.portada) return pieza.portada;
-    return String(pieza.url || '').replace(/-3000(\.[a-z0-9]+)$/i, '-1500$1') || null;
+    var url = String(pieza.url || '');
+    /* Sólo el sufijo del final: un «-3000» en medio del nombre es parte del
+       nombre. Sin el ancla, «serie-3000-metros-3000.jpg» se estropearía por
+       el primero. */
+    if (!/-3000\.jpg$/.test(url)) return null;
+    return url.replace(/-3000\.jpg$/, '-1500.jpg');
   }
 
-  function esPortada(p, pieza) {
-    return !!p.portada && portadaDe(pieza) === p.portada;
+  function copiar(proyecto, piezas, portada) {
+    var nuevo = {};
+    Object.keys(proyecto).forEach(function (k) { nuevo[k] = proyecto[k]; });
+    nuevo.piezas = piezas;
+    nuevo.portada = portada;
+    return nuevo;
   }
 
-  /* Las mismas reglas que fichaDelFormulario en panel.js: lo opcional en
-     blanco no entra —la forma de decir que un trabajo no tiene cliente o no
-     tiene vídeo es que la clave no esté—, y el año va como número, que es
-     como está en contenido.json. Un año en blanco o ilegible tampoco entra:
-     así `avisosDe` dice «la ficha no trae año» en vez de guardar NaN. */
-  function aplicarFicha(p, campos) {
-    var n = copia(p);
-    n.titulo = String(campos.titulo || '').trim();
-    n.categoria = campos.categoria;
-    var ficha = {};
-    var cliente = String(campos.cliente || '').trim();
-    if (cliente) ficha.cliente = cliente;
-    var textoAnio = String(campos.anio === undefined || campos.anio === null ? '' : campos.anio).trim();
-    if (textoAnio && !isNaN(Number(textoAnio))) ficha.anio = Number(textoAnio);
-    var papel = String(campos.papel || '').trim();
-    if (papel) ficha.papel = papel;
-    var enlace = String(campos.enlace || '').trim();
-    if (enlace) ficha.enlace = enlace;
-    n.ficha = ficha;
-    return n;
+  function piezasDe(proyecto) {
+    return (proyecto && proyecto.piezas) || [];
   }
 
-  function anadirPieza(p, pieza) {
-    var n = copia(p);
-    n.piezas = (n.piezas || []).concat([copia(pieza)]);
-    if (!n.portada) n.portada = portadaDe(pieza);
-    return n;
+  function enRango(piezas, indice) {
+    return indice >= 0 && indice < piezas.length;
   }
 
-  /* Quitar la foto que era portada deja el proyecto apuntando a una imagen
-     que ya no es suya, y eso se publicaría sin que validar lo notara: la
-     portada pasa a la primera que quede, o desaparece si no queda ninguna. */
-  function quitarPieza(p, indice) {
-    var n = copia(p);
-    var piezas = n.piezas || [];
-    if (indice < 0 || indice >= piezas.length) return n;
-    var quitada = piezas[indice];
-    n.piezas = piezas.filter(function (_, i) { return i !== indice; });
-    if (esPortada(n, quitada)) {
-      if (n.piezas.length) n.portada = portadaDe(n.piezas[0]);
-      else delete n.portada;
+  function indiceDePortada(proyecto) {
+    var piezas = piezasDe(proyecto);
+    var portada = proyecto && proyecto.portada;
+    if (!portada) return -1;
+    for (var i = 0; i < piezas.length; i++) {
+      if (portadaDe(piezas[i]) === portada) return i;
     }
-    return n;
+    return -1;
   }
 
-  function moverPieza(p, desde, hasta) {
-    var n = copia(p);
-    n.piezas = window.Orden.mover(n.piezas || [], desde, hasta);
-    return n;
+  /* Mover no es elegir: la fotografía de portada sigue siendo la misma
+     aunque ahora ocupe otro sitio en la rejilla. */
+  function mover(proyecto, desde, hasta) {
+    return copiar(proyecto, window.Orden.mover(piezasDe(proyecto), desde, hasta),
+                  proyecto.portada || null);
   }
 
-  function marcarPortada(p, indice) {
-    var n = copia(p);
-    var pieza = (n.piezas || [])[indice];
-    if (pieza) n.portada = portadaDe(pieza);
-    return n;
+  function quitar(proyecto, indice) {
+    var piezas = piezasDe(proyecto);
+    if (!enRango(piezas, indice)) return copiar(proyecto, piezas.slice(), proyecto.portada || null);
+
+    var eraLaPortada = indiceDePortada(proyecto) === indice;
+    var quedan = piezas.slice(0, indice).concat(piezas.slice(indice + 1));
+    if (!eraLaPortada) return copiar(proyecto, quedan, proyecto.portada || null);
+
+    /* La portada se recalcula porque si no el proyecto se queda apuntando a
+       una imagen que ya no es de ninguna de sus piezas. `validar` sólo mira
+       que HAYA portada, así que eso se publica sin queja y la galería enseña
+       una foto que el visor ya no tiene. */
+    return copiar(proyecto, quedan, quedan.length ? portadaDe(quedan[0]) : null);
   }
 
-  function reemplazar(proyectos, p) {
-    return proyectos.map(function (x) { return x.id === p.id ? p : x; });
+  function marcarPortada(proyecto, indice) {
+    var piezas = piezasDe(proyecto);
+    if (!enRango(piezas, indice)) return copiar(proyecto, piezas.slice(), proyecto.portada || null);
+    var nueva = portadaDe(piezas[indice]);
+    /* Sin portada deducible no se marca: dejar `portada: null` volvería el
+       proyecto impublicable sin decirle a nadie por qué. */
+    if (!nueva) return copiar(proyecto, piezas.slice(), proyecto.portada || null);
+    return copiar(proyecto, piezas.slice(), nueva);
   }
 
-  /* Lo que le falta a ESTE proyecto para publicarse, con las mismas reglas
-     que aplicará el Worker. Sin el prefijo «id: », que en su pantalla sobra. */
-  function avisosDe(p) {
-    var prefijo = p.id + ': ';
-    return window.ReglasContenido.validar({ proyectos: [p] }, window.ReglasContenido.CATEGORIAS)
-      .map(function (t) { return t.indexOf(prefijo) === 0 ? t.slice(prefijo.length) : t; });
+  function anadir(proyecto, nuevas) {
+    var piezas = piezasDe(proyecto).concat(nuevas || []);
+    var portada = proyecto.portada || null;
+    /* La primera foto de un proyecto vacío se hace portada sola: sin portada
+       no se publica, y no hay ninguna otra candidata que elegir. */
+    if (!portada && piezas.length) portada = portadaDe(piezas[0]);
+    return copiar(proyecto, piezas, portada);
   }
 
-  return { aplicarFicha: aplicarFicha, anadirPieza: anadirPieza, quitarPieza: quitarPieza,
-           moverPieza: moverPieza, marcarPortada: marcarPortada, portadaDe: portadaDe,
-           esPortada: esPortada, reemplazar: reemplazar, avisosDe: avisosDe };
+  return { portadaDe: portadaDe, indiceDePortada: indiceDePortada,
+           mover: mover, quitar: quitar, marcarPortada: marcarPortada,
+           anadir: anadir };
 })();
 ```
 
 - [ ] **Paso 4: Comprueba que pasa**
 
-Las dieciséis en verde.
+Arnés: las **veintitrés** nuevas en verde.
 
 - [ ] **Paso 5: Commit**
 
 ```bash
-git add panel/js/edicion.js tests/pruebas-edicion.js tests/test.html
-git commit -m "Las ediciones de un proyecto como funciones puras que devuelven copias"
+git add panel/js/edicion.js tests/
+git commit -m "Mover, quitar y elegir portada sin dejar el proyecto apuntando a una foto que ya no está"
 ```
 
 ---
 
-### Tarea 5: La rejilla de fotos
+### Tarea 3: Reducir la fotografía en el navegador
+
+**Archivos:**
+- Crear: `panel/js/imagenes.js`, `tests/pruebas-imagenes.js`
+- Modificar: `tests/test.html`
+
+**Interfaces:**
+- Produce: `window.Imagenes.MEDIDAS`, `Imagenes.CALIDAD`,
+  `Imagenes.caber(ancho, alto, cota)` → `{ancho, alto}`,
+  `Imagenes.reducir(archivo, cota, alTerminar)` → `alTerminar(blob, error)`.
+- Consume: nada.
+
+**Por qué importa.** Es el criterio de aceptación 7 entero: ninguna imagen
+supera su cota y ninguna sale deformada. `caber` es donde vive esa aritmética, y
+es pura, así que se prueba sin cargar ni una foto.
+
+`reducir` sí necesita el navegador (`createImageBitmap`, `canvas.toBlob`) y se
+prueba con un PNG diminuto en un `data:` URI, que es una fotografía de verdad
+por lo que a esta función respecta.
+
+- [ ] **Paso 1: Las pruebas que fallan**
+
+Crea `tests/pruebas-imagenes.js`:
+
+```js
+describe('Imagenes.caber', function () {
+  /* Por el LADO LARGO, no por el alto: una foto apaisada y una vertical caben
+     las dos en su cota, y ninguna se deforma. Criterio de aceptación 7. */
+  prueba('una vertical se mide por su alto', function () {
+    igual(Imagenes.caber(2000, 4000, 1000), { ancho: 500, alto: 1000 });
+  });
+
+  prueba('una apaisada se mide por su ancho', function () {
+    igual(Imagenes.caber(4000, 2000, 1000), { ancho: 1000, alto: 500 });
+  });
+
+  prueba('una cuadrada cabe justa', function () {
+    igual(Imagenes.caber(3000, 3000, 1000), { ancho: 1000, alto: 1000 });
+  });
+
+  /* Ampliar sería inventar píxeles: una miniatura subida por error saldría
+     borrosa y pesando más que el original. */
+  prueba('lo que ya cabe no se toca', function () {
+    igual(Imagenes.caber(400, 300, 1000), { ancho: 400, alto: 300 });
+  });
+
+  /* Un canvas de 0 px lanza en varios navegadores, y una foto muy apaisada
+     —un panorama de 8000x120 reducido a 250— da exactamente eso al redondear
+     hacia abajo. El lado corto se queda en 1, que es feo pero es una imagen. */
+  prueba('ningún lado baja de un píxel', function () {
+    igual(Imagenes.caber(8000, 120, 250), { ancho: 250, alto: 4 });
+    igual(Imagenes.caber(8000, 10, 250), { ancho: 250, alto: 1 });
+  });
+
+  prueba('medidas imposibles no devuelven NaN', function () {
+    igual(Imagenes.caber(0, 0, 1000), { ancho: 1, alto: 1 });
+  });
+});
+
+describe('Imagenes.MEDIDAS', function () {
+  /* Las mismas tres de herramientas/derivar_imagenes.py. Lo que sube el panel
+     tiene que ser indistinguible de lo que subió el script: si no, la web
+     tendría dos clases de fotografía según quién la puso. */
+  prueba('son las tres del script, con su sufijo', function () {
+    igual(Imagenes.MEDIDAS, [
+      { nombre: 'portada',   cota: 1500, sufijo: '1500' },
+      { nombre: 'pieza',     cota: 3000, sufijo: '3000' },
+      { nombre: 'miniatura', cota: 250,  sufijo: '250' }
+    ]);
+  });
+
+  prueba('la calidad es la del script', function () {
+    igual(Imagenes.CALIDAD, 0.82);
+  });
+});
+
+/* `reducir` necesita el navegador de verdad: createImageBitmap y toBlob. Se le
+   da un PNG de 4x2 en un data: URI, que para esta función es una fotografía
+   como cualquier otra. */
+describeAsync('Imagenes.reducir', function () {
+  /* 4x2 rojo. Apaisado a propósito: así la reducción tiene que elegir el
+     ancho como lado largo, y una implementación que mirase siempre el alto
+     daría medidas distintas. */
+  var PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAAEElEQVR4nGP4z8AARwzIHABvqgf5gNwAKAAAAABJRU5ErkJggg==';
+
+  function comoArchivo() {
+    return fetch(PNG).then(function (r) { return r.blob(); });
+  }
+
+  function reducido(cota) {
+    return comoArchivo().then(function (blob) {
+      return new Promise(function (ok, mal) {
+        Imagenes.reducir(blob, cota, function (salida, error) {
+          if (error) return mal(new Error(error));
+          ok(salida);
+        });
+      });
+    });
+  }
+
+  /* Se mide el resultado volviendo a decodificarlo: comprobar que `reducir`
+     llamó a toBlob con los números correctos sería probar el doble. */
+  function medir(blob) {
+    return createImageBitmap(blob).then(function (mapa) {
+      return { ancho: mapa.width, alto: mapa.height };
+    });
+  }
+
+  return reducido(2).then(function (salida) {
+    prueba('devuelve un JPEG', function () {
+      igual(salida.type, 'image/jpeg');
+    });
+    return medir(salida);
+  }).then(function (medida) {
+    prueba('reduce por el lado largo y conserva la proporción', function () {
+      igual(medida, { ancho: 2, alto: 1 });
+    });
+    return reducido(100);
+  }).then(medir).then(function (medida) {
+    prueba('una foto que ya cabe no se amplía', function () {
+      igual(medida, { ancho: 4, alto: 2 });
+    });
+  }).then(function () {
+    return new Promise(function (ok) {
+      /* Un archivo que no es una imagen tiene que salir por el camino del
+         error y en castellano, no como excepción suelta: quien sube diez
+         fotos y una está corrupta necesita saber cuál. */
+      Imagenes.reducir(new Blob(['esto no es una foto']), 100, function (salida, error) {
+        prueba('un archivo que no es imagen da error en castellano', function () {
+          igual(salida, null);
+          cierto(error && error.indexOf('imagen') !== -1);
+        });
+        ok();
+      });
+    });
+  });
+});
+```
+
+Añade a `tests/test.html`:
+
+```html
+<script src="../panel/js/imagenes.js"></script>
+```
+```html
+<script src="pruebas-imagenes.js"></script>
+```
+
+- [ ] **Paso 2: Comprueba que falla**
+
+Esperado: `Imagenes is not defined`.
+
+- [ ] **Paso 3: Escribe `panel/js/imagenes.js`**
+
+```js
+/* Reducir la fotografía ANTES de subirla. Un original ronda entre 20 y 50 MB;
+   lo que sale de aquí no llega al megabyte. Así no hay procesado de imagen en
+   el servidor ni subidas de 50 MB desde una conexión doméstica. */
+window.Imagenes = (function () {
+
+  /* Las mismas tres medidas y la misma calidad que
+     herramientas/derivar_imagenes.py, que fue quien generó las 65 piezas del
+     contenido real. Lo que suba el panel tiene que ser indistinguible de
+     aquello: si no, la web tendría dos clases de fotografía según quién la
+     puso. El sufijo es lo que acaba en el nombre del archivo, y es de lo que
+     Edicion.portadaDe deduce la portada de las piezas antiguas. */
+  var MEDIDAS = [
+    { nombre: 'portada',   cota: 1500, sufijo: '1500' },
+    { nombre: 'pieza',     cota: 3000, sufijo: '3000' },
+    { nombre: 'miniatura', cota: 250,  sufijo: '250' }
+  ];
+  var CALIDAD = 0.82;
+
+  /* La cota es del LADO LARGO, no del alto. Una foto apaisada y una vertical
+     caben las dos sin deformarse, que es el criterio de aceptación 7: «la
+     proporción original se conserva siempre». */
+  function caber(ancho, alto, cota) {
+    var a = Number(ancho) > 0 ? Number(ancho) : 1;
+    var b = Number(alto) > 0 ? Number(alto) : 1;
+    var largo = Math.max(a, b);
+    /* Ampliar sería inventar píxeles: una foto pequeña saldría borrosa y
+       pesando más que el original. */
+    var factor = largo <= cota ? 1 : cota / largo;
+    return {
+      /* Nunca por debajo de 1: un canvas de 0 px lanza en varios navegadores,
+         y un panorama de 8000x120 reducido a 250 da exactamente eso. */
+      ancho: Math.max(1, Math.round(a * factor)),
+      alto: Math.max(1, Math.round(b * factor))
+    };
+  }
+
+  /* `imageOrientation: 'from-image'` no es un adorno: sin él, una foto hecha
+     con el móvil de lado —que lleva su orientación en los metadatos EXIF y no
+     en los píxeles— se sube tumbada, y el panel no tiene ninguna pantalla
+     donde girarla. Con él, el mapa de bits llega ya derecho y el canvas
+     escribe lo que se ve. */
+  function reducir(archivo, cota, alTerminar) {
+    var listo = false;
+    function terminar(blob, error) {
+      if (listo) return;
+      listo = true;
+      alTerminar(blob, error);
+    }
+
+    /* Lo que se le enseña al estudio lo escribimos nosotros, igual que en
+       borrador.js: `e.message` aquí es del motor y en inglés. El detalle
+       técnico se queda en el registro, que es donde sirve. */
+    function fallar(que, e) {
+      console.error('Imagenes: ' + que + (e && e.message ? ': ' + e.message : ''));
+      terminar(null, 'no se ha podido leer «' + (archivo.name || 'la imagen')
+        + '»: puede que no sea una imagen o que esté dañada');
+    }
+
+    var promesa;
+    try {
+      promesa = createImageBitmap(archivo, { imageOrientation: 'from-image' });
+    } catch (e) {
+      return fallar('createImageBitmap lanzó al llamarla', e);
+    }
+
+    promesa.then(function (mapa) {
+      var medida = caber(mapa.width, mapa.height, cota);
+      var lienzo = document.createElement('canvas');
+      lienzo.width = medida.ancho;
+      lienzo.height = medida.alto;
+      lienzo.getContext('2d').drawImage(mapa, 0, 0, medida.ancho, medida.alto);
+      /* close() libera el mapa de bits en cuanto está dibujado. Subir treinta
+         fotos de 50 MB sin soltarlos deja al navegador quedándose sin memoria
+         a la mitad, y eso se ve como una subida que se para sin decir nada. */
+      if (mapa.close) mapa.close();
+      lienzo.toBlob(function (blob) {
+        if (!blob) return fallar('toBlob devolvió null', null);
+        terminar(blob, null);
+      }, 'image/jpeg', CALIDAD);
+    }, function (e) {
+      fallar('createImageBitmap rechazó', e);
+    });
+  }
+
+  return { MEDIDAS: MEDIDAS, CALIDAD: CALIDAD, caber: caber, reducir: reducir };
+})();
+```
+
+**Sobre `createImageBitmap` y ES5:** es una función del entorno, no sintaxis, así
+que no rompe la restricción. La soportan todos los navegadores que este proyecto
+contempla; el panel, además, lo usan dos personas con navegador actual.
+
+- [ ] **Paso 4: Comprueba que pasa**
+
+Arnés: las **doce** nuevas en verde (ocho síncronas y cuatro de la sección
+asíncrona).
+
+- [ ] **Paso 5: Commit**
+
+```bash
+git add panel/js/imagenes.js tests/
+git commit -m "Reducir la foto en el navegador a las tres medidas del script, sin deformarla"
+```
+
+---
+
+### Tarea 4: Subir las tres medidas
+
+**Archivos:**
+- Crear: `panel/js/subida.js`, `tests/pruebas-subida.js`
+- Modificar: `tests/test.html`
+
+**Interfaces:**
+- Produce: `window.Subida.sello()`, `Subida.nombre(id, archivo, sufijo, sello)`,
+  `Subida.subir(id, archivos, alProgreso, alTerminar)` →
+  `alTerminar({piezas, fallos})`.
+- Consume: `window.Imagenes`, `window.Identificador.desde`.
+
+**Por qué importa.** Es el criterio de aceptación 10: si una subida de varias
+falla, las demás se completan y el panel dice cuál falló. Y es donde vive el
+sello del nombre, que es lo que impide el 409 del Worker.
+
+**Cómo se prueba.** Este módulo habla por red, así que se prueba en el arnés del
+navegador **doblando `fetch` dentro del iframe** de `ArnesDom.conDocumento`, no
+con Node. Doblar `fetch` y no `Subida` entera es el mismo criterio que usa
+`pruebas-panel.js`: se dobla lo que sale de la aplicación, no sus propias piezas.
+
+- [ ] **Paso 1: Las pruebas que fallan**
+
+Crea `tests/pruebas-subida.js`:
+
+```js
+describe('Subida.nombre', function () {
+  prueba('junta id, archivo saneado, sello y medida', function () {
+    igual(Subida.nombre('bruma', { name: 'Portada Final.JPG' }, '3000', 'm8q3x1'),
+          'bruma-portada-final-m8q3x1-3000.jpg');
+  });
+
+  /* El nombre viaja a R2 como llave, y `nombreSeguro` del Worker lo volvería
+     a sanear. Se sanea aquí para que lo que el panel cree haber subido y lo
+     que R2 guarde sean la misma cadena: si no, la url que el panel se apunta
+     en la pieza no sería la que responde. */
+  prueba('los acentos y los espacios no llegan a R2', function () {
+    igual(Subida.nombre('bruma', { name: 'Sesión de Otoño.jpeg' }, '250', 'ab12'),
+          'bruma-sesion-de-otono-ab12-250.jpg');
+  });
+
+  /* Sin nombre utilizable queda un hueco entre guiones; «foto» lo llena para
+     que la llave no acabe con dos guiones seguidos y siga siendo legible al
+     mirar el bucket. */
+  prueba('un archivo sin nombre aprovechable se llama foto', function () {
+    igual(Subida.nombre('bruma', { name: '¿?.jpg' }, '3000', 'ab12'),
+          'bruma-foto-ab12-3000.jpg');
+    igual(Subida.nombre('bruma', {}, '3000', 'ab12'), 'bruma-foto-ab12-3000.jpg');
+  });
+
+  /* El Worker rechaza con 400 los nombres de más de 200 caracteres. Un
+     nombre de archivo largo es normal al exportar por lotes, y morir en un
+     400 opaco por eso sería desconcertante. */
+  prueba('un nombre larguísimo se recorta', function () {
+    var largo = { name: new Array(400).join('a') + '.jpg' };
+    cierto(Subida.nombre('bruma', largo, '3000', 'ab12').length <= 200);
+  });
+});
+
+describe('Subida.sello', function () {
+  prueba('es corto y sólo lleva letras y números', function () {
+    var s = Subida.sello();
+    cierto(/^[a-z0-9]+$/.test(s), 'el sello era «' + s + '»');
+    cierto(s.length <= 16);
+  });
+
+  /* No es criptográfico ni falta: sólo tiene que evitar que dos subidas del
+     mismo estudio choquen. Mil seguidos sin repetir es de sobra para eso. */
+  prueba('mil seguidos no se repiten', function () {
+    var vistos = {}, i, s;
+    for (i = 0; i < 1000; i++) {
+      s = Subida.sello();
+      cierto(!vistos[s], 'el sello «' + s + '» salió dos veces');
+      vistos[s] = true;
+    }
+  });
+});
+
+/* `subir` habla por red, así que se carga dentro de un iframe con `fetch`
+   doblado. Se dobla `fetch` y no `Imagenes`: probar la subida contra un doble
+   de nuestra propia reducción comprobaría el doble. */
+describeAsync('Subida.subir', function () {
+  var MODULOS = ['../panel/js/identificador.js', '../panel/js/imagenes.js',
+                 '../panel/js/subida.js'];
+
+  /* 4x2 rojo, el mismo de pruebas-imagenes.js. */
+  var PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAAEElEQVR4nGP4z8AARwzIHABvqgf5gNwAKAAAAABJRU5ErkJggg==';
+
+  function unaFoto(nombre) {
+    return fetch(PNG).then(function (r) { return r.blob(); }).then(function (b) {
+      /* Un Blob con `name` encima, en vez de un File: el constructor de File
+         no está en todos los navegadores donde sí está Blob, y a `subir` sólo
+         le hace falta el nombre. */
+      b.name = nombre;
+      return b;
+    });
+  }
+
+  /* El doble de fetch. Apunta lo que se le pide y contesta lo que la prueba
+     diga; por omisión, 200 con la url que el Worker devolvería. */
+  function redFalsa(respuestas) {
+    var llamadas = [];
+    function doble(url) {
+      var nombre = new URL(url, 'https://x/').searchParams.get('nombre');
+      llamadas.push(nombre);
+      var r = (respuestas || {})[llamadas.length] || { estado: 200 };
+      if (r.corte) return Promise.reject(new TypeError('Failed to fetch'));
+      return Promise.resolve({
+        status: r.estado,
+        text: function () {
+          return Promise.resolve(JSON.stringify(
+            r.estado === 200 ? { url: '/img/' + nombre } : { error: r.error || 'no' }));
+        }
+      });
+    }
+    doble.llamadas = llamadas;
+    return doble;
+  }
+
+  function conRed(doble, fn) {
+    return ArnesDom.conDocumento({ scripts: MODULOS, globales: { fetch: doble } },
+      function (w) { return fn(w); });
+  }
+
+  function subir(w, archivos) {
+    return new Promise(function (ok) {
+      w.Subida.subir('bruma', archivos, function () {}, ok);
+    });
+  }
+
+  return unaFoto('a.jpg').then(function (foto) {
+    var red = redFalsa();
+    return conRed(red, function (w) {
+      return subir(w, [foto]).then(function (r) {
+        prueba('una foto son tres subidas: portada, pieza y miniatura', function () {
+          igual(red.llamadas.length, 3);
+        });
+
+        prueba('la pieza apunta a las tres urls', function () {
+          igual(r.piezas.length, 1);
+          cierto(/-3000\.jpg$/.test(r.piezas[0].url), r.piezas[0].url);
+          cierto(/-250\.jpg$/.test(r.piezas[0].miniatura), r.piezas[0].miniatura);
+          cierto(/-1500\.jpg$/.test(r.piezas[0].portada), r.piezas[0].portada);
+        });
+
+        /* Las tres medidas de una misma foto comparten sello: si no, no se
+           podría saber mirando el bucket qué tres archivos son la misma
+           fotografía. */
+        prueba('las tres medidas comparten sello', function () {
+          var sellos = red.llamadas.map(function (n) {
+            return n.replace(/-(?:1500|3000|250)\.jpg$/, '');
+          });
+          igual(sellos[0], sellos[1]);
+          igual(sellos[1], sellos[2]);
+        });
+
+        prueba('sin fallos, la lista de fallos viene vacía', function () {
+          igual(r.fallos, []);
+        });
+      });
+    });
+  }).then(function () {
+    return Promise.all([unaFoto('a.jpg'), unaFoto('b.jpg')]);
+  }).then(function (fotos) {
+    /* La cuarta llamada es la primera medida de la segunda foto. Criterio de
+       aceptación 10: la primera se completa y el panel dice cuál falló. */
+    var red = redFalsa({ 4: { estado: 413, error: 'la imagen supera el tamaño máximo de 5 MB' } });
+    return conRed(red, function (w) {
+      return subir(w, fotos).then(function (r) {
+        prueba('una subida que falla no arrastra a las demás', function () {
+          igual(r.piezas.length, 1);
+          igual(r.fallos.length, 1);
+        });
+
+        prueba('el fallo dice de qué archivo es y por qué', function () {
+          igual(r.fallos[0].archivo, 'b.jpg');
+          cierto(r.fallos[0].motivo.indexOf('5 MB') !== -1, r.fallos[0].motivo);
+        });
+
+        /* Una foto a medias no se apunta: si la pieza entrara con dos de sus
+           tres urls, la galería o el visor pedirían un archivo que no está. */
+        prueba('de la foto que falló no queda ninguna pieza', function () {
+          cierto(r.piezas[0].url.indexOf('-a-') !== -1, r.piezas[0].url);
+        });
+      });
+    });
+  }).then(function () {
+    return unaFoto('a.jpg');
+  }).then(function (foto) {
+    /* El 409 del Worker es «esa llave ya existe». La salida es otro sello, no
+       rendirse: el Worker nunca pisa, así que el panel tiene que apartarse. */
+    var red = redFalsa({ 1: { estado: 409, error: 'ya hay una imagen guardada' } });
+    return conRed(red, function (w) {
+      return subir(w, [foto]).then(function (r) {
+        prueba('un 409 se reintenta con otro sello y acaba entrando', function () {
+          igual(r.fallos, []);
+          igual(r.piezas.length, 1);
+          cierto(red.llamadas.length === 4, 'llamadas: ' + red.llamadas.length);
+          cierto(red.llamadas[0] !== red.llamadas[1], 'el sello no cambió');
+        });
+      });
+    });
+  }).then(function () {
+    return unaFoto('a.jpg');
+  }).then(function (foto) {
+    var red = redFalsa({ 1: { corte: true } });
+    return conRed(red, function (w) {
+      return subir(w, [foto]).then(function (r) {
+        /* La red caída y la sesión caducada son indistinguibles desde aquí,
+           igual que en borrador.js: lo que llega es el mismo TypeError. El
+           mensaje nombra las dos y pone primero la acción que arregla la
+           frecuente. */
+        prueba('la red caída sale como fallo en castellano, no como excepción', function () {
+          igual(r.piezas, []);
+          igual(r.fallos.length, 1);
+          cierto(r.fallos[0].motivo.indexOf('sesión') !== -1, r.fallos[0].motivo);
+        });
+      });
+    });
+  });
+});
+```
+
+Añade a `tests/test.html`:
+
+```html
+<script src="../panel/js/subida.js"></script>
+```
+```html
+<script src="pruebas-subida.js"></script>
+```
+
+- [ ] **Paso 2: Comprueba que falla**
+
+Esperado: `Subida is not defined`.
+
+- [ ] **Paso 3: Escribe `panel/js/subida.js`**
+
+```js
+/* Sube una fotografía en sus tres medidas. Reducir es de `imagenes.js`; aquí
+   está el nombre que va a R2, el orden de las subidas y qué se hace cuando una
+   falla. */
+window.Subida = (function () {
+  var RUTA = '/api/imagen';
+  /* El Worker rechaza con 400 los nombres de más de 200 caracteres, y el
+     nombre del archivo es sólo una parte de la llave. Este tope deja sitio de
+     sobra para el id, el sello y el sufijo. */
+  var TOPE_ARCHIVO = 120;
+  /* Un 409 es «esa llave ya existe». Dos intentos más con sello nuevo es de
+     sobra —el sello lleva la hora dentro— y pone un final a la recursión. */
+  var REINTENTOS = 2;
+
+  /* Un contador que sólo sube. Es lo que garantiza que dos sellos de ESTA
+     página nunca sean iguales, y hace falta: la hora sola no basta —treinta
+     fotos seguidas caen en el mismo milisegundo— y el azar solo tampoco.
+     La primera versión de esto era hora + dos caracteres de azar, y la prueba
+     de los mil sellos la tumbó en el acto: con 1296 valores posibles, mil
+     sellos del mismo milisegundo colisionan casi seguro. */
+  var siguiente = 0;
+
+  /* No es criptográfico ni falta: sólo tiene que evitar que dos subidas
+     choquen en la misma llave. El contador separa las de esta página, la hora
+     separa dos cargas de la página, y el azar separa dos pestañas abiertas a
+     la vez —que comparten hora y empiezan las dos a contar desde cero—. */
+  function sello() {
+    siguiente += 1;
+    return Date.now().toString(36) + siguiente.toString(36)
+      + Math.floor(Math.random() * 1296).toString(36);
+  }
+
+  function sinExtension(nombre) {
+    var punto = String(nombre).lastIndexOf('.');
+    return punto <= 0 ? String(nombre) : String(nombre).slice(0, punto);
+  }
+
+  /* Se sanea aquí, con el mismo `Identificador.desde` que saca el id de un
+     título, para que lo que el panel cree haber subido y lo que R2 guarde sean
+     la misma cadena. El Worker vuelve a sanear por su cuenta —no se fía del
+     cliente, y hace bien—, pero si el panel mandara algo que el Worker
+     transforma, la url que se apunta en la pieza no sería la que responde. */
+  function nombre(id, archivo, sufijo, elSello) {
+    var base = window.Identificador.desde(sinExtension((archivo && archivo.name) || ''));
+    if (!base) base = 'foto';
+    if (base.length > TOPE_ARCHIVO) base = base.slice(0, TOPE_ARCHIVO).replace(/-+$/, '');
+    return id + '-' + base + '-' + elSello + '-' + sufijo + '.jpg';
+  }
+
+  /* Mismo reparto que borrador.js: mensaje nuestro y en castellano para quien
+     sube, detalle del motor en el registro. Y la misma advertencia — la sesión
+     caducada y la red caída llegan aquí como el MISMO TypeError, porque Access
+     redirige a otro origen y el navegador corta la redirección sin CORS. Por
+     eso el mensaje nombra las dos y pone primero la que se arregla. */
+  var SIN_RED = 'no se pudo contactar con el servidor. Puede que la sesión haya '
+              + 'caducado: vuelve a entrar en otra pestaña. Si sigue igual, revisa la conexión';
+
+  function mandar(llave, blob) {
+    return fetch(RUTA + '?nombre=' + encodeURIComponent(llave), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'image/jpeg' },
+      body: blob
+    }).then(function (r) {
+      return r.text().then(function (texto) {
+        var cuerpo;
+        try {
+          cuerpo = JSON.parse(texto);
+        } catch (e) {
+          console.error('Subida: el servidor respondió ' + r.status
+            + ' con algo que no es JSON: ' + String(texto).slice(0, 200));
+          throw { estado: r.status, motivo: 'la sesión ha caducado: vuelve a entrar' };
+        }
+        if (r.status === 200) return cuerpo.url;
+        throw { estado: r.status, motivo: cuerpo.error || ('el servidor respondió ' + r.status) };
+      });
+    }, function (e) {
+      console.error('Subida: la petición no llegó a completarse: ' + (e && e.message));
+      throw { estado: 0, motivo: SIN_RED };
+    });
+  }
+
+  /* Las tres medidas de una foto se suben con el MISMO sello: así, mirando el
+     bucket, se sabe qué tres archivos son la misma fotografía. Un 409 en
+     cualquiera de las tres reintenta las tres con sello nuevo, y no sólo la
+     que chocó, justamente para no romper eso. */
+  function unaFoto(id, archivo, elSello, quedan) {
+    var urls = {};
+    var cadena = window.Imagenes.MEDIDAS.reduce(function (antes, medida) {
+      return antes.then(function () {
+        return new Promise(function (ok, mal) {
+          window.Imagenes.reducir(archivo, medida.cota, function (blob, error) {
+            if (error) return mal({ estado: 0, motivo: error });
+            ok(blob);
+          });
+        });
+      }).then(function (blob) {
+        return mandar(nombre(id, archivo, medida.sufijo, elSello), blob);
+      }).then(function (url) {
+        urls[medida.nombre] = url;
+      });
+    }, Promise.resolve());
+
+    return cadena.then(function () {
+      return { url: urls.pieza, miniatura: urls.miniatura, portada: urls.portada };
+    }, function (fallo) {
+      /* El Worker nunca pisa una llave que ya existe: contesta 409. La salida
+         no es rendirse sino apartarse, que es para lo que existe el sello. */
+      if (fallo && fallo.estado === 409 && quedan > 0) {
+        return unaFoto(id, archivo, sello(), quedan - 1);
+      }
+      throw fallo;
+    });
+  }
+
+  /* Una a una y no todas a la vez: treinta fotos en paralelo son treinta
+     mapas de bits de 50 MB descodificados a la vez, y el navegador se queda
+     sin memoria a la mitad. En serie, cada una se libera antes de la
+     siguiente. La contrapartida es que tarda más, y por eso hay `alProgreso`.
+
+     Criterio de aceptación 10: una que falla no arrastra a las demás. */
+  function subir(id, archivos, alProgreso, alTerminar) {
+    var lista = Array.prototype.slice.call(archivos || []);
+    var piezas = [];
+    var fallos = [];
+
+    lista.reduce(function (antes, archivo, i) {
+      return antes.then(function () {
+        alProgreso({ hecho: i, total: lista.length, archivo: archivo.name || '' });
+        return unaFoto(id, archivo, sello(), REINTENTOS).then(function (pieza) {
+          piezas.push(pieza);
+        }, function (fallo) {
+          /* De una foto a medias no se apunta nada: una pieza con dos de sus
+             tres urls haría que la galería o el visor pidieran un archivo que
+             no está en el bucket. */
+          fallos.push({ archivo: archivo.name || 'una foto',
+                        motivo: (fallo && fallo.motivo) || 'no se pudo subir' });
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      alProgreso({ hecho: lista.length, total: lista.length, archivo: '' });
+      alTerminar({ piezas: piezas, fallos: fallos });
+    });
+  }
+
+  return { subir: subir, nombre: nombre, sello: sello, RUTA: RUTA };
+})();
+```
+
+- [ ] **Paso 4: Comprueba que pasa**
+
+Arnés: las **quince** nuevas en verde (seis síncronas y nueve de la sección
+asíncrona). Esta sección **necesita servidor**: `conDocumento` carga scripts en
+un iframe.
+
+- [ ] **Paso 5: Commit**
+
+```bash
+git add panel/js/subida.js tests/
+git commit -m "Subir las tres medidas con sello propio, y que una que falla no arrastre a las demás"
+```
+
+---
+
+### Tarea 5: `enfocarTrasRepintar` se muda a `Lista.enfocar`
+
+**Archivos:**
+- Modificar: `panel/js/lista.js`, `panel/js/panel.js`, `tests/pruebas-lista.js`
+
+**Interfaces:**
+- Produce: `window.Lista.enfocar(contenedor, foco)`.
+- Consume: nada.
+
+**Por qué esta tarea existe.** `panel.js` va por 209 líneas de 300, y las tareas
+7 y 8 le añaden el arranque de tres pantallas. `enfocarTrasRepintar` son 17
+líneas que además **no son del arranque**: saben del marcado de una fila
+—`[data-id]`, `[data-accion]`—, que es cosa de `lista.js`. Están en `panel.js`
+por cómo creció el 3b, no porque sea su sitio.
+
+Se mueve **antes** de que haga falta, no después: mudar código con el archivo ya
+desbordado obliga a hacer dos cosas a la vez y a no saber cuál rompió qué.
+
+Es una mudanza, no un cambio: el comportamiento tiene que quedar idéntico, y las
+28 pruebas de `pruebas-panel.js` que lo ejercitan a través del panel son las que
+lo comprueban. No se tocan.
+
+- [ ] **Paso 1: La prueba que falla**
+
+Añade a `tests/pruebas-lista.js`, en una sección nueva:
+
+```js
+/* `enfocar` vivía en panel.js hasta el bloque 3c. Se muda aquí porque sabe del
+   marcado de una fila —[data-id], [data-accion]—, que es de este archivo, y
+   porque panel.js necesita el sitio para el arranque de tres pantallas.
+   Estas pruebas son nuevas: antes sólo se ejercitaba a través del panel
+   entero, en pruebas-panel.js, que sigue comprobando lo mismo desde fuera. */
+describe('Lista.enfocar', function () {
+  var HTML =
+    '<ol>' +
+    '<li data-id="uno"><button data-accion="subir" disabled>↑</button>' +
+    '<button data-accion="bajar">↓</button><button data-accion="borrar">Borrar</button></li>' +
+    '<li data-id="dos"><button data-accion="subir">↑</button>' +
+    '<button data-accion="bajar" disabled>↓</button><button data-accion="borrar">Borrar</button></li>' +
+    '</ol>';
+
+  function conLista(fn) {
+    return ArnesDom.conElemento(HTML, function (ol) { return fn(ol); });
+  }
+
+  prueba('sin foco no mueve nada', function () {
+    conLista(function (ol) {
+      Lista.enfocar(ol, null);
+      igual(document.activeElement.tagName, 'BODY');
+    });
+  });
+
+  prueba('enfoca el botón que se le pide', function () {
+    conLista(function (ol) {
+      Lista.enfocar(ol, { id: 'uno', accion: 'borrar' });
+      igual(document.activeElement.dataset.accion, 'borrar');
+    });
+  });
+
+  /* El botón que se acaba de pulsar suele quedar deshabilitado justo después
+     —subir en la primera fila, bajar en la última—, y el foco iría a <body>.
+     El otro botón de la misma fila sigue siendo útil y está al lado. */
+  prueba('si el botón quedó deshabilitado, usa el otro de la fila', function () {
+    conLista(function (ol) {
+      Lista.enfocar(ol, { id: 'uno', accion: 'subir' });
+      igual(document.activeElement.dataset.accion, 'bajar');
+    });
+  });
+
+  prueba('una fila que ya no existe no revienta', function () {
+    conLista(function (ol) {
+      Lista.enfocar(ol, { id: 'fantasma', accion: 'subir' });
+      igual(document.activeElement.tagName, 'BODY');
+    });
+  });
+});
+```
+
+Y una sección más para lo que `panel.js` conserva:
+
+```js
+/* `{titulo: true}` NO se muda: es del formulario del panel, no de la lista, y
+   `enfocar` no tiene por qué saber que existe un campo de título. panel.js lo
+   resuelve antes de llamar. Se comprueba desde fuera en pruebas-panel.js, con
+   la prueba «el foco va al título cuando la lista se queda vacía». */
+```
+
+- [ ] **Paso 2: Comprueba que falla**
+
+Esperado: `Lista.enfocar is not a function`.
+
+- [ ] **Paso 3: Muda el código**
+
+En `panel/js/lista.js`, añade antes de `pintar`:
+
+```js
+  /* Tras un repintado los nodos del <ol> son todos nuevos —`pintar` hace
+     innerHTML = '' y reconstruye—, así que el elemento que tenía el foco ya no
+     existe y el navegador lo manda a <body>. Lo único que sobrevive es el `id`
+     del proyecto, así que es lo que se usa para saber dónde debe volver.
+
+     `foco` es `{ id, accion }`, con accion 'subir' | 'bajar' | 'borrar'. Si ese
+     botón ha quedado deshabilitado por llegar al extremo —subir en la primera
+     fila, bajar en la última—, se usa el otro de la misma fila, que sigue
+     siendo útil.
+
+     Vivía en panel.js hasta el bloque 3c. Se mudó aquí porque lo que sabe es
+     el marcado de una fila, que lo escribe este archivo, y porque panel.js
+     necesitaba el sitio. */
+  function enfocar(contenedor, foco) {
+    if (!foco || !foco.id) return;
+    var fila = contenedor.querySelector('[data-id="' + foco.id + '"]');
+    if (!fila) return;
+    var boton = fila.querySelector('[data-accion="' + foco.accion + '"]');
+    if (boton && !boton.disabled) {
+      boton.focus();
+      return;
+    }
+    var otraAccion = foco.accion === 'subir' ? 'bajar' : 'subir';
+    var alternativo = fila.querySelector('[data-accion="' + otraAccion + '"]');
+    if (alternativo) alternativo.focus();
+  }
+```
+
+Añádela al objeto que devuelve el módulo:
+
+```js
+  return { pintar: pintar, enfocar: enfocar, ETIQUETAS: ETIQUETAS,
+           indiceValido: indiceValido, calcularHasta: calcularHasta,
+           dentroDeLaCaja: dentroDeLaCaja };
+```
+
+En `panel/js/panel.js`, borra `enfocarTrasRepintar` entera y déjala en:
+
+```js
+  /* El caso del título se resuelve aquí y no en Lista.enfocar: es del
+     formulario de este archivo, y la lista no tiene por qué saber que existe
+     un campo de título. Lo demás es de la lista y vive con ella. */
+  function enfocarTrasRepintar(foco) {
+    if (!foco) return;
+    if (foco.titulo) {
+      elTitulo.focus();
+      return;
+    }
+    window.Lista.enfocar(elLista, foco);
+  }
+```
+
+- [ ] **Paso 4: Comprueba que pasa**
+
+Arnés: las **cuatro** nuevas en verde y, sobre todo, **las 21 de
+`pruebas-panel.js` intactas**. Si alguna de ésas cae, la mudanza cambió algo:
+vuelve atrás antes de seguir.
+
+Comprueba también el recuento de líneas:
+
+```bash
+wc -l panel/js/lista.js panel/js/panel.js
+```
+
+Ninguno pasa de 300.
+
+- [ ] **Paso 5: Commit**
+
+```bash
+git add panel/js/lista.js panel/js/panel.js tests/
+git commit -m "Mudar el foco tras repintar a lista.js, que es quien sabe del marcado de una fila"
+```
+
+---
+
+### Tarea 6: La rejilla de fotos
 
 **Archivos:**
 - Crear: `panel/js/fotos.js`, `tests/pruebas-fotos.js`
 - Modificar: `tests/test.html`
 
 **Interfaces:**
-- Produce:
-  - `window.Fotos.pintar(contenedor, proyecto, acciones)` con
-    `acciones = {alMover(desde, hasta), alQuitar(indice), alMarcarPortada(indice)}`.
-  - `window.Fotos.enfocar(contenedor, indice, accion)` → `true` si encontró
-    un botón al que devolver el foco.
-- Consume: `Edicion.esPortada`.
+- Produce: `window.Fotos.pintar(contenedor, proyecto, acciones)` con
+  `acciones = { alMover, alQuitar, alMarcarPortada }`;
+  `window.Fotos.enfocar(contenedor, foco)`.
+- Consume: `window.Edicion.portadaDe`, `window.Edicion.indiceDePortada`,
+  `window.Lista.calcularHasta`, `window.Lista.indiceValido`.
 
-Cada foto lleva **cuatro botones** —adelantar, retrasar, portada, quitar— y
-ésos son el camino principal. Arrastrar es el atajo, con una regla más simple
-que la de la lista: **soltar sobre una foto la pone en su sitio** (la
-arrastrada pasa a ocupar ese índice y las demás se corren). En una rejilla que
-envuelve, «antes o después» por mitades no tiene una lectura clara.
+**Por qué reutiliza la aritmética de `lista.js`.** `calcularHasta` e
+`indiceValido` resuelven exactamente el mismo problema aquí: traducir «soltar
+sobre esta celda, antes o después» a un índice, y no dejar pasar un NaN a
+`Orden.mover`. Están expuestas desde el 3b **para poder probarlas**, y
+escribirlas otra vez sería tener dos aritméticas que se separan.
+
+Lo que sí cambia es la geometría: la lista es vertical y decide por la mitad de
+alto; la rejilla es bidimensional y decide por la mitad de **ancho**.
+
+**Accesibilidad.** Cada foto lleva sus cuatro botones —anterior, siguiente,
+portada, quitar—, y el arrastre es el atajo. Criterio de aceptación 6.
 
 - [ ] **Paso 1: Las pruebas que fallan**
 
@@ -1196,162 +1526,173 @@ Crea `tests/pruebas-fotos.js`:
 ```js
 describe('Fotos.pintar', function () {
   function proyecto() {
-    return { id: 'bruma', portada: '/img/b-1500.jpg',
-             piezas: [{ url: '/img/a-3000.jpg', miniatura: '/img/a-250.jpg', portada: '/img/a-1500.jpg' },
-                      { url: '/img/b-3000.jpg', miniatura: '/img/b-250.jpg', portada: '/img/b-1500.jpg' },
-                      { url: '/img/c-3000.jpg', miniatura: '/img/c-250.jpg', portada: '/img/c-1500.jpg' }] };
+    return { id: 'bruma', portada: '/img/b-1500.jpg', piezas: [
+      { url: '/img/a-3000.jpg', miniatura: '/img/a-250.jpg', portada: '/img/a-1500.jpg' },
+      { url: '/img/b-3000.jpg', miniatura: '/img/b-250.jpg', portada: '/img/b-1500.jpg' },
+      { url: '/img/c-3000.jpg', miniatura: '/img/c-250.jpg', portada: '/img/c-1500.jpg' }
+    ] };
   }
-  function nada() { return { alMover: function () {}, alQuitar: function () {}, alMarcarPortada: function () {} }; }
-  function con(acciones, fn) {
+
+  function nada() { return { alMover: function () {}, alQuitar: function () {},
+                             alMarcarPortada: function () {} }; }
+
+  function conRejilla(fn, acciones) {
     return ArnesDom.conElemento('<ol></ol>', function (ol) {
       Fotos.pintar(ol, proyecto(), acciones || nada());
       return fn(ol);
     });
   }
 
-  prueba('pinta una tarjeta por pieza, con su miniatura y su índice', function () {
-    con(null, function (ol) {
-      var tarjetas = ol.querySelectorAll('li.foto');
-      igual(tarjetas.length, 3);
-      igual([].map.call(tarjetas, function (li) { return li.dataset.indice; }), ['0', '1', '2']);
-      igual(tarjetas[0].querySelector('img').getAttribute('src'), '/img/a-250.jpg');
+  prueba('una celda por pieza', function () {
+    conRejilla(function (ol) { igual(ol.children.length, 3); });
+  });
+
+  /* La miniatura y no la pieza: la rejilla enseña varias a la vez, y pedir
+     ahí los 3000 px costaría un megabyte por foto para verla a 120. Es el
+     mismo motivo por el que la tira del visor tiene su propia medida. */
+  prueba('cada celda enseña la miniatura, no la pieza', function () {
+    conRejilla(function (ol) {
+      igual(ol.querySelector('img').getAttribute('src'), '/img/a-250.jpg');
     });
   });
 
-  prueba('la portada se distingue y su botón está pulsado', function () {
-    con(null, function (ol) {
-      var tarjetas = ol.querySelectorAll('li.foto');
-      igual([].map.call(tarjetas, function (li) { return li.classList.contains('foto--portada'); }), [false, true, false]);
-      igual([].map.call(tarjetas, function (li) { return li.querySelector('[data-accion="portada"]').getAttribute('aria-pressed'); }),
-            ['false', 'true', 'false']);
+  /* Sin texto alternativo, un lector de pantalla lee la url. Con el número,
+     al menos se sabe cuál de las tres es. */
+  prueba('cada imagen dice qué número de foto es', function () {
+    conRejilla(function (ol) {
+      igual(ol.querySelector('img').getAttribute('alt'), 'Foto 1 de 3');
     });
   });
 
-  prueba('adelantar está deshabilitado en la primera y retrasar en la última', function () {
-    con(null, function (ol) {
-      var t = ol.querySelectorAll('li.foto');
-      igual([t[0].querySelector('[data-accion="antes"]').disabled, t[2].querySelector('[data-accion="despues"]').disabled], [true, true]);
-      igual([t[1].querySelector('[data-accion="antes"]').disabled, t[1].querySelector('[data-accion="despues"]').disabled], [false, false]);
+  prueba('la celda de la portada se marca', function () {
+    conRejilla(function (ol) {
+      igual(ol.children[1].classList.contains('celda--portada'), true);
+      igual(ol.children[0].classList.contains('celda--portada'), false);
     });
   });
 
-  prueba('los botones se anuncian con el número de la foto', function () {
-    con(null, function (ol) {
-      var t = ol.querySelectorAll('li.foto')[1];
-      igual(t.querySelector('[data-accion="quitar"]').getAttribute('aria-label'), 'Quitar la foto 2');
-      igual(t.querySelector('img').getAttribute('alt'), 'Foto 2, portada');
+  /* Criterio de aceptación 6: todo lo que se hace arrastrando se hace con
+     teclado. Cuatro botones por celda, y todos con etiqueta. */
+  prueba('cada celda trae sus cuatro botones', function () {
+    conRejilla(function (ol) {
+      var acciones = Array.prototype.map.call(
+        ol.children[0].querySelectorAll('button'),
+        function (b) { return b.dataset.accion; });
+      igual(acciones, ['anterior', 'siguiente', 'portada', 'quitar']);
     });
   });
 
-  prueba('pulsar los botones pide la acción con el índice correcto', function () {
-    var visto = [];
-    var acciones = { alMover: function (d, h) { visto.push('mover ' + d + '>' + h); },
-                     alQuitar: function (i) { visto.push('quitar ' + i); },
-                     alMarcarPortada: function (i) { visto.push('portada ' + i); } };
-    con(acciones, function (ol) {
-      var t = ol.querySelectorAll('li.foto')[1];
-      t.querySelector('[data-accion="antes"]').click();
-      t.querySelector('[data-accion="despues"]').click();
-      t.querySelector('[data-accion="quitar"]').click();
-      ol.querySelectorAll('li.foto')[2].querySelector('[data-accion="portada"]').click();
+  prueba('los botones dicen de qué foto son', function () {
+    conRejilla(function (ol) {
+      igual(ol.children[0].querySelector('[data-accion="quitar"]')
+        .getAttribute('aria-label'), 'Quitar la foto 1');
     });
-    igual(visto, ['mover 1>0', 'mover 1>2', 'quitar 1', 'portada 2']);
   });
 
-  /* Un DataTransfer de mentira con lo justo, como en pruebas-lista-pintar. */
-  function arrastrar(li, tipo) {
-    var e = new Event(tipo, { bubbles: true, cancelable: true });
-    e.dataTransfer = { effectAllowed: '', dropEffect: '', setData: function () {} };
-    li.dispatchEvent(e);
-  }
-
-  prueba('soltar sobre otra foto pide moverla a ESE índice', function () {
-    var visto = [];
-    var acciones = nada(); acciones.alMover = function (d, h) { visto.push([d, h]); };
-    con(acciones, function (ol) {
-      var t = ol.querySelectorAll('li.foto');
-      arrastrar(t[0], 'dragstart'); arrastrar(t[2], 'drop');
-      arrastrar(t[2], 'dragstart'); arrastrar(t[0], 'drop');
+  prueba('la primera no puede ir hacia atrás y la última hacia delante', function () {
+    conRejilla(function (ol) {
+      igual(ol.children[0].querySelector('[data-accion="anterior"]').disabled, true);
+      igual(ol.children[2].querySelector('[data-accion="siguiente"]').disabled, true);
+      igual(ol.children[1].querySelector('[data-accion="anterior"]').disabled, false);
     });
-    igual(visto, [[0, 2], [2, 0]]);
   });
 
-  prueba('soltar sobre sí misma no mueve nada', function () {
-    var visto = [];
-    var acciones = nada(); acciones.alMover = function (d, h) { visto.push([d, h]); };
-    con(acciones, function (ol) {
-      var t = ol.querySelectorAll('li.foto');
-      arrastrar(t[1], 'dragstart'); arrastrar(t[1], 'drop');
+  /* Marcar como portada la que ya lo es no hace nada, y un botón que no hace
+     nada tiene que decirlo antes de que lo pulsen. */
+  prueba('la portada no se puede volver a marcar', function () {
+    conRejilla(function (ol) {
+      igual(ol.children[1].querySelector('[data-accion="portada"]').disabled, true);
+      igual(ol.children[0].querySelector('[data-accion="portada"]').disabled, false);
     });
-    igual(visto, []);
   });
 
-  prueba('repintar reemplaza las tarjetas, no las acumula', function () {
-    con(null, function (ol) {
+  prueba('los botones de mover llaman con los dos índices', function () {
+    var movidos = [];
+    conRejilla(function (ol) {
+      ol.children[1].querySelector('[data-accion="siguiente"]').click();
+      igual(movidos, [[1, 2]]);
+    }, { alMover: function (d, h) { movidos.push([d, h]); },
+         alQuitar: function () {}, alMarcarPortada: function () {} });
+  });
+
+  prueba('quitar llama con el índice', function () {
+    var quitados = [];
+    conRejilla(function (ol) {
+      ol.children[2].querySelector('[data-accion="quitar"]').click();
+      igual(quitados, [2]);
+    }, { alMover: function () {}, alQuitar: function (i) { quitados.push(i); },
+         alMarcarPortada: function () {} });
+  });
+
+  prueba('marcar portada llama con el índice', function () {
+    var marcados = [];
+    conRejilla(function (ol) {
+      ol.children[0].querySelector('[data-accion="portada"]').click();
+      igual(marcados, [0]);
+    }, { alMover: function () {}, alQuitar: function () {},
+         alMarcarPortada: function (i) { marcados.push(i); } });
+  });
+
+  prueba('repintar no apila celdas', function () {
+    ArnesDom.conElemento('<ol></ol>', function (ol) {
       Fotos.pintar(ol, proyecto(), nada());
-      igual(ol.querySelectorAll('li.foto').length, 3);
+      Fotos.pintar(ol, proyecto(), nada());
+      igual(ol.children.length, 3);
+    });
+  });
+
+  prueba('un proyecto sin fotos deja la rejilla vacía', function () {
+    ArnesDom.conElemento('<ol></ol>', function (ol) {
+      Fotos.pintar(ol, { id: 'x', portada: null, piezas: [] }, nada());
+      igual(ol.children.length, 0);
     });
   });
 });
 
 describe('Fotos.enfocar', function () {
-  function proyecto() {
-    return { id: 'x', portada: '/img/a-1500.jpg',
-             piezas: [{ url: '/img/a-3000.jpg', portada: '/img/a-1500.jpg' }, { url: '/img/b-3000.jpg', portada: '/img/b-1500.jpg' }] };
-  }
-  function nada() { return { alMover: function () {}, alQuitar: function () {}, alMarcarPortada: function () {} }; }
-  function con(fn) {
-    return ArnesDom.conElemento('<ol></ol>', function (ol) {
-      Fotos.pintar(ol, proyecto(), nada());
-      return fn(ol);
-    });
-  }
+  /* El mismo problema que Lista.enfocar y por el mismo motivo: tras repintar,
+     los nodos son nuevos. Aquí el ancla es el índice y no el id, porque una
+     foto no tiene id — y el índice es justamente lo que cambia al mover, así
+     que quien llama pasa el índice de DESPUÉS del movimiento. */
+  var HTML =
+    '<ol><li data-indice="0"><button data-accion="anterior" disabled>‹</button>' +
+    '<button data-accion="siguiente">›</button></li>' +
+    '<li data-indice="1"><button data-accion="anterior">‹</button>' +
+    '<button data-accion="siguiente" disabled>›</button></li></ol>';
 
-  prueba('devuelve el foco al botón pedido de esa tarjeta', function () {
-    con(function (ol) {
-      cierto(Fotos.enfocar(ol, 1, 'quitar'));
-      igual(document.activeElement.dataset.accion, 'quitar');
-      igual(document.activeElement.closest('li.foto').dataset.indice, '1');
+  prueba('enfoca el botón de la celda que se le pide', function () {
+    ArnesDom.conElemento(HTML, function (ol) {
+      Fotos.enfocar(ol, { indice: 1, accion: 'anterior' });
+      igual(document.activeElement.dataset.accion, 'anterior');
     });
   });
 
-  /* El mismo borde que en la lista: al llegar al extremo, el botón que se
-     acaba de pulsar queda deshabilitado y no puede recibir el foco. */
-  prueba('si ese botón quedó deshabilitado, va al otro de mover', function () {
-    con(function (ol) {
-      cierto(Fotos.enfocar(ol, 0, 'antes'));
-      igual(document.activeElement.dataset.accion, 'despues');
+  prueba('si quedó deshabilitado, usa el contrario de la misma celda', function () {
+    ArnesDom.conElemento(HTML, function (ol) {
+      Fotos.enfocar(ol, { indice: 0, accion: 'anterior' });
+      igual(document.activeElement.dataset.accion, 'siguiente');
     });
   });
 
-  prueba('si la tarjeta ya no existe, va a la última que quede', function () {
-    con(function (ol) {
-      cierto(Fotos.enfocar(ol, 5, 'quitar'));
-      igual(document.activeElement.closest('li.foto').dataset.indice, '1');
-    });
-  });
-
-  prueba('con la rejilla vacía dice que no encontró dónde', function () {
-    ArnesDom.conElemento('<ol></ol>', function (ol) {
-      cierto(!Fotos.enfocar(ol, 0, 'quitar'));
+  prueba('una celda que ya no existe no revienta', function () {
+    ArnesDom.conElemento(HTML, function (ol) {
+      Fotos.enfocar(ol, { indice: 9, accion: 'anterior' });
+      igual(document.activeElement.tagName, 'BODY');
     });
   });
 });
 ```
 
-En `tests/test.html`, tras `edicion.js`:
+Añade a `tests/test.html`:
 
 ```html
-<!-- fotos.js no toca el DOM al cargarse: sólo define window.Fotos. `pintar`
-     recibe su <ol> del arnés de DOM. Ver pruebas-fotos.js. -->
 <script src="../panel/js/fotos.js"></script>
 ```
-
-y tras `pruebas-edicion.js`:
-
 ```html
 <script src="pruebas-fotos.js"></script>
 ```
+
+`fotos.js` va después de `lista.js` y `edicion.js`: usa las dos.
 
 - [ ] **Paso 2: Comprueba que falla**
 
@@ -1360,98 +1701,113 @@ Esperado: `Fotos is not defined`.
 - [ ] **Paso 3: Escribe `panel/js/fotos.js`**
 
 ```js
-window.Fotos = (function () {
-  /* Estado del arrastre en curso: sólo hay uno, y `pintar` lo reinicia porque
-     los nodos viejos desaparecen con el innerHTML. */
-  var origen = null;
-  var marcada = null;
+/* La rejilla de fotos de un proyecto. La aritmética del arrastre —traducir
+   «soltar sobre esta celda, antes o después» a un índice, y no dejar pasar un
+   NaN a Orden.mover— se reutiliza de lista.js, que la expone justamente para
+   poder probarla. Escribirla otra vez serían dos aritméticas que se separan.
 
-  function indice(li) {
-    var n = parseInt(li.dataset.indice, 10);
-    return isNaN(n) ? null : n;
-  }
+   Lo que sí es distinto es la geometría: la lista es vertical y decide por la
+   mitad de ALTO; la rejilla es bidimensional y decide por la mitad de ANCHO. */
+window.Fotos = (function () {
+  var origenArrastre = null;
+  var celdaMarcada = null;
 
   function desmarcar() {
-    if (marcada) { marcada.classList.remove('foto--destino'); marcada = null; }
+    if (celdaMarcada) {
+      celdaMarcada.classList.remove('celda--marca-antes', 'celda--marca-despues');
+      celdaMarcada = null;
+    }
   }
 
-  function boton(texto, accion, etiqueta) {
+  function marcar(li, antes) {
+    desmarcar();
+    li.classList.add(antes ? 'celda--marca-antes' : 'celda--marca-despues');
+    celdaMarcada = li;
+  }
+
+  /* Por el ancho, no por el alto: en una rejilla, lo que el ojo entiende como
+     «antes de ésta» es la mitad izquierda de la celda. */
+  function sueltaAntes(li, x) {
+    var caja = li.getBoundingClientRect();
+    return x < caja.left + caja.width / 2;
+  }
+
+  function boton(accion, texto, etiqueta, desactivado, alPulsar) {
     var b = document.createElement('button');
     b.type = 'button';
-    b.className = 'foto-boton';
+    b.className = 'celda-boton';
     b.textContent = texto;
-    b.dataset.accion = accion;
     b.setAttribute('aria-label', etiqueta);
+    b.dataset.accion = accion;
+    b.disabled = !!desactivado;
+    b.addEventListener('click', alPulsar);
     return b;
   }
 
-  /* Cada foto trae sus cuatro botones —adelantar, retrasar, portada, quitar—
-     y ése es el camino principal: sin ratón se hace todo con ellos. El
-     arrastrar de más abajo es un atajo. */
-  function tarjeta(pieza, i, total, esPortada, acciones) {
+  function celda(pieza, i, total, esPortada, acciones) {
     var li = document.createElement('li');
-    li.className = 'foto' + (esPortada ? ' foto--portada' : '');
+    li.className = 'celda' + (esPortada ? ' celda--portada' : '');
     li.dataset.indice = String(i);
     li.draggable = true;
-    var cual = 'la foto ' + (i + 1);
 
     var img = document.createElement('img');
+    /* La miniatura y no la pieza: la rejilla enseña varias a la vez, y pedir
+       los 3000 px para verlos a 120 costaría un megabyte por foto. Es el mismo
+       motivo por el que la tira del visor tiene su propia medida. */
     img.src = pieza.miniatura || pieza.url;
-    img.alt = 'Foto ' + (i + 1) + (esPortada ? ', portada' : '');
-    img.draggable = false;   // que se arrastre la tarjeta entera, no la imagen suelta
+    img.alt = 'Foto ' + (i + 1) + ' de ' + total;
+    img.className = 'celda-img';
     li.appendChild(img);
 
-    var antes = boton('←', 'antes', 'Adelantar ' + cual);
-    antes.disabled = i === 0;
-    antes.addEventListener('click', function () { acciones.alMover(i, i - 1); });
-
-    var despues = boton('→', 'despues', 'Retrasar ' + cual);
-    despues.disabled = i === total - 1;
-    despues.addEventListener('click', function () { acciones.alMover(i, i + 1); });
-
-    var portada = boton('Portada', 'portada', (esPortada ? 'Es la portada: ' : 'Hacer portada ') + cual);
-    portada.setAttribute('aria-pressed', esPortada ? 'true' : 'false');
-    portada.addEventListener('click', function () { acciones.alMarcarPortada(i); });
-
-    var quitar = boton('Quitar', 'quitar', 'Quitar ' + cual);
-    quitar.addEventListener('click', function () { acciones.alQuitar(i); });
-
-    [antes, despues, portada, quitar].forEach(function (b) { li.appendChild(b); });
+    /* Los cuatro botones son el camino principal, no un añadido: criterio de
+       aceptación 6, el panel es operable de principio a fin sin ratón. El
+       arrastrar y soltar de más abajo es el atajo. */
+    li.appendChild(boton('anterior', '‹', 'Mover la foto ' + (i + 1) + ' hacia atrás',
+      i === 0, function () { acciones.alMover(i, i - 1); }));
+    li.appendChild(boton('siguiente', '›', 'Mover la foto ' + (i + 1) + ' hacia delante',
+      i === total - 1, function () { acciones.alMover(i, i + 1); }));
+    /* Marcar la que ya es portada no haría nada, y un botón que no hace nada
+       tiene que decirlo antes de que lo pulsen. */
+    li.appendChild(boton('portada', 'Portada', 'Hacer portada la foto ' + (i + 1),
+      esPortada, function () { acciones.alMarcarPortada(i); }));
+    li.appendChild(boton('quitar', 'Quitar', 'Quitar la foto ' + (i + 1),
+      false, function () { acciones.alQuitar(i); }));
 
     li.addEventListener('dragstart', function (e) {
-      origen = indice(li);
-      if (origen === null) { e.preventDefault(); return; }
+      var propio = window.Lista.indiceValido(li.dataset.indice);
+      if (propio === null) { e.preventDefault(); return; }
+      origenArrastre = propio;
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', String(origen));
-      li.classList.add('foto--arrastrando');
+      e.dataTransfer.setData('text/plain', String(propio));
+      li.classList.add('celda--arrastrando');
     });
 
     li.addEventListener('dragover', function (e) {
-      if (origen === null) return;
-      var destino = indice(li);
-      if (destino === null || destino === origen) { desmarcar(); return; }
+      if (origenArrastre === null) return;
+      var destino = window.Lista.indiceValido(li.dataset.indice);
+      if (destino === null || destino === origenArrastre) { desmarcar(); return; }
       e.preventDefault();               // obligatorio para que 'drop' llegue a disparar
       e.dataTransfer.dropEffect = 'move';
-      if (marcada !== li) { desmarcar(); li.classList.add('foto--destino'); marcada = li; }
+      marcar(li, sueltaAntes(li, e.clientX));
     });
 
-    /* Soltar sobre una foto la pone EN SU SITIO: la arrastrada pasa a ocupar
-       ese índice y las demás se corren. Es la semántica de Orden.mover
-       (desde, hasta) sin mitades de fila, que en una rejilla que envuelve no
-       tienen una lectura clara. */
     li.addEventListener('drop', function (e) {
       e.preventDefault();
-      var desde = origen, hasta = indice(li);
+      var origen = origenArrastre;
+      var destino = window.Lista.indiceValido(li.dataset.indice);
+      var antes = sueltaAntes(li, e.clientX);
       desmarcar();
-      origen = null;
-      if (desde === null || hasta === null || desde === hasta) return;
-      acciones.alMover(desde, hasta);   // el mismo alMover que usan las flechas
+      origenArrastre = null;
+      if (origen === null || destino === null || destino === origen) return;
+      var hasta = window.Lista.calcularHasta(origen, destino, antes);
+      if (hasta === origen) return;
+      acciones.alMover(origen, hasta);  // el mismo alMover que usan los botones
     });
 
     li.addEventListener('dragend', function () {
-      li.classList.remove('foto--arrastrando');
+      li.classList.remove('celda--arrastrando');
       desmarcar();
-      origen = null;
+      origenArrastre = null;
     });
 
     return li;
@@ -1459,455 +1815,545 @@ window.Fotos = (function () {
 
   function pintar(contenedor, proyecto, acciones) {
     contenedor.innerHTML = '';
-    origen = null;
-    marcada = null;
+    /* Los nodos viejos desaparecen con el innerHTML: ninguna referencia a un
+       arrastre o una marca anterior debe sobrevivirlos. */
+    origenArrastre = null;
+    celdaMarcada = null;
     var piezas = proyecto.piezas || [];
+    var laPortada = window.Edicion.indiceDePortada(proyecto);
     piezas.forEach(function (pieza, i) {
-      contenedor.appendChild(
-        tarjeta(pieza, i, piezas.length, window.Edicion.esPortada(proyecto, pieza), acciones));
+      contenedor.appendChild(celda(pieza, i, piezas.length, i === laPortada, acciones));
     });
   }
 
-  /* Tras un repintado los nodos son nuevos y el foco caería a <body>. Se
-     busca la tarjeta `i` —o la última, si se quitó la última— y en ella el
-     botón `accion`; si quedó deshabilitado (mover en un extremo), el otro de
-     mover; y si no, el de portada, que siempre está activo. */
-  function enfocar(contenedor, i, accion) {
-    var tarjetas = contenedor.querySelectorAll('li.foto');
-    if (!tarjetas.length) return false;
-    var li = tarjetas[Math.min(i, tarjetas.length - 1)];
-    var candidatos = [accion, accion === 'antes' ? 'despues' : 'antes', 'portada'];
-    for (var k = 0; k < candidatos.length; k++) {
-      var b = li.querySelector('[data-accion="' + candidatos[k] + '"]');
-      if (b && !b.disabled) { b.focus(); return true; }
-    }
-    return false;
+  /* Lo mismo que Lista.enfocar y por lo mismo: tras repintar, los nodos son
+     nuevos. El ancla aquí es el índice y no un id, porque una foto no tiene
+     id — y como el índice es justo lo que cambia al mover, quien llama pasa el
+     de DESPUÉS del movimiento. */
+  function enfocar(contenedor, foco) {
+    if (!foco) return;
+    var li = contenedor.querySelector('[data-indice="' + foco.indice + '"]');
+    if (!li) return;
+    var b = li.querySelector('[data-accion="' + foco.accion + '"]');
+    if (b && !b.disabled) { b.focus(); return; }
+    var otra = foco.accion === 'anterior' ? 'siguiente' : 'anterior';
+    var alternativo = li.querySelector('[data-accion="' + otra + '"]');
+    if (alternativo && !alternativo.disabled) alternativo.focus();
   }
 
-  return { pintar: pintar, enfocar: enfocar };
+  return { pintar: pintar, enfocar: enfocar, sueltaAntes: sueltaAntes };
 })();
 ```
 
 - [ ] **Paso 4: Comprueba que pasa**
 
-Las doce en verde (ocho de `pintar`, cuatro de `enfocar`).
+Arnés: las **dieciséis** nuevas en verde.
 
 - [ ] **Paso 5: Commit**
 
 ```bash
-git add panel/js/fotos.js tests/pruebas-fotos.js tests/test.html
-git commit -m "Pintar la rejilla de fotos con sus botones y el arrastre como atajo"
+git add panel/js/fotos.js tests/
+git commit -m "Pintar la rejilla de fotos, con teclado antes que arrastre"
 ```
 
 ---
 
-### Tarea 6: Las pantallas y el marcado
+### Tarea 7: La pantalla de un proyecto
 
 **Archivos:**
-- Crear: `panel/js/pantallas.js`
-- Modificar: `panel/index.html`, `panel/css/panel.css`
+- Crear: `panel/js/proyecto.js`, `tests/pruebas-proyecto.js`
+- Modificar: `tests/test.html`
 
 **Interfaces:**
-- Produce: `window.Pantallas.init(nombres)`, `window.Pantallas.mostrar(nombre)`
-  → la `<section>` mostrada, y `window.Pantallas.visible()` → el nombre.
-- Consume: los `<section id="pantalla-…">` del marcado.
+- Produce: `window.Proyecto.pintar(elementos, proyecto, acciones)` con
+  `acciones = { alCambiar, alSubir, alVolver }`; `Proyecto.fichaDel(elementos)`.
+- Consume: `window.Fotos`, `window.Edicion`, `window.Subida`,
+  `window.ReglasContenido`.
 
-No tiene prueba propia: son cuatro líneas de DOM que `tests/pruebas-panel.js`
-ejercita enteras en la Tarea 8 (navegar y comprobar qué sección queda
-visible).
+**Por qué está separada de `fotos.js`.** `fotos.js` pinta la rejilla y no sabe
+nada del borrador; esto es lo que junta la ficha, la rejilla y la subida, y
+decide qué se le dice al estudio. Juntarlo todo pasaría de 300 líneas.
 
-- [ ] **Paso 1: `panel/js/pantallas.js`**
-
-```js
-window.Pantallas = (function () {
-  var secciones = {};
-
-  function init(nombres) {
-    nombres.forEach(function (n) { secciones[n] = document.getElementById('pantalla-' + n); });
-  }
-
-  function visible() {
-    var nombres = Object.keys(secciones);
-    for (var i = 0; i < nombres.length; i++) {
-      if (!secciones[nombres[i]].hidden) return nombres[i];
-    }
-    return null;
-  }
-
-  /* Muestra una y esconde las demás. Al cambiar de pantalla el foco va al
-     título de la nueva: si se quedara en el enlace que la abrió —que ahora
-     está oculto— el siguiente Tab saldría de cualquier parte, y un lector de
-     pantalla no se enteraría de que ha cambiado algo. Si ya era la visible
-     no se toca el foco, para no robárselo a quien estaba escribiendo. */
-  function mostrar(nombre) {
-    var cambia = visible() !== nombre;
-    Object.keys(secciones).forEach(function (n) { secciones[n].hidden = n !== nombre; });
-    var titulo = secciones[nombre] && secciones[nombre].querySelector('h2');
-    if (cambia && titulo) titulo.focus();
-    return secciones[nombre] || null;
-  }
-
-  return { init: init, mostrar: mostrar, visible: visible };
-})();
-```
-
-- [ ] **Paso 2: `panel/index.html`**
-
-Sustituye el `<body>` entero por éste. Lo que cambia respecto al bloque 3b: la
-cabecera con la navegación y «Guardar» pasa fuera de las pantallas, porque se
-guarda desde cualquiera; el formulario de crear se queda igual dentro de la
-pantalla de la lista; y aparecen las secciones del proyecto y de publicar (la
-de publicar la rellena el bloque 3d; aquí sólo tiene el título).
-
-```html
-<body>
-
-  <header class="cabecera">
-    <h1>Panel — LUQUE!</h1>
-    <nav aria-label="Pantallas del panel">
-      <a href="#/">Proyectos</a>
-      <a href="#/publicar">Publicar</a>
-    </nav>
-    <button id="guardar" type="button">Guardar</button>
-  </header>
-
-  <p id="aviso" role="status" aria-live="polite" class="aviso"></p>
-
-  <main class="panel">
-
-    <!-- Los h2 llevan tabindex="-1" para que Pantallas.mostrar pueda darles el
-         foco al cambiar de pantalla, sin meterlos en el orden del Tab. -->
-    <section id="pantalla-lista">
-      <h2 tabindex="-1">Proyectos</h2>
-
-      <ol id="lista" class="lista"></ol>
-
-      <form id="nuevo" class="nuevo">
-        <label for="titulo">Título del proyecto nuevo</label>
-        <input id="titulo" name="titulo" type="text" autocomplete="off" required>
-
-        <label for="categoria">Categoría</label>
-        <select id="categoria" name="categoria"></select>
-
-        <label for="fichaCliente">Cliente (opcional)</label>
-        <input id="fichaCliente" name="cliente" type="text" autocomplete="off">
-
-        <!-- Año y papel llevan `required` porque ReglasContenido.validar los
-             exige. Desde el bloque 3c hay pantalla para corregirlos después,
-             pero un proyecto nuevo sigue pidiéndolos: es más fácil escribirlos
-             ahora que acordarse luego. La comprobación de verdad está en crear(). -->
-        <label for="fichaAnio">Año</label>
-        <input id="fichaAnio" name="anio" type="number" required>
-
-        <label for="fichaPapel">Papel</label>
-        <input id="fichaPapel" name="papel" type="text" autocomplete="off" required>
-
-        <!-- type="url" y no text: el navegador avisa de una dirección mal
-             escrita antes de que llegue a contenido.json. -->
-        <label for="fichaEnlace">Enlace al vídeo (opcional)</label>
-        <input id="fichaEnlace" name="enlace" type="url"
-               placeholder="https://youtu.be/…">
-
-        <button type="submit">Crear</button>
-      </form>
-    </section>
-
-    <section id="pantalla-proyecto" hidden>
-      <h2 tabindex="-1">Proyecto</h2>
-
-      <!-- El id se enseña y no se edita: va en la URL pública (#/bruma) y
-           cambiarlo rompería los enlaces que la fotógrafa ya haya mandado. -->
-      <p class="identificador">Identificador: <code id="proyecto-id"></code>
-        <span class="nota">(va en la dirección pública y no cambia)</span></p>
-
-      <form id="ficha" class="nuevo">
-        <label for="proyecto-titulo">Título</label>
-        <input id="proyecto-titulo" name="titulo" type="text" autocomplete="off" required>
-
-        <label for="proyecto-categoria">Categoría</label>
-        <select id="proyecto-categoria" name="categoria"></select>
-
-        <label for="proyecto-cliente">Cliente (opcional)</label>
-        <input id="proyecto-cliente" name="cliente" type="text" autocomplete="off">
-
-        <label for="proyecto-anio">Año</label>
-        <input id="proyecto-anio" name="anio" type="number">
-
-        <label for="proyecto-papel">Papel</label>
-        <input id="proyecto-papel" name="papel" type="text" autocomplete="off">
-
-        <label for="proyecto-enlace">Enlace al vídeo (opcional)</label>
-        <input id="proyecto-enlace" name="enlace" type="url" placeholder="https://youtu.be/…">
-      </form>
-
-      <h3 id="proyecto-avisos-titulo" hidden>Para poder publicarlo falta</h3>
-      <ul id="proyecto-avisos" class="avisos" hidden></ul>
-
-      <h3>Fotos</h3>
-      <!-- La etiqueta ES la zona de soltar, y apunta al selector de archivos:
-           soltar y elegir son el mismo camino con dos entradas (spec,
-           Accesibilidad: toda subida ofrece un selector además de soltar). -->
-      <label id="zona" class="zona" for="subir">
-        Suelta aquí las fotos, o pulsa para elegirlas. Se reducen en tu
-        navegador antes de subirse, así que puedes soltar los originales.
-      </label>
-      <input id="subir" type="file" accept="image/*" multiple>
-
-      <ol id="fotos" class="fotos" aria-label="Fotos del proyecto"></ol>
-    </section>
-
-    <section id="pantalla-publicar" hidden>
-      <h2 tabindex="-1">Publicar</h2>
-    </section>
-
-  </main>
-
-  <!-- Orden importante: cada módulo tiene que existir antes de quien lo usa,
-       y panel.js, que arranca todo, va el último. reglas-contenido.js se carga
-       desde la web pública (../js/) y no se copia aquí: es el mismo archivo que
-       comparten la galería y el Worker, y duplicarlo reabriría el agujero que
-       cerró el bloque 3a. -->
-  <script src="../js/reglas-contenido.js"></script>
-  <script src="js/identificador.js"></script>
-  <script src="js/orden.js"></script>
-  <script src="js/rutas.js"></script>
-  <script src="js/imagenes.js"></script>
-  <script src="js/subida.js"></script>
-  <script src="js/edicion.js"></script>
-  <script src="js/borrador.js"></script>
-  <script src="js/lista.js"></script>
-  <script src="js/fotos.js"></script>
-  <script src="js/proyecto.js"></script>
-  <script src="js/pantallas.js"></script>
-  <script src="js/panel.js"></script>
-</body>
-```
-
-`proyecto.js` no existe todavía —lo escribe la Tarea 8— así que hasta
-entonces el panel dará un error de carga en consola. Es aceptable dentro de la
-misma rama; no despliegues entre esta tarea y la 8.
-
-- [ ] **Paso 3: `panel/css/panel.css`**
-
-Añade al final, antes del bloque de `prefers-reduced-motion`:
-
-```css
-/* ============================================================
-   CABECERA Y PANTALLAS (bloque 3c). Tres <section> que se muestran y
-   esconden con el atributo `hidden`. El !important es a propósito:
-   .lista y .fotos declaran display, y un `display:flex` gana al
-   `display:none` de [hidden] del navegador.
-============================================================ */
-[hidden]{ display:none !important; }
-
-.cabecera{
-  max-width: 44rem;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem 1.5rem;
-}
-.cabecera h1{ margin: 0; flex: 1 1 auto; }
-.cabecera nav{ display: flex; gap: 1rem; font-weight: 700; }
-.cabecera #guardar{ margin-top: 0; }
-
-/* El aviso vive ahora fuera de <main>, así que se alinea con él a mano. */
-.aviso{
-  max-width: 44rem;
-  margin: 1rem auto 0;
-  padding-left: calc(1.5rem + 0.75rem);
-  margin-left: auto;
-}
-
-.panel{ padding-top: 1.5rem; }
-
-h2{
-  font-weight: 700;
-  font-size: clamp(1.4rem, 3vw, 1.9rem);
-  margin-bottom: 1rem;
-}
-h2:focus{ outline: none; }   /* el foco programático de Pantallas no necesita anillo */
-h3{ font-weight: 700; margin: 1.5rem 0 0.5rem; }
-
-.identificador{ margin-bottom: 1rem; }
-.identificador code{ font-family: ui-monospace, Consolas, monospace; font-weight: 700; }
-.identificador .nota{ opacity: 0.7; }
-
-.avisos{
-  list-style: none;
-  border-left: 4px solid var(--black);
-  padding-left: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-/* ============================================================
-   SUBIDA. La etiqueta es la zona de soltar; el <input type=file> queda
-   visible debajo, como camino de teclado y para quien no arrastre.
-============================================================ */
-.zona{
-  display: block;
-  border: 3px dashed var(--black);
-  border-radius: 4px;
-  padding: 1.5rem;
-  margin-bottom: 0.5rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-.zona--encima{ background: var(--black); color: var(--yellow); }
-#subir{ margin-bottom: 1.5rem; font-family: var(--ff); }
-#subir:disabled{ opacity: 0.35; cursor: not-allowed; }
-
-/* ============================================================
-   REJILLA DE FOTOS
-============================================================ */
-.fotos{
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 2rem;
-}
-
-.foto{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
-  background: var(--black);
-  color: var(--yellow);
-  padding: 0.5rem;
-  border-radius: 4px;
-  cursor: grab;
-  transition: box-shadow 0.1s ease;
-}
-.foto:active{ cursor: grabbing; }
-.foto img{
-  grid-column: 1 / -1;
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
-  display: block;
-  background: var(--grey-dark);
-}
-.foto--portada{ box-shadow: 0 0 0 4px var(--black), 0 0 0 7px var(--yellow); }
-.foto--arrastrando{ opacity: 0.4; }
-.foto--destino{ box-shadow: 0 0 0 4px var(--yellow); }
-
-.foto-boton{
-  border: 2px solid var(--yellow);
-  background: transparent;
-  color: var(--yellow);
-  font-family: var(--ff);
-  font-weight: 700;
-  font-size: 0.9rem;
-  line-height: 1;
-  padding: 0.4rem 0.3rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-.foto-boton:hover:not(:disabled){ background: var(--yellow); color: var(--black); }
-.foto-boton:disabled{ opacity: 0.35; cursor: not-allowed; }
-.foto-boton[aria-pressed="true"]{ background: var(--yellow); color: var(--black); }
-/* Fondo negro: el anillo pasa a amarillo, como en .fila. */
-.foto :focus-visible{ outline-color: var(--yellow); }
-
-/* El enlace de editar se viste como los botones de la fila. */
-.fila-editar{ text-decoration: none; }
-```
-
-- [ ] **Paso 4: Comprueba y commitea**
-
-```bash
-python tests/auditar_rutas.py
-git add panel/js/pantallas.js panel/index.html panel/css/panel.css
-git commit -m "Marcado y estilos de las tres pantallas del panel"
-```
-
----
-
-### Tarea 7: La lista enlaza a cada proyecto y se queda el retorno de foco
-
-**Archivos:**
-- Modificar: `panel/js/lista.js`, `tests/pruebas-lista-pintar.js`
-
-**Interfaces:**
-- Produce: cada fila lleva `<a class="fila-boton fila-editar"
-  href="#/proyecto/<id>" data-accion="editar">Editar</a>`; y
-  `window.Lista.enfocar(contenedor, foco, alternativo)`, que es la
-  `enfocarTrasRepintar` de `panel.js` mudada aquí para que `panel.js` tenga
-  sitio (está en 209 líneas y la Tarea 8 le añade el enrutado).
-- Consume: `Rutas.a`.
-
-`Lista.pintar` **no cambia de firma**: el enlace no necesita callback, porque
-la navegación la hace el propio `href` y `panel.js` escucha `hashchange`.
+**Lo que esta pantalla NO hace:** guardar. Cambiar aquí cambia el borrador en
+memoria y avisa con `alCambiar`; el botón de guardar sigue siendo el del panel.
+Ver la decisión 6.
 
 - [ ] **Paso 1: Las pruebas que fallan**
 
-Añade a `tests/pruebas-lista-pintar.js`, dentro de `describe('Lista.pintar')`,
-al final:
+Crea `tests/pruebas-proyecto.js`:
 
 ```js
-  /* Un enlace y no un botón con callback: la navegación la hace el href y
-     panel.js escucha hashchange. Así también funciona abrir en otra pestaña. */
-  prueba('cada fila enlaza a la pantalla de su proyecto', function () {
-    var hrefs = ArnesDom.conElemento('<ol></ol>', function (ol) {
-      pintarEn(proyectos())(ol);
-      return [].map.call(ol.querySelectorAll('li.fila a[data-accion="editar"]'), function (a) {
-        return a.getAttribute('href') + ' | ' + a.getAttribute('aria-label');
-      });
+describe('Proyecto.pintar', function () {
+  var HTML =
+    '<div>' +
+    '<h2 id="pTitulo"></h2><p id="pAviso" role="status" aria-live="polite"></p>' +
+    '<input id="pNombre" type="text"><select id="pCategoria"></select>' +
+    '<input id="pCliente" type="text"><input id="pAnio" type="number">' +
+    '<input id="pPapel" type="text"><input id="pEnlace" type="url">' +
+    '<div id="pSoltar"><input id="pArchivos" type="file" multiple></div>' +
+    '<ol id="pFotos"></ol><p id="pProblemas"></p>' +
+    '</div>';
+
+  function elementos(d) {
+    return { titulo: d.querySelector('#pTitulo'), aviso: d.querySelector('#pAviso'),
+             nombre: d.querySelector('#pNombre'), categoria: d.querySelector('#pCategoria'),
+             cliente: d.querySelector('#pCliente'), anio: d.querySelector('#pAnio'),
+             papel: d.querySelector('#pPapel'), enlace: d.querySelector('#pEnlace'),
+             soltar: d.querySelector('#pSoltar'), archivos: d.querySelector('#pArchivos'),
+             fotos: d.querySelector('#pFotos'), problemas: d.querySelector('#pProblemas') };
+  }
+
+  function proyecto() {
+    return { id: 'bruma', titulo: 'Bruma', categoria: 'editorial', tipo: 'fotos',
+             ficha: { cliente: 'Vogue ES', anio: 2025, papel: 'DoP' },
+             portada: '/img/a-1500.jpg',
+             piezas: [{ url: '/img/a-3000.jpg', miniatura: '/img/a-250.jpg',
+                        portada: '/img/a-1500.jpg' }] };
+  }
+
+  function nada() { return { alCambiar: function () {}, alSubir: function () {},
+                             alVolver: function () {} }; }
+
+  function conPantalla(fn, p, acciones) {
+    return ArnesDom.conElemento(HTML, function (caja) {
+      var els = elementos(caja);
+      Proyecto.pintar(els, p || proyecto(), acciones || nada());
+      return fn(els, caja);
     });
-    igual(hrefs, ['#/proyecto/niebla | Editar Niebla', '#/proyecto/arena | Editar Arena',
-                  '#/proyecto/vidrio | Editar Vidrio']);
+  }
+
+  prueba('el encabezado dice qué proyecto es', function () {
+    conPantalla(function (els) { igual(els.titulo.textContent, 'Bruma'); });
   });
+
+  prueba('la ficha llega escrita en el formulario', function () {
+    conPantalla(function (els) {
+      igual(els.nombre.value, 'Bruma');
+      igual(els.cliente.value, 'Vogue ES');
+      igual(els.anio.value, '2025');
+      igual(els.papel.value, 'DoP');
+    });
+  });
+
+  /* Un campo opcional que no está en la ficha se pinta vacío, no como
+     «undefined». Es lo que pasaría al leer directamente ficha.enlace de un
+     editorial, que no tiene. */
+  prueba('un campo que la ficha no trae sale vacío', function () {
+    conPantalla(function (els) { igual(els.enlace.value, ''); });
+  });
+
+  prueba('la categoría trae sus cuatro opciones y la suya elegida', function () {
+    conPantalla(function (els) {
+      igual(els.categoria.options.length, 4);
+      igual(els.categoria.value, 'editorial');
+    });
+  });
+
+  prueba('la rejilla pinta las fotos', function () {
+    conPantalla(function (els) { igual(els.fotos.children.length, 1); });
+  });
+
+  /* Escribir en la ficha cambia el borrador en memoria, no guarda. El
+     borrador se guarda con el botón de siempre. Ver la decisión 6. */
+  prueba('escribir en la ficha avisa con el proyecto nuevo', function () {
+    var cambios = [];
+    conPantalla(function (els) {
+      els.papel.value = 'Fotografía';
+      els.papel.dispatchEvent(new Event('input', { bubbles: true }));
+      igual(cambios.length, 1);
+      igual(cambios[0].ficha.papel, 'Fotografía');
+    }, null, { alCambiar: function (p) { cambios.push(p); },
+               alSubir: function () {}, alVolver: function () {} });
+  });
+
+  /* El título sí se puede cambiar; el id NO se recalcula. Va en la URL
+     pública, así que se congela al crear: renombrar no puede romper un
+     enlace que la fotógrafa ya mandó a un cliente. */
+  prueba('cambiar el título no cambia el identificador', function () {
+    var cambios = [];
+    conPantalla(function (els) {
+      els.nombre.value = 'Bruma Marina';
+      els.nombre.dispatchEvent(new Event('input', { bubbles: true }));
+      igual(cambios[0].titulo, 'Bruma Marina');
+      igual(cambios[0].id, 'bruma');
+    }, null, { alCambiar: function (p) { cambios.push(p); },
+               alSubir: function () {}, alVolver: function () {} });
+  });
+
+  /* `cliente` y `enlace` vacíos salen de la ficha en vez de guardarse como
+     cadena vacía, igual que hace panel.js al crear: la forma de decir que un
+     trabajo no tiene cliente es que la clave no esté. */
+  prueba('vaciar un campo opcional lo quita de la ficha', function () {
+    var cambios = [];
+    conPantalla(function (els) {
+      els.cliente.value = '';
+      els.cliente.dispatchEvent(new Event('input', { bubbles: true }));
+      igual(Object.prototype.hasOwnProperty.call(cambios[0].ficha, 'cliente'), false);
+    }, null, { alCambiar: function (p) { cambios.push(p); },
+               alSubir: function () {}, alVolver: function () {} });
+  });
+
+  prueba('mover una foto avisa con el proyecto reordenado', function () {
+    var dos = proyecto();
+    dos.piezas.push({ url: '/img/b-3000.jpg', miniatura: '/img/b-250.jpg',
+                      portada: '/img/b-1500.jpg' });
+    var cambios = [];
+    conPantalla(function (els) {
+      els.fotos.children[0].querySelector('[data-accion="siguiente"]').click();
+      igual(cambios[0].piezas[0].url, '/img/b-3000.jpg');
+    }, dos, { alCambiar: function (p) { cambios.push(p); },
+              alSubir: function () {}, alVolver: function () {} });
+  });
+
+  /* Quitar una foto es irreversible dentro de la sesión —no hay deshacer— y
+     además es lo único de esta pantalla que destruye trabajo. Se pregunta,
+     igual que se pregunta al borrar un proyecto. */
+  prueba('quitar una foto pregunta antes', function () {
+    var cambios = [], preguntado = false;
+    var confirmDeVerdad = window.confirm;
+    window.confirm = function () { preguntado = true; return false; };
+    try {
+      conPantalla(function (els) {
+        els.fotos.children[0].querySelector('[data-accion="quitar"]').click();
+        igual(preguntado, true);
+        igual(cambios.length, 0, 'si se dice que no, no se quita');
+      }, null, { alCambiar: function (p) { cambios.push(p); },
+                 alSubir: function () {}, alVolver: function () {} });
+    } finally {
+      window.confirm = confirmDeVerdad;
+    }
+  });
+
+  /* Los problemas se enseñan ANTES de intentar publicar, que es donde el
+     Worker los diría con un 422. Enterarse en la pantalla donde se arreglan
+     es la diferencia entre un aviso y un callejón. */
+  prueba('un proyecto sin fotos dice qué le falta para publicarse', function () {
+    conPantalla(function (els) {
+      cierto(els.problemas.textContent.indexOf('piezas') !== -1
+          || els.problemas.textContent.indexOf('fotos') !== -1,
+        'decía: ' + els.problemas.textContent);
+    }, { id: 'x', titulo: 'X', categoria: 'editorial', tipo: 'fotos',
+         ficha: { anio: 2025, papel: 'DoP' }, portada: null, piezas: [] });
+  });
+
+  prueba('un proyecto completo no enseña problemas', function () {
+    conPantalla(function (els) { igual(els.problemas.textContent, ''); });
+  });
+
+  prueba('elegir archivos llama a alSubir con ellos', function () {
+    var subidos = [];
+    conPantalla(function (els) {
+      /* No se puede poner `files` en un input desde una prueba, así que se
+         emite el evento y se mira que la pantalla pregunte por los archivos
+         del input — que es lo que hace en producción. */
+      Object.defineProperty(els.archivos, 'files', { value: ['a', 'b'] });
+      els.archivos.dispatchEvent(new Event('change', { bubbles: true }));
+      igual(subidos.length, 1);
+      igual(subidos[0].length, 2);
+    }, null, { alCambiar: function () {}, alVolver: function () {},
+               alSubir: function (fs) { subidos.push(fs); } });
+  });
+
+  prueba('soltar archivos encima llama a alSubir', function () {
+    var subidos = [];
+    conPantalla(function (els) {
+      var e = new Event('drop', { bubbles: true, cancelable: true });
+      e.dataTransfer = { files: ['a'] };
+      els.soltar.dispatchEvent(e);
+      igual(subidos.length, 1);
+    }, null, { alCambiar: function () {}, alVolver: function () {},
+               alSubir: function (fs) { subidos.push(fs); } });
+  });
+
+  /* Sin esto, el navegador abre la foto soltada en la pestaña y el panel
+     desaparece con los cambios sin guardar dentro. */
+  prueba('soltar no deja que el navegador abra la foto', function () {
+    conPantalla(function (els) {
+      var e = new Event('drop', { bubbles: true, cancelable: true });
+      e.dataTransfer = { files: ['a'] };
+      els.soltar.dispatchEvent(e);
+      igual(e.defaultPrevented, true);
+    });
+  });
+});
 ```
 
-Y una sección nueva al final del archivo:
+Añade a `tests/test.html`:
+
+```html
+<script src="../panel/js/proyecto.js"></script>
+```
+```html
+<script src="pruebas-proyecto.js"></script>
+```
+
+- [ ] **Paso 2: Comprueba que falla**
+
+Esperado: `Proyecto is not defined`.
+
+- [ ] **Paso 3: Escribe `panel/js/proyecto.js`**
 
 ```js
-describe('Lista.enfocar', function () {
-  function tres() {
-    return [{ id: 'a', titulo: 'A', categoria: 'editorial' }, { id: 'b', titulo: 'B', categoria: 'editorial' },
-            { id: 'c', titulo: 'C', categoria: 'editorial' }];
-  }
-  function con(fn) {
-    return ArnesDom.conElemento('<div><ol></ol><input id="alt"></div>', function (div) {
-      var ol = div.querySelector('ol');
-      Lista.pintar(ol, tres(), function () {}, function () {});
-      return fn(ol, div.querySelector('#alt'));
+/* La pantalla de un proyecto: la ficha, la rejilla y la puerta de subida. Lo
+   que NO hace es guardar — cambiar aquí cambia el borrador en memoria y avisa
+   con `alCambiar`; el botón de guardar sigue siendo el del panel. Autoguardar
+   sería más cómodo y peor: cada pulsación un PUT, cada PUT una versión, y dos
+   sesiones abiertas mandándose conflictos por cambios a medio hacer. */
+window.Proyecto = (function () {
+
+  function opciones(select, elegida) {
+    select.innerHTML = '';
+    window.ReglasContenido.CATEGORIAS.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = c;
+      o.textContent = window.Lista.ETIQUETAS[c] || c;
+      if (c === elegida) o.selected = true;
+      select.appendChild(o);
     });
   }
 
-  prueba('devuelve el foco al botón pedido de la fila con ese id', function () {
-    con(function (ol, alt) {
-      Lista.enfocar(ol, { id: 'b', accion: 'borrar' }, alt);
-      igual(document.activeElement.dataset.accion, 'borrar');
-      igual(document.activeElement.closest('li.fila').dataset.id, 'b');
-    });
-  });
+  /* El mismo criterio que `fichaDelFormulario` en panel.js: `cliente` y
+     `enlace` sólo entran si están escritos. ReglasContenido.validar no los
+     exige a propósito —Conejita Playboy no tiene cliente y los cuatro
+     editoriales no tienen enlace—, y la forma de decir que no hay cliente es
+     que la clave no esté. Guardar `cliente: ''` sería una segunda forma de
+     decir lo mismo que además contesta que sí a quien pregunte. */
+  function fichaDel(els) {
+    var ficha = {};
+    var cliente = els.cliente.value.trim();
+    if (cliente) ficha.cliente = cliente;
+    ficha.anio = Number(els.anio.value);
+    ficha.papel = els.papel.value.trim();
+    var enlace = els.enlace.value.trim();
+    if (enlace) ficha.enlace = enlace;
+    return ficha;
+  }
 
-  prueba('si ese botón está deshabilitado, va al otro de mover', function () {
-    con(function (ol, alt) {
-      Lista.enfocar(ol, { id: 'a', accion: 'subir' }, alt);
-      igual(document.activeElement.dataset.accion, 'bajar');
-    });
-  });
+  function conFicha(proyecto, els) {
+    var nuevo = {};
+    Object.keys(proyecto).forEach(function (k) { nuevo[k] = proyecto[k]; });
+    /* El título cambia; el `id` NO se recalcula. Va en la URL pública, así que
+       se congela al crear: renombrar un proyecto no puede romper un enlace que
+       la fotógrafa ya mandó a un cliente. */
+    nuevo.titulo = els.nombre.value.trim();
+    nuevo.categoria = els.categoria.value;
+    nuevo.ficha = fichaDel(els);
+    return nuevo;
+  }
 
-  prueba('con {titulo:true} va al elemento alternativo', function () {
-    con(function (ol, alt) {
-      Lista.enfocar(ol, { titulo: true }, alt);
-      igual(document.activeElement, alt);
-    });
-  });
+  /* Los mismos problemas que diría el Worker con un 422 al publicar, pero
+     dichos en la pantalla donde se arreglan. Enterarse aquí en vez de al
+     publicar es la diferencia entre un aviso y un callejón sin salida. */
+  function problemasDe(proyecto) {
+    return window.ReglasContenido
+      .validar({ proyectos: [proyecto] }, window.ReglasContenido.CATEGORIAS);
+  }
 
-  prueba('sin foco que devolver, o con un id que no existe, no hace nada', function () {
-    con(function (ol, alt) {
-      alt.focus();
-      Lista.enfocar(ol, null, alt);
-      Lista.enfocar(ol, { id: 'zzz', accion: 'borrar' }, alt);
-      igual(document.activeElement, alt);
+  function archivosDe(e) {
+    var t = e.dataTransfer || e.target;
+    return (t && t.files) || [];
+  }
+
+  function pintar(els, proyecto, acciones) {
+    var actual = proyecto;
+
+    els.titulo.textContent = actual.titulo || actual.id;
+    els.nombre.value = actual.titulo || '';
+    opciones(els.categoria, actual.categoria);
+    var ficha = actual.ficha || {};
+    /* `|| ''` y no el valor a secas: un campo opcional que la ficha no trae
+       pintaría «undefined» en la caja, y eso se guardaría tal cual al
+       siguiente cambio. */
+    els.cliente.value = ficha.cliente || '';
+    els.anio.value = ficha.anio || '';
+    els.papel.value = ficha.papel || '';
+    els.enlace.value = ficha.enlace || '';
+
+    var problemas = problemasDe(actual);
+    els.problemas.textContent = problemas.length
+      ? 'Para poder publicarlo le falta: ' + problemas.join('; ') + '.'
+      : '';
+
+    window.Fotos.pintar(els.fotos, actual, {
+      alMover: function (desde, hasta) {
+        acciones.alCambiar(window.Edicion.mover(actual, desde, hasta),
+                           { indice: hasta, accion: desde < hasta ? 'siguiente' : 'anterior' });
+      },
+      alQuitar: function (indice) {
+        /* Se pregunta porque no hay deshacer dentro de la sesión y porque es
+           lo único de esta pantalla que destruye trabajo. Los bytes siguen en
+           R2 —quitar una foto no la borra del bucket, a propósito—, pero el
+           estudio no tiene ninguna pantalla desde la que recuperarlos. */
+        if (!window.confirm('¿Quitar la foto ' + (indice + 1) + ' de este proyecto?')) return;
+        acciones.alCambiar(window.Edicion.quitar(actual, indice),
+                           { indice: Math.max(0, indice - 1), accion: 'siguiente' });
+      },
+      alMarcarPortada: function (indice) {
+        acciones.alCambiar(window.Edicion.marcarPortada(actual, indice),
+                           { indice: indice, accion: 'quitar' });
+      }
+    });
+
+    /* Se enganchan en cada pintado sobre nodos que NO se reconstruyen —vienen
+       del HTML de la página, no de aquí—, así que hay que quitar el anterior o
+       se apilarían. Se hace con la propiedad `on*` y no con addEventListener
+       justamente por eso: asignar reemplaza. */
+    ['nombre', 'categoria', 'cliente', 'anio', 'papel', 'enlace'].forEach(function (campo) {
+      els[campo].oninput = function () { acciones.alCambiar(conFicha(actual, els)); };
+      els[campo].onchange = els[campo].oninput;
+    });
+
+    els.archivos.onchange = function (e) {
+      var fs = archivosDe(e);
+      if (fs.length) acciones.alSubir(fs);
+      /* Se vacía para que elegir el mismo archivo dos veces seguidas vuelva a
+         disparar `change`: el navegador no lo emite si el valor no cambia. */
+      els.archivos.value = '';
+    };
+
+    els.soltar.ondragover = function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      els.soltar.classList.add('soltar--encima');
+    };
+    els.soltar.ondragleave = function () { els.soltar.classList.remove('soltar--encima'); };
+    els.soltar.ondrop = function (e) {
+      /* Sin esto el navegador abre la foto soltada en la pestaña, y el panel
+         desaparece con los cambios sin guardar dentro. */
+      e.preventDefault();
+      els.soltar.classList.remove('soltar--encima');
+      var fs = archivosDe(e);
+      if (fs.length) acciones.alSubir(fs);
+    };
+  }
+
+  return { pintar: pintar, fichaDel: fichaDel, problemasDe: problemasDe };
+})();
+```
+
+- [ ] **Paso 4: Comprueba que pasa**
+
+Arnés: las **quince** nuevas en verde.
+
+- [ ] **Paso 5: Commit**
+
+```bash
+git add panel/js/proyecto.js tests/
+git commit -m "La pantalla de un proyecto: ficha, rejilla y puerta de subida"
+```
+
+---
+
+### Tarea 8: Tres pantallas en una página
+
+**Archivos:**
+- Crear: `panel/js/pantallas.js`
+- Modificar: `panel/index.html`, `panel/css/panel.css`, `panel/js/panel.js`,
+  `tests/pruebas-panel.js`, `tests/test.html`
+
+**Interfaces:**
+- Produce: `window.Pantallas.mostrar(nodos, pantalla)`,
+  `window.Panel = { ir, hayCambios }`.
+- Consume: `window.Rutas`, `window.Proyecto`, `window.Subida`.
+
+**Por qué `window.Panel`.** `panel.js` es una IIFE que no devuelve nada, así que
+desde fuera no hay forma de pedirle que cambie de pantalla: las pruebas
+tendrían que simular `hashchange`, que es probar el navegador. `Panel.ir` es la
+costura, y `Panel.hayCambios` es lo que el aviso de salir necesita saber.
+
+- [ ] **Paso 1: Las pruebas que fallan**
+
+Añade a `tests/pruebas-panel.js` una sección nueva. El `HTML` de ese archivo
+tiene que crecer con el marcado de la pantalla de proyecto y el de publicar
+—dos `<section>` más—, y `MODULOS` con los siete archivos nuevos.
+
+```js
+/* Las tres pantallas, desde fuera: se pide un destino con Panel.ir y se mira
+   qué sección queda visible. Se ejercita el panel entero dentro del iframe,
+   con Borrador doblado, igual que el resto de este archivo. */
+describeAsync('panel.js · tres pantallas', function () {
+
+  function unProyecto() {
+    return { version: 3, proyectos: [
+      { id: 'bruma', titulo: 'Bruma', categoria: 'editorial', tipo: 'fotos',
+        ficha: { anio: 2025, papel: 'DoP' }, portada: '/img/a-1500.jpg',
+        piezas: [{ url: '/img/a-3000.jpg', miniatura: '/img/a-250.jpg',
+                   portada: '/img/a-1500.jpg' }] } ] };
+  }
+
+  function visible(d, cual) {
+    return !d.getElementById(cual).hidden;
+  }
+
+  function conPanel(datos, fn) {
+    return ArnesDom.conDocumento({
+      html: HTML, scripts: MODULOS,
+      globales: { Borrador: borradorFalso({ datos: datos }) }
+    }, fn);
+  }
+
+  return conPanel(unProyecto(), function (w, d) {
+    prueba('arranca en la lista', function () {
+      igual(visible(d, 'pantallaLista'), true);
+      igual(visible(d, 'pantallaProyecto'), false);
+    });
+
+    prueba('ir a un proyecto enseña su pantalla y esconde la lista', function () {
+      w.Panel.ir('proyecto', 'bruma');
+      igual(visible(d, 'pantallaProyecto'), true);
+      igual(visible(d, 'pantallaLista'), false);
+      igual(d.getElementById('pTitulo').textContent, 'Bruma');
+    });
+
+    /* El fragmento se actualiza para que la dirección sea compartible y el
+       botón de atrás del navegador haga lo que se espera. */
+    prueba('el fragmento sigue a la pantalla', function () {
+      igual(w.location.hash, '#/proyecto/bruma');
+    });
+
+    prueba('volver a la lista la enseña otra vez', function () {
+      w.Panel.ir('lista');
+      igual(visible(d, 'pantallaLista'), true);
+      igual(visible(d, 'pantallaProyecto'), false);
+    });
+
+    /* Un id que no está en el borrador no puede dejar una pantalla en blanco
+       con el encabezado del proyecto anterior. */
+    prueba('un proyecto que no existe vuelve a la lista y lo dice', function () {
+      w.Panel.ir('proyecto', 'fantasma');
+      igual(visible(d, 'pantallaLista'), true);
+      cierto(d.getElementById('aviso').textContent.indexOf('fantasma') !== -1,
+        'decía: ' + d.getElementById('aviso').textContent);
+    });
+  }).then(function () {
+    return conPanel(unProyecto(), function (w, d) {
+      prueba('cada fila de la lista abre su proyecto', function () {
+        d.querySelector('[data-accion="abrir"]').click();
+        igual(visible(d, 'pantallaProyecto'), true);
+      });
+
+      /* hayCambios es lo que el aviso de salir necesita saber. Nada más
+         cargar no hay ninguno: el borrador de la pantalla es el del
+         servidor. */
+      prueba('recién cargado no hay cambios pendientes', function () {
+        igual(w.Panel.hayCambios(), false);
+      });
+
+      prueba('editar la ficha deja cambios pendientes', function () {
+        var papel = d.getElementById('pPapel');
+        papel.value = 'Fotografía';
+        papel.dispatchEvent(new w.Event('input', { bubbles: true }));
+        igual(w.Panel.hayCambios(), true);
+      });
+
+      /* El cambio tiene que estar en el borrador que se mandaría, no sólo en
+         la caja de texto: si la pantalla escribiera en una copia suya, el
+         estudio vería su cambio y guardaría el de antes. */
+      prueba('el cambio llega al borrador que se guarda', function () {
+        d.getElementById('guardar').click();
+        var guardado = w.Borrador.guardadas[0];
+        igual(guardado.proyectos[0].ficha.papel, 'Fotografía');
+      });
     });
   });
 });
@@ -1915,978 +2361,359 @@ describe('Lista.enfocar', function () {
 
 - [ ] **Paso 2: Comprueba que falla**
 
-Esperado: la del enlace recibe `[]`; las de `enfocar`, `Lista.enfocar is not
-a function`.
+Esperado: `Cannot read properties of undefined (reading 'ir')`.
 
-- [ ] **Paso 3: Modifica `panel/js/lista.js`**
+- [ ] **Paso 3: El marcado, los estilos y el código**
 
-Dentro de `fila()`, tras crear `borrar` y antes de los `addEventListener` de
-arrastre, añade:
+En `panel/index.html`, envuelve lo que ya hay en `<section id="pantallaLista">` y
+añade la del proyecto. Los scripts nuevos van en orden de dependencia:
 
-```js
-    /* Un enlace y no un botón: la navegación la hace el href (Rutas.a) y
-       panel.js escucha hashchange. Vale también para abrir en otra pestaña. */
-    var editar = document.createElement('a');
-    editar.className = 'fila-boton fila-editar';
-    editar.href = window.Rutas.a('proyecto', p.id);
-    editar.textContent = 'Editar';
-    editar.setAttribute('aria-label', 'Editar ' + p.titulo);
-    editar.dataset.accion = 'editar';
+```html
+    <section id="pantallaProyecto" hidden>
+      <button id="pVolver" type="button">‹ Volver a los proyectos</button>
+      <h2 id="pTitulo"></h2>
+      <p id="pAviso" role="status" aria-live="polite" class="aviso"></p>
+
+      <label for="pNombre">Título</label>
+      <input id="pNombre" type="text" autocomplete="off">
+
+      <label for="pCategoria">Categoría</label>
+      <select id="pCategoria"></select>
+
+      <label for="pCliente">Cliente (opcional)</label>
+      <input id="pCliente" type="text" autocomplete="off">
+
+      <label for="pAnio">Año</label>
+      <input id="pAnio" type="number">
+
+      <label for="pPapel">Papel</label>
+      <input id="pPapel" type="text" autocomplete="off">
+
+      <label for="pEnlace">Enlace al vídeo (opcional)</label>
+      <input id="pEnlace" type="url" placeholder="https://vimeo.com/…">
+
+      <!-- El selector de archivos va SIEMPRE, no sólo como alternativa a
+           soltar: la especificación lo pide («toda subida ofrece un selector
+           de archivos además de soltar») y soltar no existe con teclado. -->
+      <div id="pSoltar" class="soltar">
+        <label for="pArchivos">Añadir fotos</label>
+        <input id="pArchivos" type="file" accept="image/*" multiple>
+        <p class="soltar-pista">También puedes soltarlas aquí.</p>
+      </div>
+
+      <p id="pProgreso" role="status" aria-live="polite"></p>
+      <ol id="pFotos" class="fotos"></ol>
+      <p id="pProblemas" class="problemas"></p>
+    </section>
 ```
 
-y en los `appendChild` del final de `fila()`, `editar` va **antes** que
-`subir`:
-
-```js
-    li.appendChild(nombre);
-    li.appendChild(editar);
-    li.appendChild(subir);
-    li.appendChild(bajar);
-    li.appendChild(borrar);
+```html
+  <script src="../js/reglas-contenido.js"></script>
+  <script src="js/identificador.js"></script>
+  <script src="js/orden.js"></script>
+  <script src="js/rutas.js"></script>
+  <script src="js/edicion.js"></script>
+  <script src="js/imagenes.js"></script>
+  <script src="js/subida.js"></script>
+  <script src="js/borrador.js"></script>
+  <script src="js/lista.js"></script>
+  <script src="js/fotos.js"></script>
+  <script src="js/proyecto.js"></script>
+  <script src="js/pantallas.js"></script>
+  <script src="js/panel.js"></script>
 ```
 
-Añade, antes de `function pintar`, la función mudada desde `panel.js`
-(cámbiale sólo la firma: recibe el contenedor y el alternativo en vez de
-leerlos del ámbito):
+Crea `panel/js/pantallas.js`:
 
 ```js
-  /* Tras un repintado los nodos del <ol> son todos nuevos —pintar hace
-     innerHTML = '' y reconstruye—, así que el elemento que tenía el foco ya
-     no existe y el navegador lo manda a <body>. Lo único que sobrevive al
-     repintado es el `id` del proyecto, así que es lo que se usa para
-     encontrar dónde debe volver el foco.
+/* Qué sección se ve. Tan pequeño porque lo único que tiene que hacer bien es no
+   dejar dos visibles a la vez ni ninguna: cualquiera de las dos cosas es una
+   pantalla rota, y las dos son fáciles de escribir sin querer si cada pantalla
+   se esconde a sí misma. */
+window.Pantallas = (function () {
+  /* `hidden` y no `display:none` por CSS: la propiedad quita el elemento
+     también del árbol de accesibilidad y del recorrido con Tab, que es lo que
+     hace falta —una pantalla escondida cuyos campos siguen tabulables es peor
+     que no esconderla—. */
+  function mostrar(nodos, pantalla) {
+    Object.keys(nodos).forEach(function (nombre) {
+      nodos[nombre].hidden = nombre !== pantalla;
+    });
+  }
 
-     `foco` es opcional:
-       - { id, accion: 'subir'|'bajar'|'borrar' } para el botón de esa fila.
-         Si ese botón ha quedado deshabilitado por llegar al extremo, se usa
-         el otro botón de mover de la misma fila, que sigue siendo útil.
-       - { titulo: true } para `alternativo` (el campo de título del
-         formulario), cuando la lista se ha quedado vacía. */
-  function enfocar(contenedor, foco, alternativo) {
-    if (!foco) return;
-    if (foco.titulo) { alternativo.focus(); return; }
-    var fila = contenedor.querySelector('[data-id="' + foco.id + '"]');
-    if (!fila) return;
-    var boton = fila.querySelector('[data-accion="' + foco.accion + '"]');
-    if (boton && !boton.disabled) { boton.focus(); return; }
-    var otraAccion = foco.accion === 'subir' ? 'bajar' : 'subir';
-    var alternativa = fila.querySelector('[data-accion="' + otraAccion + '"]');
-    if (alternativa) alternativa.focus();
+  return { mostrar: mostrar };
+})();
+```
+
+En `panel/js/panel.js`, añade el enrutado. Lo esencial:
+
+```js
+  var pantallas, elsProyecto, abierto = null;
+  /* La copia de lo último que el servidor confirmó. Comparar contra ella es lo
+     que distingue «hay cambios sin guardar» de «se ha tocado algo y se ha
+     vuelto a dejar como estaba», que es lo que haría un simple booleano. */
+  var guardado = null;
+
+  function hayCambios() {
+    return !!trabajo && JSON.stringify(trabajo) !== guardado;
+  }
+
+  function buscar(id) {
+    for (var i = 0; i < trabajo.proyectos.length; i++) {
+      if (trabajo.proyectos[i].id === id) return i;
+    }
+    return -1;
+  }
+
+  function pintarProyecto(indice, foco) {
+    abierto = indice;
+    window.Proyecto.pintar(elsProyecto, trabajo.proyectos[indice], {
+      alCambiar: function (nuevo, focoFotos) {
+        trabajo.proyectos[indice] = nuevo;
+        pintarProyecto(indice, focoFotos);
+        avisar('Cambiado. Recuerda guardar.');
+      },
+      alSubir: subir
+    });
+    window.Fotos.enfocar(elsProyecto.fotos, foco);
+  }
+
+  function ir(pantalla, id) {
+    if (pantalla === 'proyecto') {
+      var indice = buscar(id);
+      /* Un id que no está no puede dejar la pantalla del proyecto anterior
+         con el encabezado de otro: se vuelve a la lista y se dice cuál era. */
+      if (indice === -1) {
+        window.Pantallas.mostrar(pantallas, 'pantallaLista');
+        location.hash = window.Rutas.hacia('lista');
+        return avisar('No hay ningún proyecto con el identificador «' + id + '».');
+      }
+      window.Pantallas.mostrar(pantallas, 'pantallaProyecto');
+      location.hash = window.Rutas.hacia('proyecto', id);
+      return pintarProyecto(indice);
+    }
+    abierto = null;
+    window.Pantallas.mostrar(pantallas, 'pantallaLista');
+    location.hash = window.Rutas.hacia('lista');
+    repintar();
+  }
+
+  /* El aviso de salir con cambios sin guardar. No se puede escribir el texto:
+     los navegadores enseñan el suyo desde hace años, y lo único que se
+     controla es si aparece o no. */
+  window.addEventListener('beforeunload', function (e) {
+    if (!hayCambios()) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+
+  window.addEventListener('hashchange', function () {
+    var destino = window.Rutas.leer(location.hash);
+    ir(destino.pantalla, destino.id);
+  });
+
+  window.Panel = { ir: ir, hayCambios: hayCambios };
+```
+
+Y la subida, que es lo que junta `Subida` con `Edicion`:
+
+```js
+  function subir(archivos) {
+    var indice = abierto;
+    elsProyecto.progreso.textContent = 'Preparando ' + archivos.length + ' foto(s)…';
+    window.Subida.subir(trabajo.proyectos[indice].id, archivos, function (paso) {
+      elsProyecto.progreso.textContent = paso.hecho === paso.total
+        ? '' : 'Subiendo ' + (paso.hecho + 1) + ' de ' + paso.total + ': ' + paso.archivo;
+    }, function (r) {
+      trabajo.proyectos[indice] = window.Edicion.anadir(trabajo.proyectos[indice], r.piezas);
+      pintarProyecto(indice);
+      /* Criterio de aceptación 10: se dice cuáles quedaron fuera, una por una
+         y con su motivo. Un «hubo errores» obligaría a subirlas todas otra
+         vez para averiguar cuál falló. */
+      if (!r.fallos.length) {
+        return avisar(r.piezas.length + ' foto(s) subidas. Recuerda guardar.');
+      }
+      avisar(r.piezas.length + ' foto(s) subidas. No se pudieron subir: '
+        + r.fallos.map(function (f) { return f.archivo + ' (' + f.motivo + ')'; }).join('; ')
+        + '. Recuerda guardar lo que sí ha entrado.');
+    });
   }
 ```
 
-y expórtala:
+En `guardar()`, tras el 200, actualiza la referencia:
 
 ```js
-  return { pintar: pintar, enfocar: enfocar, ETIQUETAS: ETIQUETAS,
-           indiceValido: indiceValido, calcularHasta: calcularHasta,
-           dentroDeLaCaja: dentroDeLaCaja };
+      trabajo.version = resultado.version;
+      guardado = JSON.stringify(trabajo);
+      avisar('Guardado.');
 ```
 
-**Todavía no toques `panel.js`**: hasta la Tarea 8 sigue con su copia y las
-21 pruebas del panel siguen en verde con ella.
+Y en `Borrador.cargar`, al recibir los datos:
+
+```js
+      trabajo = datos;
+      guardado = JSON.stringify(trabajo);
+```
+
+En `lista.js`, cada fila necesita su botón de abrir:
+
+```js
+    var abrir = document.createElement('button');
+    abrir.type = 'button';
+    abrir.className = 'fila-boton';
+    abrir.textContent = 'Abrir';
+    abrir.setAttribute('aria-label', 'Abrir ' + p.titulo);
+    abrir.dataset.accion = 'abrir';
+    abrir.addEventListener('click', function () { alAbrir(p.id); });
+```
+
+`pintar` y `fila` reciben `alAbrir` como quinto parámetro, y `panel.js` le pasa
+`function (id) { ir('proyecto', id); }`.
+
+En `panel/css/panel.css`, la rejilla y la zona de soltar. Nada de gestos: cursor
+del sistema y anillos de foco convencionales, como el resto del panel.
+
+```css
+.fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+         gap: .75rem; list-style: none; padding: 0; }
+.celda { border: 1px solid #333; padding: .4rem; }
+.celda--portada { border-color: #FFFF00; }
+.celda-img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; display: block; }
+/* La misma proporción y el mismo recorte que la galería: lo que se ve aquí es
+   lo que se verá en el lienzo, y elegir portada mirando otra cosa sería elegir
+   a ciegas. */
+.celda--marca-antes { box-shadow: inset 3px 0 0 #FFFF00; }
+.celda--marca-despues { box-shadow: inset -3px 0 0 #FFFF00; }
+.soltar { border: 1px dashed #555; padding: 1rem; }
+.soltar--encima { border-color: #FFFF00; }
+.problemas:not(:empty) { color: #FF5555; }
+
+/* La opacidad del arrastre es la única animación de esta pantalla, y también
+   se apaga: la especificación pide respetar prefers-reduced-motion, y un
+   parpadeo al arrastrar treinta fotos es exactamente lo que molesta a quien lo
+   tiene puesto. */
+.celda--arrastrando { opacity: .4; transition: opacity .12s; }
+@media (prefers-reduced-motion: reduce) {
+  .celda--arrastrando { transition: none; }
+}
+```
 
 - [ ] **Paso 4: Comprueba que pasa**
 
-Las cinco nuevas en verde, las once anteriores de `Lista.pintar` intactas, y:
+Arnés: las **nueve** nuevas en verde, las 28 de `pruebas-panel.js` intactas, y
+el total del arnés por encima de las 468 de antes de este bloque.
 
 ```bash
-wc -l panel/js/lista.js
+wc -l panel/js/*.js
 ```
 
-Por debajo de 300 (queda en torno a 245).
+Ninguno pasa de 300. Si `panel.js` los cruza, lo que sale es `subir` a su propio
+archivo, no acortar comentarios.
 
 - [ ] **Paso 5: Commit**
 
 ```bash
-git add panel/js/lista.js tests/pruebas-lista-pintar.js
-git commit -m "Cada fila de la lista enlaza a su proyecto, y el retorno de foco pasa a Lista"
+git add panel/ tests/
+git commit -m "Tres pantallas en una página, con el fragmento como dirección"
 ```
 
 ---
 
-### Tarea 8: La pantalla del proyecto y el enrutado en `panel.js`
+### Tarea 9: Comprobación manual, desplegada
 
-**Archivos:**
-- Crear: `panel/js/proyecto.js`
-- Modificar: `panel/js/panel.js`, `tests/pruebas-panel.js`
-
-**Interfaces:**
-- Produce:
-  - `window.Proyecto.init(contexto)` con `contexto = {porId(id), reemplazar(p),
-    avisar(texto)}`, y `window.Proyecto.mostrar(proyecto)`.
-  - `window.Panel = {ir(hash), hayCambios()}`: `ir` cambia de pantalla
-    **síncronamente** (las pruebas lo usan; en la página real lo dispara
-    también `hashchange`), `hayCambios` dice si el trabajo difiere de lo
-    último cargado o guardado.
-- Consume: todo lo anterior.
-
-**Lo que cambia en `panel.js`**, y por qué:
-
-1. **El enrutado.** `enrutar(hash)` lee la ruta con `Rutas.leer`, muestra la
-   sección con `Pantallas.mostrar` y, si es un proyecto, se lo da a
-   `Proyecto.mostrar`. Un id que no existe vuelve a la lista con aviso. Al
-   cargar el borrador se enruta una vez, para que un enlace directo a
-   `#/proyecto/bruma` funcione.
-2. **`ir(hash)` enruta en el acto y además escribe `location.hash`.** El
-   `hashchange` que eso provoca llega después y **no debe enrutar dos
-   veces** —repintaría la pantalla del proyecto en mitad de una edición—, así
-   que se recuerda qué hash se acaba de pedir y ese `hashchange` se ignora.
-3. **Cambios pendientes.** `guardadoComo` guarda el JSON de `proyectos` tal
-   como se cargó o se guardó; `hayCambios()` compara. Lo usa el bloque 3d
-   para no publicar con cambios sin guardar, y aquí `beforeunload` para que
-   el navegador pregunte antes de cerrar con trabajo perdido.
-4. **`porId` y `reemplazar`** son lo que la pantalla del proyecto necesita
-   del estado: leer un proyecto y sustituirlo por su copia editada.
-5. **`enfocarTrasRepintar` se va** (Tarea 7): `repintar` llama a
-   `Lista.enfocar(elLista, foco, elTitulo)`.
-
-- [ ] **Paso 1: Las pruebas que fallan**
-
-En `tests/pruebas-panel.js`:
-
-**(a)** Sustituye `HTML` por el marcado de las tres pantallas (lo mismo que
-`panel/index.html` pero sin etiquetas ni textos):
-
-```js
-  var HTML =
-    '<header><h1>Panel</h1><nav><a href="#/">Proyectos</a><a href="#/publicar">Publicar</a></nav>' +
-    '<button id="guardar" type="button">Guardar</button></header>' +
-    '<p id="aviso" role="status" aria-live="polite"></p>' +
-    '<main class="panel">' +
-    '<section id="pantalla-lista"><h2 tabindex="-1">Proyectos</h2><ol id="lista"></ol>' +
-    '<form id="nuevo">' +
-    '<input id="titulo" type="text"><select id="categoria"></select>' +
-    '<input id="fichaCliente" type="text"><input id="fichaAnio" type="number">' +
-    '<input id="fichaPapel" type="text"><input id="fichaEnlace" type="url">' +
-    '<button type="submit">Crear</button></form></section>' +
-    '<section id="pantalla-proyecto" hidden><h2 tabindex="-1">Proyecto</h2>' +
-    '<code id="proyecto-id"></code>' +
-    '<form id="ficha"><input id="proyecto-titulo" type="text"><select id="proyecto-categoria"></select>' +
-    '<input id="proyecto-cliente" type="text"><input id="proyecto-anio" type="number">' +
-    '<input id="proyecto-papel" type="text"><input id="proyecto-enlace" type="url"></form>' +
-    '<h3 id="proyecto-avisos-titulo" hidden></h3><ul id="proyecto-avisos" hidden></ul>' +
-    '<label id="zona" for="subir"></label><input id="subir" type="file" multiple>' +
-    '<ol id="fotos"></ol></section>' +
-    '<section id="pantalla-publicar" hidden><h2 tabindex="-1">Publicar</h2></section>' +
-    '</main>';
-```
-
-**(b)** Amplía `MODULOS` con los módulos nuevos, en el orden de
-`panel/index.html`. `Subida` **no** va: se dobla, como `Borrador`, porque
-habla con la red.
-
-```js
-  var MODULOS = ['../js/reglas-contenido.js', '../panel/js/identificador.js',
-                 '../panel/js/orden.js', '../panel/js/rutas.js', '../panel/js/edicion.js',
-                 '../panel/js/lista.js', '../panel/js/fotos.js', '../panel/js/proyecto.js',
-                 '../panel/js/pantallas.js', '../panel/js/panel.js'];
-```
-
-**(c)** Un doble de `Subida` junto a `borradorFalso`. Contesta en el acto,
-sin red ni lienzo; `piezas` es lo que «sube» cada archivo, por nombre, y los
-que no estén ahí fallan:
-
-```js
-  /* El doble de Subida. `subirVarios` es lo único que usa proyecto.js. Cada
-     archivo cuyo nombre esté en `piezas` sube con esa pieza; los demás fallan
-     con `motivo`. Responde en el acto, como borradorFalso. */
-  function subidaFalsa(piezas, motivo) {
-    var doble = {
-      pedidas: [],
-      subirVarios: function (idProyecto, archivos, alCadaUno, alTerminar) {
-        var fallos = [];
-        [].slice.call(archivos).forEach(function (a) {
-          doble.pedidas.push(idProyecto + '/' + a.name);
-          if (piezas[a.name]) return alCadaUno(a, piezas[a.name], null);
-          fallos.push({ nombre: a.name, motivo: motivo });
-          alCadaUno(a, null, motivo);
-        });
-        alTerminar(fallos);
-      }
-    };
-    return doble;
-  }
-
-  /* Un <input type=file> no deja escribir `files` a mano, pero sí asignarle
-     el FileList de un DataTransfer. Los archivos son de mentira: el doble de
-     Subida no los abre. */
-  function elegirArchivos(w, d, nombres) {
-    var dt = new w.DataTransfer();
-    nombres.forEach(function (n) { dt.items.add(new w.File(['x'], n, { type: 'image/jpeg' })); });
-    var input = d.getElementById('subir');
-    input.files = dt.files;
-    input.dispatchEvent(new w.Event('change', { bubbles: true }));
-  }
-
-  function cambiarCampo(w, d, id, valor) {
-    var campo = d.getElementById(id);
-    campo.value = valor;
-    campo.dispatchEvent(new w.Event('change', { bubbles: true }));
-  }
-```
-
-**(d)** `conPanel` acepta el doble de subida como global:
-
-```js
-  function conPanel(doble, fn, confirmar, subida) {
-    return ArnesDom.conDocumento({
-      html: HTML,
-      globales: { Borrador: doble, Subida: subida || subidaFalsa({}, 'sin red'),
-                  confirm: confirmar || function () { return true; } },
-      scripts: MODULOS
-    }, fn);
-  }
-```
-
-**(e)** Y al final de la cadena de `.then`, tras el bloque del conflicto,
-añade estas secciones (cada `return conPanel(…)` encadenado con `.then` como
-los anteriores):
-
-```js
-  }).then(function () {
-
-    // ---- Navegar --------------------------------------------------------
-
-    return conPanel(borradorFalso({ datos: dosProyectos() }), function (w, d) {
-      prueba('arranca en la lista', function () {
-        igual([d.getElementById('pantalla-lista').hidden, d.getElementById('pantalla-proyecto').hidden], [false, true]);
-      });
-
-      w.Panel.ir('#/proyecto/niebla');
-      prueba('ir a un proyecto enseña su pantalla y esconde la lista', function () {
-        igual([d.getElementById('pantalla-lista').hidden, d.getElementById('pantalla-proyecto').hidden], [true, false]);
-      });
-      prueba('con su id, su título y su categoría puestos', function () {
-        igual(d.getElementById('proyecto-id').textContent, 'niebla');
-        igual(d.getElementById('proyecto-titulo').value, 'Niebla');
-        igual(d.getElementById('proyecto-categoria').value, 'editorial');
-      });
-      /* Criterio 6: al cambiar de pantalla con el teclado, el foco no puede
-         quedarse en un enlace que ya no se ve. */
-      prueba('y el foco va al título de la pantalla', function () {
-        igual(d.activeElement, d.querySelector('#pantalla-proyecto h2'));
-      });
-
-      w.Panel.ir('#/proyecto/no-existe');
-      prueba('un id que no existe vuelve a la lista y lo dice', function () {
-        igual(d.getElementById('pantalla-lista').hidden, false);
-        cierto(d.getElementById('aviso').textContent.indexOf('no-existe') !== -1, d.getElementById('aviso').textContent);
-      });
-    });
-
-  }).then(function () {
-
-    // ---- Editar la ficha ---------------------------------------------
-
-    var alEditar = borradorFalso({ datos: dosProyectos() });
-    return conPanel(alEditar, function (w, d) {
-      w.Panel.ir('#/proyecto/niebla');
-      cambiarCampo(w, d, 'proyecto-titulo', 'Niebla espesa');
-      cambiarCampo(w, d, 'proyecto-anio', '2026');
-      cambiarCampo(w, d, 'proyecto-papel', 'DoP');
-      d.getElementById('guardar').click();
-      var guardado = alEditar.guardadas[0].proyectos[0];
-
-      prueba('cambiar un campo cambia el proyecto, y el id se queda', function () {
-        igual([guardado.id, guardado.titulo, guardado.ficha], ['niebla', 'Niebla espesa', { anio: 2026, papel: 'DoP' }]);
-      });
-      prueba('y la lista enseña el título nuevo', function () {
-        igual(d.querySelector('#lista li.fila .fila-titulo').textContent, 'Niebla espesa · Editorial');
-      });
-      prueba('hayCambios vuelve a ser falso tras guardar', function () {
-        igual(w.Panel.hayCambios(), false);
-      });
-    });
-
-  }).then(function () {
-
-    return conPanel(borradorFalso({ datos: dosProyectos() }), function (w, d) {
-      w.Panel.ir('#/proyecto/niebla');
-      prueba('un proyecto sin fotos avisa de lo que le falta para publicarse', function () {
-        var avisos = [].map.call(d.querySelectorAll('#proyecto-avisos li'), function (li) { return li.textContent; });
-        cierto(avisos.indexOf('sin piezas') !== -1 && avisos.indexOf('sin portada') !== -1, avisos.join(' | '));
-        igual(d.getElementById('proyecto-avisos').hidden, false);
-      });
-
-      cambiarCampo(w, d, 'proyecto-titulo', '   ');
-      prueba('un título en blanco no se aplica, se repone y se avisa', function () {
-        igual(d.getElementById('proyecto-titulo').value, 'Niebla');
-        cierto(d.getElementById('aviso').textContent.indexOf('título') !== -1);
-      });
-    });
-
-  }).then(function () {
-
-    // ---- Subir fotos ----------------------------------------------------
-
-    var alSubir = borradorFalso({ datos: dosProyectos() });
-    var subida = subidaFalsa({
-      'a.jpg': { url: '/img/niebla-a-1-3000.jpg', miniatura: '/img/niebla-a-1-250.jpg', portada: '/img/niebla-a-1-1500.jpg' },
-      'b.jpg': { url: '/img/niebla-b-1-3000.jpg', miniatura: '/img/niebla-b-1-250.jpg', portada: '/img/niebla-b-1-1500.jpg' }
-    }, 'la imagen supera el tamaño máximo de 5 MB');
-    return conPanel(alSubir, function (w, d) {
-      w.Panel.ir('#/proyecto/niebla');
-      elegirArchivos(w, d, ['a.jpg', 'grande.jpg', 'b.jpg']);
-      d.getElementById('guardar').click();
-      var guardado = alSubir.guardadas[0].proyectos[0];
-
-      prueba('cada foto que sube entra en el proyecto abierto, en orden', function () {
-        igual(subida.pedidas, ['niebla/a.jpg', 'niebla/grande.jpg', 'niebla/b.jpg']);
-        igual(guardado.piezas.map(function (p) { return p.url; }), ['/img/niebla-a-1-3000.jpg', '/img/niebla-b-1-3000.jpg']);
-        igual(d.querySelectorAll('#fotos li.foto').length, 2);
-      });
-      prueba('la primera se hace portada sola', function () {
-        igual(guardado.portada, '/img/niebla-a-1-1500.jpg');
-        igual(d.querySelector('#fotos li.foto').classList.contains('foto--portada'), true);
-      });
-      /* Criterio 10: la que falla no arrastra a las demás, y se dice cuál. */
-      prueba('el aviso final cuenta las subidas y nombra la que falló, con su motivo', function () {
-        var t = d.getElementById('aviso').textContent;
-        cierto(t.indexOf('2 fotos subidas') !== -1, t);
-        cierto(t.indexOf('grande.jpg') !== -1 && t.indexOf('5 MB') !== -1, t);
-      });
-      prueba('y el selector queda libre para volver a intentarlo', function () {
-        igual(d.getElementById('subir').disabled, false);
-      });
-    }, null, subida);
-
-  }).then(function () {
-
-    // ---- Ordenar, portada y quitar ------------------------------------
-
-    var conFotos = dosProyectos();
-    conFotos.proyectos[0].portada = '/img/a-1500.jpg';
-    conFotos.proyectos[0].piezas = [
-      { url: '/img/a-3000.jpg', miniatura: '/img/a-250.jpg', portada: '/img/a-1500.jpg' },
-      { url: '/img/b-3000.jpg', miniatura: '/img/b-250.jpg', portada: '/img/b-1500.jpg' },
-      { url: '/img/c-3000.jpg', miniatura: '/img/c-250.jpg', portada: '/img/c-1500.jpg' }
-    ];
-    var alOrdenar = borradorFalso({ datos: conFotos });
-    return conPanel(alOrdenar, function (w, d) {
-      w.Panel.ir('#/proyecto/niebla');
-      function urls() { return [].map.call(d.querySelectorAll('#fotos li.foto img'), function (i) { return i.getAttribute('src'); }); }
-
-      d.querySelectorAll('#fotos li.foto')[2].querySelector('[data-accion="antes"]').click();
-      prueba('adelantar una foto la mueve y el foco vuelve a su botón', function () {
-        igual(urls(), ['/img/a-250.jpg', '/img/c-250.jpg', '/img/b-250.jpg']);
-        igual(d.activeElement.dataset.accion, 'antes');
-        igual(d.activeElement.closest('li.foto').dataset.indice, '1');
-      });
-
-      d.querySelectorAll('#fotos li.foto')[1].querySelector('[data-accion="portada"]').click();
-      prueba('marcar portada cambia la del proyecto', function () {
-        igual(d.querySelectorAll('#fotos li.foto')[1].querySelector('[data-accion="portada"]').getAttribute('aria-pressed'), 'true');
-        d.getElementById('guardar').click();
-        igual(alOrdenar.guardadas[0].proyectos[0].portada, '/img/c-1500.jpg');
-      });
-
-      d.querySelectorAll('#fotos li.foto')[1].querySelector('[data-accion="quitar"]').click();
-      prueba('quitar la portada la pasa a la primera que queda', function () {
-        igual(urls(), ['/img/a-250.jpg', '/img/b-250.jpg']);
-        d.getElementById('guardar').click();
-        igual(alOrdenar.guardadas[1].proyectos[0].portada, '/img/a-1500.jpg');
-      });
-      prueba('y el foco va a la tarjeta que ocupa ahora ese sitio', function () {
-        igual(d.activeElement.closest('li.foto').dataset.indice, '1');
-      });
-      prueba('hayCambios es cierto después de editar sin guardar', function () {
-        d.querySelectorAll('#fotos li.foto')[0].querySelector('[data-accion="despues"]').click();
-        igual(w.Panel.hayCambios(), true);
-      });
-    });
-
-  }).then(function () {
-
-    return conPanel(borradorFalso({ datos: (function () {
-      var t = dosProyectos();
-      t.proyectos[0].piezas = [{ url: '/img/a-3000.jpg', miniatura: '/img/a-250.jpg', portada: '/img/a-1500.jpg' }];
-      t.proyectos[0].portada = '/img/a-1500.jpg';
-      return t;
-    })() }), function (w, d) {
-      w.Panel.ir('#/proyecto/niebla');
-      d.querySelector('#fotos li.foto [data-accion="quitar"]').click();
-      prueba('quitar pide confirmación, y si se cancela no quita nada', function () {
-        igual(d.querySelectorAll('#fotos li.foto').length, 1);
-      });
-    }, function () { return false; });
-  });
-```
-
-Ojo con el cierre: la cadena original termina en `});` tras el bloque del
-conflicto y luego `});` de `describeAsync`. Los bloques nuevos se insertan
-entre esos dos cierres, y el último `});` de arriba cierra la cadena.
-
-- [ ] **Paso 2: Comprueba que falla**
-
-Recarga. Esperado: la sección «panel.js» cae entera —`proyecto.js` no existe
-y `conDocumento` rechaza al no poder cargarlo—.
-
-- [ ] **Paso 3: Escribe `panel/js/proyecto.js`**
-
-```js
-window.Proyecto = (function () {
-  var ctx;                 // { porId, reemplazar, avisar }
-  var el = {};
-  var idAbierto = null;
-  var subiendo = false;
-
-  var CAMPOS = ['titulo', 'categoria', 'cliente', 'anio', 'papel', 'enlace'];
-
-  /* Siempre se relee del estado por id, nunca se guarda una referencia: cada
-     edición devuelve una copia (Edicion) y la anterior queda vieja. */
-  function actual() { return idAbierto ? ctx.porId(idAbierto) : null; }
-
-  function leerFormulario() {
-    var campos = {};
-    CAMPOS.forEach(function (c) { campos[c] = el[c].value; });
-    return campos;
-  }
-
-  function rellenar(p) {
-    el.id.textContent = p.id;
-    el.titulo.value = p.titulo || '';
-    el.categoria.value = p.categoria;
-    var f = p.ficha || {};
-    el.cliente.value = f.cliente || '';
-    el.anio.value = f.anio === undefined ? '' : f.anio;
-    el.papel.value = f.papel || '';
-    el.enlace.value = f.enlace || '';
-  }
-
-  /* Lo que le falta a este proyecto para publicarse, en su propia lista y
-     no en el aviso general: cambia con cada edición y no es una noticia,
-     es un estado. Publicar (bloque 3d) volverá a decirlo todo junto. */
-  function pintarAvisos(p) {
-    var avisos = window.Edicion.avisosDe(p);
-    el.avisos.innerHTML = '';
-    avisos.forEach(function (t) {
-      var li = document.createElement('li');
-      li.textContent = t;
-      el.avisos.appendChild(li);
-    });
-    el.avisos.hidden = avisos.length === 0;
-    el.avisosTitulo.hidden = avisos.length === 0;
-  }
-
-  function repintar(foco) {
-    var p = actual();
-    if (!p) return;
-    window.Fotos.pintar(el.fotos, p, acciones);
-    pintarAvisos(p);
-    /* Si no queda tarjeta a la que volver, al selector de archivos: es lo
-       siguiente que se querrá hacer con una rejilla vacía. */
-    if (foco && !window.Fotos.enfocar(el.fotos, foco.indice, foco.accion)) el.subir.focus();
-  }
-
-  function cambiar(nuevo, foco, mensaje) {
-    ctx.reemplazar(nuevo);
-    repintar(foco);
-    ctx.avisar(mensaje + ' Recuerda guardar.');
-  }
-
-  var acciones = {
-    alMover: function (desde, hasta) {
-      cambiar(window.Edicion.moverPieza(actual(), desde, hasta),
-              { indice: hasta, accion: hasta < desde ? 'antes' : 'despues' },
-              'Orden de las fotos cambiado.');
-    },
-    alMarcarPortada: function (i) {
-      cambiar(window.Edicion.marcarPortada(actual(), i), { indice: i, accion: 'portada' }, 'Portada cambiada.');
-    },
-    alQuitar: function (i) {
-      /* Destructivo dentro del borrador, aunque la imagen siga en R2 (spec:
-         borrar no borra del bucket; limpiar es una acción aparte). */
-      if (!window.confirm('¿Quitar la foto ' + (i + 1) + ' de este proyecto? La imagen sigue guardada en el servidor.')) return;
-      cambiar(window.Edicion.quitarPieza(actual(), i), { indice: i, accion: 'quitar' }, 'Foto quitada.');
-    }
-  };
-
-  /* Se aplica en cada `change`, no con un botón: la ficha son seis campos y
-     un «Aplicar» sería un paso más que olvidar antes de «Guardar». El título
-     es lo único que no puede quedar vacío —es lo que enseña la lista—, así
-     que en blanco se repone el anterior y se avisa. */
-  function alCambiarFicha() {
-    var p = actual();
-    if (!p) return;
-    var campos = leerFormulario();
-    if (!String(campos.titulo).trim()) {
-      el.titulo.value = p.titulo;
-      return ctx.avisar('El título no puede quedar vacío.');
-    }
-    ctx.reemplazar(window.Edicion.aplicarFicha(p, campos));
-    pintarAvisos(actual());
-    ctx.avisar('Ficha cambiada. Recuerda guardar.');
-  }
-
-  function subirArchivos(archivos) {
-    var p = actual();
-    if (!p || subiendo || !archivos || !archivos.length) return;
-    var id = p.id, total = archivos.length, hechas = 0;
-    subiendo = true;
-    el.subir.disabled = true;
-    ctx.avisar('Subiendo 1 de ' + total + '…');
-
-    window.Subida.subirVarios(id, archivos, function (archivo, pieza) {
-      hechas++;
-      if (pieza) {
-        /* Al proyecto por su id y no al «actual»: si mientras subía se
-           navegó a otro, la foto tiene que caer en el suyo. Y si ese
-           proyecto se borró entretanto, la pieza queda huérfana en R2, que
-           es recuperable. */
-        var dueno = ctx.porId(id);
-        if (dueno) ctx.reemplazar(window.Edicion.anadirPieza(dueno, pieza));
-        if (idAbierto === id) repintar();
-      }
-      if (hechas < total) ctx.avisar('Subiendo ' + (hechas + 1) + ' de ' + total + '…');
-    }, function (fallos) {
-      subiendo = false;
-      el.subir.disabled = false;
-      el.subir.value = '';   // que volver a elegir el mismo archivo dispare `change`
-      var bien = total - fallos.length;
-      var texto = bien === 1 ? '1 foto subida.' : bien + ' fotos subidas.';
-      if (fallos.length) {
-        /* Criterio 10: se dice cuáles quedaron fuera y por qué. */
-        texto += ' No se han podido subir: ' + fallos.map(function (f) {
-          return f.nombre + ' (' + f.motivo + ')';
-        }).join('; ') + '. Vuelve a intentarlo con ésas.';
-      }
-      if (bien) texto += ' Recuerda guardar.';
-      ctx.avisar(texto);
-    });
-  }
-
-  function init(contexto) {
-    ctx = contexto;
-    ['id'].concat(CAMPOS).forEach(function (c) { el[c] = document.getElementById('proyecto-' + c); });
-    el.fotos = document.getElementById('fotos');
-    el.subir = document.getElementById('subir');
-    el.zona = document.getElementById('zona');
-    el.avisos = document.getElementById('proyecto-avisos');
-    el.avisosTitulo = document.getElementById('proyecto-avisos-titulo');
-
-    window.ReglasContenido.CATEGORIAS.forEach(function (c) {
-      var o = document.createElement('option');
-      o.value = c;
-      o.textContent = window.Lista.ETIQUETAS[c] || c;
-      el.categoria.appendChild(o);
-    });
-
-    /* Enter en un campo no debe recargar la página. */
-    document.getElementById('ficha').addEventListener('submit', function (e) { e.preventDefault(); });
-    CAMPOS.forEach(function (c) { el[c].addEventListener('change', alCambiarFicha); });
-
-    el.subir.addEventListener('change', function () { subirArchivos(el.subir.files); });
-    el.zona.addEventListener('dragover', function (e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-      el.zona.classList.add('zona--encima');
-    });
-    el.zona.addEventListener('dragleave', function () { el.zona.classList.remove('zona--encima'); });
-    el.zona.addEventListener('drop', function (e) {
-      e.preventDefault();
-      el.zona.classList.remove('zona--encima');
-      subirArchivos(e.dataTransfer.files);
-    });
-  }
-
-  function mostrar(p) {
-    idAbierto = p.id;
-    rellenar(p);
-    repintar();
-  }
-
-  return { init: init, mostrar: mostrar };
-})();
-```
-
-- [ ] **Paso 4: Reescribe `panel/js/panel.js`**
-
-Éste es el archivo entero como queda. Lo que no se nombra en la lista de
-cambios de arriba está copiado tal cual de la versión del bloque 3b.
-
-```js
-(function () {
-  var trabajo = null;      // { version, proyectos }
-  /* JSON de trabajo.proyectos tal como se cargó o se guardó por última vez.
-     Compararlo contra el actual dice si hay cambios pendientes: es lo que
-     avisa antes de cerrar la pestaña y lo que impide publicar (bloque 3d). */
-  var guardadoComo = null;
-  var elLista, elAviso, elTitulo, elCategoria, elCrear, elGuardar;
-  var elCliente, elAnio, elPapel, elEnlace;
-
-  function avisar(texto) { elAviso.textContent = texto; }
-
-  /* Activa o desactiva lo que necesita `trabajo`. Se llama deshabilitado
-     desde el arranque, antes de que Borrador.cargar resuelva: el caso más
-     probable en producción —la sesión de Access caducó de un día para otro—
-     dejaría el formulario activo delante de un `trabajo` null. */
-  function activarControles(activo) {
-    elTitulo.disabled = !activo;
-    elCategoria.disabled = !activo;
-    elCliente.disabled = !activo;
-    elAnio.disabled = !activo;
-    elPapel.disabled = !activo;
-    elEnlace.disabled = !activo;
-    elCrear.disabled = !activo;
-    elGuardar.disabled = !activo;
-  }
-
-  function porId(id) {
-    for (var i = 0; trabajo && i < trabajo.proyectos.length; i++) {
-      if (trabajo.proyectos[i].id === id) return trabajo.proyectos[i];
-    }
-    return null;
-  }
-
-  function reemplazar(p) {
-    trabajo.proyectos = window.Edicion.reemplazar(trabajo.proyectos, p);
-    window.Lista.pintar(elLista, trabajo.proyectos, alMover, alBorrar);
-  }
-
-  function hayCambios() {
-    return !!trabajo && JSON.stringify(trabajo.proyectos) !== guardadoComo;
-  }
-
-  function fijarGuardado() { guardadoComo = JSON.stringify(trabajo.proyectos); }
-
-  /* Tras borrar, el foco vuelve a la fila que ocupa ahora ese sitio, o a la
-     anterior si se borró la última; si no queda ninguna, al título. */
-  function focoTrasBorrar(indiceBorrado) {
-    if (trabajo.proyectos.length === 0) return { titulo: true };
-    var indice = Math.min(indiceBorrado, trabajo.proyectos.length - 1);
-    return { id: trabajo.proyectos[indice].id, accion: 'borrar' };
-  }
-
-  function alMover(desde, hasta) {
-    var id = trabajo.proyectos[desde].id;
-    var accion = hasta < desde ? 'subir' : 'bajar';
-    trabajo.proyectos = window.Orden.mover(trabajo.proyectos, desde, hasta);
-    repintar({ id: id, accion: accion });
-    avisar('Orden cambiado. Recuerda guardar.');
-  }
-
-  function alBorrar(id, titulo) {
-    if (!window.confirm('¿Borrar «' + titulo + '»? No se puede deshacer sin recargar.')) return;
-    var indice = -1, i;
-    for (i = 0; i < trabajo.proyectos.length; i++) {
-      if (trabajo.proyectos[i].id === id) { indice = i; break; }
-    }
-    trabajo.proyectos = trabajo.proyectos.filter(function (p) { return p.id !== id; });
-    repintar(focoTrasBorrar(indice));
-    avisar('Proyecto borrado. Recuerda guardar.');
-  }
-
-  function repintar(foco) {
-    window.Lista.pintar(elLista, trabajo.proyectos, alMover, alBorrar);
-    window.Lista.enfocar(elLista, foco, elTitulo);
-  }
-
-  /* La ficha que escribe el formulario. `cliente` y `enlace` sólo entran si
-     el estudio los ha escrito: la forma de decir que un trabajo no tiene
-     cliente o no tiene vídeo es que la clave no esté (ver reglas-contenido.js).
-     El año va como número porque así está en contenido.json. */
-  function fichaDelFormulario() {
-    var ficha = {};
-    var cliente = elCliente.value.trim();
-    if (cliente) ficha.cliente = cliente;
-    ficha.anio = Number(elAnio.value);
-    ficha.papel = elPapel.value.trim();
-    var enlace = elEnlace.value.trim();
-    if (enlace) ficha.enlace = enlace;
-    return ficha;
-  }
-
-  function crear(titulo, categoria, ficha) {
-    if (!trabajo) return;
-    var id = window.Identificador.desde(titulo);
-    var ids = trabajo.proyectos.map(function (p) { return p.id; });
-    var problema = window.Identificador.problema(id, ids, window.ReglasContenido.CATEGORIAS);
-    if (problema) return avisar(problema);
-
-    /* El `required` del formulario sólo frena por el camino del navegador.
-       Desde el bloque 3c hay pantalla para corregir la ficha, pero pedirlo
-       aquí sigue siendo más fácil que acordarse luego. */
-    if (!ficha.anio || !ficha.papel) {
-      return avisar('El año y el papel hacen falta para poder publicar.');
-    }
-
-    /* Nace sin piezas ni portada: se le ponen en su pantalla (#/proyecto/id).
-       Hasta entonces no se puede publicar, y eso es correcto. */
-    trabajo.proyectos.push({ id: id, titulo: titulo, categoria: categoria,
-                             tipo: 'fotos', ficha: ficha, piezas: [] });
-    repintar();
-    avisar('Proyecto «' + titulo + '» creado. Ábrelo para subirle fotos, y recuerda guardar.');
-  }
-
-  function guardar() {
-    if (!trabajo) return;
-    window.Borrador.guardar(trabajo, function (resultado, error) {
-      if (error) return avisar(error);
-      if (resultado.conflicto) {
-        /* Si «Guardar» siguiera activo, volver a pulsarlo repetiría el 409 en
-           bucle. Y no se actualiza `trabajo.version` a la del servidor:
-           un segundo intento «con éxito» pisaría en silencio el trabajo de
-           la otra persona. Recargar trae los datos, no sólo el número. */
-        elGuardar.disabled = true;
-        return avisar('Alguien ha guardado mientras editabas (el servidor va por la versión '
-          + resultado.guardada + '). Si guardaras ahora, sobrescribirías su trabajo: por eso '
-          + '«Guardar» se ha desactivado. Recarga la página para ver lo último — recargar '
-          + 'descarta los cambios que tú no hayas guardado todavía, así que cópialos antes si '
-          + 'los necesitas.');
-      }
-      trabajo.version = resultado.version;
-      fijarGuardado();
-      avisar('Guardado.');
-    });
-  }
-
-  /* Las tres pantallas comparten el estado de este archivo y se reparten la
-     URL (Rutas): #/ la lista, #/proyecto/<id> un proyecto, #/publicar
-     publicar. Se enruta al arrancar —para que un enlace directo funcione—,
-     en cada hashchange, y desde ir(). */
-  function enrutar(hash) {
-    var r = window.Rutas.leer(hash === undefined ? location.hash : hash);
-    if (r.pantalla === 'proyecto') {
-      var p = porId(r.id);
-      if (!p) {
-        avisar(trabajo ? 'No hay ningún proyecto con el identificador «' + r.id + '».'
-                       : 'Espera a que cargue el contenido.');
-        return ir('#/');
-      }
-      window.Proyecto.mostrar(p);
-    }
-    window.Pantallas.mostrar(r.pantalla);
-  }
-
-  /* `ir` enruta en el acto y además escribe la URL. El hashchange que eso
-     provoca llega después y NO debe enrutar otra vez —repintaría la pantalla
-     del proyecto en mitad de una edición—, así que se recuerda qué hash se
-     acaba de pedir y ese aviso se ignora. Escribir el hash puede lanzar en un
-     documento sin URL propia (el iframe de las pruebas): se enruta igual. */
-  var hashPedido = null;
-  function ir(hash) {
-    hashPedido = hash;
-    try { location.hash = hash; } catch (e) { /* about:blank */ }
-    enrutar(hash);
-  }
-
-  function init() {
-    elLista = document.getElementById('lista');
-    elAviso = document.getElementById('aviso');
-    elTitulo = document.getElementById('titulo');
-    elCategoria = document.getElementById('categoria');
-    elCliente = document.getElementById('fichaCliente');
-    elAnio = document.getElementById('fichaAnio');
-    elPapel = document.getElementById('fichaPapel');
-    elEnlace = document.getElementById('fichaEnlace');
-    elCrear = document.querySelector('#nuevo button[type="submit"]');
-    elGuardar = document.getElementById('guardar');
-
-    activarControles(false);   // todavía no hay `trabajo`
-
-    window.ReglasContenido.CATEGORIAS.forEach(function (c) {
-      var o = document.createElement('option');
-      o.value = c;
-      o.textContent = window.Lista.ETIQUETAS[c] || c;
-      elCategoria.appendChild(o);
-    });
-
-    document.getElementById('nuevo').addEventListener('submit', function (e) {
-      e.preventDefault();
-      crear(elTitulo.value.trim(), elCategoria.value, fichaDelFormulario());
-      /* El formulario entero, no sólo el título: si la ficha se quedara
-         escrita, el siguiente proyecto nacería con el cliente del anterior
-         sin que nadie lo pidiera, y eso no da error en ningún sitio. */
-      elTitulo.value = '';
-      elCliente.value = '';
-      elAnio.value = '';
-      elPapel.value = '';
-      elEnlace.value = '';
-    });
-
-    elGuardar.addEventListener('click', guardar);
-
-    window.Pantallas.init(['lista', 'proyecto', 'publicar']);
-    window.Proyecto.init({ porId: porId, reemplazar: reemplazar, avisar: avisar });
-
-    window.addEventListener('hashchange', function () {
-      if (location.hash === hashPedido) { hashPedido = null; return; }   // ya enrutado por ir()
-      hashPedido = null;
-      enrutar();
-    });
-
-    /* Que el navegador pregunte antes de cerrar con trabajo sin guardar. El
-       texto lo pone él; `returnValue` es lo que activa la pregunta. */
-    window.addEventListener('beforeunload', function (e) {
-      if (!hayCambios()) return;
-      e.preventDefault();
-      e.returnValue = '';
-    });
-
-    window.Borrador.cargar(function (datos, error) {
-      if (error) return avisar(error);
-      trabajo = datos;
-      fijarGuardado();
-      activarControles(true);
-      repintar();
-      enrutar();
-    });
-  }
-
-  init();
-
-  /* Para las pruebas y para quien quiera navegar desde consola. `ir` es
-     síncrono a propósito: el hashchange no lo es, y en el iframe del arnés
-     ni siquiera es seguro que llegue. */
-  window.Panel = { ir: ir, hayCambios: hayCambios };
-})();
-```
-
-- [ ] **Paso 5: Comprueba que pasa**
-
-Recarga el arnés. **Las 21 pruebas anteriores de «panel.js» siguen en verde**
-—incluidas las del foco tras mover y borrar, que ahora pasan por
-`Lista.enfocar`— y las 20 nuevas también. Y:
+**Esta tarea la ejecuta Ángel, no el asistente.** Despliegue:
 
 ```bash
-wc -l panel/js/panel.js panel/js/proyecto.js
-python tests/auditar_rutas.py
+git archive HEAD | tar -x -C <tmp>
+wrangler deploy --config worker/estatico/wrangler.toml --assets <tmp>
 ```
 
-Los dos por debajo de 300. Si `panel.js` se pasa, lo primero que sobra son
-comentarios repetidos de `guardar`; no le quites funciones.
+Lo que sigue necesitando ojos humanos, porque ninguna prueba lo puede ver:
 
-- [ ] **Paso 6: Commit**
+| # | Qué se mira | Qué tiene que pasar |
+|---|---|---|
+| 1 | Abrir un proyecto desde la lista | Se ve su ficha escrita y sus fotos |
+| 2 | Recargar con `#/proyecto/bruma` | Vuelve a la misma pantalla, no a la lista |
+| 3 | Soltar una foto de 40 MB | Sube en segundos, no en minutos |
+| 4 | Mirar el bucket tras esa subida | Tres archivos: `-1500`, `-3000`, `-250` |
+| 5 | Abrir el `-3000` a tamaño completo | El lado largo son 3000 px o menos, y la foto no está deformada |
+| 6 | Subir una foto hecha con el móvil de lado | Sale derecha, no tumbada |
+| 7 | Subir diez de golpe | Se ve el progreso y entran las diez |
+| 8 | Subir un `.txt` renombrado a `.jpg` | Dice cuál falló y las demás entran |
+| 9 | Arrastrar una foto sobre otra | Se reordena, y la marca amarilla aparece del lado correcto |
+| 10 | Repetir el 9 **sólo con teclado** | Se puede hacer entero: Tab hasta ‹ o ›, Enter |
+| 11 | Marcar otra portada y guardar y publicar | El lienzo enseña esa foto |
+| 12 | Quitar una foto y decir que no | No se quita |
+| 13 | Cambiar el título y guardar | El `id` de la URL no cambia |
+| 14 | Editar algo y cerrar la pestaña | El navegador avisa |
+| 15 | Editar algo, guardar, y cerrar | **No** avisa |
+| 16 | Todo lo anterior con `prefers-reduced-motion` puesto | Nada parpadea |
 
-```bash
-git add panel/js/proyecto.js panel/js/panel.js tests/pruebas-panel.js
-git commit -m "La pantalla de un proyecto: ficha, subir fotos, ordenarlas, portada y quitar"
-```
+- [ ] **Paso 1: Desplegar y recorrer la tabla**
+- [ ] **Paso 2: Anotar lo que no cuadre y volver a la tarea que lo cubra**
 
 ---
 
-### Tarea 9: Comprobarlo con ojos, desplegado y sin ratón
+### Tarea 10: Verificación antes de decir «hecho»
 
-Nada de esto lo ve el arnés: el arrastre real, la reducción de un original de
-30 MB, el 409 del Worker, Access. **Lo hace el controlador**, con sesión de
-Access iniciada, siguiendo el procedimiento del bloque 3b (Tarea 7):
+- [ ] **Paso 1: `superpowers:verification-before-completion`**
 
-```
-git archive HEAD | tar -x -C <directorio-temporal>
-wrangler deploy --config worker/estatico/wrangler.toml --assets <directorio-temporal>
-```
-
-**No hay que tocar Access ni el Worker de la API**: `/panel` ya está detrás
-de la aplicación que cubre `/api`, y `POST /api/imagen` existe desde el
-bloque 3a.
-
-- [ ] **Paso 1: Lo que debe funcionar**
-
-| Prueba | Esperado |
-|---|---|
-| Entrar en `lidialuque.com/panel` | la lista, con «Editar» en cada fila |
-| Pulsar «Editar» en un proyecto de Lidia | su ficha rellena, sus fotos en la rejilla con la portada marcada, la URL en `#/proyecto/<id>` |
-| Recargar con esa URL | abre directamente ese proyecto |
-| Soltar **un original de cámara** (20–50 MB) en la zona | «Subiendo 1 de 1…», y en unos segundos la foto en la rejilla; en Red, tres `POST /api/imagen` de **menos de 1 MB cada uno** |
-| Abrir la `url` de la pieza subida | se ve, con lado largo 3000; la miniatura, 250; la portada, 1500. Una foto vertical sale vertical |
-| Soltar cinco a la vez, una de ellas un `.txt` | cuatro suben, el aviso nombra el `.txt` y su motivo, el selector queda activo |
-| Soltar **la misma foto otra vez** | sube (nombre distinto por el sello), sin 409 |
-| Cambiar el título y Guardar; recargar | el título nuevo en la lista y en la ficha; el id igual |
-| Marcar otra portada, Guardar, ir a Publicar del 3d (o esperar al 3d) | — |
-| Cerrar la pestaña con cambios sin guardar | el navegador pregunta |
-| Cerrar la pestaña **sin** cambios | no pregunta |
-
-- [ ] **Paso 2: Sin ratón** (criterio 6)
-
-Con el teclado solo, desde la lista: Tab hasta «Editar» de un proyecto, Enter
-—el foco tiene que aparecer en el título «Proyecto»—; Tab por la ficha;
-Tab hasta el selector de archivos y Enter abre el diálogo del sistema; en la
-rejilla, adelantar una foto con ← y comprobar que **el foco sigue en esa
-misma foto**; marcar portada con Enter; quitar con Enter y confirmar; volver a
-la lista con el enlace «Proyectos» de la cabecera.
-
-- [ ] **Paso 3: Lo que NO debe pasar**
-
-| Prueba | Esperado |
-|---|---|
-| `GET lidialuque.com/borrador.json` | 404, como siempre |
-| Un tercer correo en `/panel` | no pasa de Access, como en el 3b |
-| La web pública | **sin cambios**: nada se publica hasta el bloque 3d |
-
-- [ ] **Paso 4: Las pruebas de Node, para confirmar que nada se movió**
+- [ ] **Paso 2: Las tres suites**
 
 ```bash
-cd worker && node --test
-cd .. && node tests/prueba-borrador.js
+node tests/prueba-borrador.js          # 52/52
+cd worker && node --test               # 101/101
+# y el arnés del navegador, en verde entero
 ```
 
-Esperado: todo en verde, con los mismos recuentos que antes de este bloque
-(este plan no toca ni el Worker ni `borrador.js`). Si `node` no aparece,
-antepón `C:\nvm4w\nodejs` al PATH de la sesión.
+- [ ] **Paso 3: El techo de líneas, que es criterio de aceptación**
 
-Si algo de lo anterior falla, se arregla en esta rama antes de la Tarea 10.
+```bash
+wc -l js/*.js panel/js/*.js worker/src/*.js worker/estatico/*.js | sort -rn | head -20
+```
+
+Ninguno pasa de 300.
+
+- [ ] **Paso 4: Que no se haya colado una copia de las reglas**
+
+```bash
+ls panel/js/reglas-contenido.js   # no debe existir
+```
+
+- [ ] **Paso 5: Commit final, si quedó algo suelto**
 
 ---
 
-### Tarea 10: Dejarlo escrito
+## Lo que este bloque deja preparado para el 3d
 
-**Archivos:**
-- Modificar: `docs/estado-conocido.md`, `docs/despliegue.md`
-
-- [ ] **Paso 1: `docs/estado-conocido.md`**
-
-Añade una sección **«El panel (bloques 3b y 3c)»** antes de «Cómo se prueba»,
-con estos puntos, escritos con el detalle de las secciones vecinas:
-
-- Las tres pantallas y sus rutas (`#/`, `#/proyecto/<id>`, `#/publicar`), y
-  que `#/publicar` está vacía hasta el bloque 3d.
-- **Cada pieza que sube el panel lleva `portada`** (su medida de 1500), además
-  de `url` y `miniatura`; las 65 de la herramienta no la llevan y
-  `Edicion.portadaDe` deduce el `-1500` por el sufijo. Que la convención de
-  sufijos `-1500/-3000/-250` está escrita en dos sitios —`Subida.nombres` y
-  `MEDIDAS` de `derivar_imagenes.py`— y tienen que seguir coincidiendo.
-- Los nombres en R2: `<id>-<archivo-saneado>-<sello>-<lado>.jpg`, y por qué
-  el sello (el 409 del Worker).
-- Que la reducción se hace con `createImageBitmap` + `canvas.toBlob` a
-  calidad 0,82, **sin recorte de franjas negras**: eso lo hace sólo la
-  herramienta, y una captura de vídeo con bandas subida desde el panel sale
-  con ellas. Es deuda conocida.
-- Que quitar una foto no borra nada de R2 (spec), y que sigue sin haber
-  `DELETE /api/imagen`.
-- Actualiza el recuento de comprobaciones del arnés en «Cómo se prueba» con
-  el número que salga, y la fecha, y anota qué cubren las pruebas nuevas.
-
-- [ ] **Paso 2: `docs/despliegue.md`**
-
-En la sección del panel: que el despliegue del bloque 3c no toca Access ni
-la API, y que la comprobación de la Tarea 9 es la que hay que repetir tras
-cada despliegue del panel.
-
-- [ ] **Paso 3: Commit**
-
-```bash
-git add docs/estado-conocido.md docs/despliegue.md
-git commit -m "Documentar la pantalla de un proyecto y la convencion de las tres medidas"
-```
+- `window.Panel.ir('publicar')` ya es un destino que `Rutas` entiende; falta la
+  pantalla.
+- `window.Panel.hayCambios()` es lo que el 3d necesita para no publicar con
+  cambios sin guardar.
+- `Proyecto.problemasDe` es la misma validación que el 3d enseñará para todo el
+  borrador en vez de para un proyecto.
 
 ---
 
-## Quién consume lo que aquí se toca
+## Lo que cambió al ejecutarlo
 
-| Lo que cambia | Quién lo lee |
-|---|---|
-| `piezas[].portada` (Tareas 3, 4, 8) | nadie en la web pública todavía —lee `url` y `miniatura`—; `Edicion.esPortada` y el bloque 3d al comparar |
-| `proyecto.portada` | `js/datos.js` la convierte en `portadaUrl` para la galería: una portada mal apuntada se ve en la galería tras publicar |
-| `Lista.pintar` (Tarea 7) | `panel.js` y `tests/pruebas-lista-pintar.js`; la firma no cambia |
-| `tests/pruebas-panel.js` (Tarea 8) | carga `panel.js` entero: su `HTML` y `MODULOS` tienen que ir a la par de `panel/index.html` |
-| `window.Panel.ir` (Tarea 8) | las pruebas; el bloque 3d lo usa para llegar a `#/publicar` |
-| `Panel.hayCambios` (Tarea 8) | el bloque 3d, que no publica con cambios sin guardar |
-| `panel/index.html` (Tarea 6) | `worker/estatico` lo sirve tal cual; `_headers` no lo cachea distinto de `/` |
+El plan se siguió tarea a tarea. Cuatro cosas salieron distintas, y se anotan
+aquí en vez de reescribir el plan, para que quede el rastro de por qué:
 
-## Lo que este bloque deja preparado y no usa
+1. **`Rutas.LISTA` no existe.** El plan lo exponía como constante compartida,
+   que es justo el objeto mutable que el comentario de al lado dice evitar.
+   `leer` devuelve un objeto nuevo en cada llamada y no hay constante.
+2. **El sello lleva un contador monótono.** La versión del plan —hora en base36
+   más dos caracteres de azar— la tumbó su propia prueba de los mil sellos: con
+   1296 valores posibles, mil sellos del mismo milisegundo colisionan casi
+   seguro. Ahora el contador separa las subidas de esta página, la hora separa
+   dos cargas y el azar separa dos pestañas.
+3. **Dos módulos más de los previstos**, los dos por el techo de 300 líneas de
+   `panel.js`: `subir.js`, el pegamento entre `Subida` y `Edicion` con el aviso
+   de qué entró y qué no, y `Proyecto.recoger`, que además encaja mejor ahí
+   —es `proyecto.js` quien sabe qué nodos necesita—.
+4. **`pruebas-panel.js` saca a su ámbito** el marcado, los módulos, el doble de
+   `Borrador` y `conPanel`, para que las dos secciones los compartan.
 
-- La sección `#pantalla-publicar` y su ruta, vacías.
-- `Panel.hayCambios()`, que aquí sólo alimenta `beforeunload`.
-- `Subida.RUTA` y el patrón de `Legible` para los finales de red, que el 3d
-  repite para `POST /api/publicar`.
+**Estado:** tareas 1 a 8 hechas y en verde; la 9 (comprobación manual
+desplegada) es de Ángel. Arnés: 491 → 595 en este bloque.

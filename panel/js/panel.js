@@ -1,9 +1,35 @@
 (function () {
   var trabajo = null;      // { version, proyectos }
-  var elLista, elAviso, elTitulo, elCategoria, elCrear, elGuardar;
+  var elLista, elAviso, elAvisoProyecto, elTitulo, elCategoria, elCrear, elGuardar, elGuardarProyecto;
   var elCliente, elAnio, elPapel, elEnlace;
+  /* Las secciones por nombre, el índice del proyecto abierto, y una copia en
+     texto de lo último que el servidor confirmó. */
+  var pantallas, elsProyecto, abierto = null, guardado = null;
+  /* La pantalla de publicar, que se guarda su propio estado: lo que hay en la
+     web ahora, el aviso, y si un choque de version dejo el boton apagado. */
+  var publicar;
 
-  function avisar(texto) { elAviso.textContent = texto; }
+  /* Los dos avisos a la vez: el de la lista y el de la barra de la pantalla
+     del proyecto. Nunca se ven los dos —la pantalla escondida lleva `hidden`,
+     que la saca también del árbol de accesibilidad—, así que no hay doble
+     anuncio; y escribir sólo el de la lista dejaba mudo al Guardar de la
+     barra: ni «Guardado.», ni el error de red, ni el texto del conflicto que
+     explica por qué el botón se acaba de apagar. */
+  function avisar(texto) {
+    elAviso.textContent = texto;
+    elAvisoProyecto.textContent = texto;
+  }
+
+  /* Los dos botones de guardar —el de la lista y el de la pantalla del
+     proyecto— son el mismo `guardar()` y tienen que apagarse y encenderse a
+     la vez: al arrancar, hasta que llega el borrador, y tras un conflicto de
+     versiones, donde el aviso dice que «Guardar» se ha desactivado y el
+     botón tiene que parecerlo. Un solo sitio para el `disabled`, para que el
+     segundo botón no se quede encendido por olvido en un camino nuevo. */
+  function guardarActivo(activo) {
+    elGuardar.disabled = !activo;
+    elGuardarProyecto.disabled = !activo;
+  }
 
   /* Activa o desactiva lo que necesita `trabajo` para funcionar. Se llama
      deshabilitado desde el arranque, antes de que Borrador.cargar resuelva:
@@ -20,38 +46,24 @@
     elPapel.disabled = !activo;
     elEnlace.disabled = !activo;
     elCrear.disabled = !activo;
-    elGuardar.disabled = !activo;
+    guardarActivo(activo);
   }
 
-  /* Tras un repintado los nodos del <ol> son todos nuevos —Lista.pintar hace
-     innerHTML = '' y reconstruye—, así que el elemento que tenía el foco ya
-     no existe y el navegador lo manda a <body>. Lo único que sobrevive al
-     repintado es el `id` del proyecto, así que es lo que usamos para
-     encontrar dónde debe volver el foco.
+  /* Dónde vuelve el foco tras un repintado. Lo que sabe del marcado de una
+     fila —[data-id], [data-accion]— se mudó a `Lista.enfocar` en el bloque 3c,
+     que es quien escribe ese marcado.
 
-     `foco` es opcional:
-       - { id: idProyecto, accion: 'subir'|'bajar'|'borrar' } para el botón
-         de esa fila. Si ese botón ha quedado deshabilitado por llegar al
-         extremo (subir en la primera fila, bajar en la última), se usa el
-         otro botón de la misma fila, que sigue siendo útil.
-       - { titulo: true } para el campo de título del formulario, cuando la
-         lista se ha quedado vacía y no hay ninguna fila a la que volver. */
+     El caso `{ titulo: true }` se queda aquí a propósito: es del formulario de
+     este archivo, y la lista no tiene por qué saber que existe un campo de
+     título. Se usa cuando la lista se ha quedado vacía y no hay ninguna fila a
+     la que volver. */
   function enfocarTrasRepintar(foco) {
     if (!foco) return;
     if (foco.titulo) {
       elTitulo.focus();
       return;
     }
-    var fila = elLista.querySelector('[data-id="' + foco.id + '"]');
-    if (!fila) return;
-    var boton = fila.querySelector('[data-accion="' + foco.accion + '"]');
-    if (boton && !boton.disabled) {
-      boton.focus();
-      return;
-    }
-    var otraAccion = foco.accion === 'subir' ? 'bajar' : 'subir';
-    var alternativo = fila.querySelector('[data-accion="' + otraAccion + '"]');
-    if (alternativo) alternativo.focus();
+    window.Lista.enfocar(elLista, foco);
   }
 
   /* Tras borrar, decide a qué fila vuelve el foco: la que ahora ocupa la
@@ -79,52 +91,85 @@
       trabajo.proyectos = trabajo.proyectos.filter(function (p) { return p.id !== id; });
       repintar(focoTrasBorrar(indice));
       avisar('Proyecto borrado. Recuerda guardar.');
-    });
+    }, function (id) { ir('proyecto', id); });
     enfocarTrasRepintar(foco);
   }
 
-  /* La ficha que escribe el formulario. `cliente` y `enlace` sólo entran si
-     el estudio los ha escrito: ReglasContenido.validar no los exige a
-     propósito —el porqué está escrito junto a esa comprobación, en
-     js/reglas-contenido.js—, y la forma de decir que un trabajo no tiene
-     cliente o no tiene vídeo es que la clave no esté. Guardar `cliente: ''`
-     sería una segunda forma de decir lo mismo, y a quien pregunte si la ficha
-     trae cliente le contestaría que sí.
-
-     El año va como número porque así está escrito en contenido.json. */
-  function fichaDelFormulario() {
-    var ficha = {};
-    var cliente = elCliente.value.trim();
-    if (cliente) ficha.cliente = cliente;
-    ficha.anio = Number(elAnio.value);
-    ficha.papel = elPapel.value.trim();
-    var enlace = elEnlace.value.trim();
-    if (enlace) ficha.enlace = enlace;
-    return ficha;
+  /* Lo que el aviso de salir necesita saber. Se compara contra una copia de lo
+     último que el servidor confirmó, y no con un booleano: un booleano diría
+     que hay cambios después de tocar algo y devolverlo a como estaba, y el
+     estudio se llevaría un aviso de salida por un cambio que no existe. */
+  function hayCambios() {
+    return !!trabajo && JSON.stringify(trabajo) !== guardado;
   }
 
-  function crear(titulo, categoria, ficha) {
-    if (!trabajo) return;
-    var id = window.Identificador.desde(titulo);
-    var ids = trabajo.proyectos.map(function (p) { return p.id; });
-    var problema = window.Identificador.problema(id, ids, window.ReglasContenido.CATEGORIAS);
-    if (problema) return avisar(problema);
-
-    /* El `required` del formulario ya frena al estudio, pero sólo por el
-       camino del navegador. Se comprueba también aquí porque lo que hay al
-       otro lado no tiene arreglo: sin año o sin papel el proyecto se guarda
-       en el borrador y la publicación lo rechaza con un 422, y el panel no
-       tiene ninguna pantalla donde rellenar la ficha de un proyecto que ya
-       existe. Sería crear algo que nadie puede publicar ni corregir. */
-    if (!ficha.anio || !ficha.papel) {
-      return avisar('El año y el papel hacen falta para poder publicar.');
+  function buscar(id) {
+    for (var i = 0; i < trabajo.proyectos.length; i++) {
+      if (trabajo.proyectos[i].id === id) return i;
     }
+    return -1;
+  }
 
-    /* Nace sin piezas ni portada a propósito: las pone el bloque 3c. Hasta
-       entonces el borrador no se podrá publicar, y eso es correcto —publicar
-       valida, y un proyecto sin fotos no es publicable—. */
-    trabajo.proyectos.push({ id: id, titulo: titulo, categoria: categoria,
-                             tipo: 'fotos', ficha: ficha, piezas: [] });
+  function pintarProyecto(indice, foco) {
+    abierto = indice;
+    window.Proyecto.pintar(elsProyecto, trabajo.proyectos[indice], {
+      alCambiar: function (nuevo, focoFotos) {
+        trabajo.proyectos[indice] = nuevo;
+        pintarProyecto(indice, focoFotos);
+        avisar('Cambiado. Recuerda guardar.');
+      },
+      alSubir: function (archivos) {
+        window.Subir.aqui(elsProyecto, trabajo.proyectos[indice], archivos,
+          function (nuevo, texto) {
+            trabajo.proyectos[indice] = nuevo;
+            pintarProyecto(indice);
+            avisar(texto);
+          });
+      }
+    });
+    window.Fotos.enfocar(elsProyecto.fotos, foco);
+  }
+
+  function ir(pantalla, id) {
+    if (!trabajo) return;
+    if (pantalla === 'publicar') {
+      abierto = null;
+      window.Pantallas.mostrar(pantallas, 'pantallaPublicar');
+      location.hash = window.Rutas.hacia('publicar');
+      return publicar.entrar();
+    }
+    if (pantalla === 'proyecto') {
+      var indice = buscar(id);
+      /* Un id que no está no puede dejar en pantalla el encabezado de otro
+         proyecto: se vuelve a la lista y se dice cuál se buscaba. */
+      if (indice === -1) {
+        window.Pantallas.mostrar(pantallas, 'pantallaLista');
+        location.hash = window.Rutas.hacia('lista');
+        repintar();
+        return avisar('No hay ningún proyecto con el identificador «' + id + '».');
+      }
+      window.Pantallas.mostrar(pantallas, 'pantallaProyecto');
+      location.hash = window.Rutas.hacia('proyecto', id);
+      return pintarProyecto(indice);
+    }
+    abierto = null;
+    window.Pantallas.mostrar(pantallas, 'pantallaLista');
+    location.hash = window.Rutas.hacia('lista');
+    repintar();
+  }
+
+  /* Los campos del formulario de crear, con los nombres que espera Nuevo. */
+  function camposNuevo() {
+    return { titulo: elTitulo, cliente: elCliente, anio: elAnio,
+             papel: elPapel, enlace: elEnlace };
+  }
+
+  function crear(titulo, categoria) {
+    if (!trabajo) return;
+    var r = window.Nuevo.proyecto(trabajo.proyectos, titulo, categoria,
+                                  window.Nuevo.ficha(camposNuevo()));
+    if (r.problema) return avisar(r.problema);
+    trabajo.proyectos.push(r.proyecto);
     repintar();
     avisar('Proyecto «' + titulo + '» creado. Recuerda guardar.');
   }
@@ -145,7 +190,7 @@
            otra persona sin que el servidor lo vuelva a detectar como
            conflicto. Recargar trae los datos de verdad, no sólo el número
            de versión. */
-        elGuardar.disabled = true;
+        guardarActivo(false);
         return avisar('Alguien ha guardado mientras editabas (el servidor va por la versión '
           + resultado.guardada + '). Si guardaras ahora, sobrescribirías su trabajo: por eso '
           + '«Guardar» se ha desactivado. Recarga la página para ver lo último — recargar '
@@ -153,6 +198,7 @@
           + 'los necesitas.');
       }
       trabajo.version = resultado.version;
+      guardado = JSON.stringify(trabajo);
       avisar('Guardado.');
     });
   }
@@ -160,6 +206,7 @@
   function init() {
     elLista = document.getElementById('lista');
     elAviso = document.getElementById('aviso');
+    elAvisoProyecto = document.getElementById('pAviso');
     elTitulo = document.getElementById('titulo');
     elCategoria = document.getElementById('categoria');
     elCliente = document.getElementById('fichaCliente');
@@ -168,6 +215,7 @@
     elEnlace = document.getElementById('fichaEnlace');
     elCrear = document.querySelector('#nuevo button[type="submit"]');
     elGuardar = document.getElementById('guardar');
+    elGuardarProyecto = document.getElementById('pGuardar');
 
     /* Deshabilitado desde el primer pintado: todavía no hay `trabajo`. */
     activarControles(false);
@@ -181,27 +229,60 @@
 
     document.getElementById('nuevo').addEventListener('submit', function (e) {
       e.preventDefault();
-      crear(elTitulo.value.trim(), elCategoria.value, fichaDelFormulario());
-      /* Se vacía el formulario entero, no sólo el título. Si los campos de la
-         ficha se quedaran escritos, el siguiente proyecto nacería con el
-         cliente y el papel del anterior, y eso no da error en ningún sitio:
-         se publica y ya está. El precio es que un intento fallido —un
-         identificador repetido— también los borra, que es lo que el título ya
-         hacía antes de esta tarea. */
-      elTitulo.value = '';
-      elCliente.value = '';
-      elAnio.value = '';
-      elPapel.value = '';
-      elEnlace.value = '';
+      crear(elTitulo.value.trim(), elCategoria.value);
+      window.Nuevo.vaciar(camposNuevo());
     });
 
     elGuardar.addEventListener('click', guardar);
+    elGuardarProyecto.addEventListener('click', guardar);
+
+    pantallas = { pantallaLista: document.getElementById('pantallaLista'),
+                  pantallaProyecto: document.getElementById('pantallaProyecto'),
+                  pantallaPublicar: document.getElementById('pantallaPublicar') };
+    publicar = window.Publicar.crear(
+      { cambios: document.getElementById('qCambios'),
+        falta: document.getElementById('qFalta'),
+        aviso: document.getElementById('qAviso'),
+        boton: document.getElementById('qPublicar') },
+      function () { return trabajo; }, hayCambios);
+    document.getElementById('irAPublicar')
+      .addEventListener('click', function () { ir('publicar'); });
+    document.getElementById('qVolver')
+      .addEventListener('click', function () { ir('lista'); });
+    elsProyecto = window.Proyecto.recoger(document);
+    document.getElementById('pVolver')
+      .addEventListener('click', function () { ir('lista'); });
+
+    /* El aviso de salir con cambios sin guardar. No se puede escribir el
+       texto: los navegadores enseñan el suyo desde hace años, y lo único que
+       se controla es si aparece o no. */
+    window.addEventListener('beforeunload', function (e) {
+      if (!hayCambios()) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    window.addEventListener('hashchange', function () {
+      var destino = window.Rutas.leer(location.hash);
+      ir(destino.pantalla, destino.id);
+    });
+
+    /* La costura para las pruebas, y de paso para la consola: panel.js es una
+       IIFE que no devuelve nada, así que sin esto no hay forma de pedirle
+       desde fuera que cambie de pantalla —habría que simular eventos de
+       hashchange, que es probar el navegador y no el panel—. */
+    window.Panel = { ir: ir, hayCambios: hayCambios };
 
     window.Borrador.cargar(function (datos, error) {
       if (error) return avisar(error);
       trabajo = datos;
+      guardado = JSON.stringify(trabajo);
       activarControles(true);
-      repintar();
+      /* Se arranca donde diga el fragmento, no siempre en la lista: recargar
+         con #/proyecto/bruma tiene que volver al mismo sitio, que es lo que
+         hace compartible la dirección. */
+      var destino = window.Rutas.leer(location.hash);
+      ir(destino.pantalla, destino.id);
     });
   }
 

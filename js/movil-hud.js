@@ -14,7 +14,7 @@ window.MovilHud = (function () {
   var OCULTAR_TRAS = 3000;
 
   var refs = null, reloj = null, despierto = false;
-  var alElegirCategoria = null, alCerrar = null;
+  var alElegirCategoria = null, alCerrar = null, alFicha = null;
 
   /* Dos cifras en los dos lados, igual que la rejilla de la portada: `02/08` y
      no `2/8`, para que el ancho no baile al pasar de la 9 a la 10.
@@ -29,11 +29,17 @@ window.MovilHud = (function () {
 
   function dos(n) { return (n < 10 ? '0' : '') + n; }
 
-  function init(elementos, alCategoria, alCerrarVisor) {
+  function init(elementos, alCategoria, alCerrarVisor, alPedirFicha) {
     refs = elementos;
     alElegirCategoria = alCategoria;
     alCerrar = alCerrarVisor;
+    alFicha = alPedirFicha;
     refs.cerrar.addEventListener('click', function () { alCerrar(); });
+    /* El botón avisa y nada más. A qué parada lleva lo decide
+       `MovilRecorrido.alternarFicha`, y quién la llama es `MovilVisor`: este
+       módulo no conoce el recorrido ni el router, igual que no los conoce para
+       el desplegable de categorías. */
+    refs.ficha.addEventListener('click', function () { alFicha(); });
     refs.cat.addEventListener('click', function () {
       refs.cats.hidden = !refs.cats.hidden;
       refs.cat.setAttribute('aria-expanded', refs.cats.hidden ? 'false' : 'true');
@@ -51,6 +57,10 @@ window.MovilHud = (function () {
        única en la que este `replace` cambia algo. */
     refs.cat.textContent = proyecto.categoria.replace('-', ' ');
     refs.contador.textContent = contador(pieza, total);
+    /* `aria-pressed` y no un cambio de rótulo: el botón se llama «Ficha»
+       siempre, así la pastilla no cambia de ancho al entrar y salir. Es lo
+       mismo que hace el desplegable de al lado con `aria-expanded`. */
+    refs.ficha.setAttribute('aria-pressed', pieza === 'ficha' ? 'true' : 'false');
     pintarCategorias();
     /* Al llegar a una parada nueva el HUD se despierta: acabas de moverte, así
        que quieres saber dónde has caído. El plazo vuelve a correr desde cero. */

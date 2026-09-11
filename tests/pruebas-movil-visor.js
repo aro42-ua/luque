@@ -10,24 +10,39 @@
    trabajos, sin una sola excepción en consola. Por eso la conversión vive en
    una función con nombre y con prueba, y no suelta dentro de `init`. */
 
+/* Los tres llevan `ficha` porque el eje vertical siempre acaba en ella y
+   `MovilFicha.de` (js/movil-ficha.js) la lee sin guarda, igual que
+   `VisorFicha.pintar` en el escritorio: un proyecto de `contenido.json` la
+   trae siempre. Sin este campo, cualquier prueba de este fichero que llegue a
+   la parada `'ficha'` revienta con «Cannot read properties of undefined
+   (reading 'cliente')». Valores distintos en cada uno para que una prueba que
+   lea la ficha pintada no pueda confundir un proyecto con otro. Sin `enlace`:
+   `Plataforma.boton` devuelve `null` sin él y la ficha se pinta igual, que es
+   lo que hoy hacen los ocho proyectos reales de `contenido.json`. */
 var MV_PROYECTOS = [
   { id: 'niebla',  titulo: 'Niebla',  categoria: 'editorial',
-    tipo: 'foto',  piezas: [{ url: 'a' }, { url: 'b' }, { url: 'c' }] },
+    tipo: 'foto',  piezas: [{ url: 'a' }, { url: 'b' }, { url: 'c' }],
+    ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de arte' } },
   { id: 'oleaje',  titulo: 'Oleaje',  categoria: 'cortometraje',
-    tipo: 'video', piezas: [] },
+    tipo: 'video', piezas: [],
+    ficha: { cliente: 'Marca Norte', anio: '2025', papel: 'Dirección de fotografía' } },
   { id: 'salitre', titulo: 'Salitre', categoria: 'editorial',
-    tipo: 'video' }
+    tipo: 'video',
+    ficha: { cliente: 'Casa Salitre', anio: '2024', papel: 'Producción' } }
 ];
 
-/* El marcado de las ocho referencias que `MovilVisor.init` exige desde la
+/* El marcado de las diez referencias que `MovilVisor.init` exige desde la
    Tarea 4: la escena de siempre más las seis del HUD. Vive en un solo sitio
    porque los tres arneses de abajo (`conVisor` y los dos `conEscena`) lo
    necesitan igual, letra por letra. */
 var MV_MARCADO =
   '<div><div id="mvRaiz" hidden><div id="mvEscena"></div>' +
   '<div id="mvHud"><button id="mvCat"></button><ul id="mvCats"></ul>' +
+  '<button id="mvFicha" aria-pressed="false"></button>' +
   '<button id="mvCerrar"></button><p id="mvTitulo"></p>' +
-  '<span id="mvContador"></span></div></div></div>';
+  '<span id="mvContador"></span>' +
+  '<nav id="mvTira" class="mvisor-tira" hidden></nav>' +
+  '</div></div></div>';
 
 function mvRefsDesde(caja) {
   return {
@@ -36,14 +51,16 @@ function mvRefsDesde(caja) {
     hud:      caja.querySelector('#mvHud'),
     cat:      caja.querySelector('#mvCat'),
     cats:     caja.querySelector('#mvCats'),
+    ficha:    caja.querySelector('#mvFicha'),
     cerrar:   caja.querySelector('#mvCerrar'),
     titulo:   caja.querySelector('#mvTitulo'),
-    contador: caja.querySelector('#mvContador')
+    contador: caja.querySelector('#mvContador'),
+    tira:     caja.querySelector('#mvTira')
   };
 }
 
 /* Ayudante ÚNICO y compartido por `conVisor` y los dos `conEscena` de más
-   abajo: construye las ocho referencias, llama a `MovilVisor.init` y falsea
+   abajo: construye las diez referencias, llama a `MovilVisor.init` y falsea
    `window.Datos` con `porId` y `CATEGORIAS` —esta última porque desde la
    Tarea 4 `pintar()` llama a `MovilHud.pintar`, que la lee—.
 
@@ -462,23 +479,55 @@ describe('MovilVisor — el foco del diálogo (VisorFoco)', function () {
     }), true);
   });
 
+  /* El último control del diálogo NO es `cerrar` desde que existe la tira:
+     sus botones son controles de verdad y entran en el ciclo del tabulador,
+     porque son la única forma de saltar a una pieza con el teclado. Sacarlos
+     del atrapa-foco dejaría la tira utilizable sólo con el dedo.
+
+     Por eso estas dos pruebas calculan el último del DOM en vez de nombrarlo:
+     lo que fijan es que el Tab DA LA VUELTA, no quién está al final. Nombrarlo
+     las rompía cada vez que el HUD ganaba un control, que es lo que pasó al
+     entrar la tira. */
+
+  function ultimoEnfocable(raiz) {
+    /* El MISMO selector y el MISMO filtro que `VisorFoco.enfocables`
+       (js/visor-foco.js), y no sólo el selector: aquella función además
+       descarta lo que no se ve, y un ayudante que se saltara ese filtro
+       coincidiría con ella por casualidad de los datos y no por
+       construcción. El día que un control enfocable-por-selector quede
+       oculto —la tira sin pintar, un botón dentro de un contenedor
+       `hidden`—, esta prueba fijaría como «último» un nodo que el
+       atrapa-foco real nunca trata como tal. */
+    var todos = Array.prototype.filter.call(
+      raiz.querySelectorAll('button:not([disabled]), [role="slider"]'),
+      function (el) {
+        return el.offsetParent !== null &&
+               getComputedStyle(el).visibility !== 'hidden';
+      });
+    return todos[todos.length - 1];
+  }
+
   prueba('con el foco en el último control, el Tab da la vuelta al primero', function () {
     igual(conVisor(function (refs) {
       conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-      refs.cerrar.focus();
+      var ultimo = ultimoEnfocable(refs.raiz);
+      ultimo.focus();
       var consumido = tabular(false);
-      var r = { consumido: consumido, foco: document.activeElement === refs.cat };
+      var r = { consumido: consumido,
+                foco: document.activeElement === refs.cat,
+                ultimoNoEsCerrar: ultimo !== refs.cerrar };
       conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
       return r;
-    }), { consumido: true, foco: true });
+    }), { consumido: true, foco: true, ultimoNoEsCerrar: true });
   });
 
   prueba('con el foco en el primer control, Shift+Tab da la vuelta al último', function () {
     igual(conVisor(function (refs) {
       conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
+      var ultimo = ultimoEnfocable(refs.raiz);
       refs.cat.focus();
       var consumido = tabular(true);
-      var r = { consumido: consumido, foco: document.activeElement === refs.cerrar };
+      var r = { consumido: consumido, foco: document.activeElement === ultimo };
       conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
       return r;
     }), { consumido: true, foco: true });
@@ -637,5 +686,153 @@ describe('MovilVisor — la animación de entrada tras un deslizamiento', functi
         return refs.escena.firstChild.className;
       });
     }), 'mvisor-foto');
+  });
+});
+
+/* El botón de ficha cableado: lo que se fija aquí no es a dónde lleva —eso es
+   de `MovilRecorrido.alternarFicha` y tiene sus propias pruebas— sino que
+   `MovilVisor` recuerde la pieza correcta y llame al router con ella. */
+describe('MovilVisor — el botón de ficha', function () {
+
+  function conRuta(ruta, fn) {
+    return conVisorSobre(MV_PROYECTOS, function (refs) {
+      var antesMovil = window.Movil, antesRouter = window.Router;
+      var ido = [];
+      window.Movil = { actual: function () { return 'movil'; } };
+      window.Router = { ir: function (t, v, p) { ido.push([t, v, p]); } };
+      try {
+        MovilVisor.aplicar(ruta);
+        return fn(refs, ido);
+      } finally {
+        window.Movil = antesMovil;
+        window.Router = antesRouter;
+      }
+    });
+  }
+
+  function enProyecto(valor, pieza) {
+    return { tipo: 'proyecto', valor: valor, pieza: pieza };
+  }
+
+  prueba('desde la pieza 2, el botón pide la ficha', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
+      refs.ficha.click();
+      return ido;
+    }), [['proyecto', 'niebla', 'ficha']]);
+  });
+
+  /* La razón de ser de `piezaRecordada`: volver donde estabas y no al
+     principio. Se llega a la ficha por el router, igual que llegaría un
+     deslizamiento, para que la prueba recorra el mismo camino que el dedo. */
+  prueba('desde la ficha, el botón vuelve a la pieza de la que saliste', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
+      MovilVisor.aplicar(enProyecto('niebla', 'ficha'));
+      refs.ficha.click();
+      return ido;
+    }), [['proyecto', 'niebla', 2]]);
+  });
+
+  /* El enlace en frío: se entra directamente por la ficha, así que no hay
+     pieza que recordar y se cae a la primera. */
+  prueba('entrando por la ficha, el botón lleva a la primera pieza', function () {
+    igual(conRuta(enProyecto('niebla', 'ficha'), function (refs, ido) {
+      refs.ficha.click();
+      return ido;
+    }), [['proyecto', 'niebla', 1]]);
+  });
+
+  /* Lo que recuerda es de ESTE proyecto. Sin olvidar al cambiar, salir de la
+     pieza 3 de `niebla`, pasar a `oleaje` y pedir su ficha te devolvería a una
+     pieza 3 que en `oleaje` no existe. */
+  prueba('cambiar de proyecto olvida la pieza recordada', function () {
+    igual(conRuta(enProyecto('niebla', 3), function (refs, ido) {
+      MovilVisor.aplicar(enProyecto('oleaje', null));
+      MovilVisor.aplicar(enProyecto('oleaje', 'ficha'));
+      refs.ficha.click();
+      return ido;
+    }), [['proyecto', 'oleaje', null]]);
+  });
+
+  prueba('el botón no hace nada con el visor cerrado', function () {
+    igual(conRuta({ tipo: 'todos', valor: null, pieza: null }, function (refs, ido) {
+      refs.ficha.click();
+      return ido;
+    }), []);
+  });
+
+  /* La tira se pinta en cada parada, igual que el HUD, y pulsar una miniatura
+     lleva al router con el número de pieza. Que no reconstruya en cada parada
+     lo fija `tests/pruebas-movil-tira.js`; aquí sólo se comprueba el cable. */
+  prueba('la tira se pinta con las piezas del trabajo abierto', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs) {
+      return refs.tira.querySelectorAll('button').length;
+    }), 3);
+  });
+
+  prueba('pulsar una miniatura navega a esa pieza', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
+      refs.tira.querySelectorAll('button')[2].click();
+      return ido;
+    }), [['proyecto', 'niebla', 3]]);
+  });
+
+  /* La guarda «ya estoy aquí», igual que la del botón de ficha (arriba en
+     este mismo describe): pulsar la miniatura de la pieza en la que ya
+     estás no puede llegar al router como «avisar», porque eso repinta la
+     escena entera —vacía, recrea la <img> desde la portada, relanza la
+     animación— sobre la foto que ya se estaba mirando. */
+  prueba('pulsar la miniatura de la pieza actual no navega', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
+      refs.tira.querySelectorAll('button')[1].click();
+      return ido;
+    }), []);
+  });
+});
+
+/* El caso real de la spec: desplazar la tira con el dedo es justo lo que
+   hace que el navegador se quede el gesto y dispare `pointercancel`. Sin
+   filtrar por origen, ese `pointercancel` (o el `pointerup` de un toque
+   corriente sobre la tira) llega a `soltarEn`, que no distingue soltar de
+   que el sistema te quite el gesto, y con recorrido de sobra navega a otra
+   pieza aunque el dedo nunca soltó sobre la foto. */
+describe('MovilVisor — los dedos de la tira no entran en la máquina de gestos', function () {
+
+  function conRuta(ruta, fn) {
+    return conVisorSobre(MV_PROYECTOS, function (refs) {
+      var antesMovil = window.Movil, antesRouter = window.Router;
+      var ido = [];
+      window.Movil = { actual: function () { return 'movil'; } };
+      window.Router = { ir: function (t, v, p) { ido.push([t, v, p]); } };
+      try {
+        MovilVisor.aplicar(ruta);
+        return fn(refs, ido);
+      } finally {
+        window.Movil = antesMovil;
+        window.Router = antesRouter;
+      }
+    });
+  }
+
+  prueba('pointerdown + pointerup sobre un botón de la tira, con recorrido que en la foto navegaría, no llega al router', function () {
+    igual(conRuta({ tipo: 'proyecto', valor: 'niebla', pieza: 2 }, function (refs, ido) {
+      var boton = refs.tira.querySelectorAll('button')[0];
+      boton.dispatchEvent(new PointerEvent('pointerdown',
+        { pointerId: 1, clientX: 200, clientY: 100, bubbles: true }));
+      boton.dispatchEvent(new PointerEvent('pointerup',
+        { pointerId: 1, clientX: 120, clientY: 100, bubbles: true }));
+      return ido;
+    }), []);
+  });
+
+  /* El caso real: `pointercancel` en vez de `pointerup`. */
+  prueba('pointerdown + pointercancel sobre un botón de la tira tampoco llega al router', function () {
+    igual(conRuta({ tipo: 'proyecto', valor: 'niebla', pieza: 2 }, function (refs, ido) {
+      var boton = refs.tira.querySelectorAll('button')[0];
+      boton.dispatchEvent(new PointerEvent('pointerdown',
+        { pointerId: 1, clientX: 200, clientY: 100, bubbles: true }));
+      boton.dispatchEvent(new PointerEvent('pointercancel',
+        { pointerId: 1, clientX: 120, clientY: 100, bubbles: true }));
+      return ido;
+    }), []);
   });
 });

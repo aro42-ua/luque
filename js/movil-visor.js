@@ -24,6 +24,15 @@ window.MovilVisor = (function () {
      viene a cuento. */
   var direccionPendiente = null;
 
+  /* La última parada que NO era la ficha, para que el botón de ficha devuelva
+     a donde estabas y no al principio. Se olvida al cambiar de proyecto: la
+     pieza 3 de un trabajo no es la pieza 3 de otro, y en un proyecto de vídeo
+     no existe.
+
+     Vive aquí y no en `MovilRecorrido` porque aquél es puro y no guarda nada
+     entre llamadas; se le pasa como argumento. */
+  var piezaRecordada = null;
+
   /* Quién tenía el foco justo antes de abrir —normalmente el botón de la
      rejilla que se tocó—, para devolvérselo al cerrar. No se pregunta a
      `js/visor-origen.js`, que hace lo mismo para el escritorio: aquél
@@ -44,10 +53,12 @@ window.MovilVisor = (function () {
     elCerrar = refs.cerrar;
     orden = ordenDe(proyectos);
     aqui = null;
+    piezaRecordada = null;
     window.MovilHud.init({
       raiz:     refs.hud,
       cat:      refs.cat,
       cats:     refs.cats,
+      ficha:    refs.ficha,
       cerrar:   refs.cerrar,
       titulo:   refs.titulo,
       contador: refs.contador
@@ -59,6 +70,35 @@ window.MovilVisor = (function () {
       else window.Router.ir('categoria', categoria);
     }, function () {
       window.Router.ir('todos', null);
+    }, function () {
+      /* El botón no pinta: navega, igual que un deslizamiento, y el suscriptor
+         de siempre repinta. Es lo que impide que la pantalla diga una cosa y la
+         URL otra.
+
+         La dirección se pone a mano porque pulsar no es un dedo, pero la ficha
+         está ABAJO del eje y eso el recorrido ya lo enseñó en cada gesto: ir a
+         la ficha entra como si se hubiera deslizado «arriba» y volver como
+         «abajo». Sin esto la parada aparecería de golpe y el botón
+         contradiría el modelo espacial del eje. */
+      if (!aqui) return;
+      var destino = window.MovilRecorrido.alternarFicha(aqui, orden, piezaRecordada);
+      if (destino.pieza === aqui.pieza) return;
+      direccionPendiente = (destino.pieza === 'ficha') ? 'arriba' : 'abajo';
+      var ruta = window.MovilRecorrido.aRuta(destino);
+      window.Router.ir(ruta.tipo, ruta.valor, ruta.pieza);
+    });
+    /* La tira navega, no pinta, igual que el botón de ficha y que un
+       deslizamiento. `aqui` se lee en el momento del toque y no se captura al
+       cablear: la tira sigue puesta mientras cambias de parada. */
+    window.MovilTira.init(refs.tira, function (n) {
+      if (!aqui) return;
+      /* Guarda «ya estoy aquí», igual que la del botón de ficha más arriba:
+         sin ella, pulsar la miniatura de la pieza que ya se está viendo
+         llega al router como «avisar», que repinta la escena entera —la
+         vacía, recrea la <img> arrancando otra vez por la portada, relanza
+         la animación— sobre la foto que ya estaba puesta. */
+      if (n === aqui.pieza) return;
+      window.Router.ir('proyecto', aqui.proyecto, n);
     });
     engancharGestos();
   }
@@ -78,6 +118,8 @@ window.MovilVisor = (function () {
     var abriendo = (aqui === null);
     if (abriendo) elFocoDeAntes = document.activeElement;
 
+    if (!aqui || aqui.proyecto !== nuevo.proyecto) piezaRecordada = null;
+    if (nuevo.pieza !== 'ficha') piezaRecordada = nuevo.pieza;
     aqui = nuevo;
     raiz.hidden = false;
     /* `mvisor-abierto` es un gancho de estado que HOY ningún CSS usa. Se
@@ -106,6 +148,7 @@ window.MovilVisor = (function () {
   function cerrar() {
     if (!aqui) return;
     aqui = null;
+    piezaRecordada = null;
     raiz.hidden = true;
     document.body.classList.remove('mvisor-abierto');
     escena.innerHTML = '';
@@ -137,15 +180,20 @@ window.MovilVisor = (function () {
 
     /* Cada parada empieza encajada. Arrastrar el zoom de una foto a la
        siguiente dejaria la nueva ampliada por un trozo cualquiera, sin que
-       nadie lo hubiera pedido y sin forma evidente de deshacerlo. */
+       nadie lo hubiera pedido y sin forma evidente de deshacerlo. Se reinician
+       `punteros` y `deLaTira` aquí como red de seguridad: por si algún
+       pointerup/pointercancel se pierde (llamada entrante, gesto del sistema),
+       estas entradas no quedarían marcadas para siempre. */
     elFoto = (nodo.tagName === 'IMG') ? nodo : null;
     zoom = window.MovilZoom.inicial();
     base = null;
     punteros = {};
+    deLaTira = {};
     pintarZoom();
 
     window.MovilAnimacion.aplicar(nodo, direccion);
     window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
+    window.MovilTira.pintar(p, aqui.pieza);
   }
 
   /* La foto, con carga progresiva. Se pinta primero la PORTADA —que la rejilla
@@ -250,6 +298,7 @@ window.MovilVisor = (function () {
      `refrescarPar`. */
   var zoom = null, base = null, d0 = 0, punteros = {}, tope = 1, elFoto = null;
   var parCongelado = null;
+  var deLaTira = {};
 
   /* Las dos cajas que `MovilZoom` necesita para acotar el paseo y que no puede
      medir por su cuenta, porque es puro: la foto TAL Y COMO ESTA PINTADA y el
@@ -314,17 +363,35 @@ window.MovilVisor = (function () {
      el gesto —una llamada entrante, el gesto de «atrás» del navegador desde el
      borde— y sin tratarlo el contador de dedos de `MovilGestos` se quedaría en
      uno para siempre, dejando el visor sordo hasta recargar. */
+  /* Los dedos que bajan sobre la tira no entran en la maquina de gestos: ni en
+     `punteros`, que es el mapa del pellizco, ni en `MovilGestos`. La tira la
+     desplaza el navegador por su cuenta (`touch-action:pan-x`), y desplazarla
+     es justo lo que hace que se quede el gesto y dispare `pointercancel`; sin
+     este filtro ese `pointercancel` llega a `soltarEn`, que no distingue
+     soltar de que te quiten el gesto, y navega. El defecto es anterior a la
+     tira —esta documentado en docs/estado-conocido.md con su repro— pero la
+     tira lo pasaba de raro a cotidiano.
+
+     Se filtra por ORIGEN y no con `stopPropagation` en el `pointerdown`:
+     aquello dejaria pasar el `pointerup` y el contador de dedos se
+     descuadraria, que es peor que el problema que arregla. */
+
   function engancharGestos() {
     gesto = window.MovilGestos.inicial();
     zoom = window.MovilZoom.inicial();
 
     raiz.addEventListener('pointerdown', function (e) {
+      if (e.target.closest && e.target.closest('.mvisor-tira')) {
+        deLaTira[e.pointerId] = true;
+        return;
+      }
       punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
       gesto = window.MovilGestos.presionar(gesto, { x: e.clientX, y: e.clientY });
       refrescarPar();
     });
 
     raiz.addEventListener('pointermove', function (e) {
+      if (deLaTira[e.pointerId]) return;
       var antes = punteros[e.pointerId];
       if (!antes) return;                 /* un dedo que no se poso aqui */
       var ahora = { x: e.clientX, y: e.clientY };
@@ -345,9 +412,15 @@ window.MovilVisor = (function () {
       }
     });
 
-    raiz.addEventListener('pointerup', function (e) { soltarEn(e); });
+    raiz.addEventListener('pointerup', function (e) {
+      if (deLaTira[e.pointerId]) { delete deLaTira[e.pointerId]; return; }
+      soltarEn(e);
+    });
 
-    raiz.addEventListener('pointercancel', function (e) { soltarEn(e); });
+    raiz.addEventListener('pointercancel', function (e) {
+      if (deLaTira[e.pointerId]) { delete deLaTira[e.pointerId]; return; }
+      soltarEn(e);
+    });
   }
 
   function soltarEn(e) {

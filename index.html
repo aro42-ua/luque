@@ -348,8 +348,9 @@
 
   <!-- El visor móvil es un bloque APARTE del `#visor` de escritorio, y no una
        variante suya con clases. Los dos tienen marco, escena y controles, pero
-       ni el marcado ni los gestos coinciden: aquí no hay tira de miniaturas, ni
-       lupa, ni línea de progreso, y sí hay dos ejes de deslizamiento. Fundirlos
+       ni el marcado ni los gestos coinciden: aquí no hay lupa —la amplía el
+       pellizco— ni línea de progreso, la tira de miniaturas es otra y hay dos
+       ejes de deslizamiento. Fundirlos
        en un solo árbol obligaría a que cada regla de CSS y cada oyente
        preguntara de qué lado está, que es justo el `if` repartido por todas
        partes que `js/movil.js` existe para evitar.
@@ -376,12 +377,22 @@
         <button class="mvisor-cat" id="movilVisorCat" type="button"
                 aria-expanded="false" aria-haspopup="true"></button>
         <ul class="mvisor-cats" id="movilVisorCats" hidden></ul>
+        <button class="mvisor-ficha-boton" id="movilVisorFicha" type="button"
+                aria-pressed="false">Ficha</button>
         <button class="mvisor-cerrar" id="movilVisorCerrar" type="button"
                 aria-label="Volver a la portada">&times;</button>
       </div>
       <div class="mvisor-hud-abajo">
-        <p class="mvisor-titulo" id="movilVisorTitulo"></p>
-        <span class="mvisor-contador" id="movilVisorContador"></span>
+        <!-- La tira va DENTRO del HUD, así que se duerme con él a los 3
+             segundos. Su `touch-action` y su `pointer-events` se los devuelve
+             `css/luque.css` a mano: el visor los tiene apagados para que los
+             dos ejes los interprete js/movil-gestos.js. -->
+        <nav class="mvisor-tira" id="movilVisorTira"
+             aria-label="Piezas del trabajo" hidden></nav>
+        <div class="mvisor-hud-pie">
+          <p class="mvisor-titulo" id="movilVisorTitulo"></p>
+          <span class="mvisor-contador" id="movilVisorContador"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -457,9 +468,11 @@
        TypeError. La suite no puede cazarlo porque tests/test.html carga sus
        scripts por su cuenta. -->
   <script src="js/movil-zoom.js"></script>
-  <!-- Van ANTES de movil-visor.js, que usa `MovilBrillo.tratamientoDe` en
-       `tenirEncuadre()` para teñir el encuadre de cuatro esquinas. Hasta esta
-       tarea sólo los cargaba tests/test.html. -->
+  <!-- Va ANTES de movil-visor.js, que lo usa en `init()` para cablear la tira
+       y en `pintar()` para repintarla. Sin esta línea `window.MovilTira` es
+       undefined y abrir el visor lanza un TypeError. La suite no puede cazarlo
+       porque tests/test.html carga sus scripts por su cuenta. -->
+  <script src="js/movil-tira.js"></script>
   <script src="js/movil-visor.js"></script>
   <!-- Va ANTES de movil-puerta.js, que lo usa en `entrada()`. Sin esta línea
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError
@@ -526,9 +539,11 @@
       hud:      document.getElementById('movilVisorHud'),
       cat:      document.getElementById('movilVisorCat'),
       cats:     document.getElementById('movilVisorCats'),
+      ficha:    document.getElementById('movilVisorFicha'),
       cerrar:   document.getElementById('movilVisorCerrar'),
       titulo:   document.getElementById('movilVisorTitulo'),
-      contador: document.getElementById('movilVisorContador')
+      contador: document.getElementById('movilVisorContador'),
+      tira:     document.getElementById('movilVisorTira')
     }, window.Datos.PROYECTOS);
     window.Router.alCambiar(function (ruta) {
       window.MovilVisor.aplicar(ruta);

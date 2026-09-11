@@ -9,6 +9,11 @@
 <body>
 
   <main class="panel">
+    <!-- Tres pantallas en una sola página: el Worker de recursos estáticos
+         sirve panel/index.html y nada más, así que cualquier otra ruta daría
+         404 al recargar. Cuál se ve lo decide Pantallas.mostrar a partir del
+         fragmento; el `hidden` de aquí es el estado de arranque. -->
+    <section id="pantallaLista">
     <h1>Proyectos</h1>
 
     <p id="aviso" role="status" aria-live="polite" class="aviso"></p>
@@ -45,6 +50,85 @@
     </form>
 
     <button id="guardar" type="button">Guardar</button>
+    <button id="irAPublicar" type="button">Publicar…</button>
+    </section>
+
+    <section id="pantallaProyecto" hidden>
+      <button id="pVolver" type="button" class="volver">‹ Volver a los proyectos</button>
+      <h2 id="pTitulo" class="proyecto-titulo"></h2>
+
+      <!-- Los seis campos comparten el estilo del formulario de crear (la
+           regla `.nuevo input` gana el selector `.ficha input` en el CSS), en
+           dos columnas de ancho y una en el teléfono. Ningún `id` cambia:
+           Proyecto.recoger enlaza por ellos. -->
+      <div class="ficha">
+        <div class="campo campo--ancho">
+          <label for="pNombre">Título</label>
+          <input id="pNombre" type="text" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="pCategoria">Categoría</label>
+          <select id="pCategoria"></select>
+        </div>
+        <div class="campo">
+          <label for="pAnio">Año</label>
+          <input id="pAnio" type="number">
+        </div>
+        <div class="campo">
+          <label for="pCliente">Cliente (opcional)</label>
+          <input id="pCliente" type="text" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="pPapel">Papel</label>
+          <input id="pPapel" type="text" autocomplete="off">
+        </div>
+        <div class="campo campo--ancho">
+          <label for="pEnlace">Enlace al vídeo (opcional)</label>
+          <input id="pEnlace" type="url" placeholder="https://vimeo.com/…">
+        </div>
+      </div>
+
+      <!-- El selector de archivos va SIEMPRE, no sólo como alternativa a
+           soltar: la especificación lo pide («toda subida ofrece un selector
+           de archivos además de soltar») y soltar no existe con teclado. El
+           <input> está oculto a la vista pero NO con display:none, que lo
+           sacaría del tabulador; la etiqueta hace de botón y recibe el anillo
+           de foco por :focus-within. -->
+      <div id="pSoltar" class="soltar">
+        <label for="pArchivos" class="soltar-boton">Elegir archivos</label>
+        <input id="pArchivos" type="file" accept="image/*" multiple class="visualmente-oculto">
+        <p class="soltar-pista">o suéltalas aquí</p>
+      </div>
+
+      <p id="pProgreso" role="status" aria-live="polite" class="progreso"></p>
+      <ol id="pFotos" class="fotos"></ol>
+      <p id="pProblemas" class="problemas"></p>
+
+      <!-- La barra fija al pie. El aviso vive aquí y no arriba: en un
+           teléfono, mientras se ordena la rejilla, un «Cambiado. Recuerda
+           guardar.» en la cabecera queda fuera de la vista. Y el botón es el
+           mismo guardar() que el de la lista: panel.js los apaga y los
+           enciende a la vez (`guardarActivo`). -->
+      <div class="proyecto-barra">
+        <p id="pAviso" role="status" aria-live="polite" class="aviso"></p>
+        <button id="pGuardar" type="button">Guardar</button>
+      </div>
+    </section>
+
+    <section id="pantallaPublicar" hidden>
+      <button id="qVolver" type="button" class="volver">‹ Volver a los proyectos</button>
+      <h2>Publicar</h2>
+      <!-- La frase va en el marcado y no en el JS porque no cambia nunca, y
+           porque es lo que hay que leer antes que ninguna otra cosa de esta
+           pantalla: es la única del panel donde una pulsación cambia lo que
+           ven los clientes. -->
+      <p class="publicar-que-es">Publicar copia lo guardado sobre la web que
+        ven los clientes. No se puede deshacer desde aquí.</p>
+      <p id="qCambios" class="publicar-cambios"></p>
+      <p id="qFalta" class="problemas"></p>
+      <p id="qAviso" role="status" aria-live="polite" class="aviso"></p>
+      <button id="qPublicar" type="button">Publicar ahora</button>
+    </section>
   </main>
 
   <!-- Orden importante: panel.js lee window.ReglasContenido.CATEGORIAS al
@@ -56,8 +140,21 @@
   <script src="../js/reglas-contenido.js"></script>
   <script src="js/identificador.js"></script>
   <script src="js/orden.js"></script>
+  <script src="js/nuevo.js"></script>
+  <script src="js/cambios.js"></script>
+  <script src="js/rutas.js"></script>
+  <script src="js/edicion.js"></script>
+  <script src="js/imagenes.js"></script>
+  <script src="js/subida.js"></script>
   <script src="js/borrador.js"></script>
   <script src="js/lista.js"></script>
+  <script src="js/fotos.js"></script>
+  <script src="js/proyecto.js"></script>
+  <script src="js/subir.js"></script>
+  <script src="js/pantallas.js"></script>
+  <script src="js/publicacion.js"></script>
+  <script src="js/pantalla-publicar.js"></script>
+  <script src="js/publicar.js"></script>
   <script src="js/panel.js"></script>
 </body>
 </html>

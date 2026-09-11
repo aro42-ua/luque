@@ -98,7 +98,7 @@ window.Lista = (function () {
      para quien use ratón, pero el camino principal siguen siendo estos
      botones: sin ratón se tiene que poder hacer todo, y con lector de
      pantalla también. */
-  function fila(p, indice, total, alMover, alBorrar) {
+  function fila(p, indice, total, alMover, alBorrar, alAbrir) {
     var li = document.createElement('li');
     li.className = 'fila';
     li.dataset.id = p.id;
@@ -108,6 +108,17 @@ window.Lista = (function () {
     var nombre = document.createElement('span');
     nombre.className = 'fila-titulo';
     nombre.textContent = p.titulo + ' · ' + (ETIQUETAS[p.categoria] || p.categoria);
+
+    /* «Abrir» va el primero de los cuatro porque es lo que se hace casi
+       siempre: mover y borrar son excepciones, y el orden de tabulación
+       debería poner delante lo frecuente. */
+    var abrir = document.createElement('button');
+    abrir.type = 'button';
+    abrir.className = 'fila-boton';
+    abrir.textContent = 'Abrir';
+    abrir.setAttribute('aria-label', 'Abrir ' + p.titulo);
+    abrir.dataset.accion = 'abrir';
+    abrir.addEventListener('click', function () { alAbrir(p.id); });
 
     var subir = document.createElement('button');
     subir.type = 'button';
@@ -180,13 +191,41 @@ window.Lista = (function () {
     });
 
     li.appendChild(nombre);
+    li.appendChild(abrir);
     li.appendChild(subir);
     li.appendChild(bajar);
     li.appendChild(borrar);
     return li;
   }
 
-  function pintar(contenedor, proyectos, alMover, alBorrar) {
+  /* Tras un repintado los nodos del <ol> son todos nuevos —`pintar` hace
+     innerHTML = '' y reconstruye—, así que el elemento que tenía el foco ya no
+     existe y el navegador lo manda a <body>. Lo único que sobrevive es el `id`
+     del proyecto, así que es lo que se usa para saber dónde debe volver.
+
+     `foco` es `{ id, accion }`, con accion 'subir' | 'bajar' | 'borrar'. Si ese
+     botón ha quedado deshabilitado por llegar al extremo —subir en la primera
+     fila, bajar en la última—, se usa el otro de la misma fila, que sigue
+     siendo útil.
+
+     Vivía en panel.js hasta el bloque 3c. Se mudó aquí porque lo que sabe es
+     el marcado de una fila, que lo escribe este archivo, y porque panel.js
+     necesitaba el sitio para el arranque de tres pantallas. */
+  function enfocar(contenedor, foco) {
+    if (!foco || !foco.id) return;
+    var fila = contenedor.querySelector('[data-id="' + foco.id + '"]');
+    if (!fila) return;
+    var boton = fila.querySelector('[data-accion="' + foco.accion + '"]');
+    if (boton && !boton.disabled) {
+      boton.focus();
+      return;
+    }
+    var otraAccion = foco.accion === 'subir' ? 'bajar' : 'subir';
+    var alternativo = fila.querySelector('[data-accion="' + otraAccion + '"]');
+    if (alternativo) alternativo.focus();
+  }
+
+  function pintar(contenedor, proyectos, alMover, alBorrar, alAbrir) {
     vigilarSalidaDeLaLista(contenedor);
     contenedor.innerHTML = '';
     // Los nodos viejos desaparecen con el innerHTML de arriba: ninguna
@@ -194,7 +233,7 @@ window.Lista = (function () {
     origenArrastre = null;
     filaMarcada = null;
     proyectos.forEach(function (p, i) {
-      contenedor.appendChild(fila(p, i, proyectos.length, alMover, alBorrar));
+      contenedor.appendChild(fila(p, i, proyectos.length, alMover, alBorrar, alAbrir));
     });
   }
 
@@ -204,7 +243,7 @@ window.Lista = (function () {
      silencio —`Orden.mover` no se queja de un índice que no es un número, así
      que un `calcularHasta` mal calculado recolocaría la galería sin dar
      ningún error visible—. Se prueban en `tests/pruebas-lista.js`. */
-  return { pintar: pintar, ETIQUETAS: ETIQUETAS,
+  return { pintar: pintar, enfocar: enfocar, ETIQUETAS: ETIQUETAS,
            indiceValido: indiceValido, calcularHasta: calcularHasta,
            dentroDeLaCaja: dentroDeLaCaja };
 })();
