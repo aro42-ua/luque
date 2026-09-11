@@ -1080,7 +1080,7 @@ la miniatura activa) y las pruebas nuevas de `alternarFicha` sobre
 propia validación, así que necesita servidor).
 
 **Histórico, del 2026-09-10 — no es la cuenta vigente; la vigente es la de
-más arriba (522).** Queda por lo que explica del método de medir, no por la
+más arriba (672).** Queda por lo que explica del método de medir, no por la
 cifra: medido ese día con Chrome headless (`--virtual-time-budget=15000
 --dump-dom`) contra `tests/test.html` servido por `python -m http.server`,
 con el registro CRECIENDO antes de medir, la línea final decía «464 pasan, 0
