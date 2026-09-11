@@ -87,6 +87,13 @@ window.MovilVisor = (function () {
       var ruta = window.MovilRecorrido.aRuta(destino);
       window.Router.ir(ruta.tipo, ruta.valor, ruta.pieza);
     });
+    /* La tira navega, no pinta, igual que el botón de ficha y que un
+       deslizamiento. `aqui` se lee en el momento del toque y no se captura al
+       cablear: la tira sigue puesta mientras cambias de parada. */
+    window.MovilTira.init(refs.tira, function (n) {
+      if (!aqui) return;
+      window.Router.ir('proyecto', aqui.proyecto, n);
+    });
     engancharGestos();
   }
 
@@ -176,6 +183,7 @@ window.MovilVisor = (function () {
 
     window.MovilAnimacion.aplicar(nodo, direccion);
     window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
+    window.MovilTira.pintar(p, aqui.pieza);
   }
 
   /* La foto, con carga progresiva. Se pinta primero la PORTADA —que la rejilla

@@ -1508,12 +1508,34 @@ body.es-movil .mvisor-hud{
   transition:opacity .35s ease;
 }
 
+/* El HUD dormido no se ve Y no se puede pulsar. `opacity:0` a secas NO quita
+   el elemento del alcance del dedo: las pastillas seguían siendo pulsables
+   sin verse, y con una tira de diez miniaturas eso pasa de rareza a trampa —
+   tocar para despertar el HUD abriría una pieza al azar.
+
+   El `pointer-events` va en los DESCENDIENTES y no sólo en el contenedor: el
+   contenedor ya lo tiene en `none`, y un hijo con `auto` —que es como las
+   pastillas recuperan el dedo— lo recibe igual por mucho que el padre diga
+   `none`. Con el toque fuera de alcance cae en la raíz del visor, que es
+   justamente quien despierta el HUD (`soltarEn`, la rama del toque).
+
+   No se usa `visibility:hidden`, que además sacaría del tabulador: no
+   interpola, salta, y se llevaría por delante la transición de opacidad de
+   0,35s. Es el mismo razonamiento, con el mismo precio, que ya está escrito
+   para `.visor-ficha` en el escritorio. */
 body.es-movil .mvisor-hud.dormido{ opacity:0; }
+body.es-movil .mvisor-hud.dormido *{ pointer-events:none; }
 
 body.es-movil .mvisor-hud-arriba,
-body.es-movil .mvisor-hud-abajo{
+body.es-movil .mvisor-hud-pie{
   display:flex; align-items:flex-start; justify-content:space-between;
   gap:.6rem;
+}
+
+/* La fila de abajo pasa a ser una columna: la tira encima, el título y el
+   contador debajo, en su propia fila (`.mvisor-hud-pie`). */
+body.es-movil .mvisor-hud-abajo{
+  display:flex; flex-direction:column; gap:.6rem;
 }
 
 /* Las pastillas: amarillo con texto negro, 17,6:1 de contraste pase lo que
@@ -1560,6 +1582,53 @@ body.es-movil .mvisor-titulo{ max-width:70%; }
 
 body.es-movil .mvisor :focus-visible{
   outline:2px solid var(--yellow); outline-offset:4px;
+}
+
+/* ── La tira de miniaturas ─────────────────────────────────────────────────
+   Tres reglas del visor la dejarían muerta, y las tres se contradicen AQUÍ y
+   sólo aquí:
+
+   - `.mvisor` lleva `touch-action:none` para que los dos ejes los interprete
+     js/movil-gestos.js. Eso apaga también el desplazamiento de la tira.
+     `pan-x` devuelve un solo eje y deja el resto declinado.
+   - `.mvisor-hud` es `pointer-events:none` para que el deslizamiento lo
+     atraviese; cada control lo recupera por su cuenta, y la tira también.
+   - `overscroll-behavior-x:contain` para que llegar al final de la tira no se
+     encadene con el gesto de «atrás» del navegador.
+
+   La barra de desplazamiento se esconde en los dos motores: en un teléfono no
+   se usa con el ratón y ocuparía alto sobre la foto. */
+body.es-movil .mvisor-tira{
+  display:flex; gap:6px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  touch-action:pan-x;
+  pointer-events:auto;
+  scrollbar-width:none;
+}
+body.es-movil .mvisor-tira[hidden]{ display:none; }
+body.es-movil .mvisor-tira::-webkit-scrollbar{ display:none; }
+
+body.es-movil .mvisor-tira button{
+  flex:0 0 auto;
+  width:52px; height:52px;
+  padding:0; border:0; background:none;
+  cursor:pointer;
+  outline:2px solid transparent;
+  outline-offset:2px;
+}
+
+body.es-movil .mvisor-tira img{
+  display:block;
+  width:100%; height:100%;
+  object-fit:cover;
+}
+
+/* La actual se marca con un contorno y NO atenuando las demás: bajarle la
+   opacidad a las otras nueve para destacar una las hace ilegibles todas, y la
+   tira deja de servir para elegir. */
+body.es-movil .mvisor-tira button[aria-current="true"]{
+  outline-color:var(--yellow);
 }
 
 /* Con movimiento reducido el HUD desaparece sin transición en vez de quedarse

@@ -31,7 +31,7 @@ var MV_PROYECTOS = [
     ficha: { cliente: 'Casa Salitre', anio: '2024', papel: 'Producción' } }
 ];
 
-/* El marcado de las ocho referencias que `MovilVisor.init` exige desde la
+/* El marcado de las diez referencias que `MovilVisor.init` exige desde la
    Tarea 4: la escena de siempre más las seis del HUD. Vive en un solo sitio
    porque los tres arneses de abajo (`conVisor` y los dos `conEscena`) lo
    necesitan igual, letra por letra. */
@@ -40,7 +40,9 @@ var MV_MARCADO =
   '<div id="mvHud"><button id="mvCat"></button><ul id="mvCats"></ul>' +
   '<button id="mvFicha" aria-pressed="false"></button>' +
   '<button id="mvCerrar"></button><p id="mvTitulo"></p>' +
-  '<span id="mvContador"></span></div></div></div>';
+  '<span id="mvContador"></span>' +
+  '<nav id="mvTira" hidden></nav>' +
+  '</div></div></div>';
 
 function mvRefsDesde(caja) {
   return {
@@ -52,12 +54,13 @@ function mvRefsDesde(caja) {
     ficha:    caja.querySelector('#mvFicha'),
     cerrar:   caja.querySelector('#mvCerrar'),
     titulo:   caja.querySelector('#mvTitulo'),
-    contador: caja.querySelector('#mvContador')
+    contador: caja.querySelector('#mvContador'),
+    tira:     caja.querySelector('#mvTira')
   };
 }
 
 /* Ayudante ÚNICO y compartido por `conVisor` y los dos `conEscena` de más
-   abajo: construye las ocho referencias, llama a `MovilVisor.init` y falsea
+   abajo: construye las diez referencias, llama a `MovilVisor.init` y falsea
    `window.Datos` con `porId` y `CATEGORIAS` —esta última porque desde la
    Tarea 4 `pintar()` llama a `MovilHud.pintar`, que la lee—.
 
@@ -476,23 +479,45 @@ describe('MovilVisor — el foco del diálogo (VisorFoco)', function () {
     }), true);
   });
 
+  /* El último control del diálogo NO es `cerrar` desde que existe la tira:
+     sus botones son controles de verdad y entran en el ciclo del tabulador,
+     porque son la única forma de saltar a una pieza con el teclado. Sacarlos
+     del atrapa-foco dejaría la tira utilizable sólo con el dedo.
+
+     Por eso estas dos pruebas calculan el último del DOM en vez de nombrarlo:
+     lo que fijan es que el Tab DA LA VUELTA, no quién está al final. Nombrarlo
+     las rompía cada vez que el HUD ganaba un control, que es lo que pasó al
+     entrar la tira.
+
+     El selector es el mismo que usa `VisorFoco.enfocables` (js/visor-foco.js):
+     si difiriera, esta prueba podría mirar un `ultimo` distinto del que de
+     verdad atrapa el foco y pasar en verde por la razón equivocada. */
+  function ultimoEnfocable(raiz) {
+    var todos = raiz.querySelectorAll('button:not([disabled]), [role="slider"]');
+    return todos[todos.length - 1];
+  }
+
   prueba('con el foco en el último control, el Tab da la vuelta al primero', function () {
     igual(conVisor(function (refs) {
       conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-      refs.cerrar.focus();
+      var ultimo = ultimoEnfocable(refs.raiz);
+      ultimo.focus();
       var consumido = tabular(false);
-      var r = { consumido: consumido, foco: document.activeElement === refs.cat };
+      var r = { consumido: consumido,
+                foco: document.activeElement === refs.cat,
+                ultimoNoEsCerrar: ultimo !== refs.cerrar };
       conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
       return r;
-    }), { consumido: true, foco: true });
+    }), { consumido: true, foco: true, ultimoNoEsCerrar: true });
   });
 
   prueba('con el foco en el primer control, Shift+Tab da la vuelta al último', function () {
     igual(conVisor(function (refs) {
       conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
+      var ultimo = ultimoEnfocable(refs.raiz);
       refs.cat.focus();
       var consumido = tabular(true);
-      var r = { consumido: consumido, foco: document.activeElement === refs.cerrar };
+      var r = { consumido: consumido, foco: document.activeElement === ultimo };
       conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
       return r;
     }), { consumido: true, foco: true });
@@ -723,5 +748,21 @@ describe('MovilVisor — el botón de ficha', function () {
       refs.ficha.click();
       return ido;
     }), []);
+  });
+
+  /* La tira se pinta en cada parada, igual que el HUD, y pulsar una miniatura
+     lleva al router con el número de pieza. Que no reconstruya en cada parada
+     lo fija `tests/pruebas-movil-tira.js`; aquí sólo se comprueba el cable. */
+  prueba('la tira se pinta con las piezas del trabajo abierto', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs) {
+      return refs.tira.querySelectorAll('button').length;
+    }), 3);
+  });
+
+  prueba('pulsar una miniatura navega a esa pieza', function () {
+    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
+      refs.tira.querySelectorAll('button')[2].click();
+      return ido;
+    }), [['proyecto', 'niebla', 3]]);
   });
 });
