@@ -29,7 +29,17 @@ Desde la raíz del repositorio, en una terminal aparte:
 python -m http.server 8000
 ```
 
-y abrir `http://localhost:8000/tests/test.html` en un navegador. La última línea del informe dice «N pasan, M fallan». Antes de empezar, apúntala: hoy son **468 comprobaciones**.
+y abrir `http://localhost:8000/tests/test.html` en un navegador. La última línea del informe dice «N pasan, M fallan». Antes de empezar, apúntala: hoy son **491 comprobaciones** (medido el 2026-09-11 ejecutando la suite; `docs/estado-conocido.md` dice 468 y está desactualizado — corregirlo es parte de la Tarea 5).
+
+Sin navegador a mano, la misma suite se ejecuta sin ventana y se lee de una
+sola línea (el servidor tiene que estar levantado en otra terminal):
+
+```bash
+"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu --no-sandbox --virtual-time-budget=20000 --dump-dom "http://127.0.0.1:8000/tests/test.html" 2>/dev/null | grep -oE "[0-9]+ pasan, [0-9]+ fallan" | tail -1
+```
+
+Para ver QUÉ falla y no sólo cuántas, cambiar el `grep` final por
+`grep -oE "FALLA[^<]*"`.
 
 ## Estructura de ficheros
 
@@ -162,7 +172,7 @@ Y añadir `alternarFicha: alternarFicha,` al objeto que devuelve el módulo, des
 - [ ] **Paso 4: Ejecutar para verificar que pasan**
 
 Recargar `http://localhost:8000/tests/test.html`.
-Esperado: las siete en verde, y el total sube de 468 a **475 pasan, 0 fallan**.
+Esperado: las siete en verde, y el total sube de 491 a **498 pasan, 0 fallan**.
 
 - [ ] **Paso 5: Commit**
 
@@ -459,7 +469,7 @@ y pasa a terminar así:
 
 - [ ] **Paso 7: Ejecutar para verificar que pasan**
 
-Recargar. Esperado: **484 pasan, 0 fallan** (475 + 4 del HUD + 5 del visor).
+Recargar. Esperado: **507 pasan, 0 fallan** (498 + 4 del HUD + 5 del visor).
 
 - [ ] **Paso 8: El marcado y el estilo**
 
@@ -786,7 +796,7 @@ window.MovilTira = (function () {
 
 - [ ] **Paso 5: Ejecutar para verificar que pasan**
 
-Recargar. Esperado: **494 pasan, 0 fallan** (484 + 10).
+Recargar. Esperado: **517 pasan, 0 fallan** (507 + 10).
 
 - [ ] **Paso 6: Commit**
 
@@ -871,7 +881,7 @@ En `pintar`, después de la línea de `window.MovilHud.pintar(...)`:
 
 - [ ] **Paso 4: Ejecutar para verificar que pasan**
 
-Recargar. Esperado: **496 pasan, 0 fallan**.
+Recargar. Esperado: **519 pasan, 0 fallan**.
 
 - [ ] **Paso 5: El marcado**
 
@@ -996,7 +1006,7 @@ body.es-movil .mvisor-tira button[aria-current="true"]{
 
 - [ ] **Paso 7: Comprobar en el navegador**
 
-Recargar `http://localhost:8000/tests/test.html` — siguen **496 pasan, 0 fallan**; el CSS no lo ve la suite.
+Recargar `http://localhost:8000/tests/test.html` — siguen **519 pasan, 0 fallan**; el CSS no lo ve la suite.
 
 Abrir `http://localhost:8000/` estrechado bajo 860px, tocar un trabajo y comprobar a ojo:
 - La tira sale bajo el título, con una miniatura por pieza y la actual con contorno amarillo.
@@ -1031,7 +1041,7 @@ Apuntar el número de `js/movil-visor.js`: el plan lo esperaba en torno a 420, y
 
 - [ ] **Paso 2: Contar las pruebas**
 
-Recargar `http://localhost:8000/tests/test.html` y apuntar la línea final. Se esperan **496 pasan, 0 fallan**, frente a las 468 de antes del bloque.
+Recargar `http://localhost:8000/tests/test.html` y apuntar la línea final. Se esperan **519 pasan, 0 fallan**, frente a las 491 de antes del bloque.
 
 - [ ] **Paso 3: Escribir**
 
@@ -1117,7 +1127,7 @@ juzgar quien lo mire en un teléfono de verdad:
    de arriba no se aprieten en un teléfono estrecho.
 ```
 
-En la sección «Cómo se prueba», actualizar el número de comprobaciones de 468 al medido en el Paso 2, y nombrar el fichero de pruebas nuevo (`tests/pruebas-movil-tira.js`).
+En la sección «Cómo se prueba», actualizar el número de comprobaciones —dice 468 y ya antes de este bloque eran 491— al medido en el Paso 2, y nombrar el fichero de pruebas nuevo (`tests/pruebas-movil-tira.js`).
 
 - [ ] **Paso 4: Commit**
 
