@@ -30,6 +30,11 @@ var HTML =
   '<div id="pSoltar"><input id="pArchivos" type="file" multiple></div>' +
   '<p id="pProgreso" role="status" aria-live="polite"></p>' +
   '<ol id="pFotos"></ol><p id="pProblemas"></p></section>' +
+  '<section id="pantallaPublicar" hidden>' +
+  '<button id="qVolver" type="button">Volver</button>' +
+  '<p id="qCambios"></p><p id="qFalta"></p>' +
+  '<p id="qAviso" role="status" aria-live="polite"></p>' +
+  '<button id="qPublicar" type="button">Publicar ahora</button></section>' +
   '</main>';
 
 var MODULOS = ['../js/reglas-contenido.js', '../panel/js/identificador.js',
@@ -38,6 +43,8 @@ var MODULOS = ['../js/reglas-contenido.js', '../panel/js/identificador.js',
                '../panel/js/subida.js', '../panel/js/lista.js',
                '../panel/js/fotos.js', '../panel/js/proyecto.js',
                '../panel/js/subir.js', '../panel/js/pantallas.js',
+               '../panel/js/cambios.js', '../panel/js/pantalla-publicar.js',
+               '../panel/js/nuevo.js', '../panel/js/publicar.js',
                '../panel/js/panel.js'];
 
 /* El doble de Borrador. `cargar` responde en el acto por omisión; con
@@ -67,12 +74,13 @@ function borradorFalso(opciones) {
 }
 
 
-function conPanel(doble, fn, confirmar) {
-  return ArnesDom.conDocumento({
-    html: HTML,
-    globales: { Borrador: doble, confirm: confirmar || function () { return true; } },
-    scripts: MODULOS
-  }, fn);
+/* `extra` lo añadió el bloque 3d, para poder doblar también `Publicacion` sin
+   tocar a quien ya llamaba con dos o tres argumentos. */
+function conPanel(doble, fn, confirmar, extra) {
+  var globales = { Borrador: doble,
+                   confirm: confirmar || function () { return true; } };
+  Object.keys(extra || {}).forEach(function (k) { globales[k] = extra[k]; });
+  return ArnesDom.conDocumento({ html: HTML, globales: globales, scripts: MODULOS }, fn);
 }
 
 
@@ -526,5 +534,102 @@ describeAsync('panel.js · tres pantallas', function () {
         igual(w.Borrador.guardadas[0].proyectos[0].ficha.papel, 'Fotografía');
       });
     });
+  });
+});
+
+/* Publicar, desde fuera. `Publicacion` se dobla porque es lo que habla con la
+   red; `Cambios` y `PantallaPublicar` van de verdad, con el mismo criterio de
+   siempre: probar el panel contra dobles de sus propias piezas comprobaría el
+   doble. */
+describeAsync('panel.js · publicar', function () {
+
+  function publicacionFalsa(o) {
+    var opciones = o || {};
+    var doble = {
+      publicados: [],
+      publicado: function (cb) { cb(opciones.publicado || { proyectos: [] }, null); },
+      publicar: function (version, cb) {
+        doble.publicados.push(version);
+        cb(opciones.respuesta || { version: version }, opciones.error || null);
+      }
+    };
+    return doble;
+  }
+
+  function listo() {
+    return { version: 4, proyectos: [
+      { id: 'bruma', titulo: 'Bruma', categoria: 'editorial', tipo: 'fotos',
+        ficha: { anio: 2025, papel: 'DoP' }, portada: '/img/a-1500.jpg',
+        piezas: [{ url: '/img/a-3000.jpg' }] } ] };
+  }
+
+  function conPublicar(opciones, fn) {
+    var pub = publicacionFalsa(opciones.publicacion);
+    return conPanel(borradorFalso({ datos: listo() }),
+      function (w, d) { return fn(w, d, pub); },
+      opciones.confirm, { Publicacion: pub });
+  }
+
+  return conPublicar({}, function (w, d, pub) {
+    w.Panel.ir('publicar');
+
+    prueba('la pantalla de publicar se ve y las otras no', function () {
+      igual(d.getElementById('pantallaPublicar').hidden, false);
+      igual(d.getElementById('pantallaLista').hidden, true);
+    });
+
+    prueba('el resumen dice que entra el proyecto', function () {
+      cierto(d.getElementById('qCambios').textContent.indexOf('bruma') !== -1,
+        d.getElementById('qCambios').textContent);
+    });
+
+    prueba('publicar manda la versión del borrador guardado', function () {
+      d.getElementById('qPublicar').click();
+      igual(pub.publicados, [4]);
+    });
+
+    prueba('y lo dice cuando sale bien', function () {
+      cierto(d.getElementById('qAviso').textContent.indexOf('ublicad') !== -1,
+        d.getElementById('qAviso').textContent);
+    });
+  }).then(function () {
+    /* Se pregunta SIEMPRE. Es la única acción del panel que se ve desde fuera
+       y la única sin deshacer. */
+    return conPublicar({ confirm: function () { return false; } }, function (w, d, pub) {
+      w.Panel.ir('publicar');
+      d.getElementById('qPublicar').click();
+      prueba('si se dice que no, no se publica', function () {
+        igual(pub.publicados, []);
+      });
+    });
+  }).then(function () {
+    return conPublicar({ publicacion: { respuesta: { conflicto: true, guardada: 9 } } },
+      function (w, d) {
+        w.Panel.ir('publicar');
+        d.getElementById('qPublicar').click();
+        /* El mismo criterio que al guardar. Reintentar mandaría la misma
+           versión vieja y volvería a chocar, en bucle. */
+        prueba('un conflicto apaga el botón hasta recargar', function () {
+          igual(d.getElementById('qPublicar').disabled, true);
+        });
+        prueba('y el aviso dice por dónde va el servidor', function () {
+          cierto(d.getElementById('qAviso').textContent.indexOf('9') !== -1,
+            d.getElementById('qAviso').textContent);
+        });
+      });
+  }).then(function () {
+    return conPublicar({ publicacion: { respuesta: { problemas: ['bruma: sin portada'] } } },
+      function (w, d) {
+        w.Panel.ir('publicar');
+        d.getElementById('qPublicar').click();
+        /* Un 422 que el panel no había previsto —porque valida con las mismas
+           reglas, pero el Worker manda— se enseña entero. Que el botón siga
+           activo es lo correcto: se arregla y se reintenta. */
+        prueba('un 422 se enseña con sus problemas', function () {
+          cierto(d.getElementById('qAviso').textContent.indexOf('sin portada') !== -1,
+            d.getElementById('qAviso').textContent);
+          igual(d.getElementById('qPublicar').disabled, false);
+        });
+      });
   });
 });

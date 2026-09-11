@@ -5,6 +5,9 @@
   /* Las secciones por nombre, el índice del proyecto abierto, y una copia en
      texto de lo último que el servidor confirmó. */
   var pantallas, elsProyecto, abierto = null, guardado = null;
+  /* La pantalla de publicar, que se guarda su propio estado: lo que hay en la
+     web ahora, el aviso, y si un choque de version dejo el boton apagado. */
+  var publicar;
 
   function avisar(texto) { elAviso.textContent = texto; }
 
@@ -109,6 +112,12 @@
 
   function ir(pantalla, id) {
     if (!trabajo) return;
+    if (pantalla === 'publicar') {
+      abierto = null;
+      window.Pantallas.mostrar(pantallas, 'pantallaPublicar');
+      location.hash = window.Rutas.hacia('publicar');
+      return publicar.entrar();
+    }
     if (pantalla === 'proyecto') {
       var indice = buscar(id);
       /* Un id que no está no puede dejar en pantalla el encabezado de otro
@@ -129,48 +138,18 @@
     repintar();
   }
 
-  /* La ficha que escribe el formulario. `cliente` y `enlace` sólo entran si
-     el estudio los ha escrito: ReglasContenido.validar no los exige a
-     propósito —el porqué está escrito junto a esa comprobación, en
-     js/reglas-contenido.js—, y la forma de decir que un trabajo no tiene
-     cliente o no tiene vídeo es que la clave no esté. Guardar `cliente: ''`
-     sería una segunda forma de decir lo mismo, y a quien pregunte si la ficha
-     trae cliente le contestaría que sí.
-
-     El año va como número porque así está escrito en contenido.json. */
-  function fichaDelFormulario() {
-    var ficha = {};
-    var cliente = elCliente.value.trim();
-    if (cliente) ficha.cliente = cliente;
-    ficha.anio = Number(elAnio.value);
-    ficha.papel = elPapel.value.trim();
-    var enlace = elEnlace.value.trim();
-    if (enlace) ficha.enlace = enlace;
-    return ficha;
+  /* Los campos del formulario de crear, con los nombres que espera Nuevo. */
+  function camposNuevo() {
+    return { titulo: elTitulo, cliente: elCliente, anio: elAnio,
+             papel: elPapel, enlace: elEnlace };
   }
 
-  function crear(titulo, categoria, ficha) {
+  function crear(titulo, categoria) {
     if (!trabajo) return;
-    var id = window.Identificador.desde(titulo);
-    var ids = trabajo.proyectos.map(function (p) { return p.id; });
-    var problema = window.Identificador.problema(id, ids, window.ReglasContenido.CATEGORIAS);
-    if (problema) return avisar(problema);
-
-    /* El `required` del formulario ya frena al estudio, pero sólo por el
-       camino del navegador. Se comprueba también aquí porque lo que hay al
-       otro lado no tiene arreglo: sin año o sin papel el proyecto se guarda
-       en el borrador y la publicación lo rechaza con un 422, y el panel no
-       tiene ninguna pantalla donde rellenar la ficha de un proyecto que ya
-       existe. Sería crear algo que nadie puede publicar ni corregir. */
-    if (!ficha.anio || !ficha.papel) {
-      return avisar('El año y el papel hacen falta para poder publicar.');
-    }
-
-    /* Nace sin piezas ni portada a propósito: las pone el bloque 3c. Hasta
-       entonces el borrador no se podrá publicar, y eso es correcto —publicar
-       valida, y un proyecto sin fotos no es publicable—. */
-    trabajo.proyectos.push({ id: id, titulo: titulo, categoria: categoria,
-                             tipo: 'fotos', ficha: ficha, piezas: [] });
+    var r = window.Nuevo.proyecto(trabajo.proyectos, titulo, categoria,
+                                  window.Nuevo.ficha(camposNuevo()));
+    if (r.problema) return avisar(r.problema);
+    trabajo.proyectos.push(r.proyecto);
     repintar();
     avisar('Proyecto «' + titulo + '» creado. Recuerda guardar.');
   }
@@ -228,24 +207,25 @@
 
     document.getElementById('nuevo').addEventListener('submit', function (e) {
       e.preventDefault();
-      crear(elTitulo.value.trim(), elCategoria.value, fichaDelFormulario());
-      /* Se vacía el formulario entero, no sólo el título. Si los campos de la
-         ficha se quedaran escritos, el siguiente proyecto nacería con el
-         cliente y el papel del anterior, y eso no da error en ningún sitio:
-         se publica y ya está. El precio es que un intento fallido —un
-         identificador repetido— también los borra, que es lo que el título ya
-         hacía antes de esta tarea. */
-      elTitulo.value = '';
-      elCliente.value = '';
-      elAnio.value = '';
-      elPapel.value = '';
-      elEnlace.value = '';
+      crear(elTitulo.value.trim(), elCategoria.value);
+      window.Nuevo.vaciar(camposNuevo());
     });
 
     elGuardar.addEventListener('click', guardar);
 
     pantallas = { pantallaLista: document.getElementById('pantallaLista'),
-                  pantallaProyecto: document.getElementById('pantallaProyecto') };
+                  pantallaProyecto: document.getElementById('pantallaProyecto'),
+                  pantallaPublicar: document.getElementById('pantallaPublicar') };
+    publicar = window.Publicar.crear(
+      { cambios: document.getElementById('qCambios'),
+        falta: document.getElementById('qFalta'),
+        aviso: document.getElementById('qAviso'),
+        boton: document.getElementById('qPublicar') },
+      function () { return trabajo; }, hayCambios);
+    document.getElementById('irAPublicar')
+      .addEventListener('click', function () { ir('publicar'); });
+    document.getElementById('qVolver')
+      .addEventListener('click', function () { ir('lista'); });
     elsProyecto = window.Proyecto.recoger(document);
     document.getElementById('pVolver')
       .addEventListener('click', function () { ir('lista'); });

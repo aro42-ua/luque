@@ -310,6 +310,22 @@ h1{
 .problemas:not(:empty){ color: #FF5555; }
 
 /* ============================================================
+   LA PANTALLA DE PUBLICAR (bloque 3d)
+============================================================ */
+
+/* Lo que hace el boton se lee antes que nada: es la unica pantalla del panel
+   donde una pulsacion cambia lo que ven los clientes. La barra amarilla a la
+   izquierda lo separa del resto sin gritar. */
+.publicar-que-es{
+  border-left: 3px solid var(--yellow);
+  padding-left: .75rem;
+}
+
+/* El resumen nombra proyectos y puede ocupar varias lineas: se respetan los
+   saltos para que no salga un parrafo unico e ilegible. */
+.publicar-cambios{ white-space: pre-line; }
+
+/* ============================================================
    MOVIMIENTO REDUCIDO
 ============================================================ */
 @media (prefers-reduced-motion: reduce){

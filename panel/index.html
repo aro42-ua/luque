@@ -50,6 +50,7 @@
     </form>
 
     <button id="guardar" type="button">Guardar</button>
+    <button id="irAPublicar" type="button">Publicar…</button>
     </section>
 
     <section id="pantallaProyecto" hidden>
@@ -88,6 +89,21 @@
       <ol id="pFotos" class="fotos"></ol>
       <p id="pProblemas" class="problemas"></p>
     </section>
+
+    <section id="pantallaPublicar" hidden>
+      <button id="qVolver" type="button">‹ Volver a los proyectos</button>
+      <h2>Publicar</h2>
+      <!-- La frase va en el marcado y no en el JS porque no cambia nunca, y
+           porque es lo que hay que leer antes que ninguna otra cosa de esta
+           pantalla: es la única del panel donde una pulsación cambia lo que
+           ven los clientes. -->
+      <p class="publicar-que-es">Publicar copia lo guardado sobre la web que
+        ven los clientes. No se puede deshacer desde aquí.</p>
+      <p id="qCambios" class="publicar-cambios"></p>
+      <p id="qFalta" class="problemas"></p>
+      <p id="qAviso" role="status" aria-live="polite" class="aviso"></p>
+      <button id="qPublicar" type="button">Publicar ahora</button>
+    </section>
   </main>
 
   <!-- Orden importante: panel.js lee window.ReglasContenido.CATEGORIAS al
@@ -99,6 +115,8 @@
   <script src="../js/reglas-contenido.js"></script>
   <script src="js/identificador.js"></script>
   <script src="js/orden.js"></script>
+  <script src="js/nuevo.js"></script>
+  <script src="js/cambios.js"></script>
   <script src="js/rutas.js"></script>
   <script src="js/edicion.js"></script>
   <script src="js/imagenes.js"></script>
@@ -109,6 +127,9 @@
   <script src="js/proyecto.js"></script>
   <script src="js/subir.js"></script>
   <script src="js/pantallas.js"></script>
+  <script src="js/publicacion.js"></script>
+  <script src="js/pantalla-publicar.js"></script>
+  <script src="js/publicar.js"></script>
   <script src="js/panel.js"></script>
 </body>
 </html>
