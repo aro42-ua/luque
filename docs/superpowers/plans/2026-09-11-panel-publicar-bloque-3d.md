@@ -349,7 +349,7 @@ window.Cambios = (function () {
     if (!cambios.hay) return 'No hay ningún cambio pendiente de publicar.';
     return [
       trozo('Entran', cambios.nuevos),
-      trozo('Se retiran de la web', cambios.retirados),
+      trozo('Se quitan de la web', cambios.retirados),
       trozo('Cambian', cambios.tocados),
       cambios.movidos.length
         ? 'Cambia el orden, y con él la composición del lienzo: '
@@ -364,7 +364,7 @@ window.Cambios = (function () {
 
 - [ ] **Paso 4: Comprueba que pasa**
 
-Arnés: las **quince** nuevas en verde.
+Arnés: las **dieciséis** nuevas en verde.
 
 - [ ] **Paso 5: Commit**
 
