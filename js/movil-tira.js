@@ -15,8 +15,11 @@ window.MovilTira = (function () {
   /* De qué proyecto es la tira que hay puesta. Es lo que permite repintar la
      marca sin reconstruir: el visor llama a `pintar` en CADA parada, y
      reconstruir en cada una tiraría las <img> ya descargadas para volver a
-     pedirlas, además de perder el desplazamiento horizontal que el dedo
-     hubiera dejado puesto. */
+     pedirlas. (No es que además se perdería el desplazamiento horizontal que
+     el dedo hubiera dejado puesto: `marcar` llama a `centrar` en cada parada
+     y le sobrescribe `scrollLeft` justo después, así que ese desplazamiento
+     se pierde igual, se reconstruya o no. La razón que sostiene esto es sólo
+     la de las <img>.) */
   var proyectoPuesto = null;
 
   function init(elRaiz, alElegirPieza) {
@@ -86,9 +89,16 @@ window.MovilTira = (function () {
      sólo puede mover la tira, y éste puede además desplazar el documento
      entero si el navegador decide que hace falta. Dentro de un visor a
      pantalla completa eso se ve como que la página da un salto sin que nadie
-     la haya tocado. */
+     la haya tocado.
+
+     Se mide contra la caja de la TIRA y no con `offsetLeft`: el `offsetParent`
+     de una miniatura no es la tira, que es `position:static`, sino el HUD, que
+     es absoluto — medido, eso metia un desfase constante de 24px, el padding
+     lateral del HUD (la octava miniatura daba `offsetLeft` 430 estando en
+     realidad a 406 de la tira). */
   function centrar(b) {
-    raiz.scrollLeft = b.offsetLeft - (raiz.clientWidth - b.offsetWidth) / 2;
+    var caja = b.getBoundingClientRect(), marco = raiz.getBoundingClientRect();
+    raiz.scrollLeft += (caja.left - marco.left) - (marco.width - caja.width) / 2;
   }
 
   return { init: init, pintar: pintar };
