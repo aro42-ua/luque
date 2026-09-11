@@ -707,6 +707,26 @@ que escala por el lado largo y no recorta: las tres medidas de una foto salen
 con la proporción del original. Ver la misma condición explicada arriba para
 el visor de escritorio.
 
+**Y desde el 2026-09-11 esa condición sólo pesa en la PRIMERA parada.** Al
+copiar las quince líneas, el móvil se quedó con la portada como previa de
+TODAS las paradas —tenía sentido: sin tira, la portada era la única imagen ya
+descargada—. Cuando la tira entró, eso pasó a ser un error que Ángel vio en su
+iPhone: «al entrar a un trabajo y deslizar, siempre sale la misma imagen».
+Medido con una sonda inyectada en la página desde el servidor local (cada
+`load`/`error` de imagen y cada cambio de `src` en la escena, mandados a un
+registro): el gesto navegaba —el contador cambiaba—, la pieza grande se
+pedía… y tardaba **de 4 a 12 segundos** en llegar, y durante ese tiempo la
+escena enseñaba la portada, que es OTRA foto, con el rótulo «08/10» encima.
+Ahora `fotoDe` pregunta a `vistaPrevia`, calcada de `VisorCarga.vistaPrevia`:
+portada en la primera parada, **miniatura propia** en las demás —la tira ya la
+tiene—, y pieza entera directa si no hay miniatura. La miniatura es la misma
+foto, así que el relevo no puede dar salto de proporción; la condición de
+arriba queda para la primera parada, que sigue previendo con la portada. Lo
+fijan tres pruebas de `tests/pruebas-movil-visor.js`. Lo que NO arregla esto es
+la lentitud: 520 KB por pieza siguen siendo 520 KB, y en local además pasan por
+una redirección a producción; en 4G real la miniatura borrosa se verá un par de
+segundos antes de afinarse, y eso es lo esperado.
+
 **Las dos cosas del sistema operativo, en `css/luque.css`:**
 
 - La franja de los bordes que se queda el navegador. El HUD lleva
