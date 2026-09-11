@@ -2692,3 +2692,28 @@ ls panel/js/reglas-contenido.js   # no debe existir
   cambios sin guardar.
 - `Proyecto.problemasDe` es la misma validación que el 3d enseñará para todo el
   borrador en vez de para un proyecto.
+
+---
+
+## Lo que cambió al ejecutarlo
+
+El plan se siguió tarea a tarea. Cuatro cosas salieron distintas, y se anotan
+aquí en vez de reescribir el plan, para que quede el rastro de por qué:
+
+1. **`Rutas.LISTA` no existe.** El plan lo exponía como constante compartida,
+   que es justo el objeto mutable que el comentario de al lado dice evitar.
+   `leer` devuelve un objeto nuevo en cada llamada y no hay constante.
+2. **El sello lleva un contador monótono.** La versión del plan —hora en base36
+   más dos caracteres de azar— la tumbó su propia prueba de los mil sellos: con
+   1296 valores posibles, mil sellos del mismo milisegundo colisionan casi
+   seguro. Ahora el contador separa las subidas de esta página, la hora separa
+   dos cargas y el azar separa dos pestañas.
+3. **Dos módulos más de los previstos**, los dos por el techo de 300 líneas de
+   `panel.js`: `subir.js`, el pegamento entre `Subida` y `Edicion` con el aviso
+   de qué entró y qué no, y `Proyecto.recoger`, que además encaja mejor ahí
+   —es `proyecto.js` quien sabe qué nodos necesita—.
+4. **`pruebas-panel.js` saca a su ámbito** el marcado, los módulos, el doble de
+   `Borrador` y `conPanel`, para que las dos secciones los compartan.
+
+**Estado:** tareas 1 a 8 hechas y en verde; la 9 (comprobación manual
+desplegada) es de Ángel. Arnés: 491 → 595 en este bloque.

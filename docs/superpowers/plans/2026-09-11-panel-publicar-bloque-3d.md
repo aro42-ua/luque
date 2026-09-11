@@ -1226,3 +1226,24 @@ wc -l js/*.js panel/js/*.js worker/src/*.js worker/estatico/*.js | sort -rn | he
   diseño que nadie ha tomado.
 - **Limpiar las imágenes huérfanas** de R2 sigue sin ruta. El bloque 3a lo dejó
   anotado: hace falta un `DELETE /api/imagen`.
+
+---
+
+## Lo que cambió al ejecutarlo
+
+1. **Dos módulos más de los previstos**, los dos por el techo de 300 líneas de
+   `panel.js`: `publicar.js`, que se guarda el estado de esta pantalla y junta
+   `publicacion.js` con `pantalla-publicar.js`, y `nuevo.js`, el formulario de
+   crear un proyecto — que salió de `panel.js` sin cambiar de comportamiento, y
+   encaja mejor fuera: es la pantalla de crear, hermana de `proyecto.js`.
+2. **`Publicar.crear` recibe el borrador como función**, no como valor: el
+   borrador cambia por debajo —se edita en otra pantalla, se guarda— y una
+   copia tomada al crear el módulo estaría vieja justo antes de pulsar.
+3. **Todo mensaje de fallo al publicar promete que la web no ha cambiado.** Es
+   lo primero que necesita saber quien ve fallar una publicación, y es verdad
+   porque publicar es atómico.
+4. **`conPanel` acepta globales extra**, para doblar también `Publicacion` sin
+   tocar a quien ya llamaba con dos o tres argumentos.
+
+**Estado:** tareas 1 a 4 hechas y en verde; la 5 (comprobación manual
+desplegada) es de Ángel. Arnés: 595 → 642 en este bloque.
