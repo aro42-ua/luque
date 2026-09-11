@@ -113,6 +113,11 @@ window.MovilVisor = (function () {
        de brillo sobreviviendo al cierre teniria la siguiente foto con el
        veredicto de la anterior. */
     TRATAMIENTOS.forEach(function (c) { raiz.classList.remove(c); });
+    /* Sin esto el oyente sobrevive a la foto huerfana: su `load` puede llegar
+       con el visor ya cerrado y `raiz.hidden`, y `tenirEncuadre` volveria a
+       poner una clase de brillo justo despues de que esta funcion las quitara
+       todas, dejando falsa la invariante que se acaba de escribir arriba. */
+    if (elFoto) elFoto.removeEventListener('load', tenirEncuadre);
     elFoto = null;
     document.removeEventListener('keydown', alTeclado);
     /* Devuelve el foco a quien lo tenía antes de abrir, y no si ese elemento
@@ -133,6 +138,12 @@ window.MovilVisor = (function () {
 
     var direccion = direccionPendiente;
     direccionPendiente = null;
+
+    /* La foto de la parada anterior puede seguir cargando cuando se abandona
+       —el recorrido no espera a nadie—, y su oyente de `load` sigue enganchado
+       si no se quita aqui: ver el comentario de `cerrar` sobre por que esto
+       importa incluso dentro de una misma sesion del visor. */
+    if (elFoto) elFoto.removeEventListener('load', tenirEncuadre);
 
     escena.innerHTML = '';
     var nodo = (aqui.pieza === 'ficha') ? window.MovilFicha.de(p) :
@@ -250,12 +261,23 @@ window.MovilVisor = (function () {
      necesita las dos posiciones a la vez y el paseo necesita saber de donde
      venia ESE dedo y no el otro.
 
-     `base` y `d0` se congelan al posarse el segundo dedo y no se tocan hasta
-     que se levanta: el porque esta en `MovilZoom.pellizcar`. */
+     `base` y `d0` se congelan al formarse una pareja de dedos y no se tocan
+     mientras siga siendo LA MISMA: el porque esta en `MovilZoom.pellizcar`.
+     `parCongelado` guarda de que pareja son, y el porque de eso esta en
+     `refrescarPar`. */
   var zoom = null, base = null, d0 = 0, punteros = {}, tope = 1, elFoto = null;
+  var parCongelado = null;
 
-  function cajaDeLaFoto() {
-    return { ancho: elFoto.clientWidth, alto: elFoto.clientHeight };
+  /* Las dos cajas que `MovilZoom` necesita para acotar el paseo y que no puede
+     medir por su cuenta, porque es puro: la foto TAL Y COMO ESTA PINTADA y el
+     marco, que es la escena a pantalla completa. No son la misma con
+     `object-fit: contain`, y confundirlas es dejar que la foto se despegue del
+     marco por el eje de las franjas. */
+  function medidasDelPaseo() {
+    return {
+      foto:  { ancho: elFoto.clientWidth,  alto: elFoto.clientHeight },
+      marco: { ancho: escena.clientWidth,  alto: escena.clientHeight }
+    };
   }
 
   function dosDedos() {
@@ -263,11 +285,27 @@ window.MovilVisor = (function () {
     return ids.length === 2 ? [punteros[ids[0]], punteros[ids[1]]] : null;
   }
 
-  /* El transform se QUITA al volver al encaje en vez de escribir la identidad,
-     y no es cosmetica: `MovilAnimacion.aplicar` entra la escena con una
-     animacion CSS que tambien es un transform, y un estilo en linea puesto ahi
-     se queda peleando con ella en cada parada. Sin ampliar no hay nada que
-     escribir, asi que no se escribe. */
+  /* Congela `base` y `d0` cada vez que la PAREJA de dedos cambia, y no solo la
+     primera vez que hay dos. Con tres dedos en la pantalla —el pulgar o la
+     palma que se apoyan, que en un telefono pasa— levantar uno de la pareja
+     original deja dos dedos que nunca midieron `d0` juntos: arrastrar el `d0`
+     viejo hace que la foto salte de golpe en el siguiente `pointermove` sin
+     que ningun dedo se haya movido. Medido: A@150 y B@250 pellizcados a 3x,
+     entra C@470 y se levanta A, y la foto cae de 3x a 1x sola.
+
+     La identidad de la pareja son sus `pointerId` ordenados: comparar cuantos
+     dedos hay no basta, porque dos son dos antes y despues del cambio. */
+  function refrescarPar() {
+    var par = dosDedos();
+    if (!par || !elFoto) { base = null; parCongelado = null; return; }
+    var quienes = Object.keys(punteros).sort().join('/');
+    if (quienes === parCongelado) return;
+    parCongelado = quienes;
+    base = zoom;
+    d0 = window.MovilZoom.distancia(par[0], par[1]);
+    tope = window.MovilZoom.maxEscala(elFoto.naturalWidth, elFoto.clientWidth);
+  }
+
   var TRATAMIENTOS = ['brillo-claro', 'brillo-oscuro', 'brillo-halo'];
 
   /* La contramedida que la spec exige por escrito: «el fallo se registra».
@@ -298,15 +336,34 @@ window.MovilVisor = (function () {
      `pintar` limpia siempre los tres antes de poner uno: sin eso, pasar de una
      foto clara a una oscura dejaria las dos clases puestas y ganaria la que el
      CSS declare mas abajo, que es una forma silenciosa de tener el encuadre
-     equivocado. */
+     equivocado.
+
+     La llamada SINCRONA que hace `pintar` justo despues del `appendChild` mide
+     una `<img>` que, salvo que ya estuviera en cache, todavia no esta
+     `complete`: eso hace que `medidorDe` lance a proposito («la foto todavia
+     no esta cargada») y sin esta guarda esa medicion benigna consumiria el
+     unico aviso de la sesion, dejando sin registrar el fallo de verdad que la
+     spec quiere cazar —un `SecurityError` de lienzo manchado— y el mensaje en
+     consola diciendo «esto no deberia pasar» sobre algo que pasa siempre.
+     Midiendo con `elFoto.complete` en el momento de la llamada: si es `false`
+     el halo es el estado PROVISIONAL correcto, no un fallo, y no se registra
+     nada; si es `true` —la llamada del oyente de `load`, o esta misma llamada
+     si la portada ya estaba en cache— cualquier fallo de aqui en adelante es
+     el que la spec pide registrar. */
   function tenirEncuadre() {
+    var completa = elFoto && elFoto.complete;
     var tratamiento = elFoto
-      ? window.MovilBrillo.tratamientoDe(elFoto, registrarBrillo)
+      ? window.MovilBrillo.tratamientoDe(elFoto, completa ? registrarBrillo : null)
       : 'halo';
     TRATAMIENTOS.forEach(function (c) { raiz.classList.remove(c); });
     raiz.classList.add('brillo-' + tratamiento);
   }
 
+  /* El transform se QUITA al volver al encaje en vez de escribir la identidad,
+     y no es cosmetica: `MovilAnimacion.aplicar` entra la escena con una
+     animacion CSS que tambien es un transform, y un estilo en linea puesto ahi
+     se queda peleando con ella en cada parada. Sin ampliar no hay nada que
+     escribir, asi que no se escribe. */
   function pintarZoom() {
     if (!elFoto) return;
     elFoto.style.transform = window.MovilZoom.ampliado(zoom)
@@ -334,12 +391,7 @@ window.MovilVisor = (function () {
     raiz.addEventListener('pointerdown', function (e) {
       punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
       gesto = window.MovilGestos.presionar(gesto, { x: e.clientX, y: e.clientY });
-      var par = dosDedos();
-      if (par && elFoto) {
-        base = zoom;
-        d0 = window.MovilZoom.distancia(par[0], par[1]);
-        tope = window.MovilZoom.maxEscala(elFoto.naturalWidth, elFoto.clientWidth);
-      }
+      refrescarPar();
     });
 
     raiz.addEventListener('pointermove', function (e) {
@@ -352,13 +404,13 @@ window.MovilVisor = (function () {
       var par = dosDedos();
       if (par && base) {
         zoom = window.MovilZoom.pellizcar(base, d0,
-          window.MovilZoom.distancia(par[0], par[1]), tope, cajaDeLaFoto());
+          window.MovilZoom.distancia(par[0], par[1]), tope, medidasDelPaseo());
         pintarZoom();
         return;
       }
       if (!par && window.MovilZoom.ampliado(zoom)) {
         zoom = window.MovilZoom.arrastrar(zoom, ahora.x - antes.x,
-          ahora.y - antes.y, cajaDeLaFoto());
+          ahora.y - antes.y, medidasDelPaseo());
         pintarZoom();
       }
     });
@@ -370,7 +422,12 @@ window.MovilVisor = (function () {
 
   function soltarEn(e) {
     delete punteros[e.pointerId];
-    if (!dosDedos()) base = null;
+    /* No basta con `if (!dosDedos()) base = null`: la pareja tambien cambia
+       cuando un dedo se levanta y deja exactamente dos (el caso del pulgar
+       que se apoyaba y se retira), y ese caso necesita recongelar `base`/`d0`
+       igual que el de `pointerdown`. `refrescarPar` ya cubre el caso de
+       menos de dos dedos, poniendo `base` a `null`. */
+    refrescarPar();
 
     var r = window.MovilGestos.soltar(gesto, { x: e.clientX, y: e.clientY });
     gesto = r.estado;
