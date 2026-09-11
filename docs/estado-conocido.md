@@ -988,6 +988,11 @@ tras un conflicto de versiones—. Quien añada un tercer camino que toque
 
 **El aviso de la pantalla del proyecto (`#pAviso`) vive en esa barra**, no en la
 cabecera: en un teléfono, mientras se ordena la rejilla, arriba no se veía.
+`avisar()` en `panel/js/panel.js` escribe los dos avisos a la vez, el de la
+lista y el de la barra; hasta el arreglo de la revisión final de este bloque
+`#pAviso` era marcado muerto —nadie lo escribía, inocuo desde el bloque 3c
+porque desde dentro de un proyecto no se podía guardar, y ya no lo es desde
+que este bloque le puso un botón—.
 
 **La celda de la rejilla es una rejilla de cuatro columnas** (`44px 1fr 1fr
 44px`) repartida por `grid-template-areas` según el `data-accion` de cada
@@ -1019,6 +1024,10 @@ descubrir dos veces.
 inserción) podían coincidir en la misma celda al arrastrar sobre la portada, y
 la marca borraba el anillo. Se resolvió con `.celda--portada.celda--marca-antes`
 y `.celda--portada.celda--marca-despues`, que escriben las sombras juntas.
+
+**Este bloque no toca la lista ni la pantalla de publicar, salvo una
+excepción compartida:** el relleno lateral de `.panel` en el `@media` del
+teléfono aplica a las tres pantallas, porque es la misma regla para las tres.
 
 ### Lo que la suite no puede certificar de este bloque
 

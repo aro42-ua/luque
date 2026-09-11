@@ -453,8 +453,9 @@ Sustituir la cabecera `/* LA PANTALLA DE UN PROYECTO (bloque 3c) */` y todo lo q
 }
 
 /* Dos columnas en ancho, una en el teléfono (ver el @media del final). Los
-   dos campos anchos llevan `span 2`, que sobre una rejilla de una columna no
-   hace nada, así que en el móvil no hay nada que deshacer. */
+   dos campos anchos llevan `span 2` aquí y lo PIERDEN en el @media: un span
+   sobre una rejilla de una columna no es inofensivo, crea una columna
+   implícita. El porqué, medido, está junto a esa regla. */
 .ficha{
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -871,3 +872,42 @@ del plan 3c (16 puntos: subir 40 MB, girar, teclado, portada…) y la Tarea 5 de
 git add docs/estado-conocido.md
 git commit -m "Estado conocido: la pantalla del proyecto vestida, y los bloques 3c y 3d que faltaban"
 ```
+
+---
+
+## Lo que cambió al ejecutarlo
+
+El plan se siguió tarea a tarea. La revisión final del bloque encontró cuatro
+cosas que salieron distintas de lo planeado, y se anotan aquí en vez de
+reescribir las tareas de arriba, para que quede el rastro de por qué:
+
+1. **`grid-column: span 2` sobre una rejilla de una columna NO es inofensivo.**
+   El plan y el CSS original decían que el `span` «no hace nada» en el
+   `@media` de una columna. Medido a 375px, `.ficha` computaba `222px 222px`
+   y desbordaba: el `span` crea una segunda columna implícita que el
+   contenido dimensiona (los `<input>` miden ~220px como mínimo). Se dejó el
+   comentario real junto a la regla, y `.campo--ancho{ grid-column: auto; }`
+   sigue siendo el arreglo correcto.
+2. **Dos `box-shadow` de la misma especificidad no se suman.** `.celda--portada`
+   (el anillo doble) y las marcas de inserción `.celda--marca-antes` /
+   `.celda--marca-despues` podían coincidir en la misma celda al arrastrar
+   sobre la portada, y la segunda sombra sustituía a la primera en vez de
+   sumarse. Se resolvió escribiendo las combinaciones
+   `.celda--portada.celda--marca-antes` y
+   `.celda--portada.celda--marca-despues` con las dos sombras juntas.
+3. **`#pAviso` no lo escribía nadie.** `avisar()` sólo tocaba `#aviso`, el de
+   la lista; la barra nueva de la pantalla del proyecto tenía su propio nodo
+   `#pAviso` pero ninguna llamada lo alcanzaba, así que Guardar desde ahí no
+   decía «Guardado.», y un conflicto o un error de red pasaban en silencio.
+   Lo encontró la revisión final de este bloque. Se arregló haciendo que
+   `avisar()` escriba los dos avisos a la vez, y se añadió la prueba que
+   debió existir desde la Tarea 1.
+4. **`env(safe-area-inset-bottom)` sin `viewport-fit=cover` es letra muerta**,
+   y se quitó. El meta viewport del panel no lleva `viewport-fit=cover`, así
+   que `env()` resolvía siempre a 0: la regla no hacía nada y sólo sugería una
+   protección que no existía. No se añadió `viewport-fit=cover` porque
+   obligaría a dar márgenes seguros laterales a todo el panel, un cambio de
+   alcance mayor que este bloque no pedía.
+
+**Estado:** tareas 1 a 5 hechas y en verde; la comprobación en producción y en
+un teléfono real es de Ángel. Arnés: 668 → 673 en este bloque.

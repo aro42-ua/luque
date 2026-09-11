@@ -73,8 +73,10 @@ dentro de la sección, y lleva dos cosas:
 
 - **`#pAviso`**, que hoy está arriba. En un teléfono, mientras se ordena la
   rejilla, el aviso «Cambiado. Recuerda guardar.» queda fuera de la vista. En
-  la barra está siempre. Se mueve el nodo; el `id`, el `role="status"` y el
-  `aria-live` no cambian, así que `panel.js` no se entera.
+  la barra está siempre. No basta con mover el nodo: `avisar()` pasa a
+  escribir los dos, `#aviso` y `#pAviso`, porque las dos pantallas nunca se ven
+  a la vez —la que está escondida lleva `hidden`— y porque sólo escribir
+  `#aviso` dejaría mudo al Guardar de la barra nueva.
 - **`#pGuardar`**, un botón nuevo cableado al mismo `guardar()` de `panel.js`
   que ya sirve al `#guardar` de la lista. Se apaga y se enciende **a la vez**
   que aquél: al arrancar, hasta que llega el borrador; y tras un conflicto de
@@ -218,7 +220,10 @@ Va a la misma lista de comprobaciones en producción que el bloque 3c dejó a
   reescribe `fotos.js`, rehace el criterio de teclado y el repositorio ya pagó
   dos veces la interacción entre `touch-action` y los gestos. Se hará si Lidia,
   tras usar esto, dice que ordenar con ‹ › desde el móvil le sabe a poco.
-- **No toca la lista ni la pantalla de publicar.** Comparten lenguaje con esto,
-  pero rediseñarlas es otro alcance que Ángel dejó fuera a propósito.
+- **No toca la lista ni la pantalla de publicar**, salvo una excepción
+  compartida: el relleno lateral de `.panel` en el `@media` del teléfono se
+  aplica a las tres pantallas, porque es la misma regla para las tres. Fuera
+  de eso, comparten lenguaje con esto, pero rediseñarlas es otro alcance que
+  Ángel dejó fuera a propósito.
 - **No añade funciones**: ni pie por foto, ni selección múltiple, ni recorte,
   ni mover fotos entre proyectos. Ninguna se ha pedido.
