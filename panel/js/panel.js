@@ -11,13 +11,6 @@
 
   function avisar(texto) { elAviso.textContent = texto; }
 
-  /* Activa o desactiva lo que necesita `trabajo` para funcionar. Se llama
-     deshabilitado desde el arranque, antes de que Borrador.cargar resuelva:
-     sin esto, el caso más probable en producción —la sesión de Access
-     caducó de un día para otro— deja el formulario y "Guardar" activos
-     delante de un `trabajo` que sigue siendo `null`, y la primera pulsación
-     revienta con una excepción muda. Si `cargar` falla, se queda así:
-     deshabilitado, con el aviso explicando por qué. */
   /* Los dos botones de guardar —el de la lista y el de la pantalla del
      proyecto— son el mismo `guardar()` y tienen que apagarse y encenderse a
      la vez: al arrancar, hasta que llega el borrador, y tras un conflicto de
@@ -29,6 +22,13 @@
     elGuardarProyecto.disabled = !activo;
   }
 
+  /* Activa o desactiva lo que necesita `trabajo` para funcionar. Se llama
+     deshabilitado desde el arranque, antes de que Borrador.cargar resuelva:
+     sin esto, el caso más probable en producción —la sesión de Access
+     caducó de un día para otro— deja el formulario y "Guardar" activos
+     delante de un `trabajo` que sigue siendo `null`, y la primera pulsación
+     revienta con una excepción muda. Si `cargar` falla, se queda así:
+     deshabilitado, con el aviso explicando por qué. */
   function activarControles(activo) {
     elTitulo.disabled = !activo;
     elCategoria.disabled = !activo;
