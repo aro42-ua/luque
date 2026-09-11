@@ -145,6 +145,32 @@ repositorio: lo que se exporta y se sube **es** el sitio.
    ```
    git archive main | tar -t | grep -v '/$' | wc -l
    ```
+
+   **Desde PowerShell la tubería NO vale.** PowerShell pasa la salida de
+   `git archive` por su propia tubería de objetos, como texto, y le rompe los
+   bytes: `tar` recibe un archivo corrupto y escupe `Damaged tar archive (bad
+   header checksum)` una y otra vez, extrae vacío o a medias, y `wrangler`
+   despliega sin quejarse un directorio al que le faltan carpetas enteras. Pasó
+   el 2026-09-11: el sitio contestaba 404 en `/panel`. Si el shell es
+   PowerShell, se escribe el `.tar` a disco y se extrae desde ahí:
+
+   ```powershell
+   $tmp = Join-Path $env:TEMP ("luque-deploy-" + (Get-Date -Format yyyyMMdd-HHmm))
+   New-Item -ItemType Directory -Path $tmp | Out-Null
+   git archive main -o "$env:TEMP\luque.tar"
+   tar -xf "$env:TEMP\luque.tar" -C $tmp
+   ```
+
+   `$tmp` se construye con `Join-Path` y no con lo que devuelve `New-Item`: en
+   PowerShell 5, un `DirectoryInfo` se convierte a texto como **sólo el
+   nombre**, sin la ruta, y `-C $tmp` apuntaría a una carpeta relativa que no
+   existe.
+
+   Antes de desplegar, comprobar que el directorio tiene lo que tiene que
+   tener —unos 200 archivos, y `panel/index.html` entre ellos— y, en la salida
+   de `wrangler deploy`, que la línea `Uploaded N files` diga un número de ese
+   orden y no un puñado. Desde Git Bash o `cmd` la tubería es binaria de verdad
+   y el comando de arriba sirve tal cual.
 4. **Desplegar:**
 
    ```
@@ -489,6 +515,46 @@ queda con el segundo y sin aviso.
 En la práctica no muerde, porque las llaves las genera `llave()` a partir de
 la ruta del original y son estables: volver a subir escribe lo mismo encima de
 lo mismo. Muerde si se cambia una foto conservando su nombre.
+
+## Sembrar el borrador con lo publicado
+
+**El panel edita `borrador.json`, y publicar copia el borrador SOBRE
+`contenido.json`.** Son dos archivos de R2, y nada los sincroniza en el otro
+sentido: lo que se escriba en `contenido.json` por fuera del panel —con
+`wrangler r2 object put`, o el archivo estático del repositorio al que el
+Worker cae cuando R2 no tiene ninguno— **no aparece en el borrador**.
+
+Pasó el 2026-09-11, el primer día con la pantalla de un proyecto. El contenido
+real entró en el escaparate el 2026-09-10 escribiendo `contenido.json` (ver la
+sección de esa fecha), y el borrador se quedó con lo que dejaron las pruebas
+del bloque 3b: proyectos sin fotos. Al abrir un proyecto en el panel no había
+ninguna foto; al subir una y publicar, ese borrador se copió sobre
+`contenido.json` y **la web se quedó con una sola foto**. Las 65 no se
+perdieron —publicar sólo escribe `contenido.json`, y nada borra de `img/`—,
+pero la web dejó de nombrarlas.
+
+**Siempre que `contenido.json` se escriba por fuera del panel, hay que
+sembrar el borrador con lo mismo:**
+
+```bash
+wrangler r2 object put luque-contenido/borrador.json --file contenido.json --content-type application/json --remote
+```
+
+Vale cualquier versión: el Worker lee la que haya guardada y el panel parte de
+ella. Con `--remote`, por lo dicho dos secciones más arriba. Tras sembrarlo, el
+panel enseña los proyectos con sus fotos y la pantalla de publicar dice «No hay
+ningún cambio pendiente», que es la comprobación de que los dos archivos vuelven
+a decir lo mismo.
+
+Para deshacer una publicación que haya vaciado la web, el mismo comando sobre
+`contenido.json`, con el archivo bueno como origen. El del repositorio es el que
+se desplegó el 2026-09-10 y vale como copia de seguridad hasta que el panel sea
+la única fuente.
+
+**La pantalla de publicar avisa de esto antes de que ocurra**: lista lo que
+entra, lo que cambia y lo que **se quita de la web**, con los nombres. Si dice
+que se quitan siete proyectos y sólo se ha tocado uno, no es el momento de
+pulsar.
 
 ## Los pasos que hace el estudio
 
