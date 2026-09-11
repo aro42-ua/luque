@@ -447,6 +447,16 @@
     transform:translateY(-140%);
     opacity:0;
     transition: opacity 0.45s ease, transform 0.45s ease;
+    /* La barra no tiene fondo y las portadas pasan por debajo al desplazar
+       la galería: visto en producción el 2026-09-11, el texto negro se
+       perdía sobre una foto oscura. En vez de darle una caja, se pinta TODO
+       en amarillo y se mezcla por diferencia: amarillo sobre el amarillo del
+       fondo da negro —exactamente lo que se veía antes— y sobre una foto se
+       invierte respecto a lo que tenga debajo, así que siempre se lee.
+       Por eso ningún color de esta barra puede ser negro: negro por
+       diferencia es invisible. */
+    color:var(--yellow);
+    mix-blend-mode:difference;
   }
   .navbar.visible{
     transform:translateY(0);
@@ -492,7 +502,7 @@
   }
   .navbar-categorias a:hover,
   .navbar-categorias a:focus-visible{
-    text-decoration-color:rgba(10,10,10,0.4);
+    text-decoration-color:rgba(255,255,0,0.4);
   }
   .navbar-categorias a:focus-visible{ outline:none; }
 
@@ -720,7 +730,7 @@
   /* Categoría activa: negrita y la regla de 2 px. El hover no la lava. */
   .navbar-categorias a.activa{
     font-weight:700;
-    text-decoration-color:var(--black);
+    text-decoration-color:var(--yellow);   /* amarillo por diferencia = negro */
     text-decoration-thickness:2px;
   }
 
