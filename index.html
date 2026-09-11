@@ -451,6 +451,15 @@
        undefined y deslizar dentro del visor lanza un TypeError. La suite no
        puede cazarlo porque tests/test.html carga sus scripts por su cuenta. -->
   <script src="js/movil-animacion.js"></script>
+  <!-- Va ANTES de movil-visor.js, que lo usa en `engancharGestos` para el
+       pellizco y en `pintar()` para el reencaje. Sin esta línea
+       `window.MovilZoom` es undefined y separar dos dedos lanza un
+       TypeError. La suite no puede cazarlo porque tests/test.html carga sus
+       scripts por su cuenta. -->
+  <script src="js/movil-zoom.js"></script>
+  <!-- Van ANTES de movil-visor.js, que usa `MovilBrillo.tratamientoDe` en
+       `tenirEncuadre()` para teñir el encuadre de cuatro esquinas. Hasta esta
+       tarea sólo los cargaba tests/test.html. -->
   <script src="js/movil-visor.js"></script>
   <!-- Va ANTES de movil-puerta.js, que lo usa en `entrada()`. Sin esta línea
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError

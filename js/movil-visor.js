@@ -109,6 +109,7 @@ window.MovilVisor = (function () {
     raiz.hidden = true;
     document.body.classList.remove('mvisor-abierto');
     escena.innerHTML = '';
+    elFoto = null;
     document.removeEventListener('keydown', alTeclado);
     /* Devuelve el foco a quien lo tenía antes de abrir, y no si ese elemento
        ya salió del documento —la rejilla pudo repintarse mientras el visor
@@ -133,6 +134,16 @@ window.MovilVisor = (function () {
     var nodo = (aqui.pieza === 'ficha') ? window.MovilFicha.de(p) :
                (aqui.pieza === null)    ? videoDe(p) : fotoDe(p, aqui.pieza);
     escena.appendChild(nodo);
+
+    /* Cada parada empieza encajada. Arrastrar el zoom de una foto a la
+       siguiente dejaria la nueva ampliada por un trozo cualquiera, sin que
+       nadie lo hubiera pedido y sin forma evidente de deshacerlo. */
+    elFoto = (nodo.tagName === 'IMG') ? nodo : null;
+    zoom = window.MovilZoom.inicial();
+    base = null;
+    punteros = {};
+    pintarZoom();
+
     window.MovilAnimacion.aplicar(nodo, direccion);
     window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
   }
@@ -227,6 +238,69 @@ window.MovilVisor = (function () {
 
   var gesto = null;
 
+  /* El estado del zoom vive aqui y no en `MovilZoom`, que es puro y no guarda
+     nada entre llamadas. `punteros` es cuantos dedos hay y donde, indexado por
+     `pointerId`: hace falta el mapa entero y no una cuenta, porque el pellizco
+     necesita las dos posiciones a la vez y el paseo necesita saber de donde
+     venia ESE dedo y no el otro.
+
+     `base` y `d0` se congelan al formarse una pareja de dedos y no se tocan
+     mientras siga siendo LA MISMA: el porque esta en `MovilZoom.pellizcar`.
+     `parCongelado` guarda de que pareja son, y el porque de eso esta en
+     `refrescarPar`. */
+  var zoom = null, base = null, d0 = 0, punteros = {}, tope = 1, elFoto = null;
+  var parCongelado = null;
+
+  /* Las dos cajas que `MovilZoom` necesita para acotar el paseo y que no puede
+     medir por su cuenta, porque es puro: la foto TAL Y COMO ESTA PINTADA y el
+     marco, que es la escena a pantalla completa. No son la misma con
+     `object-fit: contain`, y confundirlas es dejar que la foto se despegue del
+     marco por el eje de las franjas. */
+  function medidasDelPaseo() {
+    return {
+      foto:  { ancho: elFoto.clientWidth,  alto: elFoto.clientHeight },
+      marco: { ancho: escena.clientWidth,  alto: escena.clientHeight }
+    };
+  }
+
+  function dosDedos() {
+    var ids = Object.keys(punteros);
+    return ids.length === 2 ? [punteros[ids[0]], punteros[ids[1]]] : null;
+  }
+
+  /* Congela `base` y `d0` cada vez que la PAREJA de dedos cambia, y no solo la
+     primera vez que hay dos. Con tres dedos en la pantalla —el pulgar o la
+     palma que se apoyan, que en un telefono pasa— levantar uno de la pareja
+     original deja dos dedos que nunca midieron `d0` juntos: arrastrar el `d0`
+     viejo hace que la foto salte de golpe en el siguiente `pointermove` sin
+     que ningun dedo se haya movido. Medido: A@150 y B@250 pellizcados a 3x,
+     entra C@470 y se levanta A, y la foto cae de 3x a 1x sola.
+
+     La identidad de la pareja son sus `pointerId` ordenados: comparar cuantos
+     dedos hay no basta, porque dos son dos antes y despues del cambio. */
+  function refrescarPar() {
+    var par = dosDedos();
+    if (!par || !elFoto) { base = null; parCongelado = null; return; }
+    var quienes = Object.keys(punteros).sort().join('/');
+    if (quienes === parCongelado) return;
+    parCongelado = quienes;
+    base = zoom;
+    d0 = window.MovilZoom.distancia(par[0], par[1]);
+    tope = window.MovilZoom.maxEscala(elFoto.naturalWidth, elFoto.clientWidth);
+  }
+
+  /* El transform se QUITA al volver al encaje en vez de escribir la identidad,
+     y no es cosmetica: `MovilAnimacion.aplicar` entra la escena con una
+     animacion CSS que tambien es un transform, y un estilo en linea puesto ahi
+     se queda peleando con ella en cada parada. Sin ampliar no hay nada que
+     escribir, asi que no se escribe. */
+  function pintarZoom() {
+    if (!elFoto) return;
+    elFoto.style.transform = window.MovilZoom.ampliado(zoom)
+      ? window.MovilZoom.transformar(zoom)
+      : '';
+  }
+
   /* Los oyentes van en la RAÍZ y no en la escena: la escena la vacía `pintar`
      en cada parada, así que un oyente puesto allí se iría con el primer
      deslizamiento y el segundo no haría nada. La raíz sobrevive a todo el
@@ -242,28 +316,63 @@ window.MovilVisor = (function () {
      uno para siempre, dejando el visor sordo hasta recargar. */
   function engancharGestos() {
     gesto = window.MovilGestos.inicial();
+    zoom = window.MovilZoom.inicial();
 
     raiz.addEventListener('pointerdown', function (e) {
+      punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
       gesto = window.MovilGestos.presionar(gesto, { x: e.clientX, y: e.clientY });
+      refrescarPar();
     });
 
-    raiz.addEventListener('pointerup', function (e) {
-      soltarEn(e);
+    raiz.addEventListener('pointermove', function (e) {
+      var antes = punteros[e.pointerId];
+      if (!antes) return;                 /* un dedo que no se poso aqui */
+      var ahora = { x: e.clientX, y: e.clientY };
+      punteros[e.pointerId] = ahora;
+      if (!elFoto) return;
+
+      var par = dosDedos();
+      if (par && base) {
+        zoom = window.MovilZoom.pellizcar(base, d0,
+          window.MovilZoom.distancia(par[0], par[1]), tope, medidasDelPaseo());
+        pintarZoom();
+        return;
+      }
+      if (!par && window.MovilZoom.ampliado(zoom)) {
+        zoom = window.MovilZoom.arrastrar(zoom, ahora.x - antes.x,
+          ahora.y - antes.y, medidasDelPaseo());
+        pintarZoom();
+      }
     });
 
-    raiz.addEventListener('pointercancel', function (e) {
-      soltarEn(e);
-    });
+    raiz.addEventListener('pointerup', function (e) { soltarEn(e); });
+
+    raiz.addEventListener('pointercancel', function (e) { soltarEn(e); });
   }
 
   function soltarEn(e) {
+    delete punteros[e.pointerId];
+    /* No basta con `if (!dosDedos()) base = null`: la pareja tambien cambia
+       cuando un dedo se levanta y deja exactamente dos (el caso del pulgar
+       que se apoyaba y se retira), y ese caso necesita recongelar `base`/`d0`
+       igual que el de `pointerdown`. `refrescarPar` ya cubre el caso de
+       menos de dos dedos, poniendo `base` a `null`. */
+    refrescarPar();
+
     var r = window.MovilGestos.soltar(gesto, { x: e.clientX, y: e.clientY });
     gesto = r.estado;
     if (r.intencion === null) return;
 
     /* El toque despierta el HUD y no navega. Que no navegue es lo que hace
-       posible volver a encenderlo sin cambiar de foto. */
+       posible volver a encenderlo sin cambiar de foto, y por eso sigue
+       funcionando tambien con la foto ampliada: mirar una esquina de cerca y
+       querer leer el titulo no son cosas incompatibles. */
     if (r.intencion === 'toque') { window.MovilHud.despertar(); return; }
+
+    /* Ampliada, el dedo estaba paseando la foto y no pidiendo otra parada. La
+       intencion se consume aqui y se tira: llegar al router con ella sacaria
+       del trabajo a quien solo queria mirar la esquina de la imagen. */
+    if (window.MovilZoom.ampliado(zoom)) return;
 
     var ruta = siguienteRuta(aqui, r.intencion, orden);
     if (!ruta) return;

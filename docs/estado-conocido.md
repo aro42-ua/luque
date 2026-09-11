@@ -209,6 +209,16 @@ Ninguno bloquea nada. Se anotan para que no se descubran dos veces:
 - El indicador de carga se dibuja por encima de la interfaz.
 - El paneo con ratón sigue interpolando aunque el sistema pida movimiento
   reducido; el centrado por teclado sí lo respeta.
+- **En el visor móvil, `pointercancel` decide intención y navega.** `soltarEn`
+  (`js/movil-visor.js`) no distingue soltar de que te quiten el gesto, así que
+  el sistema llevándose el dedo cuenta como un deslizamiento terminado.
+  Reproducido: `pointerdown` en (300,400), `pointermove` a (300,200),
+  `pointercancel` en (300,200) → el router recibe la pieza 2. Donde se nota es
+  en el caso que la propia spec anticipa —el gesto de «atrás» del navegador
+  desde el borde—, que da **doble navegación**: la del navegador y la del
+  visor. Viene del bloque 4f, no del 4g; el comentario que hay junto a los
+  oyentes sólo razona sobre el contador de dedos, no sobre esto. Lo cierra un
+  `soltarEn(e, cancelado)` que reinicie el gesto sin decidir intención.
 
 ## Sin resolver: la barra tapa fotos, y la regla evidente es la contraria
 
@@ -273,6 +283,14 @@ está en la pantalla. **Decidido por Ángel el 2026-09-11: `Brillo` se retira.**
 este documento sobre ellos es historia de por qué nunca llegó a funcionar, y se
 deja porque explica decisiones que sí siguen en pie (las fotos del mismo
 origen, la caída al «halo»).
+
+**Lo que el bloque 4g sí trajo, ya sin brillo ni esquinas, es el pellizco.**
+`js/movil-zoom.js` (`window.MovilZoom`) es un cuarto módulo puro —escala y
+desplazamiento, acotados contra la pantalla y no contra la foto— y
+`js/movil-visor.js` lo cablea: dos dedos amplían hasta 1:1 con los píxeles del
+archivo (con tope de 6×), y con la foto ampliada un dedo la pasea en vez de
+cambiar de parada. Cada parada empieza encajada.
+
 
 **Y desde el contenido real, `visor-video.js` está igual: sin ningún
 consumidor.** Los vídeos se alcanzan con el botón que construye
@@ -1098,6 +1116,16 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   contenido real las fotos son del mismo origen y el lienzo ya no se mancha;
   y desde el 2026-09-11 el visor de escritorio no tiene esquinas que teñir.
   Las dos cosas están dichas más arriba, en la sección del visor móvil.)
+  El cuarto módulo puro del móvil, `js/movil-zoom.js`, nació ya cableado en el
+  bloque 4g: lo nombran `index.html` y `tests/test.html`, y `js/movil-visor.js`
+  lo llama en `pointerdown`/`pointermove` para el pellizco y el paseo.
+- **Que el pellizco se sienta bien en un dedo de verdad sigue sin
+  comprobarse.** Todo lo que ejercitan `tests/pruebas-movil-zoom.js` y el
+  arnés de `movil-visor.js` son eventos de puntero sintéticos: ningún gesto de
+  este bloque —pellizcar, pasear la foto ampliada, deslizar entre piezas— se
+  ha probado con un dedo real. El tope de 6× (`MovilZoom.maxEscala`) y que
+  soltar por debajo de 1× vuelva al encaje son decisiones tomadas sobre el
+  papel, no medidas sobre un teléfono.
 - **`MovilRecorrido.paradas` lee `piezas` como una cuenta, y en todo el resto
   del repositorio `piezas` es un array.** En `contenido.json`, en
   `Datos.PROYECTOS` y en lo que consume `Router.piezasPorId`
@@ -1160,6 +1188,14 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   sólo al soltar. No es un defecto de este bloque —construye lo puro, y lo
   continuo es cosa de quien pinta—, pero es lo primero que se va a echar en
   falta al empezar el bloque que cablea el móvil.
+
+  **Ese bloque ya llegó, y el acercamiento continuo se resolvió, pero no por
+  aquí.** El bloque 4g añadió `js/movil-zoom.js` (módulo puro, la distancia y
+  la escala) y el seguimiento de `pointermove` en `js/movil-visor.js`, que lo
+  llama en cada movimiento mientras hay dos dedos en pantalla —sin tocar
+  `movil-gestos.js`, que sigue exactamente como describe este párrafo—. Quien
+  lea sólo este párrafo hoy concluiría que el pellizco continuo todavía no
+  existe en el sitio; sí existe, sólo que vive en otro archivo.
 - **Lo que ninguna prueba de este bloque puede decir, y que sólo puede juzgar
   el estudio en un móvil de verdad:** si los umbrales de gesto tienen el tacto
   correcto —si 24px (`MovilGestos.UMBRAL`) es el punto justo entre «no me
