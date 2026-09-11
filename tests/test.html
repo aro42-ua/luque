@@ -93,6 +93,10 @@
 <!-- edicion.js es puro: sólo define window.Edicion. Va DESPUÉS de orden.js,
      que usa para mover piezas. Ver pruebas-edicion.js. -->
 <script src="../panel/js/edicion.js"></script>
+<!-- imagenes.js no toca el DOM al cargarse: sólo define window.Imagenes.
+     `caber` y `MEDIDAS` se prueban solas; `reducir`, que sí construye un
+     canvas, se ejercita con un PNG en un data: URI. Ver pruebas-imagenes.js. -->
+<script src="../panel/js/imagenes.js"></script>
 <!-- lista.js no toca el DOM al cargarse: sólo define window.Lista. Se carga
      por sus tres funciones sin DOM (indiceValido, calcularHasta,
      dentroDeLaCaja) y también por `pintar`, que sí construye nodos: el arnés
@@ -132,6 +136,7 @@
 <script src="pruebas-orden.js"></script>
 <script src="pruebas-rutas-panel.js"></script>
 <script src="pruebas-edicion.js"></script>
+<script src="pruebas-imagenes.js"></script>
 <script src="pruebas-lista.js"></script>
 <script src="pruebas-lista-pintar.js"></script>
 <!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
