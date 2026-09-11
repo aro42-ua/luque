@@ -160,13 +160,13 @@ window.Galeria = (function () {
      otra y al pulsarla la galería se quedaba en blanco, que es exactamente lo
      que le pasaba a quien entraba: hoy `contenido.json` sólo trae editorial y
      videoclip, así que dos de las cuatro celdas del menú no llevaban a ningún
-     sitio. No se esconden —la barra es un SVG de cuatro celdas fijas y
-     quitar una dejaría un hueco—: se atenúan y dejan de responder.
+     sitio. No se esconden —la barra sigue diciendo qué hace el estudio—:
+     se atenúan y dejan de responder.
 
      Se calcula del contenido y no de una lista escrita a mano, así que el día
      que entre un cortometraje la celda se enciende sola. */
   function marcarVacias() {
-    document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
+    document.querySelectorAll('.navbar a[data-cat]').forEach(function (a) {
       var vacia = window.Datos.porCategoria(a.dataset.cat).length === 0;
       a.classList.toggle('vacia', vacia);
       if (vacia) a.setAttribute('aria-disabled', 'true');
@@ -175,7 +175,7 @@ window.Galeria = (function () {
   }
 
   function marcarNavbar(activa) {
-    document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
+    document.querySelectorAll('.navbar a[data-cat]').forEach(function (a) {
       a.classList.toggle('activa', a.dataset.cat === activa);
     });
   }
@@ -253,7 +253,7 @@ window.Galeria = (function () {
     window.GaleriaTeclado.init(stage, window.GaleriaPaneo.centrarEn);
 
     // Navegación desde el menú: recompone el lienzo con la categoría pulsada
-    document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
+    document.querySelectorAll('.navbar a[data-cat]').forEach(function (a) {
       a.addEventListener('click', function (e) {
         e.preventDefault();
         if (a.classList.contains('vacia')) return;

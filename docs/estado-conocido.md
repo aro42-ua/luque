@@ -24,27 +24,28 @@ alfabético, y por eso vive escrito a mano en `herramientas/proyectos.json`.
 generan a propósito: una ruta mal escrita sigue siendo una ruta válida y la
 validación no la atrapa.
 
-**Dos categorías se quedan vacías, y sus celdas del menú no se pulsan.**
+**Dos categorías se quedan vacías, y sus enlaces del menú no se pulsan.**
 `cortometraje` y `foto-stills` están declaradas en `CATEGORIAS` y no tienen ni un
 proyecto. Pulsarlas dejaba la rejilla en blanco; ahora `Galeria.marcarVacias()`
-les quita el ratón y atenúa **sus letras** (`.navbar .nav-svg a.vacia g`), y un
-enlace escrito a mano a `#/cortometraje` se va a «todos» en vez de pintar el
-vacío. Que se atenúe el `<g>` y no el `<a>` entero no es un detalle: cada celda
-del SVG lleva dentro medio corchete del marco de la barra, así que bajarle la
-opacidad al `<a>` dejaba el marco a medio pintar y la barra parecía rota en vez
-de tener dos categorías apagadas. Se calcula
-del contenido, así que el día que entre un cortometraje la celda se enciende
-sola. Sigue sin decidirse si además deberían enseñar algo —un aviso, un «muy
-pronto»—: es la tercera de las tres preguntas que la spec dejó abiertas para
+les quita el ratón y las atenúa (`.navbar-categorias a.vacia`), y un enlace
+escrito a mano a `#/cortometraje` se va a «todos» en vez de pintar el vacío. Se
+calcula del contenido, así que el día que entre un cortometraje el enlace se
+enciende solo. Sigue sin decidirse si además deberían enseñar algo —un aviso, un
+«muy pronto»—: es la tercera de las tres preguntas que la spec dejó abiertas para
 Lidia, y esto es sólo el suelo para que no se vea rota mientras se decide.
 
-**Las celdas del menú apuntaban a la categoría equivocada.** El SVG de la barra
-dibuja, por orden, Editorial, Videoclip, Cortometraje y Foto Stills, pero los
-`data-cat` de sus `<a>` iban corridos un puesto: pulsar «Editorial» filtraba
-`foto-stills` —vacía, rejilla en blanco— y pulsar «Cortometraje» enseñaba los
-videoclips. Corregido en `index.html`. Si alguien vuelve a tocar ese SVG, que
-compruebe que cada `<a href>` es el de las letras que hay DENTRO de él: no hay
-prueba automática que lo ate, porque las letras son `<path>` y no texto.
+**La barra superior es texto, ya no el SVG «tabla navegadores» (2026-09-11).**
+Hasta entonces era una píldora amarilla con sombra y desenfoque y, dentro, un
+SVG de cuatro celdas con las palabras dibujadas en `<path>`. Ángel eligió la
+«línea de créditos» entre cinco propuestas: sin contenedor, la marca a la
+izquierda, las cuatro categorías en el centro y el rol a la derecha, sobre la
+línea de 22 px en la que ya viven las esquinas del hero. La activa va en negrita
+y subrayada con una regla de 2 px; las vacías, atenuadas e inertes. Con el
+texto real desaparecen dos servidumbres del SVG: los `data-cat` ya no pueden
+ir corridos respecto a unas letras que no eran texto, y atenuar una celda ya no
+parte por la mitad ningún marco. `galeria.js` y `cursor.js` buscan
+`.navbar a[data-cat]`. Lo que no se ha visto en local: la barra sobre fotos de
+verdad (ver la nota de las imágenes en R2).
 
 **Cada foto se guarda en tres medidas, y no es capricho.** Cada una se pide donde
 se ve, porque la diferencia entre la mayor y la menor es de casi cuarenta veces:
