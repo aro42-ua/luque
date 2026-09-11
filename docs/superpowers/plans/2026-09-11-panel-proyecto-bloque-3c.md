@@ -52,6 +52,16 @@ pantalla**, y eso pide un enrutador propio.
   navegador doblando `fetch` dentro del iframe de `ArnesDom.conDocumento`**, no
   con Node. El Worker tiene sus propias pruebas y no es lo que se prueba aquí.
 
+**Aviso sobre cómo se mide el arnés.** Desde este bloque, el arnés reduce
+imágenes de verdad, y `canvas.toBlob` **no avanza bajo
+`--virtual-time-budget`**: Chrome sin cabeza salta los temporizadores pero no
+espera al trabajo del canvas, así que las secciones de `imagenes.js` y
+`subida.js` parecen colgadas y el recuento final no llega a pintarse. No es un
+fallo del código —en un navegador abierto pasan— sino de la forma de medir. Se
+mide abriendo `tests/test.html` en un navegador de verdad, o conduciéndolo en
+tiempo real (Playwright, esperando a que aparezca el recuento). Subir el
+presupuesto de tiempo virtual no lo arregla.
+
 ---
 
 ## Siete decisiones, razonadas
@@ -1163,11 +1173,22 @@ window.Subida = (function () {
      sobra —el sello lleva la hora dentro— y pone un final a la recursión. */
   var REINTENTOS = 2;
 
-  /* No es criptográfico ni falta: sólo tiene que evitar que dos subidas del
-     mismo estudio choquen en la misma llave. La hora da el grueso y el azar
-     separa dos subidas del mismo milisegundo. */
+  /* Un contador que sólo sube. Es lo que garantiza que dos sellos de ESTA
+     página nunca sean iguales, y hace falta: la hora sola no basta —treinta
+     fotos seguidas caen en el mismo milisegundo— y el azar solo tampoco.
+     La primera versión de esto era hora + dos caracteres de azar, y la prueba
+     de los mil sellos la tumbó en el acto: con 1296 valores posibles, mil
+     sellos del mismo milisegundo colisionan casi seguro. */
+  var siguiente = 0;
+
+  /* No es criptográfico ni falta: sólo tiene que evitar que dos subidas
+     choquen en la misma llave. El contador separa las de esta página, la hora
+     separa dos cargas de la página, y el azar separa dos pestañas abiertas a
+     la vez —que comparten hora y empiezan las dos a contar desde cero—. */
   function sello() {
-    return Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36);
+    siguiente += 1;
+    return Date.now().toString(36) + siguiente.toString(36)
+      + Math.floor(Math.random() * 1296).toString(36);
   }
 
   function sinExtension(nombre) {

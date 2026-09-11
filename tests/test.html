@@ -97,6 +97,11 @@
      `caber` y `MEDIDAS` se prueban solas; `reducir`, que sí construye un
      canvas, se ejercita con un PNG en un data: URI. Ver pruebas-imagenes.js. -->
 <script src="../panel/js/imagenes.js"></script>
+<!-- subida.js se carga aquí sólo por sus dos piezas sin red, `nombre` y
+     `sello`. `subir`, que sí habla con el Worker, se ejercita dentro de un
+     iframe con fetch doblado — de ahí que pruebas-subida.js vuelva a
+     cargarlo allí. Ver pruebas-subida.js. -->
+<script src="../panel/js/subida.js"></script>
 <!-- lista.js no toca el DOM al cargarse: sólo define window.Lista. Se carga
      por sus tres funciones sin DOM (indiceValido, calcularHasta,
      dentroDeLaCaja) y también por `pintar`, que sí construye nodos: el arnés
@@ -137,6 +142,7 @@
 <script src="pruebas-rutas-panel.js"></script>
 <script src="pruebas-edicion.js"></script>
 <script src="pruebas-imagenes.js"></script>
+<script src="pruebas-subida.js"></script>
 <script src="pruebas-lista.js"></script>
 <script src="pruebas-lista-pintar.js"></script>
 <!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
