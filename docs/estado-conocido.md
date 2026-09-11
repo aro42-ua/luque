@@ -1047,9 +1047,9 @@ dejó el bloque 3c (su Tarea 9):
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **672 comprobaciones** (medido tras el bloque de la
+`tests/test.html` ejecuta **673 comprobaciones** (medido tras el bloque de la
 pantalla del proyecto vestida: eran 668 antes de la rama, y este bloque
-añadió 4). Antes de esa cuenta, la de 522 era la medida tras la ronda de la
+añadió 5: cuatro del plan y una más del arreglo de `#pAviso`). Antes de esa cuenta, la de 522 era la medida tras la ronda de la
 revisión final del bloque de la ficha y la tira: las 3 nuevas de esa ronda son
 las de `engancharGestos` filtrando por origen y la guarda «ya estoy aquí» de la
 tira, descritas más arriba. El 519 de antes de esa ronda, y el 468 de este
@@ -1089,7 +1089,7 @@ la miniatura activa) y las pruebas nuevas de `alternarFicha` sobre
 propia validación, así que necesita servidor).
 
 **Histórico, del 2026-09-10 — no es la cuenta vigente; la vigente es la de
-más arriba (672).** Queda por lo que explica del método de medir, no por la
+más arriba (673).** Queda por lo que explica del método de medir, no por la
 cifra: medido ese día con Chrome headless (`--virtual-time-budget=15000
 --dump-dom`) contra `tests/test.html` servido por `python -m http.server`,
 con el registro CRECIENDO antes de medir, la línea final decía «464 pasan, 0
