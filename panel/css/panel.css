@@ -233,6 +233,8 @@ h1{
 
 .nuevo button,
 #guardar,
+#irAPublicar,
+#qPublicar,
 #pGuardar{
   align-self: flex-start;
   margin-top: 0.75rem;
@@ -249,6 +251,8 @@ h1{
 
 .nuevo button:hover:not(:disabled),
 #guardar:hover:not(:disabled),
+#irAPublicar:hover:not(:disabled),
+#qPublicar:hover:not(:disabled),
 #pGuardar:hover:not(:disabled){
   background: var(--yellow);
   color: var(--black);
@@ -256,6 +260,8 @@ h1{
 
 .nuevo button:disabled,
 #guardar:disabled,
+#irAPublicar:disabled,
+#qPublicar:disabled,
 #pGuardar:disabled{
   opacity: 0.35;
   cursor: not-allowed;
