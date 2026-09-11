@@ -16,7 +16,7 @@ window.Cursor = (function () {
   // Estado actual: 'default' | 'nav-hover' | 'bbox'
   var state = 'default';
 
-  var NAV_SELECTOR  = '.navbar .nav-svg a';
+  var NAV_SELECTOR  = '.navbar a[data-cat]';
   var PROJ_SELECTOR = '.proj';
 
   function raf(){
