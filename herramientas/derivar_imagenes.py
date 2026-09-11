@@ -146,6 +146,13 @@ def fotos_de(raiz, carpeta):
     return portadas + resto, portadas[0] if portadas else None
 
 
+def se_recorta(nombre, proyecto):
+    """Si a esta foto se le quitan las franjas. `sin_recorte` en proyectos.json
+    es la lista de las que Lidia quiere enteras aunque tengan franja: los
+    rotulos de Conejita Playboy, donde el recorte se llevaba parte del titulo."""
+    return nombre not in proyecto.get('sin_recorte', [])
+
+
 def leer_meta():
     """Los datos humanos de los ocho, escritos UNA vez y a mano."""
     with io.open(os.path.join(AQUI, 'proyectos.json'), encoding='utf-8') as f:
@@ -176,7 +183,7 @@ def derivar_todo(raiz, meta, destino):
             # exploracion fila a fila del original es lo caro.
             with abrir_derecha(origen) as im:
                 caja = caja_sin_franjas(im)
-                recortada = caja != (0, 0) + im.size
+                recortada = se_recorta(nombre, p) and caja != (0, 0) + im.size
             if recortada:
                 k += SUFIJO_RECORTE
                 recortadas += 1

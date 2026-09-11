@@ -24,8 +24,7 @@ window.Movil = (function () {
     if (fn) fn();
   }
 
-  /* `consulta` se recibe y no se construye aquí, por el mismo motivo por el
-     que `Brillo.decidir` recibe `medir` (js/brillo.js): lo que se inyecta se
+  /* `consulta` se recibe y no se construye aquí: lo que se inyecta se
      puede falsificar, y lo que se puede falsificar se puede probar. Una
      `window.matchMedia` de verdad exigiría redimensionar la ventana desde una
      prueba, que no se puede hacer. En producción se le pasa
