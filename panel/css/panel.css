@@ -313,7 +313,6 @@ h1{
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: .75rem;
   list-style: none;
-  padding: 0;
 }
 
 /* La celda es negra con texto amarillo, como las filas de la lista: es el
@@ -497,6 +496,11 @@ h1{
 }
 .proyecto-barra .aviso{ margin: 0; flex: 1 1 auto; }
 
+/* Al tabular hasta la última fila, el navegador desplaza el botón enfocado
+   sin saber que hay una barra fija encima: sin esto, el foco puede quedar
+   detrás de ella. */
+html{ scroll-padding-bottom: 5rem; }
+
 /* Vacio no ocupa: `:not(:empty)` evita un hueco rojo permanente debajo de la
    rejilla en los proyectos que no tienen ningun problema. */
 .problemas:not(:empty){ color: #FF5555; }
@@ -532,8 +536,9 @@ h1{
   /* Dos columnas a 375px son celdas de ~160px, donde caben «Portada» y
      «Quitar» uno al lado del otro a 44px de alto. */
   .fotos{ grid-template-columns: repeat(2, 1fr); }
-  /* Que la barra no quede bajo la barra de gestos del sistema. */
-  .proyecto-barra{ padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
+  /* Con 44px de flecha a cada lado, a «Portada» le quedan ~57px a 375px, y
+     menos en un teléfono estrecho. Sin esto el texto se sale del botón. */
+  .celda-boton{ font-size: .875rem; padding: 0 .25rem; }
 }
 
 /* ============================================================
