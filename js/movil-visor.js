@@ -180,11 +180,15 @@ window.MovilVisor = (function () {
 
     /* Cada parada empieza encajada. Arrastrar el zoom de una foto a la
        siguiente dejaria la nueva ampliada por un trozo cualquiera, sin que
-       nadie lo hubiera pedido y sin forma evidente de deshacerlo. */
+       nadie lo hubiera pedido y sin forma evidente de deshacerlo. Se reinician
+       `punteros` y `deLaTira` aquí como red de seguridad: por si algún
+       pointerup/pointercancel se pierde (llamada entrante, gesto del sistema),
+       estas entradas no quedarían marcadas para siempre. */
     elFoto = (nodo.tagName === 'IMG') ? nodo : null;
     zoom = window.MovilZoom.inicial();
     base = null;
     punteros = {};
+    deLaTira = {};
     pintarZoom();
 
     window.MovilAnimacion.aplicar(nodo, direccion);
@@ -294,6 +298,7 @@ window.MovilVisor = (function () {
      `refrescarPar`. */
   var zoom = null, base = null, d0 = 0, punteros = {}, tope = 1, elFoto = null;
   var parCongelado = null;
+  var deLaTira = {};
 
   /* Las dos cajas que `MovilZoom` necesita para acotar el paseo y que no puede
      medir por su cuenta, porque es puro: la foto TAL Y COMO ESTA PINTADA y el
@@ -370,7 +375,6 @@ window.MovilVisor = (function () {
      Se filtra por ORIGEN y no con `stopPropagation` en el `pointerdown`:
      aquello dejaria pasar el `pointerup` y el contador de dedos se
      descuadraria, que es peor que el problema que arregla. */
-  var deLaTira = {};
 
   function engancharGestos() {
     gesto = window.MovilGestos.inicial();

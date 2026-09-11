@@ -897,8 +897,9 @@ el dedo y sólo se alcanzaban unas 5 de las 10 piezas.
 El arreglo quita el `none` de `.mvisor` y lo reparte en cada descendiente
 que SÍ recibe el dedo: `.mvisor-escena`, `.mvisor-hud-arriba` y
 `.mvisor-hud-pie`. Los que se quedan en `auto` (`.mvisor`, `.mvisor-hud`,
-`.mvisor-hud-abajo`) son todos `pointer-events:none`, así que el dedo nunca
-aterriza en ellos y su `auto` no decide nada. Medido tras el arreglo, con
+`.mvisor-hud-abajo`) nunca ven un toque: `.mvisor-escena` cubre `.mvisor`
+entero y se lleva el impacto primero, y `.mvisor-hud` y `.mvisor-hud-abajo`
+son `pointer-events:none`. Medido tras el arreglo, con
 Chrome headless en modo móvil de verdad (375×812) sobre `#/la-boquerona`:
 
 | elemento | `touch-action` computado |

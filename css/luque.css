@@ -1424,10 +1424,10 @@ body.es-movil .hoja-hero{
    Se reparte en su lugar un `none` por cada descendiente que SÍ recibe el
    dedo —`.mvisor-escena`, `.mvisor-hud-arriba`, `.mvisor-hud-pie`, más abajo
    en este mismo fichero—, dejando `pan-x` sólo en `.mvisor-tira`. Los que se
-   quedan en `auto` aquí (`.mvisor`, `.mvisor-hud`, `.mvisor-hud-abajo`) son
-   todos `pointer-events:none`, así que el dedo nunca aterriza en ellos y su
-   `auto` no llega a decidir nada; ver el comentario de `.mvisor-tira`, más
-   abajo, para la cadena completa. */
+   quedan en `auto` aquí (`.mvisor`, `.mvisor-hud`, `.mvisor-hud-abajo`) nunca
+   ven un toque: `.mvisor-escena` cubre `.mvisor` entero (`position:absolute; inset:0`)
+   y se lleva el impacto primero, y `.mvisor-hud` y `.mvisor-hud-abajo` son `pointer-events:none`.
+   Ver el comentario de `.mvisor-tira`, más abajo, para la cadena completa. */
 body.es-movil .mvisor{
   display:block;
   position:fixed; inset:0;
@@ -1545,10 +1545,12 @@ body.es-movil .mvisor-hud{
 body.es-movil .mvisor-hud.dormido{ opacity:0; }
 body.es-movil .mvisor-hud.dormido *{ pointer-events:none; }
 
-/* `touch-action:none` propio, por la misma razón que `.mvisor-escena`: las
-   pastillas de arriba (a través de esta fila) y el título/contador (a través
-   de la de abajo) SÍ reciben el dedo —son `pointer-events:auto`—, así que su
-   `none` ya no lo hereda de `.mvisor`. */
+/* `touch-action:none` propio por adelantado: hoy nada de esta fila recibe
+   el dedo (el título y contador heredan `pointer-events:none` del HUD, y el
+   toque cae en `.mvisor-escena`, que también declina el toque), pero está
+   puesto de antemano para que cuando la fila gane un control pulsable no
+   herede un `auto` que le devuelva al navegador gestos que el visor
+   interpreta por su cuenta. Igual que `.mvisor-escena`. */
 body.es-movil .mvisor-hud-arriba,
 body.es-movil .mvisor-hud-pie{
   display:flex; align-items:flex-start; justify-content:space-between;
