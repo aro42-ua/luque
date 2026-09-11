@@ -268,8 +268,11 @@ de la foto eran trabajo del bloque 4g.
 **Y desde el 2026-09-11 ese destino ya no existe en escritorio.** Ángel pidió
 quitar las cuatro esquinas del visor, y se quitaron con todo lo que las
 animaba. Lo que el bloque 4g tenía que teñir según el brillo de la foto ya no
-está en la pantalla; `Brillo` se queda sin consumidor conocido hasta que se
-decida qué, si algo, se adapta al brillo (el visor móvil tiene su HUD).
+está en la pantalla. **Decidido por Ángel el 2026-09-11: `Brillo` se retira.**
+`js/brillo.js` y `tests/pruebas-brillo.js` ya no existen; lo que sigue diciendo
+este documento sobre ellos es historia de por qué nunca llegó a funcionar, y se
+deja porque explica decisiones que sí siguen en pie (las fotos del mismo
+origen, la caída al «halo»).
 
 **Y desde el contenido real, `visor-video.js` está igual: sin ningún
 consumidor.** Los vídeos se alcanzan con el botón que construye
@@ -760,7 +763,8 @@ acordarse de `index.html` a mano, porque la suite no se lo va a recordar.
 
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **464 comprobaciones**: la lógica pura (el enrutado,
+`tests/test.html` ejecuta **468 comprobaciones** (medido el 2026-09-11, tras
+retirar las 18 de `brillo.js`): la lógica pura (el enrutado,
 la validación de datos, el cálculo de la composición filtrada, la máquina de
 estado del visor, el salto del hero, el identificador que se saca del título,
 el reordenado de la lista), desde el bloque 4a el panel entero — lo que antes
@@ -877,7 +881,7 @@ bloque 4c):**
   segundo dedo a mitad de arrastre cancele el deslizamiento en curso y lo
   convierta en pellizco, y que soltar sin haber presionado no invente una
   intención.
-- **`brillo.js` (18 pruebas)** — el umbral, con el mismo reparto de papeles que
+- **`brillo.js` (18 pruebas; RETIRADO el 2026-09-11, ver arriba)** — el umbral, con el mismo reparto de papeles que
   en `movil-gestos.js` y por la misma razón: una prueba de borde escrita contra
   `Brillo.UMBRAL` que fija la geometría (justo en el umbral es oscuro, justo
   por encima claro) y se adapta sola, y otra aparte, «el umbral está en la
@@ -1032,7 +1036,7 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   que lo contiene, y quitar el iframe no devuelve la entrada. Chrome tope el
   `history.length` en unas 50 por pestaña, así que no crece sin límite, pero sí
   ensucia el botón «atrás» de quien corre la suite muchas veces.
-- **El camino automático del brillo sigue sin verificarse, y nadie ha
+- **(Retirado el 2026-09-11; queda como historia.) El camino automático del brillo sigue sin verificarse, y nadie ha
   comprobado todavía que llegue a funcionar.** Medir la luminancia de verdad
   obliga a dibujar la foto en un `<canvas>` y leer el píxel con
   `getImageData`, y si el lienzo está manchado eso lanza una excepción de
@@ -1078,7 +1082,8 @@ por llegar al extremo, el foco va al otro botón de la misma fila.
   está sin verificar, y sin esta anotación el halo puede quedarse puesto meses
   en producción sin que nadie note que la medición nunca llegó a funcionar.
 - **Desde el bloque 4f esto ya no es cierto para dos de los tres: sólo
-  `brillo.js` sigue sin que lo cargue ni lo llame ningún código.** Hasta el
+  `brillo.js` sigue sin que lo cargue ni lo llame ningún código** (y desde el
+  2026-09-11 tampoco existe: retirado). Hasta el
   bloque 4f, `movil-recorrido.js`, `movil-gestos.js` y `brillo.js` se
   cargaban sólo desde `tests/test.html`. Ahora `index.html` nombra a
   `js/movil-recorrido.js` y `js/movil-gestos.js`, y `js/movil-visor.js` los
