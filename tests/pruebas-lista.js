@@ -154,3 +154,58 @@ describe('Lista.dentroDeLaCaja', function () {
     cierto(!window.Lista.dentroDeLaCaja(OL, 0, 0));
   });
 });
+
+/* `enfocar` vivía en panel.js hasta el bloque 3c. Se muda aquí porque sabe del
+   marcado de una fila —[data-id], [data-accion]—, que es de este archivo, y
+   porque panel.js necesita el sitio para el arranque de tres pantallas.
+   Estas pruebas son nuevas: antes sólo se ejercitaba a través del panel
+   entero, en pruebas-panel.js, que sigue comprobando lo mismo desde fuera.
+
+   El caso `{titulo: true}` NO se muda: es del formulario del panel, no de la
+   lista, y `enfocar` no tiene por qué saber que existe un campo de título.
+   panel.js lo resuelve antes de llamar, y se comprueba desde fuera en
+   pruebas-panel.js. */
+describe('Lista.enfocar', function () {
+  var HTML =
+    '<ol>' +
+    '<li data-id="uno"><button data-accion="subir" disabled>↑</button>' +
+    '<button data-accion="bajar">↓</button><button data-accion="borrar">Borrar</button></li>' +
+    '<li data-id="dos"><button data-accion="subir">↑</button>' +
+    '<button data-accion="bajar" disabled>↓</button><button data-accion="borrar">Borrar</button></li>' +
+    '</ol>';
+
+  function conLista(fn) {
+    return window.ArnesDom.conElemento(HTML, function (ol) { return fn(ol); });
+  }
+
+  prueba('sin foco no mueve nada', function () {
+    conLista(function (ol) {
+      window.Lista.enfocar(ol, null);
+      igual(document.activeElement.tagName, 'BODY');
+    });
+  });
+
+  prueba('enfoca el botón que se le pide', function () {
+    conLista(function (ol) {
+      window.Lista.enfocar(ol, { id: 'uno', accion: 'borrar' });
+      igual(document.activeElement.dataset.accion, 'borrar');
+    });
+  });
+
+  /* El botón que se acaba de pulsar suele quedar deshabilitado justo después
+     —subir en la primera fila, bajar en la última—, y el foco iría a <body>.
+     El otro botón de la misma fila sigue siendo útil y está al lado. */
+  prueba('si el botón quedó deshabilitado, usa el otro de la fila', function () {
+    conLista(function (ol) {
+      window.Lista.enfocar(ol, { id: 'uno', accion: 'subir' });
+      igual(document.activeElement.dataset.accion, 'bajar');
+    });
+  });
+
+  prueba('una fila que ya no existe no revienta', function () {
+    conLista(function (ol) {
+      window.Lista.enfocar(ol, { id: 'fantasma', accion: 'subir' });
+      igual(document.activeElement.tagName, 'BODY');
+    });
+  });
+});

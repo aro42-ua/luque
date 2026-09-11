@@ -23,35 +23,21 @@
     elGuardar.disabled = !activo;
   }
 
-  /* Tras un repintado los nodos del <ol> son todos nuevos —Lista.pintar hace
-     innerHTML = '' y reconstruye—, así que el elemento que tenía el foco ya
-     no existe y el navegador lo manda a <body>. Lo único que sobrevive al
-     repintado es el `id` del proyecto, así que es lo que usamos para
-     encontrar dónde debe volver el foco.
+  /* Dónde vuelve el foco tras un repintado. Lo que sabe del marcado de una
+     fila —[data-id], [data-accion]— se mudó a `Lista.enfocar` en el bloque 3c,
+     que es quien escribe ese marcado.
 
-     `foco` es opcional:
-       - { id: idProyecto, accion: 'subir'|'bajar'|'borrar' } para el botón
-         de esa fila. Si ese botón ha quedado deshabilitado por llegar al
-         extremo (subir en la primera fila, bajar en la última), se usa el
-         otro botón de la misma fila, que sigue siendo útil.
-       - { titulo: true } para el campo de título del formulario, cuando la
-         lista se ha quedado vacía y no hay ninguna fila a la que volver. */
+     El caso `{ titulo: true }` se queda aquí a propósito: es del formulario de
+     este archivo, y la lista no tiene por qué saber que existe un campo de
+     título. Se usa cuando la lista se ha quedado vacía y no hay ninguna fila a
+     la que volver. */
   function enfocarTrasRepintar(foco) {
     if (!foco) return;
     if (foco.titulo) {
       elTitulo.focus();
       return;
     }
-    var fila = elLista.querySelector('[data-id="' + foco.id + '"]');
-    if (!fila) return;
-    var boton = fila.querySelector('[data-accion="' + foco.accion + '"]');
-    if (boton && !boton.disabled) {
-      boton.focus();
-      return;
-    }
-    var otraAccion = foco.accion === 'subir' ? 'bajar' : 'subir';
-    var alternativo = fila.querySelector('[data-accion="' + otraAccion + '"]');
-    if (alternativo) alternativo.focus();
+    window.Lista.enfocar(elLista, foco);
   }
 
   /* Tras borrar, decide a qué fila vuelve el foco: la que ahora ocupa la

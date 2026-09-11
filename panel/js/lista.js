@@ -186,6 +186,33 @@ window.Lista = (function () {
     return li;
   }
 
+  /* Tras un repintado los nodos del <ol> son todos nuevos —`pintar` hace
+     innerHTML = '' y reconstruye—, así que el elemento que tenía el foco ya no
+     existe y el navegador lo manda a <body>. Lo único que sobrevive es el `id`
+     del proyecto, así que es lo que se usa para saber dónde debe volver.
+
+     `foco` es `{ id, accion }`, con accion 'subir' | 'bajar' | 'borrar'. Si ese
+     botón ha quedado deshabilitado por llegar al extremo —subir en la primera
+     fila, bajar en la última—, se usa el otro de la misma fila, que sigue
+     siendo útil.
+
+     Vivía en panel.js hasta el bloque 3c. Se mudó aquí porque lo que sabe es
+     el marcado de una fila, que lo escribe este archivo, y porque panel.js
+     necesitaba el sitio para el arranque de tres pantallas. */
+  function enfocar(contenedor, foco) {
+    if (!foco || !foco.id) return;
+    var fila = contenedor.querySelector('[data-id="' + foco.id + '"]');
+    if (!fila) return;
+    var boton = fila.querySelector('[data-accion="' + foco.accion + '"]');
+    if (boton && !boton.disabled) {
+      boton.focus();
+      return;
+    }
+    var otraAccion = foco.accion === 'subir' ? 'bajar' : 'subir';
+    var alternativo = fila.querySelector('[data-accion="' + otraAccion + '"]');
+    if (alternativo) alternativo.focus();
+  }
+
   function pintar(contenedor, proyectos, alMover, alBorrar) {
     vigilarSalidaDeLaLista(contenedor);
     contenedor.innerHTML = '';
@@ -204,7 +231,7 @@ window.Lista = (function () {
      silencio —`Orden.mover` no se queja de un índice que no es un número, así
      que un `calcularHasta` mal calculado recolocaría la galería sin dar
      ningún error visible—. Se prueban en `tests/pruebas-lista.js`. */
-  return { pintar: pintar, ETIQUETAS: ETIQUETAS,
+  return { pintar: pintar, enfocar: enfocar, ETIQUETAS: ETIQUETAS,
            indiceValido: indiceValido, calcularHasta: calcularHasta,
            dentroDeLaCaja: dentroDeLaCaja };
 })();
