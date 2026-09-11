@@ -446,7 +446,7 @@ describeAsync('panel.js', function () {
       prueba('el Guardar de la pantalla del proyecto guarda lo mismo que el de la lista', function () {
         igual(desdeProyecto.guardadas.length, 1);
         igual(desdeProyecto.guardadas[0].version, 3);
-        igual(d.getElementById('aviso').textContent, 'Guardado.');
+        igual(d.getElementById('pAviso').textContent, 'Guardado.');
       });
     });
 
@@ -468,6 +468,15 @@ describeAsync('panel.js', function () {
          vieja y el servidor contestaría 409 en bucle. */
       prueba('y también el Guardar de la pantalla del proyecto', function () {
         igual(d.getElementById('pGuardar').disabled, true);
+      });
+
+      /* El texto que explica por qué Guardar se ha apagado tiene que leerse
+         DONDE se pulsó: si sólo fuera al aviso de la lista, desde la pantalla
+         del proyecto el botón se apagaría en silencio. */
+      prueba('y el aviso del conflicto se lee también en la pantalla del proyecto', function () {
+        igual(d.getElementById('pAviso').textContent,
+              d.getElementById('aviso').textContent);
+        cierto(d.getElementById('pAviso').textContent.indexOf('versión 9') !== -1);
       });
 
       prueba('y el aviso dice la versión del servidor y que hay que recargar', function () {

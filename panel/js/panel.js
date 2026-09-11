@@ -1,6 +1,6 @@
 (function () {
   var trabajo = null;      // { version, proyectos }
-  var elLista, elAviso, elTitulo, elCategoria, elCrear, elGuardar, elGuardarProyecto;
+  var elLista, elAviso, elAvisoProyecto, elTitulo, elCategoria, elCrear, elGuardar, elGuardarProyecto;
   var elCliente, elAnio, elPapel, elEnlace;
   /* Las secciones por nombre, el índice del proyecto abierto, y una copia en
      texto de lo último que el servidor confirmó. */
@@ -9,7 +9,16 @@
      web ahora, el aviso, y si un choque de version dejo el boton apagado. */
   var publicar;
 
-  function avisar(texto) { elAviso.textContent = texto; }
+  /* Los dos avisos a la vez: el de la lista y el de la barra de la pantalla
+     del proyecto. Nunca se ven los dos —la pantalla escondida lleva `hidden`,
+     que la saca también del árbol de accesibilidad—, así que no hay doble
+     anuncio; y escribir sólo el de la lista dejaba mudo al Guardar de la
+     barra: ni «Guardado.», ni el error de red, ni el texto del conflicto que
+     explica por qué el botón se acaba de apagar. */
+  function avisar(texto) {
+    elAviso.textContent = texto;
+    elAvisoProyecto.textContent = texto;
+  }
 
   /* Los dos botones de guardar —el de la lista y el de la pantalla del
      proyecto— son el mismo `guardar()` y tienen que apagarse y encenderse a
@@ -197,6 +206,7 @@
   function init() {
     elLista = document.getElementById('lista');
     elAviso = document.getElementById('aviso');
+    elAvisoProyecto = document.getElementById('pAviso');
     elTitulo = document.getElementById('titulo');
     elCategoria = document.getElementById('categoria');
     elCliente = document.getElementById('fichaCliente');
