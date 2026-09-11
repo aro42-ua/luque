@@ -297,10 +297,18 @@ window.Visor = (function () {
     renderizar();
   }
 
+  /* La rueda se lee por gestos y no por eventos: un trackpad suelta ráfagas
+     y un pellizco llega como wheel con ctrlKey. `VisorRueda.paso` decide si
+     este evento completa un gesto; aquí sólo se obedece. Ver js/visor-rueda.js. */
+  var rueda = window.VisorRueda.inicial();
+
   function alRodar(e) {
     if (!estado.abierto || estado.lupa || window.VisorVideo.activo()) return;
-    irParada((e.deltaY > 0) ? window.VisorEstado.siguiente(estado)
-                            : window.VisorEstado.anterior(estado));
+    var r = window.VisorRueda.paso(rueda, e, e.timeStamp);
+    rueda = r.estado;
+    if (!r.paso) return;
+    irParada(r.paso > 0 ? window.VisorEstado.siguiente(estado)
+                        : window.VisorEstado.anterior(estado));
     window.VisorChrome.despertar();
   }
 

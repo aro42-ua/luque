@@ -418,6 +418,10 @@
   <script src="js/visor-carga.js"></script>
   <script src="js/visor-chrome.js"></script>
   <script src="js/visor-origen.js"></script>
+  <!-- Va ANTES de visor.js, que lo llama en cada evento de rueda. Sin esta
+       línea `window.VisorRueda` es undefined y rodar sobre el visor lanza un
+       TypeError, con la suite entera en verde. -->
+  <script src="js/visor-rueda.js"></script>
   <script src="js/visor-foco.js"></script>
   <script src="js/visor.js"></script>
   <script src="js/movil-gestos.js"></script>
