@@ -665,7 +665,7 @@ window.Publicacion = (function () {
 
 - [ ] **Paso 4: Comprueba que pasa**
 
-Arnés: las **diez** nuevas en verde. Necesita servidor.
+Arnés: las **doce** nuevas en verde. Necesita servidor.
 
 - [ ] **Paso 5: Commit**
 
