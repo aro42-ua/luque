@@ -201,7 +201,9 @@ h1{
 }
 
 .nuevo input,
-.nuevo select{
+.nuevo select,
+.ficha input,
+.ficha select{
   font-family: var(--ff);
   font-size: 1rem;
   padding: 0.5rem 0.75rem;
@@ -221,13 +223,16 @@ h1{
    aviso dice que «Guardar» se ha desactivado, y hasta ahora el botón no lo
    parecía. */
 .nuevo input:disabled,
-.nuevo select:disabled{
+.nuevo select:disabled,
+.ficha input:disabled,
+.ficha select:disabled{
   opacity: 0.35;
   cursor: not-allowed;
 }
 
 .nuevo button,
-#guardar{
+#guardar,
+#pGuardar{
   align-self: flex-start;
   margin-top: 0.75rem;
   font-family: var(--ff);
@@ -242,20 +247,60 @@ h1{
 }
 
 .nuevo button:hover:not(:disabled),
-#guardar:hover:not(:disabled){
+#guardar:hover:not(:disabled),
+#pGuardar:hover:not(:disabled){
   background: var(--yellow);
   color: var(--black);
 }
 
 .nuevo button:disabled,
-#guardar:disabled{
+#guardar:disabled,
+#pGuardar:disabled{
   opacity: 0.35;
   cursor: not-allowed;
 }
 
+/* `#pGuardar` vive dentro de `.proyecto-barra`, no en el formulario: sin este
+   ajuste heredaría el `align-self: flex-start` y el `margin-top` pensados
+   para el botón suelto de `.nuevo`, y se descolocaría en la barra flex. */
+#pGuardar{ align-self: auto; margin-top: 0; flex: 0 0 auto; }
+
 /* ============================================================
-   LA PANTALLA DE UN PROYECTO (bloque 3c)
+   LA PANTALLA DE UN PROYECTO (bloque 3c; vestida en el bloque
+   de la pantalla del proyecto)
 ============================================================ */
+
+.volver{
+  font-family: var(--ff);
+  font-size: 1rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-bottom: 1.5rem;
+}
+
+/* Un escalón por debajo del h1 de la lista: es el título de UNA cosa. */
+.proyecto-titulo{
+  font-weight: 700;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  letter-spacing: var(--kerning);
+  margin-bottom: 1.5rem;
+}
+
+/* Dos columnas en ancho, una en el teléfono (ver el @media del final). Los
+   dos campos anchos llevan `span 2`, que sobre una rejilla de una columna no
+   hace nada, así que en el móvil no hay nada que deshacer. */
+.ficha{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  margin-bottom: 2rem;
+}
+.campo{ display: flex; flex-direction: column; gap: 0.35rem; }
+.campo label{ font-weight: 700; }
+.campo--ancho{ grid-column: span 2; }
 
 .fotos{
   display: grid;
@@ -294,16 +339,76 @@ h1{
    fotos es justo lo que molesta a quien la tiene puesta. */
 .celda--arrastrando{ opacity: .4; transition: opacity .12s; }
 
-/* El borde discontinuo dice que ahi se puede soltar sin tener que leerlo, y
-   el selector de archivos de dentro dice que tambien se puede sin raton. */
+/* La zona de soltar se entiende sin leerla: borde discontinuo, altura, y una
+   etiqueta con aspecto de botón en medio. Al arrastrar encima se invierte,
+   igual que hacen los botones al pasar el ratón. */
 .soltar{
-  border: 1px dashed #555;
-  padding: 1rem;
-  margin: 1rem 0;
+  border: 2px dashed var(--black);
+  border-radius: 4px;
+  padding: 1.5rem 1rem;
+  margin: 0 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.soltar--encima{
+  border-style: solid;
+  background: var(--black);
+  color: var(--yellow);
+}
+.soltar-pista{ opacity: .7; font-size: .9em; }
+
+.soltar-boton{
+  display: inline-block;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.6rem 1.25rem;
+  border: 2px solid var(--black);
+  border-radius: 4px;
+  background: var(--black);
+  color: var(--yellow);
+  cursor: pointer;
+}
+.soltar--encima .soltar-boton{ background: var(--yellow); color: var(--black); }
+
+/* Oculto a la vista, no al tabulador: `display:none` sacaría el <input> del
+   recorrido con Tab y la subida dejaría de existir sin ratón. El foco lo
+   recibe la etiqueta, que es lo que se ve. */
+.visualmente-oculto{
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.soltar:focus-within .soltar-boton{
+  outline: 3px solid var(--black);
+  outline-offset: 2px;
 }
 
-.soltar--encima{ border-color: var(--yellow); }
-.soltar-pista{ opacity: .7; font-size: .9em; }
+.progreso{ min-height: 1.5em; font-weight: 700; margin-bottom: 0.75rem; }
+
+/* La barra fija al pie: el aviso y Guardar siempre a la vista, también con
+   la rejilla desplazada. `sticky` y no `fixed` para que siga el ancho de la
+   columna del panel y no tape nada fuera de ella. */
+.proyecto-barra{
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem 0;
+  background: var(--yellow);
+  border-top: 2px solid var(--black);
+}
+.proyecto-barra .aviso{ margin: 0; flex: 1 1 auto; }
 
 /* Vacio no ocupa: `:not(:empty)` evita un hueco rojo permanente debajo de la
    rejilla en los proyectos que no tienen ningun problema. */

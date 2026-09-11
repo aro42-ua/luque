@@ -54,37 +54,53 @@
     </section>
 
     <section id="pantallaProyecto" hidden>
-      <button id="pVolver" type="button">‹ Volver a los proyectos</button>
-      <h2 id="pTitulo"></h2>
+      <button id="pVolver" type="button" class="volver">‹ Volver a los proyectos</button>
+      <h2 id="pTitulo" class="proyecto-titulo"></h2>
 
-      <label for="pNombre">Título</label>
-      <input id="pNombre" type="text" autocomplete="off">
-
-      <label for="pCategoria">Categoría</label>
-      <select id="pCategoria"></select>
-
-      <label for="pCliente">Cliente (opcional)</label>
-      <input id="pCliente" type="text" autocomplete="off">
-
-      <label for="pAnio">Año</label>
-      <input id="pAnio" type="number">
-
-      <label for="pPapel">Papel</label>
-      <input id="pPapel" type="text" autocomplete="off">
-
-      <label for="pEnlace">Enlace al vídeo (opcional)</label>
-      <input id="pEnlace" type="url" placeholder="https://vimeo.com/…">
+      <!-- Los seis campos comparten el estilo del formulario de crear (la
+           regla `.nuevo input` gana el selector `.ficha input` en el CSS), en
+           dos columnas de ancho y una en el teléfono. Ningún `id` cambia:
+           Proyecto.recoger enlaza por ellos. -->
+      <div class="ficha">
+        <div class="campo campo--ancho">
+          <label for="pNombre">Título</label>
+          <input id="pNombre" type="text" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="pCategoria">Categoría</label>
+          <select id="pCategoria"></select>
+        </div>
+        <div class="campo">
+          <label for="pAnio">Año</label>
+          <input id="pAnio" type="number">
+        </div>
+        <div class="campo">
+          <label for="pCliente">Cliente (opcional)</label>
+          <input id="pCliente" type="text" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="pPapel">Papel</label>
+          <input id="pPapel" type="text" autocomplete="off">
+        </div>
+        <div class="campo campo--ancho">
+          <label for="pEnlace">Enlace al vídeo (opcional)</label>
+          <input id="pEnlace" type="url" placeholder="https://vimeo.com/…">
+        </div>
+      </div>
 
       <!-- El selector de archivos va SIEMPRE, no sólo como alternativa a
            soltar: la especificación lo pide («toda subida ofrece un selector
-           de archivos además de soltar») y soltar no existe con teclado. -->
+           de archivos además de soltar») y soltar no existe con teclado. El
+           <input> está oculto a la vista pero NO con display:none, que lo
+           sacaría del tabulador; la etiqueta hace de botón y recibe el anillo
+           de foco por :focus-within. -->
       <div id="pSoltar" class="soltar">
-        <label for="pArchivos">Añadir fotos</label>
-        <input id="pArchivos" type="file" accept="image/*" multiple>
-        <p class="soltar-pista">También puedes soltarlas aquí.</p>
+        <label for="pArchivos" class="soltar-boton">Elegir archivos</label>
+        <input id="pArchivos" type="file" accept="image/*" multiple class="visualmente-oculto">
+        <p class="soltar-pista">o suéltalas aquí</p>
       </div>
 
-      <p id="pProgreso" role="status" aria-live="polite"></p>
+      <p id="pProgreso" role="status" aria-live="polite" class="progreso"></p>
       <ol id="pFotos" class="fotos"></ol>
       <p id="pProblemas" class="problemas"></p>
 
