@@ -107,6 +107,10 @@
      dentroDeLaCaja) y también por `pintar`, que sí construye nodos: el arnés
      de DOM le da un <ol> propio, así que no hace falta el panel entero. -->
 <script src="../panel/js/lista.js"></script>
+<!-- fotos.js no toca el DOM al cargarse: sólo define window.Fotos. Va DESPUÉS
+     de lista.js y edicion.js, que usa: la aritmética del arrastre se reutiliza
+     de lista.js en vez de escribirla dos veces. Ver pruebas-fotos.js. -->
+<script src="../panel/js/fotos.js"></script>
 <script src="pruebas-arnes.js"></script>
 <script src="pruebas-arnes-dom.js"></script>
 <script src="pruebas-datos.js"></script>
@@ -145,6 +149,7 @@
 <script src="pruebas-subida.js"></script>
 <script src="pruebas-lista.js"></script>
 <script src="pruebas-lista-pintar.js"></script>
+<script src="pruebas-fotos.js"></script>
 <!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
      cuatro dependencias delante (reglas-contenido, identificador, orden,
      lista): cinco scripts encadenados por conDocumento. Que UN script se
