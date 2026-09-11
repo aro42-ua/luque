@@ -95,8 +95,10 @@ cada campo, como en el formulario de crear.
 
 En pantalla ancha, dos columnas: Título y Enlace a lo ancho; Categoría y Año en
 pareja; Cliente y Papel en pareja. Por debajo de 600px, una sola columna. Los
-dos campos anchos llevan `grid-column: span 2`, así que en una columna no hay
-nada que deshacer: el `span` sobre una rejilla de una columna no hace nada.
+dos campos anchos llevan `grid-column: span 2` en ancho y lo pierden en el
+`@media (max-width: 600px)`: un `span` sobre una rejilla de una columna no es
+inofensivo, crea una columna implícita — medido, y anotado en
+`docs/estado-conocido.md`.
 
 `#pTitulo` se estiliza como el `h1` de la lista, un escalón por debajo.
 

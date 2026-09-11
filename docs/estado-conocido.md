@@ -951,12 +951,99 @@ juzgar quien lo mire en un teléfono de verdad:
 2. Que el botón de ficha esté donde la mano lo busca, y que las tres pastillas
    de arriba no se aprieten en un teléfono estrecho.
 
+## El panel tiene tres pantallas (bloques 3c y 3d)
+
+**Desde el PR #13 (2026-09-11) el panel tiene tres pantallas y no una:** la
+lista de proyectos (bloque 3b), la pantalla de un proyecto (3c) y la de
+publicar (3d). Cuál se ve lo decide `panel/js/rutas.js` a partir del fragmento
+(`#/proyecto/<id>`, `#/publicar`), y `panel/js/pantallas.js` esconde las
+otras con `hidden`. Los planes están en
+`docs/superpowers/plans/2026-09-11-panel-proyecto-bloque-3c.md` y
+`…-panel-publicar-bloque-3d.md`, y los dos anotan al final lo que salió
+distinto al ejecutarlos.
+
+**Las pruebas del panel llevan su propia copia del marcado** (la constante
+`HTML` de `tests/pruebas-panel.js`), con sólo los `id`. Un nodo nuevo que
+`panel.js` busque al arrancar va en DOS sitios, `panel/index.html` y esa
+copia; sin el segundo, la sección entera del panel cae en el iframe. La suite
+en verde no demuestra que `panel/index.html` tenga el nodo.
+
+**Las dos comprobaciones manuales en producción siguen pendientes:** la Tarea 9
+del plan 3c (16 puntos: subir 40 MB, girar, teclado, portada…) y la Tarea 5 del
+3d (publicar). Son de Ángel.
+
+## La pantalla del proyecto, vestida (bloque de la pantalla del proyecto)
+
+**La pantalla de un proyecto del panel existe desde el bloque 3c y hace todo lo
+que el spec pedía; hasta este bloque no tenía diseño.** El formulario de la
+ficha no tenía ni una regla de CSS —sólo las tenía el de crear—, la portada se
+marcaba con un borde amarillo sobre una página amarilla, y desde dentro de un
+proyecto no había botón de guardar: había que volver a la lista.
+
+**Ahora hay dos botones de guardar y son el mismo `guardar()`.** `#guardar` en
+la lista y `#pGuardar` en la barra fija al pie de la pantalla del proyecto, y
+`panel.js` los apaga y los enciende a la vez con `guardarActivo` —al arrancar y
+tras un conflicto de versiones—. Quien añada un tercer camino que toque
+`disabled` en uno de ellos tiene que pasar por esa función.
+
+**El aviso de la pantalla del proyecto (`#pAviso`) vive en esa barra**, no en la
+cabecera: en un teléfono, mientras se ordena la rejilla, arriba no se veía.
+
+**La celda de la rejilla es una rejilla de cuatro columnas** (`44px 1fr 1fr
+44px`) repartida por `grid-template-areas` según el `data-accion` de cada
+botón. Los cuatro botones siguen siendo hijos directos del `<li>`, que es lo
+que pulsan las pruebas. Quien añada un quinto control tiene que darle su área.
+
+**El `<input type="file">` está oculto a la vista y NO al tabulador.** Se
+esconde con el patrón de «visualmente oculto» (`.visualmente-oculto`) y la
+etiqueta hace de botón; `display:none` lo sacaría del recorrido con Tab y la
+subida dejaría de existir sin ratón, que es el criterio de aceptación 6.
+
+**Los botones de la celda miden 44px en todas las anchuras**, no sólo en el
+teléfono. Lidia sube desde el ordenador y retoca desde el móvil, y el arrastre
+nativo (`draggable`) que usa `fotos.js` no funciona con el dedo: en el teléfono
+‹ › no son el atajo, son el único camino. El arrastre táctil propio se
+descartó a propósito (spec, «Lo que este bloque NO hace»).
+
+**Un `grid-column: span 2` sobre una rejilla de una columna NO es inofensivo.**
+La spec y el plan afirmaban que «no hace nada»; medido a 375px, `.ficha`
+computaba `222px 222px` y la página desbordaba en horizontal: el `span`
+obliga a crear una segunda columna implícita, dimensionada por el contenido
+(los `<input>` miden ~220px como mínimo). El arreglo es
+`.campo--ancho{ grid-column: auto; }` dentro del `@media (max-width: 600px)`.
+Es exactamente el tipo de trampa que este documento existe para no
+descubrir dos veces.
+
+**Dos `box-shadow` de la misma especificidad no se suman.** `.celda--portada`
+(anillo doble) y `.celda--marca-antes`/`.celda--marca-despues` (marca de
+inserción) podían coincidir en la misma celda al arrastrar sobre la portada, y
+la marca borraba el anillo. Se resolvió con `.celda--portada.celda--marca-antes`
+y `.celda--portada.celda--marca-despues`, que escriben las sombras juntas.
+
+### Lo que la suite no puede certificar de este bloque
+
+`tests/test.html` no carga `panel/css/panel.css`. Comprobado por el controlador
+en un navegador de escritorio con el viewport emulado a 1100 y a 375px, con las
+diez fotos de `la-boquerona` inyectadas y sin imágenes (en local no hay
+`img/`): lo medido son cajas y estilos computados, no tacto ni aspecto real; lo
+que sólo puede juzgar quien lo abra en producción, y va a la misma lista que
+dejó el bloque 3c (su Tarea 9):
+
+1. Que la barra fija no tape la última fila de fotos al llegar abajo.
+2. Que en un teléfono de verdad quepan dos columnas con los cuatro botones
+   pulsables sin acertar de milagro.
+3. Que la portada se distinga a un golpe de vista, con fotos claras y oscuras.
+4. Que la zona de soltar se entienda como tal sin leerla.
+5. Que el foco con Tab se vea en cada botón de la celda negra.
+
 ## Cómo se prueba
 
-`tests/test.html` ejecuta **522 comprobaciones** (medido tras la ronda de la
-revisión final del bloque de la ficha y la tira: las 3 nuevas son las de
-`engancharGestos` filtrando por origen y la guarda «ya estoy aquí» de la
-tira, descritas más arriba). El 519 de antes de esa ronda, y el 468 de este
+`tests/test.html` ejecuta **672 comprobaciones** (medido tras el bloque de la
+pantalla del proyecto vestida: eran 668 antes de la rama, y este bloque
+añadió 4). Antes de esa cuenta, la de 522 era la medida tras la ronda de la
+revisión final del bloque de la ficha y la tira: las 3 nuevas de esa ronda son
+las de `engancharGestos` filtrando por origen y la guarda «ya estoy aquí» de la
+tira, descritas más arriba. El 519 de antes de esa ronda, y el 468 de este
 párrafo —medido el 2026-09-11 tras retirar las 18 de `brillo.js`— ya estaba
 obsoleto antes de que ese bloque tocara nada: la suite arrancó en 491, no en
 468, así que la diferencia con las 519 no la trae este bloque entero; lo que
@@ -1461,7 +1548,8 @@ escritorio, no del móvil; queda anotado aquí para que la próxima mano que
 toque `js/visor.js` sepa que ya no hay margen y cualquier añadido nuevo
 tiene que sacar algo primero.
 
-**Y desde el bloque de la ficha y la tira, `js/movil-visor.js`: 428.** Ya
+**Y desde el bloque de la ficha y la tira, `js/movil-visor.js`: 463** (número
+medido; el documento decía 428, desfasado). Ya
 estaba en 390 antes de este bloque —el pellizco del 4g lo dejó así— y el
 cableado de los dos controles nuevos lo sube. Se decidió **no partirlo en este
 bloque**: la spec lo declara fuera de alcance y sacó la tira a
