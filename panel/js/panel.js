@@ -1,6 +1,6 @@
 (function () {
   var trabajo = null;      // { version, proyectos }
-  var elLista, elAviso, elTitulo, elCategoria, elCrear, elGuardar;
+  var elLista, elAviso, elAvisoProyecto, elTitulo, elCategoria, elCrear, elGuardar, elGuardarProyecto;
   var elCliente, elAnio, elPapel, elEnlace;
   /* Las secciones por nombre, el índice del proyecto abierto, y una copia en
      texto de lo último que el servidor confirmó. */
@@ -9,7 +9,27 @@
      web ahora, el aviso, y si un choque de version dejo el boton apagado. */
   var publicar;
 
-  function avisar(texto) { elAviso.textContent = texto; }
+  /* Los dos avisos a la vez: el de la lista y el de la barra de la pantalla
+     del proyecto. Nunca se ven los dos —la pantalla escondida lleva `hidden`,
+     que la saca también del árbol de accesibilidad—, así que no hay doble
+     anuncio; y escribir sólo el de la lista dejaba mudo al Guardar de la
+     barra: ni «Guardado.», ni el error de red, ni el texto del conflicto que
+     explica por qué el botón se acaba de apagar. */
+  function avisar(texto) {
+    elAviso.textContent = texto;
+    elAvisoProyecto.textContent = texto;
+  }
+
+  /* Los dos botones de guardar —el de la lista y el de la pantalla del
+     proyecto— son el mismo `guardar()` y tienen que apagarse y encenderse a
+     la vez: al arrancar, hasta que llega el borrador, y tras un conflicto de
+     versiones, donde el aviso dice que «Guardar» se ha desactivado y el
+     botón tiene que parecerlo. Un solo sitio para el `disabled`, para que el
+     segundo botón no se quede encendido por olvido en un camino nuevo. */
+  function guardarActivo(activo) {
+    elGuardar.disabled = !activo;
+    elGuardarProyecto.disabled = !activo;
+  }
 
   /* Activa o desactiva lo que necesita `trabajo` para funcionar. Se llama
      deshabilitado desde el arranque, antes de que Borrador.cargar resuelva:
@@ -26,7 +46,7 @@
     elPapel.disabled = !activo;
     elEnlace.disabled = !activo;
     elCrear.disabled = !activo;
-    elGuardar.disabled = !activo;
+    guardarActivo(activo);
   }
 
   /* Dónde vuelve el foco tras un repintado. Lo que sabe del marcado de una
@@ -170,7 +190,7 @@
            otra persona sin que el servidor lo vuelva a detectar como
            conflicto. Recargar trae los datos de verdad, no sólo el número
            de versión. */
-        elGuardar.disabled = true;
+        guardarActivo(false);
         return avisar('Alguien ha guardado mientras editabas (el servidor va por la versión '
           + resultado.guardada + '). Si guardaras ahora, sobrescribirías su trabajo: por eso '
           + '«Guardar» se ha desactivado. Recarga la página para ver lo último — recargar '
@@ -186,6 +206,7 @@
   function init() {
     elLista = document.getElementById('lista');
     elAviso = document.getElementById('aviso');
+    elAvisoProyecto = document.getElementById('pAviso');
     elTitulo = document.getElementById('titulo');
     elCategoria = document.getElementById('categoria');
     elCliente = document.getElementById('fichaCliente');
@@ -194,6 +215,7 @@
     elEnlace = document.getElementById('fichaEnlace');
     elCrear = document.querySelector('#nuevo button[type="submit"]');
     elGuardar = document.getElementById('guardar');
+    elGuardarProyecto = document.getElementById('pGuardar');
 
     /* Deshabilitado desde el primer pintado: todavía no hay `trabajo`. */
     activarControles(false);
@@ -212,6 +234,7 @@
     });
 
     elGuardar.addEventListener('click', guardar);
+    elGuardarProyecto.addEventListener('click', guardar);
 
     pantallas = { pantallaLista: document.getElementById('pantallaLista'),
                   pantallaProyecto: document.getElementById('pantallaProyecto'),

@@ -23,13 +23,15 @@ var HTML =
   '<button id="irAPublicar" type="button">Publicar…</button></section>' +
   '<section id="pantallaProyecto" hidden>' +
   '<button id="pVolver" type="button">Volver</button>' +
-  '<h2 id="pTitulo"></h2><p id="pAviso" role="status" aria-live="polite"></p>' +
+  '<h2 id="pTitulo"></h2>' +
   '<input id="pNombre" type="text"><select id="pCategoria"></select>' +
   '<input id="pCliente" type="text"><input id="pAnio" type="number">' +
   '<input id="pPapel" type="text"><input id="pEnlace" type="url">' +
   '<div id="pSoltar"><input id="pArchivos" type="file" multiple></div>' +
   '<p id="pProgreso" role="status" aria-live="polite"></p>' +
-  '<ol id="pFotos"></ol><p id="pProblemas"></p></section>' +
+  '<ol id="pFotos"></ol><p id="pProblemas"></p>' +
+  '<div class="proyecto-barra"><p id="pAviso" role="status" aria-live="polite"></p>' +
+  '<button id="pGuardar" type="button">Guardar</button></div></section>' +
   '<section id="pantallaPublicar" hidden>' +
   '<button id="qVolver" type="button">Volver</button>' +
   '<p id="qCambios"></p><p id="qFalta"></p>' +
@@ -108,21 +110,23 @@ describeAsync('panel.js', function () {
     ] };
   }
 
-  /* El estado de los ocho controles que toca `activarControles`
-     (panel.js:15-25), en este orden: título, categoría, los cuatro campos de
-     la ficha, el botón de crear y el de guardar. Se mira la lista entera y no
-     un par de ellos: un control que se quedara fuera de `activarControles`
-     seguiría activo delante de un `trabajo` que todavía es null. */
+  /* El estado de los nueve controles que toca `activarControles`
+     (panel.js), en este orden: título, categoría, los cuatro campos de la
+     ficha, el botón de crear, el de guardar de la lista y el de guardar
+     de la pantalla del proyecto. Se mira la lista entera y no un par de
+     ellos: un control que se quedara fuera de `activarControles` seguiría
+     activo delante de un `trabajo` que todavía es null. */
   function estadoControles(d) {
     var ids = ['titulo', 'categoria', 'fichaCliente', 'fichaAnio',
                'fichaPapel', 'fichaEnlace'];
     return ids.map(function (id) { return d.getElementById(id).disabled; })
       .concat([d.querySelector('#nuevo button[type="submit"]').disabled,
-               d.getElementById('guardar').disabled]);
+               d.getElementById('guardar').disabled,
+               d.getElementById('pGuardar').disabled]);
   }
 
-  function ochoIguales(valor) {
-    return [valor, valor, valor, valor, valor, valor, valor, valor];
+  function nueveIguales(valor) {
+    return [valor, valor, valor, valor, valor, valor, valor, valor, valor];
   }
 
   /* Rellena el formulario entero. Los campos que la prueba no nombre se
@@ -146,7 +150,7 @@ describeAsync('panel.js', function () {
   return conPanel(borradorFalso({ diferido: true }), function (w, d) {
 
     prueba('arranca con los controles deshabilitados, antes de que llegue el borrador', function () {
-      igual(estadoControles(d), ochoIguales(true));
+      igual(estadoControles(d), nueveIguales(true));
     });
 
     /* No basta con el número de opciones: rellenarlo con el número correcto
@@ -179,7 +183,7 @@ describeAsync('panel.js', function () {
         /* El nombre es plural: todos los controles que toca
            `activarControles`, no sólo Guardar. */
         prueba('y los controles se quedan apagados', function () {
-          igual(estadoControles(d), ochoIguales(true));
+          igual(estadoControles(d), nueveIguales(true));
         });
       });
 
@@ -194,7 +198,7 @@ describeAsync('panel.js', function () {
       /* Los mismos controles que arriba: el nombre promete «los controles»,
          no sólo título y guardar. */
       prueba('y activa los controles', function () {
-        igual(estadoControles(d), ochoIguales(false));
+        igual(estadoControles(d), nueveIguales(false));
       });
     });
 
@@ -432,6 +436,22 @@ describeAsync('panel.js', function () {
 
   }).then(function () {
 
+    /* El Guardar de la pantalla del proyecto es el MISMO guardar: manda el
+       trabajo entero con su versión, igual que el de la lista. Un botón que
+       guardara «sólo este proyecto» sería otra cosa, y no existe. */
+    var desdeProyecto = borradorFalso({ datos: dosProyectos() });
+    return conPanel(desdeProyecto, function (w, d) {
+      d.getElementById('pGuardar').click();
+
+      prueba('el Guardar de la pantalla del proyecto guarda lo mismo que el de la lista', function () {
+        igual(desdeProyecto.guardadas.length, 1);
+        igual(desdeProyecto.guardadas[0].version, 3);
+        igual(d.getElementById('pAviso').textContent, 'Guardado.');
+      });
+    });
+
+  }).then(function () {
+
     var doble = borradorFalso({ datos: dosProyectos(),
                                 respuestaAlGuardar: { conflicto: true, guardada: 9 } });
     return conPanel(doble, function (w, d) {
@@ -442,6 +462,23 @@ describeAsync('panel.js', function () {
       prueba('un conflicto deshabilita Guardar', function () {
         igual(d.getElementById('guardar').disabled, true);
       });
+
+      /* Los dos botones son el mismo peligro: si el de la pantalla del
+         proyecto siguiera activo, desde allí se mandaría la misma versión
+         vieja y el servidor contestaría 409 en bucle. */
+      prueba('y también el Guardar de la pantalla del proyecto', function () {
+        igual(d.getElementById('pGuardar').disabled, true);
+      });
+
+      /* El texto que explica por qué Guardar se ha apagado tiene que leerse
+         DONDE se pulsó: si sólo fuera al aviso de la lista, desde la pantalla
+         del proyecto el botón se apagaría en silencio. */
+      prueba('y el aviso del conflicto se lee también en la pantalla del proyecto', function () {
+        igual(d.getElementById('pAviso').textContent,
+              d.getElementById('aviso').textContent);
+        cierto(d.getElementById('pAviso').textContent.indexOf('versión 9') !== -1);
+      });
+
       prueba('y el aviso dice la versión del servidor y que hay que recargar', function () {
         var t = d.getElementById('aviso').textContent;
         cierto(t.indexOf('9') !== -1, t);

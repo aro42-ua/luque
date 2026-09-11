@@ -180,7 +180,8 @@ h1{
    contorno negro sobre negro no se ve —contraste 1:1—, justo en los botones
    que reordenan y borran. Dentro de la fila el contorno pasa a amarillo,
    que sobre negro da el mismo contraste alto que el negro da sobre amarillo. */
-.fila :focus-visible{
+.fila :focus-visible,
+.celda :focus-visible{
   outline-color: var(--yellow);
 }
 
@@ -201,7 +202,9 @@ h1{
 }
 
 .nuevo input,
-.nuevo select{
+.nuevo select,
+.ficha input,
+.ficha select{
   font-family: var(--ff);
   font-size: 1rem;
   padding: 0.5rem 0.75rem;
@@ -221,13 +224,16 @@ h1{
    aviso dice que «Guardar» se ha desactivado, y hasta ahora el botón no lo
    parecía. */
 .nuevo input:disabled,
-.nuevo select:disabled{
+.nuevo select:disabled,
+.ficha input:disabled,
+.ficha select:disabled{
   opacity: 0.35;
   cursor: not-allowed;
 }
 
 .nuevo button,
-#guardar{
+#guardar,
+#pGuardar{
   align-self: flex-start;
   margin-top: 0.75rem;
   font-family: var(--ff);
@@ -242,68 +248,258 @@ h1{
 }
 
 .nuevo button:hover:not(:disabled),
-#guardar:hover:not(:disabled){
+#guardar:hover:not(:disabled),
+#pGuardar:hover:not(:disabled){
   background: var(--yellow);
   color: var(--black);
 }
 
 .nuevo button:disabled,
-#guardar:disabled{
+#guardar:disabled,
+#pGuardar:disabled{
   opacity: 0.35;
   cursor: not-allowed;
 }
 
+/* `#pGuardar` vive dentro de `.proyecto-barra`, no en el formulario: sin este
+   ajuste heredaría el `align-self: flex-start` y el `margin-top` pensados
+   para el botón suelto de `.nuevo`, y se descolocaría en la barra flex. */
+#pGuardar{ align-self: auto; margin-top: 0; flex: 0 0 auto; }
+
 /* ============================================================
-   LA PANTALLA DE UN PROYECTO (bloque 3c)
+   LA PANTALLA DE UN PROYECTO (bloque 3c; vestida en el bloque
+   de la pantalla del proyecto)
+============================================================ */
+
+.volver{
+  font-family: var(--ff);
+  font-size: 1rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-bottom: 1.5rem;
+}
+
+/* Un escalón por debajo del h1 de la lista: es el título de UNA cosa. */
+.proyecto-titulo{
+  font-weight: 700;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  letter-spacing: var(--kerning);
+  margin-bottom: 1.5rem;
+}
+
+/* Dos columnas en ancho, una en el teléfono (ver el @media del final). Los
+   dos campos anchos llevan `span 2` aquí y lo PIERDEN en el @media: un span
+   sobre una rejilla de una columna no es inofensivo, crea una columna
+   implícita. El porqué, medido, está junto a esa regla. */
+.ficha{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  margin-bottom: 2rem;
+}
+.campo{ display: flex; flex-direction: column; gap: 0.35rem; }
+.campo label{ font-weight: 700; }
+.campo--ancho{ grid-column: span 2; }
+
+/* ============================================================
+   LA REJILLA DE FOTOS
 ============================================================ */
 
 .fotos{
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: .75rem;
   list-style: none;
-  padding: 0;
 }
 
+/* La celda es negra con texto amarillo, como las filas de la lista: es el
+   lenguaje que el panel ya tiene, y las fotos destacan sobre negro. Dentro,
+   una rejilla de cuatro columnas —44px, 1fr, 1fr, 44px— para que ‹ y ›
+   midan lo que un dedo y «Portada» y «Quitar» se repartan el resto:
+
+     img  img  img  img
+     ant  num  num  sig
+     por  por  qui  qui
+
+   Los cuatro botones son hijos directos del <li>, como los pulsan las
+   pruebas; las áreas las reparte el data-accion. */
 .celda{
-  border: 1px solid #333;
-  padding: .4rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr 44px;
+  grid-template-areas:
+    "img img img img"
+    "ant num num sig"
+    "por por qui qui";
+  gap: 4px;
+  padding: 4px;
+  background: var(--black);
+  color: var(--yellow);
+  border-radius: 4px;
+  cursor: grab;
 }
+.celda:active{ cursor: grabbing; }
 
-/* La portada se distingue con el amarillo del sitio, que es el unico color
-   que el panel usa para decir «esto». */
-.celda--portada{ border-color: var(--yellow); }
+/* La portada, además de su etiqueta, lleva un anillo doble: amarillo pegado
+   a la celda y negro por fuera. Uno solo amarillo se confundiría con la
+   página; uno solo negro, con la celda. */
+.celda--portada{
+  box-shadow: 0 0 0 3px var(--yellow), 0 0 0 6px var(--black);
+}
 
 /* La misma proporcion y el mismo recorte que la galeria: lo que se ve aqui es
    lo que se vera en el lienzo, y elegir portada mirando otra cosa seria
    elegir a ciegas. */
 .celda-img{
+  grid-area: img;
   width: 100%;
   aspect-ratio: 4 / 5;
   object-fit: cover;
   display: block;
 }
 
+.celda-etiqueta{
+  position: absolute;
+  top: 10px; left: 10px;
+  padding: 0.2rem 0.5rem;
+  background: var(--yellow);
+  color: var(--black);
+  font-weight: 700;
+  font-size: 0.8rem;
+  border-radius: 3px;
+}
+
+.celda-num{
+  grid-area: num;
+  align-self: center;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* 44px de alto como mínimo en TODAS las anchuras, no sólo en el móvil:
+   son el camino principal en táctil, donde el arrastre nativo no funciona, y
+   tener dos rejillas según el ancho sería mantener dos. */
+.celda-boton{
+  min-height: 44px;
+  border: 2px solid var(--yellow);
+  background: transparent;
+  color: var(--yellow);
+  font-family: var(--ff);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.celda-boton:hover:not(:disabled){ background: var(--yellow); color: var(--black); }
+.celda-boton:disabled{ opacity: 0.35; cursor: not-allowed; }
+.celda-boton[data-accion="anterior"]{ grid-area: ant; }
+.celda-boton[data-accion="siguiente"]{ grid-area: sig; }
+.celda-boton[data-accion="portada"]{ grid-area: por; }
+.celda-boton[data-accion="quitar"]{ grid-area: qui; border-color: var(--grey-mid); }
+.celda-boton[data-accion="quitar"]:hover:not(:disabled){ background: var(--grey-mid); color: var(--yellow); }
+
 /* De que lado caeria la foto al soltarla. En la lista la marca es horizontal
-   porque es vertical; aqui es al reves. */
+   porque es vertical; aqui es al reves. Sombra interior amarilla, que sobre
+   la celda negra se ve. */
 .celda--marca-antes{ box-shadow: inset 3px 0 0 var(--yellow); }
 .celda--marca-despues{ box-shadow: inset -3px 0 0 var(--yellow); }
+
+/* Sobre la portada, la marca de inserción y el anillo tienen que verse a la
+   vez: dos `box-shadow` de la misma especificidad no se suman, la posterior
+   sustituye a la anterior, así que aquí se escriben juntas. */
+.celda--portada.celda--marca-antes{
+  box-shadow: inset 3px 0 0 var(--yellow), 0 0 0 3px var(--yellow), 0 0 0 6px var(--black);
+}
+.celda--portada.celda--marca-despues{
+  box-shadow: inset -3px 0 0 var(--yellow), 0 0 0 3px var(--yellow), 0 0 0 6px var(--black);
+}
 
 /* La unica animacion de esta pantalla. La apaga la regla de movimiento
    reducido de mas abajo, que es global: un parpadeo al arrastrar treinta
    fotos es justo lo que molesta a quien la tiene puesta. */
 .celda--arrastrando{ opacity: .4; transition: opacity .12s; }
 
-/* El borde discontinuo dice que ahi se puede soltar sin tener que leerlo, y
-   el selector de archivos de dentro dice que tambien se puede sin raton. */
+/* La zona de soltar se entiende sin leerla: borde discontinuo, altura, y una
+   etiqueta con aspecto de botón en medio. Al arrastrar encima se invierte,
+   igual que hacen los botones al pasar el ratón. */
 .soltar{
-  border: 1px dashed #555;
-  padding: 1rem;
-  margin: 1rem 0;
+  border: 2px dashed var(--black);
+  border-radius: 4px;
+  padding: 1.5rem 1rem;
+  margin: 0 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.soltar--encima{
+  border-style: solid;
+  background: var(--black);
+  color: var(--yellow);
+}
+.soltar-pista{ opacity: .7; font-size: .9em; }
+
+.soltar-boton{
+  display: inline-block;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0.6rem 1.25rem;
+  border: 2px solid var(--black);
+  border-radius: 4px;
+  background: var(--black);
+  color: var(--yellow);
+  cursor: pointer;
+}
+.soltar--encima .soltar-boton{ background: var(--yellow); color: var(--black); }
+
+/* Oculto a la vista, no al tabulador: `display:none` sacaría el <input> del
+   recorrido con Tab y la subida dejaría de existir sin ratón. El foco lo
+   recibe la etiqueta, que es lo que se ve. */
+.visualmente-oculto{
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.soltar:focus-within .soltar-boton{
+  outline: 3px solid var(--black);
+  outline-offset: 2px;
 }
 
-.soltar--encima{ border-color: var(--yellow); }
-.soltar-pista{ opacity: .7; font-size: .9em; }
+.progreso{ min-height: 1.5em; font-weight: 700; margin-bottom: 0.75rem; }
+
+/* La barra fija al pie: el aviso y Guardar siempre a la vista, también con
+   la rejilla desplazada. `sticky` y no `fixed` para que siga el ancho de la
+   columna del panel y no tape nada fuera de ella. */
+.proyecto-barra{
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem 0;
+  background: var(--yellow);
+  border-top: 2px solid var(--black);
+}
+.proyecto-barra .aviso{ margin: 0; flex: 1 1 auto; }
+
+/* Al tabular hasta la última fila, el navegador desplaza el botón enfocado
+   sin saber que hay una barra fija encima: sin esto, el foco puede quedar
+   detrás de ella. */
+html{ scroll-padding-bottom: 5rem; }
 
 /* Vacio no ocupa: `:not(:empty)` evita un hueco rojo permanente debajo de la
    rejilla en los proyectos que no tienen ningun problema. */
@@ -324,6 +520,26 @@ h1{
 /* El resumen nombra proyectos y puede ocupar varias lineas: se respetan los
    saltos para que no salga un parrafo unico e ilegible. */
 .publicar-cambios{ white-space: pre-line; }
+
+/* ============================================================
+   EL TELÉFONO — Lidia sube desde el ordenador y retoca desde el
+   móvil: reordenar, cambiar la portada, quitar una.
+============================================================ */
+@media (max-width: 600px){
+  .panel{ padding: 1.5rem 1rem 4rem; }
+  .ficha{ grid-template-columns: 1fr; }
+  /* `span 2` sobre una rejilla de una columna NO es inofensivo: obliga a crear
+     una segunda columna implícita, que se dimensiona por el contenido —los
+     <input> miden ~220px como mínimo— y la ficha vuelve a dos columnas y
+     desborda. Medido a 375px: «222px 222px». Se quita el span en el móvil. */
+  .campo--ancho{ grid-column: auto; }
+  /* Dos columnas a 375px son celdas de ~160px, donde caben «Portada» y
+     «Quitar» uno al lado del otro a 44px de alto. */
+  .fotos{ grid-template-columns: repeat(2, 1fr); }
+  /* Con 44px de flecha a cada lado, a «Portada» le quedan ~57px a 375px, y
+     menos en un teléfono estrecho. Sin esto el texto se sale del botón. */
+  .celda-boton{ font-size: .875rem; padding: 0 .25rem; }
+}
 
 /* ============================================================
    MOVIMIENTO REDUCIDO

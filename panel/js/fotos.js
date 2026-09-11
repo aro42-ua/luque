@@ -58,11 +58,31 @@ window.Fotos = (function () {
     img.className = 'celda-img';
     li.appendChild(img);
 
+    /* La portada lleva su etiqueta encima de la foto. Hasta este bloque se
+       distinguía sólo por `celda--portada`, cuyo borde era amarillo sobre una
+       página amarilla, o sea invisible. La etiqueta se lee, y el botón
+       «Portada» apagado de abajo lo confirma. */
+    if (esPortada) {
+      var etiqueta = document.createElement('span');
+      etiqueta.className = 'celda-etiqueta';
+      etiqueta.textContent = 'Portada';
+      li.appendChild(etiqueta);
+    }
+
     /* Los cuatro botones son el camino principal, no un añadido: criterio de
        aceptación 6, el panel es operable de principio a fin sin ratón. El
        arrastrar y soltar de más abajo es el atajo. */
     li.appendChild(boton('anterior', '‹', 'Mover la foto ' + (i + 1) + ' hacia atrás',
       i === 0, function () { acciones.alMover(i, i - 1); }));
+
+    /* El número entre ‹ y › se lee como un control de posición, y es lo que
+       permite «mover la 7 antes de la 4» en diez fotos casi iguales. Hasta
+       ahora sólo estaba en el `alt`. */
+    var num = document.createElement('span');
+    num.className = 'celda-num';
+    num.textContent = (i + 1) + '/' + total;
+    li.appendChild(num);
+
     li.appendChild(boton('siguiente', '›', 'Mover la foto ' + (i + 1) + ' hacia delante',
       i === total - 1, function () { acciones.alMover(i, i + 1); }));
     /* Marcar la que ya es portada no haría nada, y un botón que no hace nada

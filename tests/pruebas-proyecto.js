@@ -26,6 +26,17 @@ describe('Proyecto.pintar', function () {
                         portada: '/img/a-1500.jpg' }] };
   }
 
+  /* Tres piezas y la portada en la del medio, para que las pruebas del
+     número y de la etiqueta no puedan acertar por casualidad con la primera. */
+  function tresPiezas() {
+    return { id: 'bruma', titulo: 'Bruma', categoria: 'editorial', tipo: 'fotos',
+             ficha: { cliente: 'Vogue ES', anio: 2025, papel: 'DoP' },
+             portada: '/img/b-1500.jpg',
+             piezas: [{ url: '/img/a-3000.jpg', miniatura: '/img/a-250.jpg', portada: '/img/a-1500.jpg' },
+                      { url: '/img/b-3000.jpg', miniatura: '/img/b-250.jpg', portada: '/img/b-1500.jpg' },
+                      { url: '/img/c-3000.jpg', miniatura: '/img/c-250.jpg', portada: '/img/c-1500.jpg' }] };
+  }
+
   function nada() {
     return { alCambiar: function () {}, alSubir: function () {}, alVolver: function () {} };
   }
@@ -190,5 +201,28 @@ describe('Proyecto.pintar', function () {
       els.soltar.dispatchEvent(e);
       igual(e.defaultPrevented, true);
     });
+  });
+
+  /* El número va visible y no sólo en el `alt`: en una rejilla de diez fotos
+     casi iguales, «mover la 7 antes de la 4» necesita ver los números. */
+  prueba('cada celda enseña su número, desde 1', function () {
+    conPantalla(function (els) {
+      var nums = Array.prototype.map.call(els.fotos.querySelectorAll('.celda-num'),
+        function (s) { return s.textContent; });
+      igual(nums, ['1/3', '2/3', '3/3']);
+    }, tresPiezas());
+  });
+
+  /* Hasta este bloque la portada sólo se distinguía por una clase en el <li>,
+     cuyo borde era amarillo sobre una página amarilla: invisible. */
+  prueba('sólo la portada lleva la etiqueta', function () {
+    conPantalla(function (els) {
+      var celdas = els.fotos.children;
+      var etiquetas = Array.prototype.map.call(celdas, function (li) {
+        var e = li.querySelector('.celda-etiqueta');
+        return e ? e.textContent : null;
+      });
+      igual(etiquetas, [null, 'Portada', null]);
+    }, tresPiezas());
   });
 });
