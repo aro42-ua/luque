@@ -25,22 +25,26 @@ window.Composicion = (function () {
      de explorar. Con 12 proyectos: 120 x 102vw, la misma forma que los
      240 x 201vw de antes.
 
-     compacto: la vista filtrada SE QUEDA COMO ESTABA, 2 x 50 = 100vw, y no es
-     un olvido. Se probaron las dos formas de encogerla y las dos salen mal por
-     la misma razón —una categoría trae hoy 3 proyectos, y con tan pocos la
-     rejilla se queda sin filas:
-       - 2 x 25 = 50vw: más estrecho que la pantalla. Ahí el paneo no centra el
-         lienzo, `minX = Math.min(0, stageW - canvasW)` (galeria-paneo.js) da 0
-         y lo deja pegado a la izquierda con media pantalla amarilla.
-       - 4 x 25 = 100vw: el ancho vuelve, pero 3 proyectos entran en UNA fila y
-         el lienzo queda en 100 x 28vw, una tira pegada al borde de arriba,
-         medio tapada por la barra, con el resto de la pantalla vacío.
-     Con 2 columnas, 3 proyectos hacen 2 filas y la composición se sostiene.
-     Cuando entren los trabajos de verdad y una categoría traiga ocho o diez,
-     merece la pena volver aquí: entonces sí habrá filas que repartir. */
+     compacto: MISMA celda que el amplio, 30, y sólo la mitad de columnas. La
+     celda valía 50, y ese era el fallo que se veía en pantalla: filtrar
+     multiplicaba cada foto por 50/30 = 1,67 y las cajas crecían de golpe al
+     pulsar una categoría del menú. El tamaño de una foto no puede depender de
+     si hay un filtro puesto, así que la celda se iguala y `disponer` recibe
+     además la variante de cada proyecto (ver abajo): con las dos cosas, la
+     escala que aplica `Galeria.aplicarFiltro` es exactamente 1 y filtrar sólo
+     recoloca.
+
+     Aquella celda de 50 estaba puesta para que el lienzo compacto no se
+     quedase más estrecho que la pantalla, porque entonces el paneo lo pegaba a
+     la izquierda con media pantalla amarilla. Eso ya no pasa: `medir()`
+     (galeria-paneo.js) centra el lienzo cuando es más pequeño que el
+     escenario, en vez de dejarlo en el origen. Ese arreglo es el que libera
+     esta decisión, que ahora se toma sólo por composición: con 2 columnas los
+     cuatro proyectos de una categoría hacen un cuadrado de 2 x 2, y no la tira
+     de una sola fila que saldría con 4 columnas. */
   var MODOS = {
     amplio:   { columnas: 4, anchoCelda: 30 },
-    compacto: { columnas: 2, anchoCelda: 50 }
+    compacto: { columnas: 2, anchoCelda: 30 }
   };
 
   /* Aire alrededor de toda la composición, en vw. Sin él, las fotos de los
@@ -81,11 +85,22 @@ window.Composicion = (function () {
     return { columnas: m.columnas, anchoCelda: m.anchoCelda, altoCelda: altoDeCelda(m.anchoCelda) };
   }
 
-  function disponer(cantidad, modo) {
+  /* `variantes` es opcional y dice, para cada hueco, QUÉ caja del ciclo va en
+     él. Sin ella cada hueco usa la suya por orden, que es lo de siempre. Con
+     ella, la vista filtrada puede pedir para cada proyecto la misma caja que
+     tenía sin filtrar, y así conservar su tamaño exacto en vez de heredar el
+     del hueco que le toque.
+
+     Esto no debilita nada de lo que garantiza la construcción: el alto de
+     celda sale del MÁXIMO sobre todo el ciclo (`altoDeCelda`), y a lo ancho la
+     caja más saliente ocupa 0,78 de su celda contando el sesgo, así que
+     cualquier variante cabe en cualquier hueco. Por eso las pruebas de no
+     solape y de aire en los bordes se pasan también con variantes revueltas. */
+  function disponer(cantidad, modo, variantes) {
     var c = config(modo);
     var salida = [];
     for (var i = 0; i < cantidad; i++) {
-      var v = i % ANCHOS.length;
+      var v = (variantes ? variantes[i] : i) % ANCHOS.length;
       var columna = i % c.columnas;
       var fila = Math.floor(i / c.columnas);
       salida.push({

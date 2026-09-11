@@ -76,6 +76,10 @@
      Que index.html lo cargue antes que sus dos consumidores lo comprueba
      pruebas-ficha-dato.js sobre la página real, no sobre este arnés. -->
 <script src="../js/ficha-dato.js"></script>
+<!-- visor-rueda.js es puro: sólo define window.VisorRueda. Lo usa visor.js
+     al rodar, que aquí sólo carga pruebas-visor-foco.js en su iframe.
+     Ver pruebas-visor-rueda.js. -->
+<script src="../js/visor-rueda.js"></script>
 <!-- Va DESPUÉS de plataforma.js, que `pintar` usa para construir el botón del
      vídeo, con el mismo orden relativo que ya usa index.html. visor-ficha.js
      no toca el DOM al cargarse: sólo define window.VisorFicha; `init` y
@@ -101,6 +105,8 @@
 <script src="pruebas-visor-estado.js"></script>
 <script src="pruebas-visor-carga.js"></script>
 <script src="pruebas-visor-ficha.js"></script>
+<script src="pruebas-visor-lupa.js"></script>
+<script src="pruebas-visor-rueda.js"></script>
 <script src="pruebas-galeria.js"></script>
 <script src="pruebas-movil-recorrido.js"></script>
 <script src="pruebas-movil-gestos.js"></script>

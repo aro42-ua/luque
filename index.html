@@ -117,7 +117,7 @@
   ============================================================ -->
   <nav class="navbar" id="navbar">
     <svg class="nav-svg" viewBox="0 0 1127.75 90.39" xmlns="http://www.w3.org/2000/svg">
-      <a href="#/foto-stills" data-cat="foto-stills" aria-label="Foto Stills">
+      <a href="#/editorial" data-cat="editorial" aria-label="Editorial">
         <rect class="nav-hit" x="0" y="0" width="247.81" height="90.39"/>
         <g>
           <path d="M55.19,28.15h24.48v4.32h-19.68v9.84h16.8v4.32h-16.8v10.8h20.16v4.32h-24.96V28.15Z"/>
@@ -136,7 +136,7 @@
         <polygon points="242.62 36 242.62 5.2 211.81 5.2 211.81 0 247.81 0 247.81 36 242.62 36"/>
       </a>
 
-      <a href="#/editorial" data-cat="editorial" aria-label="Editorial">
+      <a href="#/videoclip" data-cat="videoclip" aria-label="Videoclip">
         <rect class="nav-hit" x="242.62" y="0" width="274.16" height="90.39"/>
         <polygon points="242.62 90.39 242.62 54.39 247.81 54.39 247.81 85.2 278.62 85.2 278.62 90.39 242.62 90.39"/>
         <polygon points="242.62 36 242.62 0 278.62 0 278.62 5.19 247.81 5.19 247.81 36 242.62 36"/>
@@ -155,7 +155,7 @@
         <polygon points="511.59 36 511.59 5.2 480.78 5.2 480.78 0 516.78 0 516.78 36 511.59 36"/>
       </a>
 
-      <a href="#/videoclip" data-cat="videoclip" aria-label="Videoclip">
+      <a href="#/cortometraje" data-cat="cortometraje" aria-label="Cortometraje">
         <rect class="nav-hit" x="511.59" y="0" width="345.75" height="90.39"/>
         <polygon points="511.59 90.39 511.59 54.39 516.78 54.39 516.78 85.2 547.59 85.2 547.59 90.39 511.59 90.39"/>
         <polygon points="511.59 36 511.59 0 547.59 0 547.59 5.19 516.78 5.19 516.78 36 511.59 36"/>
@@ -177,7 +177,7 @@
         <polygon points="852.15 36 852.15 5.2 821.35 5.2 821.35 0 857.34 0 857.34 36 852.15 36"/>
       </a>
 
-      <a href="#/cortometraje" data-cat="cortometraje" aria-label="Cortometraje">
+      <a href="#/foto-stills" data-cat="foto-stills" aria-label="Foto Stills">
         <rect class="nav-hit" x="852.15" y="0" width="275.6" height="90.39"/>
         <polygon points="852.15 90.39 852.15 54.39 857.34 54.39 857.34 85.2 888.15 85.2 888.15 90.39 852.15 90.39"/>
         <polygon points="852.15 36 852.15 0 888.15 0 888.15 5.19 857.34 5.19 857.34 36 852.15 36"/>
@@ -241,7 +241,6 @@
   ============================================================ -->
   <section class="gallery" id="gallery" tabindex="-1">
 
-    <p class="gallery-intro">Trabajo seleccionado</p>
 
     <div class="spatial-stage" id="spatialStage">
       <div class="spatial-canvas" id="spatialCanvas">
@@ -301,11 +300,6 @@
   ============================================================ -->
   <div class="visor" id="visor" role="dialog" aria-modal="true"
        aria-labelledby="visorTitulo" hidden>
-
-    <span class="visor-esquina tl" aria-hidden="true"><i></i></span>
-    <span class="visor-esquina tr" aria-hidden="true"><i></i></span>
-    <span class="visor-esquina bl" aria-hidden="true"><i></i></span>
-    <span class="visor-esquina br" aria-hidden="true"><i></i></span>
 
     <div class="visor-chrome" id="visorChrome">
       <header class="visor-cabecera">
@@ -438,6 +432,10 @@
   <script src="js/visor-carga.js"></script>
   <script src="js/visor-chrome.js"></script>
   <script src="js/visor-origen.js"></script>
+  <!-- Va ANTES de visor.js, que lo llama en cada evento de rueda. Sin esta
+       línea `window.VisorRueda` es undefined y rodar sobre el visor lanza un
+       TypeError, con la suite entera en verde. -->
+  <script src="js/visor-rueda.js"></script>
   <script src="js/visor-foco.js"></script>
   <script src="js/visor.js"></script>
   <script src="js/movil-gestos.js"></script>

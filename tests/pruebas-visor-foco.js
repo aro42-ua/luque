@@ -73,7 +73,8 @@ describeAsync('Visor — el envolvente de foco del diálogo', function () {
                  '../js/plataforma.js', '../js/ficha-dato.js',
                  '../js/visor-ficha.js', '../js/visor-video.js',
                  '../js/visor-carga.js', '../js/visor-chrome.js',
-                 '../js/visor-origen.js', '../js/visor-foco.js',
+                 '../js/visor-origen.js', '../js/visor-rueda.js',
+                 '../js/visor-foco.js',
                  '../js/visor.js'];
 
   function dobles() {

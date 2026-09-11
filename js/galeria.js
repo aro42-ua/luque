@@ -86,7 +86,16 @@ window.Galeria = (function () {
     categoria = nueva; window.GaleriaPaneo.congelar();
 
     var dentro = window.Datos.porCategoria(nueva);
-    var ranuras = window.Composicion.disponer(dentro.length, 'compacto');
+    /* Cada proyecto se lleva al lienzo filtrado la MISMA caja del ciclo que
+       tenía sin filtrar. Sin esto, el hueco n.º 0 del filtrado le daba la caja
+       n.º 0 a un proyecto que quizá era el n.º 3, y la foto cambiaba de tamaño
+       sólo por haber pulsado una categoría. Con la variante propia —y con la
+       celda ya igualada en `composicion.js`— el `r.w / anchoBase[p.id]` de
+       abajo da 1 clavado: filtrar recoloca, no redimensiona. */
+    var variantes = dentro.map(function (p) {
+      return window.Datos.PROYECTOS.indexOf(p);
+    });
+    var ranuras = window.Composicion.disponer(dentro.length, 'compacto', variantes);
     var tam = window.Composicion.tamano(dentro.length, 'compacto');
 
     conRecomposicion(function (canvas) {
@@ -147,6 +156,24 @@ window.Galeria = (function () {
     escenario.appendChild(aviso);
   }
 
+  /* Una categoría sin proyectos no se puede pulsar. Se marcaba como cualquier
+     otra y al pulsarla la galería se quedaba en blanco, que es exactamente lo
+     que le pasaba a quien entraba: hoy `contenido.json` sólo trae editorial y
+     videoclip, así que dos de las cuatro celdas del menú no llevaban a ningún
+     sitio. No se esconden —la barra es un SVG de cuatro celdas fijas y
+     quitar una dejaría un hueco—: se atenúan y dejan de responder.
+
+     Se calcula del contenido y no de una lista escrita a mano, así que el día
+     que entre un cortometraje la celda se enciende sola. */
+  function marcarVacias() {
+    document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
+      var vacia = window.Datos.porCategoria(a.dataset.cat).length === 0;
+      a.classList.toggle('vacia', vacia);
+      if (vacia) a.setAttribute('aria-disabled', 'true');
+      else a.removeAttribute('aria-disabled');
+    });
+  }
+
   function marcarNavbar(activa) {
     document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
       a.classList.toggle('activa', a.dataset.cat === activa);
@@ -179,9 +206,10 @@ window.Galeria = (function () {
      nativo se dispara ANTES que el `change` de `matchMedia` que quita
      `es-movil`. Al volver de móvil a escritorio, ese `resize` llega con
      `es-movil` todavía puesto, `.gallery` todavía en `display:none` y
-     `#spatialStage` a 0×0, así que ese `medir()` deja `minX = minY = 0` y el
-     lienzo en `translate3d(0,0,0)` — comprobado neutralizando esta función:
-     sin ella el paneo se queda clavado ahí. `remedir()` mide otra vez
+     `#spatialStage` a 0×0, así que ese `medir()` mide contra un escenario que
+     no existe y deja el lienzo en una posición de reposo que no es la que le
+     toca — comprobado neutralizando esta función: sin ella el paneo se queda
+     clavado ahí. `remedir()` mide otra vez
      DESPUÉS de que `Movil.init` ya haya quitado `es-movil`, deshaciendo esa
      medida equivocada.
 
@@ -213,6 +241,7 @@ window.Galeria = (function () {
     if (!stage || !canvas) return;
 
     window.GaleriaPaneo.init(stage, canvas);
+    marcarVacias();
 
     // El foco llega por clic, restauración o el tabulador (GaleriaTeclado);
     // en todos los casos basta centrar el lienzo, sin tocar el scroll.
@@ -227,6 +256,7 @@ window.Galeria = (function () {
     document.querySelectorAll('.navbar .nav-svg a[data-cat]').forEach(function (a) {
       a.addEventListener('click', function (e) {
         e.preventDefault();
+        if (a.classList.contains('vacia')) return;
         var cat = a.dataset.cat;
         if (categoria === cat) window.Router.ir('todos');
         else window.Router.ir('categoria', cat);
@@ -236,6 +266,13 @@ window.Galeria = (function () {
     window.Router.alCambiar(function (ruta) {
       // 'proyecto' se ignora: abrir un proyecto no dice nada del filtro.
       if (ruta.tipo === 'categoria') {
+        /* El clic ya no llega aquí con una categoría vacía, pero un enlace
+           escrito a mano —o guardado en favoritos antes de que se vaciara—
+           sí. Se manda a «todos» en vez de pintar el vacío. */
+        if (!window.Datos.porCategoria(ruta.valor).length) {
+          window.Router.ir('todos');
+          return;
+        }
         if (categoria !== ruta.valor) aplicarFiltro(ruta.valor);
       } else if (ruta.tipo === 'todos' && categoria !== null) {
         quitarFiltro();
@@ -255,6 +292,7 @@ window.Galeria = (function () {
     elementoDe: elementoDe,
     aplicarFiltro: aplicarFiltro,
     quitarFiltro: quitarFiltro,
+    marcarVacias: marcarVacias,
     categoriaActiva: categoriaActiva,
     congelar: congelar,
     descongelar: descongelar,
