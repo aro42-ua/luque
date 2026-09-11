@@ -123,6 +123,10 @@
 <!-- cambios.js es puro: sólo define window.Cambios. Compara el borrador con
      lo publicado y dice qué cambiaría. Ver pruebas-cambios.js. -->
 <script src="../panel/js/cambios.js"></script>
+<!-- pantalla-publicar.js no toca el DOM al cargarse: sólo define
+     window.PantallaPublicar. Sólo pinta —la red es de publicacion.js—, así que
+     se prueba entera sin doblar nada. Ver pruebas-pantalla-publicar.js. -->
+<script src="../panel/js/pantalla-publicar.js"></script>
 <script src="pruebas-arnes.js"></script>
 <script src="pruebas-arnes-dom.js"></script>
 <script src="pruebas-datos.js"></script>
@@ -165,6 +169,7 @@
 <script src="pruebas-proyecto.js"></script>
 <script src="pruebas-cambios.js"></script>
 <script src="pruebas-publicacion.js"></script>
+<script src="pruebas-pantalla-publicar.js"></script>
 <!-- pruebas-panel.js carga panel/js/panel.js entero dentro de un iframe, con
      cuatro dependencias delante (reglas-contenido, identificador, orden,
      lista): cinco scripts encadenados por conDocumento. Que UN script se

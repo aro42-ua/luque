@@ -888,7 +888,7 @@ window.PantallaPublicar = (function () {
 
 - [ ] **Paso 4: Comprueba que pasa**
 
-Arnés: las **diez** nuevas en verde.
+Arnés: las **once** nuevas en verde.
 
 - [ ] **Paso 5: Commit**
 
