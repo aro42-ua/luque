@@ -246,7 +246,11 @@ describe('MovilVisor — qué pinta cada parada del eje', function () {
     id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'foto',
     portadaUrl: 'portada-niebla.jpg',
     ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de arte' },
-    piezas: [{ url: 'pieza-1.jpg' }, { url: 'pieza-2.jpg' }]
+    /* Las dos primeras llevan `miniatura`, como las 65 del contenido real; la
+       tercera no, para fijar qué pasa cuando falta. */
+    piezas: [{ url: 'pieza-1.jpg', miniatura: 'mini-1.jpg' },
+             { url: 'pieza-2.jpg', miniatura: 'mini-2.jpg' },
+             { url: 'pieza-3.jpg' }]
   }];
 
   /* `Datos.porId` es a quien `pintar` le pide el proyecto entero, porque
@@ -270,13 +274,41 @@ describe('MovilVisor — qué pinta cada parada del eje', function () {
     }), 'portada-niebla.jpg');
   });
 
+  /* Las demás paradas NO arrancan con la portada, sino con SU miniatura: la
+     tira de abajo ya la tiene descargada, y es la misma foto —borrosa, pero la
+     que toca—. Hasta este arreglo el móvil pintaba la portada en todas las
+     paradas, así que mientras bajaba la pieza (de 4 a 12 segundos, medido con
+     la sonda en el iPhone de Ángel el 2026-09-11) se veía OTRA foto con el
+     rótulo «08/10». Es lo que el escritorio hace desde `VisorCarga.vistaPrevia`
+     y el móvil no había copiado, porque cuando se escribió no tenía tira. */
+  prueba('las demás paradas arrancan con su propia miniatura, no con la portada', function () {
+    igual(conEscena(MV_CON_FOTOS, function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
+      });
+      return escena.querySelector('img').getAttribute('src');
+    }), 'mini-2.jpg');
+  });
+
+  /* Sin miniatura no hay previa que valga: se pide la pieza entera y punto,
+     igual que hace el escritorio. Pintar la portada aquí sería volver a
+     enseñar otra foto. */
+  prueba('una pieza sin miniatura arranca con la pieza entera, no con la portada', function () {
+    igual(conEscena(MV_CON_FOTOS, function (escena) {
+      conLado('movil', function () {
+        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 3 });
+      });
+      return escena.querySelector('img').getAttribute('src');
+    }), 'pieza-3.jpg');
+  });
+
   prueba('la foto lleva texto alternativo con el trabajo y la pieza', function () {
     igual(conEscena(MV_CON_FOTOS, function (escena) {
       conLado('movil', function () {
         MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
       });
       return escena.querySelector('img').alt;
-    }), 'Niebla, pieza 2 de 2');
+    }), 'Niebla, pieza 2 de 3');
   });
 
   /* La ficha es el FONDO del eje vertical, no un panel aparte, así que se pinta

@@ -196,8 +196,9 @@ window.MovilVisor = (function () {
     window.MovilTira.pintar(p, aqui.pieza);
   }
 
-  /* La foto, con carga progresiva. Se pinta primero la PORTADA —que la rejilla
-     ya tiene descargada, porque venías de verla— y se cambia a la pieza entera
+  /* La foto, con carga progresiva. Se pinta primero una PREVIA que ya está
+     descargada —la portada en la primera parada, la miniatura propia en las
+     demás; lo decide `vistaPrevia`, más abajo— y se cambia a la pieza entera
      cuando llega. Medido el 2026-09-04 sobre el visor de escritorio en móvil:
      pedir la pieza de primeras eran 1371 ms hasta ver algo, contra 4 ms con la
      imagen ya en caché. Sin esto, cada deslizamiento en 4G es un segundo de
@@ -217,14 +218,36 @@ window.MovilVisor = (function () {
      de ancho con el visor abierto. Quince líneas repetidas salen más baratas
      que un fallo que sólo aparece girando una tableta. */
   function fotoDe(p, numero) {
-    var plena = p.piezas[numero - 1].url;
+    var pieza = p.piezas[numero - 1];
+    var plena = pieza.url;
+    var previa = vistaPrevia(p, numero);
     var img = document.createElement('img');
     img.className = 'mvisor-foto';
-    img.src = p.portadaUrl || plena;
+    img.src = previa || plena;
     img.alt = p.titulo + ', pieza ' + numero + ' de ' + p.piezas.length;
     img.decoding = 'async';
-    if (p.portadaUrl && p.portadaUrl !== plena) relevar(img, plena);
+    if (previa && previa !== plena) relevar(img, plena);
     return img;
+  }
+
+  /* Qué se pinta mientras baja la pieza entera. Lo mismo que decide
+     `VisorCarga.vistaPrevia` (js/visor-carga.js) para el escritorio, y por lo
+     mismo: la primera parada arranca con la PORTADA, que la rejilla ya tiene;
+     las demás con SU miniatura, que la tira de abajo ya pidió. Sin miniatura
+     no hay previa y se pide la pieza entera directamente.
+
+     Hasta el 2026-09-11 aquí se pintaba la portada en TODAS las paradas —el
+     visor móvil se escribió sin tira, y la portada era la única imagen ya
+     descargada—. Con la tira eso pasó a ser un error visible: la portada es
+     OTRA foto, y mientras la pieza bajaba (de 4 a 12 segundos, medido con una
+     sonda en el iPhone de Ángel) se veía con el rótulo «08/10» encima. Se leía
+     como «al deslizar siempre sale la misma imagen». La miniatura propia es la
+     foto que toca, borrosa, y comparte proporción con la pieza por
+     construcción, así que el relevo tampoco da salto. */
+  function vistaPrevia(p, numero) {
+    var pieza = p.piezas[numero - 1];
+    var propia = pieza && pieza.miniatura;
+    return (numero === 1 ? (p.portadaUrl || propia) : propia) || null;
   }
 
   /* Cambia a la foto entera cuando está descargada y decodificada, así que el
