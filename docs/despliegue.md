@@ -316,7 +316,7 @@ El árbol que exporta `git archive` es exactamente lo versionado, así que
 nada, `https://lidialuque.com/docs/estado-conocido.md`
 devolvería 200 a cualquiera — y ese archivo dice en texto plano que las
 tipografías son versiones Trial sin licencia para uso público, a pocos clics
-de los propios `.otf` descargables. `/.claude/launch.json` filtra además rutas
+de los propios archivos de fuente. `/.claude/launch.json` filtra además rutas
 locales del tipo `C:/Users/...`. `robots.txt` y `X-Robots-Tag` no sirven aquí:
 impiden **indexar**, no **acceder**.
 
@@ -710,22 +710,21 @@ de este documento), así que estos puntos hay que volver a comprobarlos contra
 - Los 21 recursos locales que referencian `index.html` y `css/luque.css`
   devuelven los 21 un 200: nada roto por el despliegue.
 
-## La deuda de las tipografías
+## La deuda de las tipografías (saldada el 2026-09-12)
 
-Los tres archivos son `ABCFavorit-Regular-Trial.otf`,
-`ABCFavorit-Bold-Trial.otf` y `ABCFavorit-BoldItalic-Trial.otf`. Son versiones
-**Trial**: se distribuyen para evaluación, y su licencia habitualmente **no
-cubre un sitio público**, menos aún el de un estudio comercial. Publicarlas
-además las deja descargables desde su URL directa — cualquiera que abra las
-herramientas de red del navegador puede bajarse el archivo.
+Hasta el 2026-09-12 el sitio publicaba tres versiones **Trial** de ABC Favorit
+(`ABCFavorit-Regular-Trial.otf`, `-Bold-` y `-BoldItalic-`), que se
+distribuyen para evaluación y no cubren un sitio público. Se sustituyeron por
+**Space Grotesk**, bajo SIL Open Font License 1.1: un solo archivo variable,
+`SpaceGrotesk-Variable.woff2`, con la licencia al lado en
+`SpaceGrotesk-OFL.txt`. Los `.otf` de Favorit ya no están en el repositorio,
+así que el siguiente despliegue deja de servirlos. En producción hay que
+comprobar que `/SpaceGrotesk-Variable.woff2` responde 200 con
+`content-type: font/woff2` y que las tres URL viejas de los `.otf` dan 404.
 
-Esto no lo resuelve un desplegar: hay que comprar la licencia web en Dinamo o
-sustituir la tipografía, y hacerlo **antes de anunciar la web**. Mientras no
-esté resuelto, el sitio se despliega cerrado a los buscadores
-(`robots.txt` y la cabecera `X-Robots-Tag: noindex`). Desde la Tarea 7 del
-bloque 3b el sitio sí tiene dominio propio (`lidialuque.com`) — el cierre a
-buscadores no depende de eso, es deuda conocida aparte, no un descuido, y
-queda anotada también en `docs/estado-conocido.md`.
+El cierre a buscadores (`robots.txt` y `X-Robots-Tag: noindex`) sigue puesto,
+pero ya no lo justifica la tipografía. Abrirlo es una decisión aparte, anotada
+en `docs/estado-conocido.md`.
 
 ## Despliegue del bloque 4f sin fusionar (2026-09-05)
 
