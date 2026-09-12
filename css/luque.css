@@ -472,7 +472,7 @@
 
   .navbar-marca{
     font-weight:700;
-    font-size:0.95rem;
+    font-size:1.1rem;
     letter-spacing:-0.05em;
     justify-self:start;
     cursor:none;
@@ -482,14 +482,20 @@
 
   .navbar-categorias{
     display:flex;
-    gap:clamp(16px, 2.2vw, 30px);
+    gap:clamp(20px, 2.6vw, 36px);
   }
   /* La activa va en negrita y subrayada con una regla de 2 px; el hover la
      insinúa. Es subrayado de verdad y no un borde, para que siga a la
      palabra y no a la caja: con el kerning negativo la caja sobra por los
      lados. */
   .navbar-categorias a{
-    font-size:1rem;
+    font-size:1.2rem;
+    /* El área de clic era la caja del texto y nada más: con el cursor propio
+       (cursor:none) acertar una línea de 16 px era un pulso. El relleno la
+       engorda y el margen negativo lo compensa, así que la barra se ve
+       igual de holgada pero se pincha en una franja el doble de alta. */
+    padding:0.5em 0.35em;
+    margin:-0.5em -0.35em;
     font-weight:400;
     letter-spacing:var(--kerning);
     white-space:nowrap;
@@ -508,7 +514,7 @@
 
   .navbar-rol{
     justify-self:end;
-    font-size:0.72rem;
+    font-size:0.8rem;
     font-weight:700;
     letter-spacing:0.15em;
     text-transform:uppercase;
