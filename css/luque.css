@@ -835,47 +835,33 @@
   .contacto-volver:focus-visible{ opacity:1; text-decoration-color:var(--black); }
   .contacto-volver:focus-visible{ outline:none; }
 
-  /* En escritorio no existe: la barra está delante y ya cierra. Es el mismo
-     criterio que `.visor-ficha-cerrar`. Se enciende en móvil, más abajo. */
-  .contacto-cerrar{ display:none; }
-
-  /* El enlace del pie de la portada móvil. En escritorio la portada entera
-     va con display:none, pero el enlace se apaga también por sí mismo, para
-     que no cuente como segundo enlace a la hoja fuera del móvil. */
-  .hoja-contacto{ display:none; }
-
-  body.es-movil .hoja-contacto{
+  /* EN EL MÓVIL NO ES UNA HOJA: es el final del recorrido. `Contacto.colocar`
+     (js/contacto.js) mueve la sección dentro de `.hoja`, detrás de la
+     rejilla, y aquí se le quita todo lo de capa: deja de ser fija, se ve
+     siempre y no responde a la ruta. Se lee después del último trabajo,
+     separada por la misma regla fina que sus filas. Los 72 de abajo son los
+     que llevaba la rejilla: el hueco para el indicador de inicio de iOS pasa
+     a llevarlo el contacto, que ahora es lo último. */
+  body.es-movil .hoja-rejilla{ padding-bottom:28px; }
+  body.es-movil .hoja .contacto{
+    position:static;
     display:block;
+    visibility:visible;
+    opacity:1;
+    transition:none;
+    z-index:auto;
     margin:0 24px;
-    /* Los 72 de abajo son los de la rejilla: el hueco para el indicador de
-       inicio de iOS pasa a llevarlo el enlace, que ahora es lo último. */
-    padding:22px 0 72px;
+    padding:28px 0 72px;
     border-top:1px solid rgba(10,10,10,0.25);
-    font-size:1.2rem; font-weight:700;
-    letter-spacing:-0.05em;
-    color:var(--black);
   }
-  body.es-movil .hoja-rejilla{ padding-bottom:22px; }
-  body.es-movil .hoja.con-hero .hoja-contacto{ visibility:hidden; }
-
-  body.es-movil .contacto{
-    align-items:flex-start;
-    padding:84px 24px 72px;
-    overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-  }
-  body.es-movil .contacto-correo{ margin-left:-12px; padding:10px 12px; }
-  body.es-movil .contacto-cerrar{
-    display:block;
-    position:absolute; top:18px; right:18px;
-    z-index:1;
-    width:44px; height:44px;
-    border:none; background:none; padding:0;
-    color:var(--black);
-    cursor:pointer;
-  }
-  body.es-movil .contacto-cerrar svg{ width:100%; height:100%; display:block; fill:currentColor; }
-  body.es-movil .contacto-cerrar:focus-visible{ outline:2px solid var(--black); outline-offset:2px; }
+  /* Con la puerta delante, la rejilla va en visibility:hidden; el contacto
+     también, o se colaría por debajo en el tabulador. */
+  body.es-movil .hoja.con-hero .contacto{ visibility:hidden; }
+  body.es-movil .contacto-titulo{ font-size:clamp(2.4rem, 13vw, 4rem); }
+  body.es-movil .contacto-correo{ margin-left:-12px; padding:10px 12px; font-size:clamp(1.15rem, 5.4vw, 1.6rem); }
+  body.es-movil .contacto-datos{ max-width:none; }
+  /* Sin capa no hay nada a lo que volver. */
+  body.es-movil .contacto-volver{ display:none; }
 
   /* ============================================================
      RESPONSIVE
