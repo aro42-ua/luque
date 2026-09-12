@@ -104,6 +104,68 @@ describe('Contacto — la hoja de contacto', function () {
     });
   });
 
+  /* El lado móvil: la sección se muda al pie de la portada y deja de ser
+     una capa. `colocar` la mueve y la ruta ya no abre nada. */
+  var MARCADO_MOVIL =
+    '<div>' +
+    '<a class="navbar-contacto" href="#/contacto">Contacto</a>' +
+    '<section id="hojaPrueba"><ol></ol></section>' +
+    '<section id="contactoPrueba" aria-hidden="true"><h2 tabindex="-1">¿Hablamos?</h2></section>' +
+    '</div>';
+
+  function conLados(fn) {
+    return ArnesDom.conElemento(MARCADO_MOVIL, function (raiz) {
+      Contacto.preparar(raiz.querySelector('#contactoPrueba'),
+                        { hoja: raiz.querySelector('#hojaPrueba') });
+      try { return fn(raiz); }
+      finally {
+        Contacto.colocar('escritorio');
+        Contacto.aplicar(TODOS);
+        document.body.classList.remove('contacto-abierto');
+      }
+    });
+  }
+
+  prueba('en el móvil la sección se cuelga al final de la portada', function () {
+    conLados(function (raiz) {
+      Contacto.colocar('movil');
+      var hoja = raiz.querySelector('#hojaPrueba');
+      igual(hoja.lastElementChild.id, 'contactoPrueba');
+      igual(hoja.querySelector('#contactoPrueba').getAttribute('aria-hidden'), 'false');
+    });
+  });
+
+  prueba('al volver a escritorio la sección vuelve a donde nació, escondida', function () {
+    conLados(function (raiz) {
+      Contacto.colocar('movil');
+      Contacto.colocar('escritorio');
+      var s = raiz.querySelector('#contactoPrueba');
+      igual(s.parentNode, raiz);
+      igual(s.previousElementSibling.id, 'hojaPrueba');
+      igual(s.getAttribute('aria-hidden'), 'true');
+    });
+  });
+
+  prueba('en el móvil la ruta de contacto no abre ninguna capa', function () {
+    conLados(function () {
+      Contacto.colocar('movil');
+      Contacto.aplicar(CONTACTO);
+      igual(Contacto.abierto(), false);
+      igual(document.body.classList.contains('contacto-abierto'), false);
+    });
+  });
+
+  prueba('cruzar a móvil con la hoja abierta la desmonta', function () {
+    conLados(function (raiz) {
+      Contacto.aplicar(CONTACTO);
+      igual(Contacto.abierto(), true);
+      Contacto.colocar('movil');
+      igual(Contacto.abierto(), false);
+      igual(document.body.classList.contains('contacto-abierto'), false);
+      igual(raiz.querySelector('.navbar-contacto').classList.contains('activa'), false);
+    });
+  });
+
   prueba('sin preparar no hace nada ni lanza', function () {
     Contacto.preparar(null);
     Contacto.aplicar(CONTACTO);

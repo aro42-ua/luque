@@ -52,13 +52,15 @@ capa amarilla delante de la galería (`#contacto`, `js/contacto.js`), con la voz
 de la ficha del visor: rótulo pequeño en mayúsculas, titular grande, el correo
 con las cuatro esquinas del botón ENTRAR y filas con regla fina. Se llega desde
 la propia barra —«Contacto», solo en la esquina derecha, con el estilo exacto de
-una categoría— y en el móvil desde el pie de la rejilla, después del último
-trabajo; no hay botón flotante ni nada que se interponga en la galería. Tres
+una categoría— y en el móvil no se llega: la MISMA sección se muda al pie de la
+rejilla (`Contacto.colocar`, llamado desde las dos ramas de `Movil.init`) y es
+el final del recorrido, sin enlace ni página aparte —decisión de Ángel, porque
+la portada es scroll—; no hay botón flotante ni nada que se interponga en la
+galería. Tres
 decisiones que conviene no deshacer sin leer: (1) la hoja se apila ENTRE la
 galería y la barra (z-index 400), así que la barra sigue mandando: «Contacto»
 alterna, la marca y las categorías cierran, y por eso en escritorio no hay
-aspa ni foco atrapado; el aspa sólo existe en móvil, como
-`.visor-ficha-cerrar`. (2) Cerrar vuelve a la categoría activa, no a la
+aspa ni foco atrapado; en el móvil no hay capa que cerrar. (2) Cerrar vuelve a la categoría activa, no a la
 portada —la misma regla que `cerrar` en `js/visor.js`—, y por eso `galeria.js`
 y `movil-hoja.js` ignoran la ruta `contacto` igual que ignoran `proyecto`, y
 el Escape de la galería cede cuando `body.contacto-abierto`. (3) Mientras
