@@ -810,3 +810,39 @@ advertencia en mayúsculas de `_redirects` no bastó.
 
 Sigue **cerrada a los buscadores**, y ahora por un solo motivo: las tipografías
 siguen siendo Trial. El del contenido de relleno dejó de valer.
+
+## La hoja de contacto, en el escaparate (2026-09-12)
+
+**Desplegado el commit `29dfeb1` de `main`** (fusión del PR #26), versión
+`e2c03b3a-954d-4237-a67b-f33967f5c18d`: 16 archivos subidos nuevos y 174 ya en
+Cloudflare, sobre un export de 192 archivos con `panel/index.html` dentro.
+Lleva el PR #25 (la barra crece: categorías a 1,2 rem con área de clic de
+42 px) y el PR #26 (la hoja de contacto, `#/contacto`, `js/contacto.js`;
+«Contacto» solo en la esquina derecha de la barra, con el rol «Dirección de
+fotografía» retirado de la barra a petición de Ángel; en el móvil el enlace va
+al pie de la rejilla).
+
+Desplegado desde Git Bash con la tubería `git archive origin/main | tar -x`,
+que ahí sí es binaria; el directorio temporal, en `/c/Users/.../Temp/`.
+
+Comprobado después contra `https://lidialuque.com` con `curl -A Mozilla/5.0` y
+una query de cache-bust —no con la pestaña del navegador, que guarda `/css` y
+`/js` una hora—:
+
+- **`/`**: el `index.html` vivo lleva `.navbar-contacto` y ya no lleva
+  `.navbar-rol`.
+- **`/js/contacto.js`**: `200`, 6.397 bytes. **`/css/luque.css`**: incluye las
+  reglas de `.contacto`.
+- **`/contenido.json`**: sigue en la versión 7 con los ocho proyectos; el
+  despliegue no lo toca.
+- **Las rutas cerradas**: `/docs/*`, `/.claude/*`, `/worker/*` y
+  `/herramientas/*` dan 302.
+
+**Pendiente, y público desde este despliegue:** el correo, el Instagram y el
+Vimeo del marcado de la hoja (`hola@lidialuque.com`, `@lidialuque`,
+`vimeo.com/lidialuque`) son suposiciones sobre el dominio, no datos
+confirmados con Lidia. Se cambian en `index.html`, y sólo ahí. La hoja sobre
+fotos reales y en un teléfono sigue sin verse: es de la lista manual de
+`docs/comprobaciones-en-produccion.md`.
+
+Sigue **cerrada a los buscadores** por las tipografías Trial.
