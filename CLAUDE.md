@@ -59,6 +59,15 @@ publicación vacía la web — ha pasado dos veces. Se siembra con:
 wrangler r2 object put luque-contenido/borrador.json --file contenido.json --content-type application/json --remote
 ```
 
+**El logotipo es siempre el SVG original, nunca la palabra escrita.** La marca
+LUQUE! se pone con `logo-luque.svg` (o `fin-de-carga.svg`, la versión con
+esquinas del preloader). No se escribe "LUQUE!" a mano en la tipografía en
+ningún sitio: se parece al logo, pero no es el logo. Donde el contenedor se
+mezcle por diferencia —el navbar pinta en amarillo con
+`mix-blend-mode:difference`— el SVG va en línea con `fill:currentColor`,
+porque un `<img>` con el relleno negro del archivo desaparece. El `aria-label`
+sigue diciendo "LUQUE!" para los lectores de pantalla.
+
 ## Cómo está hecho el código
 
 Módulos IIFE que cuelgan de `window` (`window.Galeria`, `window.VisorEstado`…),

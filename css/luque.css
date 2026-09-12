@@ -470,12 +470,22 @@
      desplazamiento del navbar siguen siendo los de siempre. */
   body:not(.galeria-activa) .navbar{ visibility:hidden; }
 
+  /* El logotipo es el SVG original en línea (ver index.html). Se centra en
+     vertical en vez de ir a la línea base de las categorías: un SVG no tiene
+     línea base, y la cola de la Q y el punto de la ! bajan por debajo de
+     la de las letras. */
   .navbar-marca{
-    font-weight:700;
-    font-size:1.1rem;
-    letter-spacing:-0.05em;
     justify-self:start;
+    align-self:center;
+    display:block;
+    line-height:0;
     cursor:none;
+  }
+  .navbar-logo{
+    display:block;
+    height:1.15rem;
+    width:auto;
+    fill:currentColor;   /* el amarillo de la barra, que la mezcla invierte */
   }
   .navbar-marca:hover,
   .navbar-marca:focus-visible{ opacity:0.5; }
@@ -705,6 +715,17 @@
     letter-spacing:0.12em;
     opacity:0.45;
     pointer-events:none;
+    display:flex;
+    align-items:center;
+    gap:0.45em;
+  }
+  /* El logotipo original, a la altura de las mayúsculas del texto que le
+     sigue y con su mismo negro. */
+  .pie-logo{
+    display:block;
+    height:0.78em;
+    width:auto;
+    fill:currentColor;
   }
   body:not(.galeria-activa) footer{ opacity:0; }
 
