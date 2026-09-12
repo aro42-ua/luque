@@ -857,3 +857,12 @@ Instagram y Vimeo salieron por no estar confirmados. Comprobado contra
 `https://lidialuque.com` con cache-bust: el `index.html` vivo lleva los dos
 datos nuevos, ninguno de los supuestos, y `/panel` y `/docs/*` siguen dando
 302. Con esto, lo pendiente de la entrada anterior queda cerrado.
+
+### El Instagram en la hoja (2026-09-12, tercero)
+
+**Desplegado el commit `6b268c8` de `main`** (fusión del PR #30), versión
+`624695ac-0fbd-4835-9a92-795948257614`: 3 archivos nuevos, 187 ya subidos.
+La hoja de contacto añade la fila de Instagram, `@luque.rea`, que dio Ángel.
+Comprobado contra `https://lidialuque.com` con cache-bust: el `index.html`
+vivo lleva el enlace a `instagram.com/luque.rea` junto al correo y el
+teléfono, y `/panel` y `/docs/*` siguen dando 302.
