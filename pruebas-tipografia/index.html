@@ -143,14 +143,17 @@
   // `variable:true` → un archivo cubre el rango de pesos.
   const FUENTES = [
     {
-      id:'favorit', familia:'ABC Favorit', etiqueta:'ABC Favorit (actual, Trial)',
-      nota:'Dinamo · 90 €/estilo web (≤3 personas)',
-      caras:[]   // ya la declara css/luque.css dentro del iframe
+      id:'favorit', familia:'ABC Favorit', etiqueta:'ABC Favorit (anterior, Trial)',
+      nota:'Dinamo · 90 €/estilo web (≤3 personas) · los .otf ya no están en el repo',
+      caras:[
+        {archivo:'../../ABCFavorit-Regular-Trial.otf', peso:'400', estilo:'normal'},
+        {archivo:'../../ABCFavorit-Bold-Trial.otf', peso:'700', estilo:'normal'}
+      ]
     },
     {
-      id:'space', familia:'Space Grotesk', etiqueta:'Space Grotesk',
+      id:'space', familia:'Space Grotesk', etiqueta:'Space Grotesk (actual)',
       nota:'Google Fonts · gratis (OFL) · sin cursiva',
-      caras:[{archivo:'SpaceGrotesk.ttf', peso:'300 700', estilo:'normal'}]
+      caras:[{archivo:'../../SpaceGrotesk-Variable.woff2', peso:'300 700', estilo:'normal'}]
     },
     {
       id:'instrument', familia:'Instrument Sans', etiqueta:'Instrument Sans',
@@ -188,7 +191,7 @@
         }catch(e){ /* sigue probando */ }
       }
     }
-    f.disponible = f.id === 'favorit' || f.caras.some(c => c.src);
+    f.disponible = f.caras.some(c => c.src);
     return f;
   }
 
@@ -202,7 +205,7 @@
   // ---- iframe: inyecta las fuentes y cambia --ff ----
   const iframe = document.getElementById('web');
   const etiqueta = document.getElementById('etiqueta');
-  let actual = 'favorit';
+  let actual = 'space';
 
   function aplicarEnIframe(){
     const doc = iframe.contentDocument;
@@ -214,9 +217,7 @@
       doc.head.appendChild(st);
     }
     const f = FUENTES.find(x => x.id === actual);
-    st.textContent = f.id === 'favorit'
-      ? ''
-      : cssFontFaces(f) + `\n:root{--ff:'${f.familia}', Helvetica, Arial, sans-serif !important;}`;
+    st.textContent = cssFontFaces(f) + `\n:root{--ff:'${f.familia}', Helvetica, Arial, sans-serif !important;}`;
     etiqueta.textContent = f.etiqueta;
   }
   iframe.addEventListener('load', aplicarEnIframe);
@@ -243,11 +244,7 @@
   document.head.appendChild(hoja);
 
   function pintarMuestras(){
-    hoja.textContent = FUENTES.map(cssFontFaces).join('\n') + `
-      @font-face{font-family:'ABC Favorit';src:url('../ABCFavorit-Regular-Trial.otf') format('opentype');font-weight:400;font-style:normal;}
-      @font-face{font-family:'ABC Favorit';src:url('../ABCFavorit-Bold-Trial.otf') format('opentype');font-weight:700;font-style:normal;}
-      @font-face{font-family:'ABC Favorit';src:url('../ABCFavorit-BoldItalic-Trial.otf') format('opentype');font-weight:700;font-style:italic;}
-    `;
+    hoja.textContent = FUENTES.map(cssFontFaces).join('\n');
     const cont = document.getElementById('columnas');
     cont.innerHTML = FUENTES.map(f => `
       <div class="col ${f.disponible?'':'no-disponible'}" style="font-family:'${f.familia}', Helvetica, Arial, sans-serif">

@@ -161,16 +161,20 @@ pueda ponerse delante (Access sólo cubre nombres de host de una zona propia,
 no `workers.dev`). El razonamiento completo está en `docs/despliegue.md`.
 
 Sigue **cerrada a los buscadores** por `robots.txt` y por la cabecera
-`X-Robots-Tag: noindex`. De los dos motivos que la mantenían cerrada, el del
-contenido de relleno ya no vale: las fotos son las de Lidia. Queda el otro, y
-basta por sí solo: **las tipografías siguen siendo Trial**.
+`X-Robots-Tag: noindex`. Los dos motivos que la mantenían cerrada ya no
+valen: las fotos son las de Lidia, y desde el 2026-09-12 la tipografía tiene
+licencia. Abrirla es una decisión de Ángel y de Lidia, no algo que se haga
+de paso.
 
-**Las tres tipografías son versiones Trial y su licencia probablemente no
-cubre el uso público.** `ABCFavorit-Regular-Trial.otf`,
-`ABCFavorit-Bold-Trial.otf` y `ABCFavorit-BoldItalic-Trial.otf` se distribuyen
-para evaluación, no para un sitio público y menos aún el de un estudio
-comercial. Hay que comprar la licencia web en Dinamo o sustituirlas antes de
-anunciar la web. Es deuda conocida, no un descuido.
+**La tipografía es Space Grotesk, bajo SIL Open Font License 1.1.** Hasta el
+2026-09-12 el sitio usaba tres versiones *Trial* de ABC Favorit (Dinamo),
+que se distribuyen para evaluación y no cubren un sitio público. Se
+sustituyeron por `SpaceGrotesk-Variable.woff2`, un archivo variable (peso
+300 a 700, sin cursiva; el sitio no la usa) con su licencia al lado en
+`SpaceGrotesk-OFL.txt`, y los `.otf` de Favorit se borraron del repositorio.
+La OFL permite el uso web comercial y exige sólo que la licencia acompañe
+al archivo. Sigue siendo posible comprar Favorit en Dinamo (90 € por estilo
+web para un estudio de hasta tres personas) si algún día se quiere volver.
 
 ## Una cosa que conviene saber
 

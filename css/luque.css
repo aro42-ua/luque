@@ -1,26 +1,17 @@
   /* ============================================================
-     TIPOGRAFÍA PERSONALIZADA — ABC Favorit (Trial)
-     Los 3 archivos deben estar en la misma carpeta que este HTML.
+     TIPOGRAFÍA — Space Grotesk (SIL Open Font License 1.1)
+     Sustituye a ABC Favorit desde el 2026-09-12: las Favorit eran
+     versiones Trial sin licencia para un sitio público. Un solo
+     archivo variable (eje wght 300–700) en la raíz, junto a su
+     licencia (SpaceGrotesk-OFL.txt); la ruta se resuelve contra
+     esta hoja, no contra el HTML. No tiene cursiva y el sitio no
+     la usa. Sí tiene el peso 500, que Favorit no traía.
   ============================================================ */
   @font-face{
-    font-family:'ABC Favorit';
-    src:url('../ABCFavorit-Regular-Trial.otf') format('opentype');
-    font-weight:400;
+    font-family:'Space Grotesk';
+    src:url('../SpaceGrotesk-Variable.woff2') format('woff2');
+    font-weight:300 700;
     font-style:normal;
-    font-display:swap;
-  }
-  @font-face{
-    font-family:'ABC Favorit';
-    src:url('../ABCFavorit-Bold-Trial.otf') format('opentype');
-    font-weight:700;
-    font-style:normal;
-    font-display:swap;
-  }
-  @font-face{
-    font-family:'ABC Favorit';
-    src:url('../ABCFavorit-BoldItalic-Trial.otf') format('opentype');
-    font-weight:700;
-    font-style:italic;
     font-display:swap;
   }
 
@@ -33,7 +24,7 @@
     --grey-dark:#1c1c1c;
     --grey-mid:#3a3a3a;
     --pill-bg-yellow: rgba(255,255,0,0.96);
-    --ff: 'ABC Favorit', 'Montserrat', Helvetica, Arial, sans-serif;
+    --ff: 'Space Grotesk', Helvetica, Arial, sans-serif;
 
     /* NOTA SOBRE EL KERNING:
        -100px de letter-spacing literal cerraría cualquier texto
@@ -431,7 +422,7 @@
      NAVBAR — la línea de créditos
      Sin píldora, sin sombra, sin desenfoque: sobre un fondo plano
      amarillo no había nada que desenfocar, y la píldora era el único
-     elemento «de app» del sitio. Quedan las palabras, en la Favorit
+     elemento «de app» del sitio. Quedan las palabras, en la tipografía
      del cuerpo con el kerning cerrado de la casa, sobre una línea a
      22 px del borde: el mismo margen que las esquinas del hero.
      Tres zonas en rejilla 1fr/auto/1fr para que las categorías queden

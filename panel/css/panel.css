@@ -8,28 +8,14 @@
 ============================================================ */
 
 /* ============================================================
-   TIPOGRAFÍA — mismos archivos que la web pública, un nivel más
-   abajo (panel/css/ en vez de css/).
+   TIPOGRAFÍA — el mismo archivo que la web pública, un nivel más
+   abajo (panel/css/ en vez de css/). Ver css/luque.css.
 ============================================================ */
 @font-face{
-  font-family:'ABC Favorit';
-  src:url('../../ABCFavorit-Regular-Trial.otf') format('opentype');
-  font-weight:400;
+  font-family:'Space Grotesk';
+  src:url('../../SpaceGrotesk-Variable.woff2') format('woff2');
+  font-weight:300 700;
   font-style:normal;
-  font-display:swap;
-}
-@font-face{
-  font-family:'ABC Favorit';
-  src:url('../../ABCFavorit-Bold-Trial.otf') format('opentype');
-  font-weight:700;
-  font-style:normal;
-  font-display:swap;
-}
-@font-face{
-  font-family:'ABC Favorit';
-  src:url('../../ABCFavorit-BoldItalic-Trial.otf') format('opentype');
-  font-weight:700;
-  font-style:italic;
   font-display:swap;
 }
 
@@ -41,7 +27,7 @@
   --black:#0a0a0a;
   --grey-dark:#1c1c1c;
   --grey-mid:#3a3a3a;
-  --ff: 'ABC Favorit', 'Montserrat', Helvetica, Arial, sans-serif;
+  --ff: 'Space Grotesk', Helvetica, Arial, sans-serif;
   --kerning: -0.03em;
 }
 
