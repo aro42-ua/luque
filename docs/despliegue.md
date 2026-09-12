@@ -866,6 +866,49 @@ Comprobado contra `https://lidialuque.com` con cache-bust: el `index.html`
 vivo lleva el enlace a `instagram.com/luque.rea` junto al correo y el
 teléfono, y `/panel` y `/docs/*` siguen dando 302.
 
+### Space Grotesk y el logotipo en SVG (2026-09-12, quinto)
+
+**Desplegado el commit `d8eb25c` de `main`**, versión
+`47ea59c9-bd2a-4f32-bab7-fb7cda15cbc4`, 194 archivos. Entran los PR #34 y #35
+—Space Grotesk en vez de las tres ABC Favorit Trial, y el logotipo del navbar
+y del pie como SVG original en línea— y tres correcciones que salieron al
+preparar el despliegue.
+
+Comprobado contra `https://lidialuque.com` con cache-bust:
+`/SpaceGrotesk-Variable.woff2` da 200 con `font/woff2`, 49.252 bytes y
+`max-age=31536000, immutable`; las tres URL de los `.otf` de Favorit dan 404;
+`/SpaceGrotesk-OFL.txt` da 200, que es **obligatorio**, no un descuido; la
+hoja viva declara `Space Grotesk`; el `index.html` vivo lleva `navbar-logo` y
+`pie-logo`; la cabecera `x-robots-tag: noindex` sigue puesta; las ocho
+portadas cargan; `/panel` sigue dando 302 a Access. En el navegador, con la
+hoja forzada, el logo sale amarillo en la barra (18×61) y negro en el pie
+(8×27), y la consola está limpia.
+
+**Lo que hubo que corregir sobre la marcha, y por qué importa:**
+
+1. **`pruebas-tipografia/` habría contestado 200.** Es utillaje de diseño. Se
+   cerró con 302 en `_redirects`, como `docs/`, `worker/` y `herramientas/`.
+   Es la tercera vez que un directorio de primer nivel llega hasta aquí: el
+   `_redirects` se mira al añadirlo, no al desplegar.
+2. **La tipografía nueva perdió la caché de un año.** La regla era `/*.otf`, y
+   el `.woff2` cayó en el `/*` general —`max-age=0, must-revalidate`—, o sea
+   una petición condicional por visita. Hicieron falta dos despliegues:
+   `177cf67` lo arregló con `/*.woff2`. **Al cambiar la extensión de un
+   recurso hay que mirar `_headers`.**
+3. **`CLAUDE.md`, `handoff.md` y `.gitignore` contestaban 200** desde mucho
+   antes, y se cerraron con 302 a petición de Ángel. `_redirects` cubría los
+   directorios pero nunca los archivos sueltos de la raíz.
+
+**La suite servida desde producción no da 699 en verde, y no es un fallo del
+despliegue.** `/tests/test.html` redirige con 307 a `/tests/test` (Cloudflare
+Assets quita la extensión) y la página carga bien, pero los 16
+`<script src="../panel/js/*.js">` que el arnés necesita están **detrás de
+Access**: contestan 302 y el navegador no los ejecuta. Salen 471 en verde y
+161 en rojo, y el propio arnés lo dice —«El arnés no pudo cargar
+`../panel/js/identificador.js`»—. Las 161 son todas del panel. Para ver la
+suite entera en verde hay que abrirla en local, o con una sesión de Access
+abierta en el navegador. Conviene no volver a diagnosticar esto desde cero.
+
 ### El contacto al pie de la portada móvil (2026-09-12, cuarto)
 
 **Desplegado el commit `da6b4a5` de `main`** (fusión del PR #32), versión
