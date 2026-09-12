@@ -866,3 +866,16 @@ La hoja de contacto añade la fila de Instagram, `@luque.rea`, que dio Ángel.
 Comprobado contra `https://lidialuque.com` con cache-bust: el `index.html`
 vivo lleva el enlace a `instagram.com/luque.rea` junto al correo y el
 teléfono, y `/panel` y `/docs/*` siguen dando 302.
+
+### El contacto al pie de la portada móvil (2026-09-12, cuarto)
+
+**Desplegado el commit `da6b4a5` de `main`** (fusión del PR #32), versión
+`ad68a82c-4bcd-4907-a8da-e56b6cfb5246`: 6 archivos nuevos, 184 ya subidos.
+En el móvil el contacto deja de ser un enlace y una página aparte: la misma
+sección `#contacto` se muda al pie de la rejilla (`Contacto.colocar`, desde
+las dos ramas de `Movil.init`) y es el final del recorrido, debajo de las
+imágenes; fuera el enlace del pie y el aspa. Decisión de Ángel. Comprobado
+contra `https://lidialuque.com` con cache-bust: el `index.html` vivo llama a
+`Contacto.colocar` y ya no lleva `.hoja-contacto`, `js/contacto.js` sirve la
+función `colocar`, la hoja de estilos lleva `body.es-movil .hoja .contacto`,
+y `/panel` sigue dando 302. La suite quedó en 699 pruebas en verde.
