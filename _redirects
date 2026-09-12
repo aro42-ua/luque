@@ -40,14 +40,20 @@
 # se genera contenido.json: verlo invita a editarlo por la web, que no es como
 # se edita. Se cierra igual que docs/ y worker/, sin sacarlo del despliegue, para
 # que el arbol desplegado siga siendo exactamente lo versionado.
+# pruebas-tipografia/ es la TERCERA vez, y esta vez si se volvio aqui: es la
+# vista para comparar tipografias candidatas, utillaje de diseno que carga la
+# web en un iframe y no pinta nada en un sitio publico. Se cierra igual que los
+# otros tres, sin sacarlo del despliegue.
 /docs / 302
 /.claude / 302
 /worker / 302
 /herramientas / 302
+/pruebas-tipografia / 302
 /docs/* / 302
 /.claude/* / 302
 /worker/* / 302
 /herramientas/* / 302
+/pruebas-tipografia/* / 302
 
 # /tests/* se queda ACCESIBLE a proposito. No es un olvido: no contiene nada
 # sensible —el arnes y sus pruebas— y la verificacion del despliegue necesita

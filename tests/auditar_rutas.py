@@ -52,6 +52,15 @@ def _es_local(ruta):
         return False
     if ruta.lower().startswith(ESQUEMAS_EXTERNOS):
         return False
+    # Una ruta que un script CONSTRUYE en tiempo de ejecucion no es una ruta:
+    # "url('${c.src}')" dentro de una plantilla de JavaScript no se puede
+    # comprobar contra el disco, y reportarla deja en rojo la comprobacion
+    # previa al despliegue por algo que no esta roto. Paso el 2026-09-12 con
+    # pruebas-tipografia/. Se arregla la causa -no auditar lo que aun no es una
+    # ruta- y no escondiendo el directorio en IGNORADOS, que taparia tambien
+    # las rutas literales que ese mismo archivo escriba.
+    if '${' in ruta or '{{' in ruta:
+        return False
     return True
 
 
