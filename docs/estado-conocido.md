@@ -51,8 +51,8 @@ verdad (ver la nota de las imágenes en R2).
 capa amarilla delante de la galería (`#contacto`, `js/contacto.js`), con la voz
 de la ficha del visor: rótulo pequeño en mayúsculas, titular grande, el correo
 con las cuatro esquinas del botón ENTRAR y filas con regla fina. Se llega desde
-la propia barra —«Contacto», a la derecha del rol, con el estilo exacto de una
-categoría— y en el móvil desde el pie de la rejilla, después del último
+la propia barra —«Contacto», solo en la esquina derecha, con el estilo exacto de
+una categoría— y en el móvil desde el pie de la rejilla, después del último
 trabajo; no hay botón flotante ni nada que se interponga en la galería. Tres
 decisiones que conviene no deshacer sin leer: (1) la hoja se apila ENTRE la
 galería y la barra (z-index 400), así que la barra sigue mandando: «Contacto»
@@ -64,9 +64,10 @@ y `movil-hoja.js` ignoran la ruta `contacto` igual que ignoran `proyecto`, y
 el Escape de la galería cede cuando `body.contacto-abierto`. (3) Mientras
 está abierta, `.gallery` y `.hoja` pasan a `visibility:hidden` con el retardo
 del fundido, para que el tabulador y el lector no recorran trabajos tapados.
-Consecuencia en la barra: la zona derecha creció y a 1024 px «Foto Stills»
-pisaba el rol, así que entre 861 y 1199 px el rol se retira (es decorativo y
-se lee en el hero y en la hoja). **Los datos de contacto del marcado —correo,
+Consecuencia en la barra: el rol («Dirección de fotografía») que ocupaba la
+esquina derecha se retiró del todo, a petición de Ángel, para que allí sólo
+esté «Contacto»; el rol se sigue leyendo en el hero y en la hoja. **Los datos de
+contacto del marcado —correo,
 Instagram, Vimeo— son suposiciones sobre el dominio, pendientes de confirmar
 con Lidia**; viven sólo en `index.html`.
 

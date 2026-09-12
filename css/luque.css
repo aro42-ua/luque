@@ -516,24 +516,11 @@
   .navbar-categorias a:focus-visible,
   .navbar-contacto:focus-visible{ outline:none; }
 
-  /* La zona derecha: el rol y, detrás, «Contacto». El enlace hereda el
-     estilo de una categoría —mismo cuerpo, mismo relleno de clic, mismo
-     subrayado— porque para quien mira es una celda más de la misma línea;
-     lo único que cambia es que abre una hoja en vez de filtrar. */
-  .navbar-derecha{
-    justify-self:end;
-    display:flex;
-    align-items:baseline;
-    gap:clamp(20px, 2.6vw, 36px);
-  }
-  .navbar-rol{
-    font-size:0.8rem;
-    font-weight:700;
-    letter-spacing:0.15em;
-    text-transform:uppercase;
-    opacity:0.7;
-    white-space:nowrap;
-  }
+  /* La zona derecha es sólo «Contacto». El enlace hereda el estilo de una
+     categoría —mismo cuerpo, mismo relleno de clic, mismo subrayado— porque
+     para quien mira es una celda más de la misma línea; lo único que cambia
+     es que abre una hoja en vez de filtrar. */
+  .navbar-contacto{ justify-self:end; }
 
   /* ============================================================
      GALERÍA — NAVEGACIÓN ESPACIAL 2D
@@ -893,18 +880,12 @@
   /* ============================================================
      RESPONSIVE
   ============================================================ */
-  /* Por debajo de 860 px el sitio entra en modo móvil y esconde la barra
-     (`body.es-movil`). Entre 861 y 1199 px la barra sí necesita una regla
-     desde que la zona derecha lleva «Contacto» además del rol: la rejilla
-     es 1fr/auto/1fr, así que la zona derecha (rol + hueco + Contacto,
-     medido: 328 px) se duplica a la izquierda para que las categorías
-     queden centradas, y con las categorías (417 px) y los márgenes suman
-     unos 1.116 px — a 1024 px «Foto Stills» pisaba el rol. Se retira el
-     rol, que es decorativo (aria-hidden) y ya se lee en el hero y en la
-     propia hoja de contacto; sin él la línea cabe desde 645 px. */
-  @media (max-width: 1199px){
-    .navbar-rol{ display:none; }
-  }
+  /* La barra no necesita regla estrecha: por debajo de 860 px el sitio
+     entra en modo móvil y la oculta (`body.es-movil`), y a 861 px la
+     marca, las cuatro categorías y «Contacto» caben en la línea con
+     holgura. La rejilla es 1fr/auto/1fr, así que la zona más ancha de los
+     extremos (Contacto, 92 px) se duplica para centrar las categorías
+     (417 px): con los márgenes, la línea cabe desde unos 645 px. */
 
   /* Respeta la preferencia de movimiento reducido */
   @media (prefers-reduced-motion: reduce){
