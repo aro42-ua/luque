@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Prueba de tipografías — LUQUE!</title>
+<!--
+  Vista de comparación de tipografías. NO forma parte del sitio.
+
+  Arriba: la web real (../index.html) dentro de un iframe; el selector
+  cambia la variable --ff del documento del iframe al vuelo, así que se
+  puede recorrer la portada, la galería, el visor y el contacto con cada
+  candidata. Las fotos dan 404 en local, eso es lo esperado.
+
+  Abajo: los mismos textos del sitio en las cuatro fuentes a la vez.
+
+  Las fuentes viven en ./fuentes/. Space Grotesk e Instrument Sans son
+  variables (un archivo por familia, del repositorio de Google Fonts).
+  Basier Circle es de Atipo y no se puede descargar sin pasar por su
+  formulario: si se ponen sus archivos en ./fuentes/ con los nombres que
+  lista CANDIDATAS, la casilla se activa sola.
+
+  Se sirve con el perfil `luque` de .claude/launch.json:
+  http://localhost:8765/.claude/worktrees/<worktree>/pruebas-tipografia/
+-->
+<style>
+  :root{ --yellow:#FFFF00; --black:#0a0a0a; --kerning:-0.03em; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    background:#111; color:#eee;
+    font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    display:grid; grid-template-rows:auto 1fr auto; height:100vh;
+  }
+
+  /* --- barra de control --- */
+  .barra{
+    display:flex; flex-wrap:wrap; gap:.6rem 1.2rem; align-items:center;
+    padding:.6rem 1rem; background:#1c1c1c; border-bottom:1px solid #333;
+    font-size:.85rem;
+  }
+  .barra strong{ font-weight:600; color:var(--yellow); }
+  .barra label{
+    display:inline-flex; align-items:center; gap:.4rem; cursor:pointer;
+    padding:.3rem .7rem; border:1px solid #444; border-radius:999px;
+  }
+  .barra label:has(input:checked){ border-color:var(--yellow); background:#2a2a00; }
+  .barra label.no-disponible{ opacity:.45; cursor:not-allowed; }
+  .barra label.no-disponible input{ pointer-events:none; }
+  .barra .nota{ color:#999; margin-left:auto; }
+  .barra .nota code{ color:#ddd; }
+  .barra .estado{ font-size:.72rem; color:#888; }
+
+  /* --- iframe con la web real --- */
+  .marco{ position:relative; min-height:0; }
+  .marco iframe{ width:100%; height:100%; border:0; background:var(--yellow); display:block; }
+  .marco .etiqueta{
+    position:absolute; top:.6rem; right:.6rem; z-index:2;
+    background:var(--black); color:var(--yellow); padding:.25rem .6rem;
+    font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+    border-radius:999px; pointer-events:none;
+  }
+
+  /* --- muestras --- */
+  .muestras{
+    max-height:46vh; overflow:auto; background:var(--yellow); color:var(--black);
+    border-top:3px solid var(--black);
+  }
+  .muestras-cabecera{
+    display:flex; gap:1rem; align-items:baseline; padding:.7rem 1rem 0;
+    font-size:.8rem;
+  }
+  .muestras-cabecera button{
+    font:inherit; background:var(--black); color:var(--yellow); border:0;
+    padding:.25rem .7rem; border-radius:999px; cursor:pointer;
+  }
+  .columnas{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; }
+  .col{
+    padding:1rem; border-right:1px solid rgba(0,0,0,.15);
+    letter-spacing:var(--kerning);
+  }
+  .col:last-child{ border-right:0; }
+  .col.no-disponible{ opacity:.35; }
+  .col h3{
+    font-family: system-ui, sans-serif; letter-spacing:0;
+    font-size:.72rem; font-weight:600; text-transform:uppercase;
+    margin-bottom:.4rem; opacity:.7;
+  }
+  .col h3 small{ display:block; font-weight:400; text-transform:none; opacity:.8; }
+  .col .logo{ font-size:3.2rem; font-weight:700; line-height:1; letter-spacing:-0.05em; }
+  .col .roles{ font-size:.95rem; font-weight:500; margin:.5rem 0 .2rem; }
+  .col .boton{
+    display:inline-block; margin:.6rem 0; padding:.45rem 1.1rem;
+    border:2px solid var(--black); font-size:.8rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:.08em;
+  }
+  .col .titulo{ font-size:2.4rem; font-weight:700; line-height:1.05; }
+  .col .ficha{ font-size:.68rem; font-weight:500; text-transform:uppercase; letter-spacing:.06em; margin:.6rem 0 .1rem; }
+  .col .ficha b{ font-weight:700; }
+  .col .parrafo{ font-size:.92rem; line-height:1.45; margin:.5rem 0; max-width:34ch; }
+  .col .glifos{ font-size:1.9rem; margin-top:.5rem; line-height:1.2; }
+  .col .pesos{ font-size:1rem; margin-top:.4rem; display:flex; gap:.7rem; }
+  .col .pesos span:nth-child(1){ font-weight:400; }
+  .col .pesos span:nth-child(2){ font-weight:500; }
+  .col .pesos span:nth-child(3){ font-weight:700; }
+  .col .pesos span:nth-child(4){ font-weight:700; font-style:italic; }
+
+  @media (max-width:1100px){ .columnas{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+</style>
+</head>
+<body>
+
+<div class="barra" id="barra">
+  <strong>Tipografía</strong>
+  <!-- las casillas se generan desde FUENTES -->
+  <span class="nota">Las fotos dan 404 en local: es lo esperado. <span class="estado" id="estado"></span></span>
+</div>
+
+<div class="marco">
+  <span class="etiqueta" id="etiqueta"></span>
+  <iframe id="web" src="../index.html" title="La web con la tipografía elegida"></iframe>
+</div>
+
+<section class="muestras">
+  <div class="muestras-cabecera">
+    <span><b>Los mismos textos, las cuatro a la vez.</b> Los tamaños y pesos son los del sitio.</span>
+    <button type="button" id="alternar">Ocultar muestras</button>
+  </div>
+  <div class="columnas" id="columnas"></div>
+</section>
+
+<script>
+(function(){
+  'use strict';
+
+  // Ruta absoluta a ./fuentes/, para que el @font-face inyectado en el
+  // iframe resuelva igual que aquí (los url() se resuelven contra la hoja
+  // donde se declaran, y la del iframe está en otra carpeta).
+  const BASE = new URL('fuentes/', location.href).href;
+
+  // Cada fuente: nombre de familia CSS, archivos, y cómo declararlos.
+  // `variable:true` → un archivo cubre el rango de pesos.
+  const FUENTES = [
+    {
+      id:'favorit', familia:'ABC Favorit', etiqueta:'ABC Favorit (actual, Trial)',
+      nota:'Dinamo · 90 €/estilo web (≤3 personas)',
+      caras:[]   // ya la declara css/luque.css dentro del iframe
+    },
+    {
+      id:'space', familia:'Space Grotesk', etiqueta:'Space Grotesk',
+      nota:'Google Fonts · gratis (OFL) · sin cursiva',
+      caras:[{archivo:'SpaceGrotesk.ttf', peso:'300 700', estilo:'normal'}]
+    },
+    {
+      id:'instrument', familia:'Instrument Sans', etiqueta:'Instrument Sans',
+      nota:'Google Fonts · gratis (OFL)',
+      caras:[
+        {archivo:'InstrumentSans.ttf', peso:'400 700', estilo:'normal'},
+        {archivo:'InstrumentSans-Italic.ttf', peso:'400 700', estilo:'italic'}
+      ]
+    },
+    {
+      id:'basier', familia:'Basier Circle', etiqueta:'Basier Circle',
+      nota:'Atipo · paga lo que quieras (desde 15 €) · faltan los archivos',
+      // Atipo no permite descargar sin formulario. Se prueban varios
+      // nombres habituales; con que exista el Regular ya se activa.
+      caras:[
+        {archivo:['BasierCircle-Regular.otf','basiercircle-regular-webfont.woff2','BasierCircle-Regular.woff2','BasierCircle-Regular.ttf'], peso:'400', estilo:'normal'},
+        {archivo:['BasierCircle-Medium.otf','basiercircle-medium-webfont.woff2','BasierCircle-Medium.woff2','BasierCircle-Medium.ttf'], peso:'500', estilo:'normal'},
+        {archivo:['BasierCircle-Bold.otf','basiercircle-bold-webfont.woff2','BasierCircle-Bold.woff2','BasierCircle-Bold.ttf'], peso:'700', estilo:'normal'},
+        {archivo:['BasierCircle-BoldItalic.otf','basiercircle-bolditalic-webfont.woff2','BasierCircle-BoldItalic.woff2','BasierCircle-BoldItalic.ttf'], peso:'700', estilo:'italic'}
+      ]
+    }
+  ];
+
+  const formato = a => /\.otf$/i.test(a) ? 'opentype' : /\.woff2$/i.test(a) ? 'woff2' : /\.woff$/i.test(a) ? 'woff' : 'truetype';
+
+  // Comprueba qué archivo de cada cara existe (HEAD) y fija `cara.src`.
+  async function resolver(f){
+    for (const cara of f.caras){
+      const candidatos = [].concat(cara.archivo);
+      cara.src = null;
+      for (const a of candidatos){
+        try{
+          const r = await fetch(BASE + a, {method:'HEAD'});
+          if (r.ok){ cara.src = BASE + a; break; }
+        }catch(e){ /* sigue probando */ }
+      }
+    }
+    f.disponible = f.id === 'favorit' || f.caras.some(c => c.src);
+    return f;
+  }
+
+  function cssFontFaces(f){
+    return f.caras.filter(c => c.src).map(c =>
+      `@font-face{font-family:'${f.familia}';src:url('${c.src}') format('${formato(c.src)}');` +
+      `font-weight:${c.peso};font-style:${c.estilo};font-display:block;}`
+    ).join('\n');
+  }
+
+  // ---- iframe: inyecta las fuentes y cambia --ff ----
+  const iframe = document.getElementById('web');
+  const etiqueta = document.getElementById('etiqueta');
+  let actual = 'favorit';
+
+  function aplicarEnIframe(){
+    const doc = iframe.contentDocument;
+    if (!doc || !doc.head) return;
+    let st = doc.getElementById('prueba-tipografia');
+    if (!st){
+      st = doc.createElement('style');
+      st.id = 'prueba-tipografia';
+      doc.head.appendChild(st);
+    }
+    const f = FUENTES.find(x => x.id === actual);
+    st.textContent = f.id === 'favorit'
+      ? ''
+      : cssFontFaces(f) + `\n:root{--ff:'${f.familia}', Helvetica, Arial, sans-serif !important;}`;
+    etiqueta.textContent = f.etiqueta;
+  }
+  iframe.addEventListener('load', aplicarEnIframe);
+
+  // ---- casillas ----
+  const barra = document.getElementById('barra');
+  const nota = barra.querySelector('.nota');
+  function pintarCasillas(){
+    FUENTES.forEach(f => {
+      const l = document.createElement('label');
+      if (!f.disponible) l.className = 'no-disponible';
+      l.title = f.nota;
+      l.innerHTML = `<input type="radio" name="fuente" value="${f.id}" ${f.id===actual?'checked':''} ${f.disponible?'':'disabled'}> ${f.etiqueta}`;
+      l.querySelector('input').addEventListener('change', () => {
+        actual = f.id; aplicarEnIframe();
+        try{ localStorage.setItem('prueba-tipografia', actual); }catch(e){}
+      });
+      barra.insertBefore(l, nota);
+    });
+  }
+
+  // ---- muestras ----
+  const hoja = document.createElement('style');
+  document.head.appendChild(hoja);
+
+  function pintarMuestras(){
+    hoja.textContent = FUENTES.map(cssFontFaces).join('\n') + `
+      @font-face{font-family:'ABC Favorit';src:url('../ABCFavorit-Regular-Trial.otf') format('opentype');font-weight:400;font-style:normal;}
+      @font-face{font-family:'ABC Favorit';src:url('../ABCFavorit-Bold-Trial.otf') format('opentype');font-weight:700;font-style:normal;}
+      @font-face{font-family:'ABC Favorit';src:url('../ABCFavorit-BoldItalic-Trial.otf') format('opentype');font-weight:700;font-style:italic;}
+    `;
+    const cont = document.getElementById('columnas');
+    cont.innerHTML = FUENTES.map(f => `
+      <div class="col ${f.disponible?'':'no-disponible'}" style="font-family:'${f.familia}', Helvetica, Arial, sans-serif">
+        <h3>${f.etiqueta}<small>${f.nota}</small></h3>
+        <div class="logo">LUQUE!</div>
+        <div class="roles">Dirección de fotografía<br>Operadora de cámara</div>
+        <span class="boton">Entrar</span>
+        <div class="titulo">¿Hablamos?</div>
+        <p class="ficha">Editorial · <b>La Boquerona</b></p>
+        <p class="ficha">Cliente Harper's Bazaar · Año 2026 · Papel DoP</p>
+        <p class="parrafo">Lidia Luque es directora de fotografía y operadora de cámara. Trabaja en editorial, videoclip y publicidad entre Madrid y Quito.</p>
+        <div class="glifos">t j y g a R Q &amp; 2026</div>
+        <div class="pesos"><span>Regular</span><span>Medium</span><span>Bold</span><span>Cursiva</span></div>
+      </div>`).join('');
+  }
+
+  document.getElementById('alternar').addEventListener('click', e => {
+    const c = document.getElementById('columnas');
+    c.hidden = !c.hidden;
+    e.target.textContent = c.hidden ? 'Mostrar muestras' : 'Ocultar muestras';
+  });
+
+  // ---- arranque ----
+  Promise.all(FUENTES.map(resolver)).then(() => {
+    try{
+      const g = localStorage.getItem('prueba-tipografia');
+      if (g && FUENTES.some(f => f.id===g && f.disponible)) actual = g;
+    }catch(e){}
+    pintarCasillas();
+    pintarMuestras();
+    aplicarEnIframe();
+    const faltan = FUENTES.filter(f => !f.disponible).map(f => f.etiqueta);
+    document.getElementById('estado').textContent = faltan.length
+      ? `Sin archivos: ${faltan.join(', ')} (ponlos en pruebas-tipografia/fuentes/).`
+      : 'Las cuatro cargadas.';
+  });
+})();
+</script>
+</body>
+</html>
