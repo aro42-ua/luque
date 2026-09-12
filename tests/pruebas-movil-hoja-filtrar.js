@@ -91,6 +91,14 @@ describe('MovilHoja — filtrar y la foto que falta', function () {
      `Galeria.init()`): 'proyecto' se ignora, porque abrir un proyecto no dice
      nada del filtro. Sin esta guarda, `filtrarDesdeRuta` traducía 'proyecto'
      a `null` y deshacía el filtro de categoría que ya había. */
+  prueba('una ruta de contacto tampoco toca el filtro que ya había', function () {
+    igual(pintada(function (ol) {
+      MovilHoja.filtrarDesdeRuta(ol, { tipo: 'categoria', valor: 'editorial', pieza: null });
+      MovilHoja.filtrarDesdeRuta(ol, { tipo: 'contacto', valor: null, pieza: null });
+      return visibles(ol);
+    }), ['bruma', 'oleaje']);
+  });
+
   prueba('una ruta de proyecto no toca el filtro que ya había', function () {
     igual(pintada(function (ol) {
       MovilHoja.filtrarDesdeRuta(ol, { tipo: 'categoria', valor: 'editorial', pieza: null });

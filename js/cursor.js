@@ -16,7 +16,9 @@ window.Cursor = (function () {
   // Estado actual: 'default' | 'nav-hover' | 'bbox'
   var state = 'default';
 
-  var NAV_SELECTOR  = '.navbar a[data-cat]';
+  // El enlace de contacto de la barra se comporta como una categoría más
+  // también para el cursor: mismo tamaño grande al pasar por encima.
+  var NAV_SELECTOR  = '.navbar a[data-cat], .navbar-contacto';
   var PROJ_SELECTOR = '.proj';
 
   function raf(){

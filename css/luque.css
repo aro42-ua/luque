@@ -488,7 +488,8 @@
      insinúa. Es subrayado de verdad y no un borde, para que siga a la
      palabra y no a la caja: con el kerning negativo la caja sobra por los
      lados. */
-  .navbar-categorias a{
+  .navbar-categorias a,
+  .navbar-contacto{
     font-size:1.2rem;
     /* El área de clic era la caja del texto y nada más: con el cursor propio
        (cursor:none) acertar una línea de 16 px era un pulso. El relleno la
@@ -507,20 +508,19 @@
     transition: text-decoration-color 0.2s ease, opacity 0.2s ease;
   }
   .navbar-categorias a:hover,
-  .navbar-categorias a:focus-visible{
+  .navbar-categorias a:focus-visible,
+  .navbar-contacto:hover,
+  .navbar-contacto:focus-visible{
     text-decoration-color:rgba(255,255,0,0.4);
   }
-  .navbar-categorias a:focus-visible{ outline:none; }
+  .navbar-categorias a:focus-visible,
+  .navbar-contacto:focus-visible{ outline:none; }
 
-  .navbar-rol{
-    justify-self:end;
-    font-size:0.8rem;
-    font-weight:700;
-    letter-spacing:0.15em;
-    text-transform:uppercase;
-    opacity:0.7;
-    white-space:nowrap;
-  }
+  /* La zona derecha es sólo «Contacto». El enlace hereda el estilo de una
+     categoría —mismo cuerpo, mismo relleno de clic, mismo subrayado— porque
+     para quien mira es una celda más de la misma línea; lo único que cambia
+     es que abre una hoja en vez de filtrar. */
+  .navbar-contacto{ justify-self:end; }
 
   /* ============================================================
      GALERÍA — NAVEGACIÓN ESPACIAL 2D
@@ -709,12 +709,183 @@
   body:not(.galeria-activa) footer{ opacity:0; }
 
   /* ============================================================
+     LA HOJA DE CONTACTO — ver js/contacto.js
+     Una capa amarilla delante de la galería, con la misma voz que la ficha
+     del visor: rótulo pequeño en mayúsculas, titular grande con el kerning
+     de la casa, filas con regla fina. Sin caja, sin sombra, sin desenfoque.
+     Se apila ENTRE la galería y la barra: la barra sigue delante y sigue
+     mandando —«Contacto» alterna, la marca y las categorías cierran—, así
+     que la hoja no necesita ni aspa ni foco atrapado en escritorio.
+  ============================================================ */
+  .contacto{
+    position:fixed; inset:0;
+    z-index:400;   /* sobre la galería (2–6) y el pie (3); bajo el navbar (500) */
+    background:var(--yellow);
+    color:var(--black);
+    display:flex;
+    align-items:center;
+    padding:88px 6vw 10vh;
+    opacity:0;
+    visibility:hidden;
+    /* Mismo truco que .visor-ficha: la visibilidad salta al FINAL del fundido
+       de salida y al PRINCIPIO del de entrada, o uno de los dos no se vería. */
+    transition:opacity 0.35s ease, visibility 0s 0.35s;
+  }
+  body.contacto-abierto .contacto{
+    opacity:1;
+    visibility:visible;
+    transition:opacity 0.35s ease, visibility 0s 0s;
+  }
+  /* Mientras la hoja está delante, lo que hay detrás deja de existir para el
+     tabulador y para el lector de pantalla: la hoja es opaca y no atrapa el
+     foco, así que sin esto Tab seguiría recorriendo trabajos invisibles.
+     El retardo iguala el fundido: las fotos no desaparecen antes de que la
+     hoja las haya tapado. Al cerrar, la regla cae y vuelven en el acto,
+     debajo del fundido de salida. Gana a `body.galeria-activa .gallery`
+     por orden, con la misma especificidad (0,2,0). */
+  body.contacto-abierto .gallery,
+  body.contacto-abierto .hoja{
+    visibility:hidden;
+    transition:visibility 0s 0.35s;
+  }
+
+  .contacto-cuerpo{ width:100%; max-width:820px; }
+
+  .contacto-rol{
+    font-size:0.8rem; font-weight:700;
+    letter-spacing:0.15em; text-transform:uppercase;
+    opacity:0.7;
+  }
+  .contacto-titulo{
+    font-size:clamp(2.8rem, 8vw, 7rem);
+    font-weight:700;
+    letter-spacing:-0.05em;
+    line-height:0.92;
+    margin:18px 0 30px;
+    outline:none;   /* recibe el foco por programa, no por tabulador */
+  }
+
+  /* El correo es la acción principal y lleva las cuatro esquinas del botón
+     ENTRAR del hero: el mismo marco pequeño que ya sabe cerrarse. El relleno
+     da el área de clic y el margen negativo lo compensa, para que el texto
+     siga alineado con el titular. */
+  .contacto-correo{
+    position:relative;
+    display:inline-block;
+    padding:12px 20px;
+    margin-left:-20px;
+    font-size:clamp(1.3rem, 3vw, 2.4rem);
+    font-weight:400;
+    letter-spacing:var(--kerning);
+    line-height:1.1;
+    cursor:none;
+    transition:opacity 0.2s ease;
+  }
+  .contacto-correo:hover{ opacity:0.55; }
+  .contacto-correo:focus-visible{ outline:none; }
+  .contacto-correo:hover .hero-boton-esq,
+  .contacto-correo:focus-visible .hero-boton-esq{ transform:scale(1.45); }
+
+  .contacto-datos{
+    margin-top:34px;
+    max-width:440px;
+    font-size:0.8rem;
+  }
+  .contacto-datos div{
+    display:flex; justify-content:space-between; gap:16px;
+    padding:9px 0;
+    border-top:1px solid rgba(10,10,10,0.25);
+  }
+  .contacto-datos div:last-child{ border-bottom:1px solid rgba(10,10,10,0.25); }
+  .contacto-datos dt{ opacity:0.6; }
+  .contacto-datos dd{ text-align:right; }
+  .contacto-datos a{
+    /* Mismo relleno compensado que la barra: las filas son bajas y un enlace
+       de 13 px sin engordar es difícil de acertar con el cursor propio. */
+    padding:0.5em 0.35em; margin:-0.5em -0.35em;
+    text-decoration:underline;
+    text-decoration-color:transparent;
+    text-decoration-thickness:1.5px;
+    text-underline-offset:0.3em;
+    transition:text-decoration-color 0.2s ease;
+  }
+  .contacto-datos a:hover,
+  .contacto-datos a:focus-visible{ text-decoration-color:rgba(10,10,10,0.6); }
+  .contacto-datos a:focus-visible{ outline:none; }
+
+  /* La vuelta, en la voz del botón ENTRAR (mayúsculas espaciadas, pequeño):
+     es la salida para quien no mire a la barra, y para el teclado. */
+  .contacto-volver{
+    margin-top:44px;
+    padding:10px 0;
+    border:none; background:none;
+    color:var(--black);
+    font:inherit;
+    font-size:0.72rem; font-weight:700;
+    letter-spacing:0.28em; text-transform:uppercase;
+    cursor:none;
+    opacity:0.7;
+    text-decoration:underline;
+    text-decoration-color:transparent;
+    text-decoration-thickness:1.5px;
+    text-underline-offset:0.5em;
+    transition:opacity 0.2s ease, text-decoration-color 0.2s ease;
+  }
+  .contacto-volver:hover,
+  .contacto-volver:focus-visible{ opacity:1; text-decoration-color:var(--black); }
+  .contacto-volver:focus-visible{ outline:none; }
+
+  /* En escritorio no existe: la barra está delante y ya cierra. Es el mismo
+     criterio que `.visor-ficha-cerrar`. Se enciende en móvil, más abajo. */
+  .contacto-cerrar{ display:none; }
+
+  /* El enlace del pie de la portada móvil. En escritorio la portada entera
+     va con display:none, pero el enlace se apaga también por sí mismo, para
+     que no cuente como segundo enlace a la hoja fuera del móvil. */
+  .hoja-contacto{ display:none; }
+
+  body.es-movil .hoja-contacto{
+    display:block;
+    margin:0 24px;
+    /* Los 72 de abajo son los de la rejilla: el hueco para el indicador de
+       inicio de iOS pasa a llevarlo el enlace, que ahora es lo último. */
+    padding:22px 0 72px;
+    border-top:1px solid rgba(10,10,10,0.25);
+    font-size:1.2rem; font-weight:700;
+    letter-spacing:-0.05em;
+    color:var(--black);
+  }
+  body.es-movil .hoja-rejilla{ padding-bottom:22px; }
+  body.es-movil .hoja.con-hero .hoja-contacto{ visibility:hidden; }
+
+  body.es-movil .contacto{
+    align-items:flex-start;
+    padding:84px 24px 72px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  body.es-movil .contacto-correo{ margin-left:-12px; padding:10px 12px; }
+  body.es-movil .contacto-cerrar{
+    display:block;
+    position:absolute; top:18px; right:18px;
+    z-index:1;
+    width:44px; height:44px;
+    border:none; background:none; padding:0;
+    color:var(--black);
+    cursor:pointer;
+  }
+  body.es-movil .contacto-cerrar svg{ width:100%; height:100%; display:block; fill:currentColor; }
+  body.es-movil .contacto-cerrar:focus-visible{ outline:2px solid var(--black); outline-offset:2px; }
+
+  /* ============================================================
      RESPONSIVE
   ============================================================ */
   /* La barra no necesita regla estrecha: por debajo de 860 px el sitio
      entra en modo móvil y la oculta (`body.es-movil`), y a 861 px la
-     marca, las cuatro categorías y el rol caben en la línea con holgura
-     (medido: 39 px entre «Foto Stills» y el rol). */
+     marca, las cuatro categorías y «Contacto» caben en la línea con
+     holgura. La rejilla es 1fr/auto/1fr, así que la zona más ancha de los
+     extremos (Contacto, 92 px) se duplica para centrar las categorías
+     (417 px): con los márgenes, la línea cabe desde unos 645 px. */
 
   /* Respeta la preferencia de movimiento reducido */
   @media (prefers-reduced-motion: reduce){
@@ -727,6 +898,11 @@
     .hero.saliendo .hero-main,
     .hero.saliendo .hero-esquina{ animation:none; }
     .hero.saliendo{ opacity:0; transition:opacity 0.2s ease; }
+
+    .contacto,
+    body.contacto-abierto .contacto,
+    body.contacto-abierto .gallery,
+    body.contacto-abierto .hoja{ transition:none; }
   }
 
   /* ============================================================
@@ -734,7 +910,8 @@
   ============================================================ */
 
   /* Categoría activa: negrita y la regla de 2 px. El hover no la lava. */
-  .navbar-categorias a.activa{
+  .navbar-categorias a.activa,
+  .navbar-contacto.activa{
     font-weight:700;
     text-decoration-color:var(--yellow);   /* amarillo por diferencia = negro */
     text-decoration-thickness:2px;
