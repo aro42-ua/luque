@@ -85,6 +85,11 @@
      `pintar`, que sí lo tocan, reciben su marcado del arnés de DOM.
      Ver pruebas-visor-ficha.js. -->
 <script src="../js/visor-ficha.js"></script>
+<!-- contacto.js no toca el DOM al cargarse: sólo define window.Contacto.
+     `aplicar` se ejercita con `preparar` y un marcado del arnés de DOM; `init`
+     —que se suscribe al Router y al teclado— no se llama aquí.
+     Ver pruebas-contacto.js. -->
+<script src="../js/contacto.js"></script>
 <script src="../panel/js/identificador.js"></script>
 <script src="../panel/js/orden.js"></script>
 <!-- rutas.js es puro: sólo define window.Rutas. Lee el fragmento y dice qué
@@ -141,6 +146,7 @@
 <script src="pruebas-ficha-dato.js"></script>
 <script src="pruebas-router.js"></script>
 <script src="pruebas-router-ir.js"></script>
+<script src="pruebas-contacto.js"></script>
 <script src="pruebas-composicion.js"></script>
 <script src="pruebas-visor-estado.js"></script>
 <script src="pruebas-visor-carga.js"></script>

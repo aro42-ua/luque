@@ -40,6 +40,21 @@ describe('parsearRuta', function () {
     igual(r('#/inventado'), { tipo: 'todos', valor: null, pieza: null });
   });
 
+  prueba('reconoce la hoja de contacto', function () {
+    igual(r('#/contacto'), { tipo: 'contacto', valor: null, pieza: null });
+  });
+
+  prueba('el contacto no tiene piezas: un segundo tramo se ignora', function () {
+    igual(r('#/contacto/3'), { tipo: 'contacto', valor: null, pieza: null });
+  });
+
+  /* Palabra reservada: un enlace de contacto nunca debe abrir un trabajo,
+     aunque alguien titule un proyecto así. */
+  prueba('el contacto gana al proyecto con el mismo nombre', function () {
+    igual(Router.parsearRuta('#/contacto', CATS, { contacto: 4 }),
+          { tipo: 'contacto', valor: null, pieza: null });
+  });
+
   prueba('ignora espacios sobrantes', function () {
     igual(r('#/  bruma  '), { tipo: 'proyecto', valor: 'bruma', pieza: null });
   });
@@ -172,6 +187,21 @@ describe('decidir', function () {
 
   prueba('filtrar por categoría empuja', function () {
     igual(d('', 'categoria', 'editorial', null).accion, 'empujar');
+  });
+
+  prueba('la hoja de contacto es un solo tramo', function () {
+    igual(d('', 'contacto', null, null).hash, '#/contacto');
+  });
+
+  /* Abrir el contacto empuja: cerrarlo con «atrás» tiene que devolver a
+     donde se estaba, con el filtro que hubiera. */
+  prueba('abrir el contacto empuja, desde la portada y desde una categoría', function () {
+    igual(d('', 'contacto', null, null).accion, 'empujar');
+    igual(d('#/editorial', 'contacto', null, null).accion, 'empujar');
+  });
+
+  prueba('abrir el contacto estando ya en él sólo avisa', function () {
+    igual(d('#/contacto', 'contacto', null, null).accion, 'avisar');
   });
 
   /* Esto no es nuevo: es lo que hace hoy js/router.js:23, y se prueba aquí

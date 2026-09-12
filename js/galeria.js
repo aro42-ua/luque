@@ -282,6 +282,11 @@ window.Galeria = (function () {
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       if (document.body.classList.contains('visor-abierto')) return;
+      /* Con la hoja de contacto delante, Escape es suyo (js/contacto.js la
+         cierra y vuelve a la categoría activa); sin esta guarda el mismo
+         Escape quitaría además el filtro que la hoja se esfuerza en
+         conservar. */
+      if (document.body.classList.contains('contacto-abierto')) return;
       if (categoria !== null) window.Router.ir('todos');
     });
   }

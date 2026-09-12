@@ -128,7 +128,15 @@
       <a href="#/cortometraje" data-cat="cortometraje">Cortometraje</a>
       <a href="#/foto-stills" data-cat="foto-stills">Foto Stills</a>
     </div>
-    <span class="navbar-rol" aria-hidden="true">Dirección de fotografía</span>
+    <!-- La zona derecha lleva el rol y, a continuación, el único enlace de
+         la barra que no filtra: «Contacto» abre la hoja de contacto
+         (`#/contacto`, js/contacto.js) y, ya abierta, la cierra. Es texto en
+         la misma línea que las categorías y con su mismo tamaño: no hay
+         botón flotante, ni icono, ni nada que se interponga en la galería. -->
+    <div class="navbar-derecha">
+      <span class="navbar-rol" aria-hidden="true">Dirección de fotografía</span>
+      <a class="navbar-contacto" href="#/contacto">Contacto</a>
+    </div>
   </nav>
 
   <!-- ============================================================
@@ -225,6 +233,50 @@
       </span>
     </div>
     <ol class="hoja-rejilla" id="hojaRejilla"></ol>
+    <!-- En el móvil no hay barra superior, así que el contacto va donde
+         acaba el recorrido: al pie de la rejilla, después del último
+         trabajo. Es el mismo enlace que el de la barra —`#/contacto`— y
+         js/contacto.js lo trata igual (lo marca activo, lo alterna). -->
+    <a class="hoja-contacto" href="#/contacto">Contacto</a>
+  </section>
+
+  <!-- ============================================================
+       LA HOJA DE CONTACTO
+       Una capa amarilla delante de la galería (o de la portada móvil),
+       gobernada por la ruta `#/contacto` (js/contacto.js). Nace con
+       aria-hidden y visibility:hidden; no tapa nada hasta que se pide.
+       En escritorio se cierra desde la barra —«Contacto» alterna—, con
+       Escape, o con «Volver a los trabajos»; el aspa de arriba sólo
+       existe en móvil, donde no hay barra (mismo criterio que
+       .visor-ficha-cerrar).
+
+       DATOS PENDIENTES DE CONFIRMAR CON LIDIA: el correo y las redes son
+       los que se suponen del dominio, no están verificados. Se cambian
+       aquí, en el marcado; no hay ningún otro sitio donde vivan.
+  ============================================================ -->
+  <section class="contacto" id="contacto" aria-labelledby="contactoTitulo" aria-hidden="true">
+    <button class="contacto-cerrar" type="button" aria-label="Cerrar el contacto" data-contacto-cerrar>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 5.4L5.4 4 12 10.6 18.6 4 20 5.4 13.4 12 20 18.6 18.6 20 12 13.4 5.4 20 4 18.6 10.6 12z"/>
+      </svg>
+    </button>
+    <div class="contacto-cuerpo">
+      <p class="contacto-rol">Dirección de fotografía · Operadora de cámara</p>
+      <h2 class="contacto-titulo" id="contactoTitulo" tabindex="-1">¿Hablamos?</h2>
+      <a class="contacto-correo" href="mailto:hola@lidialuque.com">
+        <span>hola@lidialuque.com</span>
+        <i class="hero-boton-esq tl" aria-hidden="true"></i>
+        <i class="hero-boton-esq tr" aria-hidden="true"></i>
+        <i class="hero-boton-esq bl" aria-hidden="true"></i>
+        <i class="hero-boton-esq br" aria-hidden="true"></i>
+      </a>
+      <dl class="contacto-datos">
+        <div><dt>Instagram</dt><dd><a href="https://www.instagram.com/lidialuque" target="_blank" rel="noopener">@lidialuque</a></dd></div>
+        <div><dt>Vimeo</dt><dd><a href="https://vimeo.com/lidialuque" target="_blank" rel="noopener">vimeo.com/lidialuque</a></dd></div>
+        <div><dt>Estudio</dt><dd>LUQUE! · Fotografía y cine</dd></div>
+      </dl>
+      <button class="contacto-volver" type="button" data-contacto-cerrar>Volver a los trabajos</button>
+    </div>
   </section>
 
   <!-- ============================================================
@@ -367,6 +419,9 @@
   <script src="js/visor-rueda.js"></script>
   <script src="js/visor-foco.js"></script>
   <script src="js/visor.js"></script>
+  <!-- contacto.js no toca el DOM al cargarse: sólo define window.Contacto.
+       Usa Router y Galeria al arrancar, así que va después de los dos. -->
+  <script src="js/contacto.js"></script>
   <script src="js/movil-gestos.js"></script>
   <script src="js/movil.js"></script>
   <script src="js/movil-hoja.js"></script>
@@ -431,6 +486,9 @@
     window.Datos.establecer(proyectos);
     window.Galeria.init();
     window.Visor.init();
+    /* Antes de `Router.init()`, como todo lo que se suscribe: un enlace en
+       frío a `#/contacto` tiene que encontrar la hoja escuchando. */
+    window.Contacto.init();
 
     /* La portada móvil se construye siempre, aunque estemos en escritorio: es
        lo que permite cruzar el umbral de ancho sin reconstruir nada y sin

@@ -28,6 +28,13 @@ window.Router = (function () {
       return { tipo: 'categoria', valor: cabeza, pieza: null };
     }
 
+    /* La hoja de contacto es una palabra reservada, detrás de las categorías
+       y delante de los proyectos: un proyecto que se llamara `contacto`
+       quedaría tapado, y es preferible a que un enlace de contacto abra un
+       trabajo. Tampoco tiene piezas: un segundo tramo se ignora, como en las
+       categorías. */
+    if (cabeza === 'contacto') return { tipo: 'contacto', valor: null, pieza: null };
+
     /* `hasOwnProperty` y no `in`: sin esto, `#/constructor` y `#/toString`
        pasarían por proyectos, porque esas claves están en el prototipo de
        cualquier objeto. */
@@ -57,6 +64,7 @@ window.Router = (function () {
      no tiene fragmento: se va a la URL desnuda. */
   function hashDe(destino) {
     if (destino.tipo === 'todos') return '';
+    if (destino.tipo === 'contacto') return '#/contacto';
     var h = '#/' + destino.valor;
     if (destino.tipo === 'proyecto' && destino.pieza != null) h += '/' + destino.pieza;
     return h;

@@ -114,9 +114,12 @@ window.MovilHoja = (function () {
      un proyecto no dice nada del filtro. Sin esta guarda, una ruta de
      proyecto se traducía a `null` y deshacía el filtro de categoría que ya
      había en la rejilla — el escritorio y la hoja quedaban en desacuerdo
-     sobre qué significa navegar a un proyecto. */
+     sobre qué significa navegar a un proyecto.
+
+     'contacto' se ignora por lo mismo: abrir la hoja de contacto tampoco
+     dice nada del filtro, y al cerrarla se vuelve a la categoría que había. */
   function filtrarDesdeRuta(contenedor, ruta) {
-    if (ruta.tipo === 'proyecto') return;
+    if (ruta.tipo === 'proyecto' || ruta.tipo === 'contacto') return;
     filtrar(contenedor, ruta.tipo === 'categoria' ? ruta.valor : null);
   }
 
