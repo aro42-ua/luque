@@ -55,6 +55,20 @@
 /herramientas/* / 302
 /pruebas-tipografia/* / 302
 
+# Los tres archivos sueltos de la raiz que no son del sitio sino del
+# repositorio. Hasta el 2026-09-12 contestaban 200: CLAUDE.md describe como
+# esta hecho el proyecto y donde estan sus trampas, handoff.md es un relevo
+# entre sesiones ya desfasado, y .gitignore ensena la estructura de trabajo.
+# No hay credenciales en ninguno, pero es documentacion interna, igual que
+# docs/, y se cierra igual.
+#
+# OJO: SpaceGrotesk-OFL.txt se queda accesible A PROPOSITO. La SIL Open Font
+# License obliga a que la licencia acompañe al archivo de fuente, asi que
+# cerrarla incumpliria la licencia con la que se sirve la tipografia.
+/CLAUDE.md / 302
+/handoff.md / 302
+/.gitignore / 302
+
 # /tests/* se queda ACCESIBLE a proposito. No es un olvido: no contiene nada
 # sensible —el arnes y sus pruebas— y la verificacion del despliegue necesita
 # abrir /tests/test.html contra la URL real para comprobar que las 51
