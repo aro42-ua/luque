@@ -846,3 +846,14 @@ fotos reales y en un teléfono sigue sin verse: es de la lista manual de
 `docs/comprobaciones-en-produccion.md`.
 
 Sigue **cerrada a los buscadores** por las tipografías Trial.
+
+### Los datos reales de la hoja (2026-09-12, después)
+
+**Desplegado el commit `f1a107e` de `main`** (fusión del PR #28), versión
+`08ea8394-7563-49b7-80e5-0fcb41ade566`: 3 archivos nuevos, 187 ya subidos.
+La hoja de contacto lleva ya el correo y el teléfono que dio Ángel
+(`lidia.luque.rea@gmail.com`, `644 970 369`, con `mailto:` y `tel:`);
+Instagram y Vimeo salieron por no estar confirmados. Comprobado contra
+`https://lidialuque.com` con cache-bust: el `index.html` vivo lleva los dos
+datos nuevos, ninguno de los supuestos, y `/panel` y `/docs/*` siguen dando
+302. Con esto, lo pendiente de la entrada anterior queda cerrado.
