@@ -6,6 +6,16 @@
   X-Robots-Tag: noindex
 
 # Las tipografias no cambian nunca: se cachean un año.
+#
+# Hacen falta las dos extensiones. Hasta el 2026-09-12 la tipografia eran tres
+# .otf; ahora es un .woff2, y al cambiarla se quedo fuera de esta regla y caia
+# en el "/*" de arriba, o sea "max-age=0, must-revalidate": una peticion
+# condicional por visita para un archivo que no cambia nunca. La linea del .otf
+# se deja porque no estorba y el dia que se compre una tipografia de pago puede
+# volver a hacer falta.
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
 /*.otf
   Cache-Control: public, max-age=31536000, immutable
   X-Content-Type-Options: nosniff
