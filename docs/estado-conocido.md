@@ -66,10 +66,10 @@ está abierta, `.gallery` y `.hoja` pasan a `visibility:hidden` con el retardo
 del fundido, para que el tabulador y el lector no recorran trabajos tapados.
 Consecuencia en la barra: el rol («Dirección de fotografía») que ocupaba la
 esquina derecha se retiró del todo, a petición de Ángel, para que allí sólo
-esté «Contacto»; el rol se sigue leyendo en el hero y en la hoja. **Los datos de
-contacto del marcado —correo,
-Instagram, Vimeo— son suposiciones sobre el dominio, pendientes de confirmar
-con Lidia**; viven sólo en `index.html`.
+esté «Contacto»; el rol se sigue leyendo en el hero y en la hoja. Los datos de contacto —correo
+`lidia.luque.rea@gmail.com` y teléfono `644 970 369`— los dio Ángel el
+2026-09-12 y viven sólo en `index.html`; Instagram y Vimeo se retiraron por no
+estar confirmados.
 
 **Cada foto se guarda en tres medidas, y no es capricho.** Cada una se pide donde
 se ve, porque la diferencia entre la mayor y la menor es de casi cuarenta veces:
