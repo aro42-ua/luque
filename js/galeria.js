@@ -240,7 +240,10 @@ window.Galeria = (function () {
     canvas = document.getElementById('spatialCanvas');
     if (!stage || !canvas) return;
 
-    window.GaleriaPaneo.init(stage, canvas);
+    /* La barra va como tercer argumento para que el paneo sepa qué franja
+       tiene que dejar despejada: subir a «Contacto» no debe traerse una foto
+       debajo (ver js/galeria-paneo.js). */
+    window.GaleriaPaneo.init(stage, canvas, document.getElementById('navbar'));
     marcarVacias();
 
     // El foco llega por clic, restauración o el tabulador (GaleriaTeclado);

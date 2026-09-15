@@ -16,6 +16,10 @@ window.GaleriaPaneo = (function () {
   var curX = 0, curY = 0, targetX = 0, targetY = 0;
   var raf = null;
   var congelado = false;
+  /* La barra superior y la posición del lienzo a partir de la cual su franja
+     queda despejada. Ver `medirBarra`. */
+  var barra = null;
+  var topeBarra = 0;
 
   function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
 
@@ -41,6 +45,53 @@ window.GaleriaPaneo = (function () {
     targetX = reposoX(); targetY = reposoY();
     curX = targetX; curY = targetY;
     canvas.style.transform = `translate3d(${curX}px, ${curY}px, 0)`;
+    medirBarra();
+  }
+
+  /* `topeBarra` es la posición vertical MÍNIMA del lienzo que deja la franja
+     de la barra superior sin una sola foto debajo: por encima de ella el
+     lienzo ha bajado lo bastante como para que su foto más alta empiece por
+     debajo de la barra. Se mide, no se estima, porque depende del aire que
+     `Composicion.MARGEN` deja arriba del lienzo, del alto de la barra y del
+     tamaño de la ventana, y las tres cosas cambian.
+
+     Se toma el borde inferior de la barra Y el de sus enlaces: «Contacto» y
+     las categorías llevan relleno con margen negativo (ver css/luque.css),
+     así que su zona de clic sobresale de la caja de la barra. Es esa zona
+     —la que el ratón pisa— la que tiene que quedar despejada.
+
+     De las fotos se ignoran las apagadas: en la vista filtrada siguen en el
+     lienzo, pero con `opacity:0`. Estorbarían la medida sin verse. */
+  function medirBarra() {
+    topeBarra = minY;
+    if (!barra) return;
+
+    var borde = barra.getBoundingClientRect().bottom;
+    var enlaces = barra.querySelectorAll('a');
+    for (var i = 0; i < enlaces.length; i++) {
+      borde = Math.max(borde, enlaces[i].getBoundingClientRect().bottom);
+    }
+
+    var lienzo = canvas.getBoundingClientRect();
+    var arriba = Infinity;
+    for (var j = 0; j < canvas.children.length; j++) {
+      var foto = canvas.children[j];
+      if (foto.classList.contains('apagado')) continue;
+      arriba = Math.min(arriba, foto.getBoundingClientRect().top - lienzo.top);
+    }
+    if (arriba === Infinity) return;
+
+    topeBarra = clamp(borde - arriba, minY, maxY);
+  }
+
+  /* Baja el lienzo lo justo para que no quede nada debajo de la barra, y sólo
+     si hace falta: viniendo de la galería el paneo ya suele estar arriba del
+     todo —el ratón cerca del borde superior satura el eje Y— y entonces esto
+     no mueve nada. Lo que sí arregla es llegar a la barra sin pasar por la
+     galería, que es como se llega volviendo de las pestañas del navegador. */
+  function despejarBarra() {
+    if (congelado) return;
+    if (targetY < topeBarra) targetY = topeBarra;
   }
 
   function loop(){
@@ -67,9 +118,12 @@ window.GaleriaPaneo = (function () {
   function descongelar()   { congelado = false; }
   function estaCongelado() { return congelado; }
 
-  function init(escenario, lienzo) {
+  /* `barraSuperior` es opcional: sin ella el paneo funciona igual que
+     siempre, sólo que nada protege la franja de arriba. */
+  function init(escenario, lienzo, barraSuperior) {
     stage  = escenario;
     canvas = lienzo;
+    barra  = barraSuperior || null;
 
     const isFinePointer = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
 
@@ -129,9 +183,22 @@ window.GaleriaPaneo = (function () {
         targetY = clamp(restY - cyN * rangeY * STRENGTH, minY, maxY);
       });
 
-      stage.addEventListener('mouseleave', () => {
+      /* Salir del escenario devuelve el lienzo al reposo... salvo si se sale
+         por arriba, hacia la barra. Subir a pulsar «Contacto» disparaba este
+         `mouseleave` —la barra no es hija del escenario— y el lienzo se iba
+         al centro justo mientras el ratón llegaba al enlace: la galería se
+         movía sola y acababa con una foto debajo del botón, que es la
+         posición de reposo de siempre. Yendo a la barra no se ha salido de
+         la galería, así que el paneo se queda donde estaba. */
+      stage.addEventListener('mouseleave', (e) => {
+        if (barra && e.relatedTarget && barra.contains(e.relatedTarget)) {
+          despejarBarra();
+          return;
+        }
         targetX = reposoX(); targetY = reposoY();
       });
+
+      if (barra) barra.addEventListener('mouseenter', despejarBarra);
     } else {
       // Fallback táctil: arrastre directo con inercia
       let dragging = false;
