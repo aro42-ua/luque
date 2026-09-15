@@ -866,6 +866,34 @@ Comprobado contra `https://lidialuque.com` con cache-bust: el `index.html`
 vivo lleva el enlace a `instagram.com/luque.rea` junto al correo y el
 teléfono, y `/panel` y `/docs/*` siguen dando 302.
 
+### Nada debajo de «Contacto» (2026-09-15)
+
+**Desplegado el commit `2cefd34` de `main`** —la fusión del PR #36—, versión
+`48731040-730e-4b50-90cc-04f702935a2e`, 194 archivos exportados y **3 subidos**
+(`js/galeria-paneo.js`, `js/galeria.js` y un mapa de fuentes; 191 ya estaban).
+
+Arregla lo que contó Ángel: al subir el cursor a la esquina superior derecha
+para pulsar «Contacto», la galería se desplazaba hacia el centro y el botón
+quedaba encima de una foto. La barra no es hija de `#spatialStage`, así que
+cruzar a ella disparaba el `mouseleave` del escenario y el lienzo volvía **al
+reposo** — que es justo la posición con una foto bajo el enlace. Yendo a la
+esquina, en cambio, el paneo llega a su tope y allí sólo está el aire de 8vw
+de `Composicion.MARGEN`.
+
+Comprobado contra `https://lidialuque.com` con cache-bust y las ocho fotos
+reales cargadas, a 1280x800: en reposo, *monstruación* está bajo el botón —el
+estado viejo—; haciendo el gesto, el lienzo se queda en `-461, 0` al cruzar a
+la barra y **no hay ni una foto bajo el botón ni bajo la franja entera**.
+`/js/galeria-paneo.js` y `/js/galeria.js` vivos traen el código nuevo.
+
+**El directorio temporal acaba con más archivos de los que exporta
+`git archive`.** Salieron 194 y `wrangler` leyó 223: el propio `wrangler`
+escribe su `worker/estatico/.wrangler/tmp/...` dentro del directorio de
+recursos mientras construye, y de ahí subió también un `index.js.map`. No es
+un agujero —`_redirects` cierra `/worker/*` con 302, comprobado sobre esa
+misma ruta—, pero explica la diferencia entre los dos números y conviene no
+diagnosticarlo dos veces.
+
 ### Space Grotesk y el logotipo en SVG (2026-09-12, quinto)
 
 **Desplegado el commit `d8eb25c` de `main`**, versión
