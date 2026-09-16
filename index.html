@@ -495,6 +495,11 @@
        undefined y abrir el visor lanza un TypeError. La suite no puede cazarlo
        porque tests/test.html carga sus scripts por su cuenta. -->
   <script src="js/movil-tira.js"></script>
+  <!-- TEMPORAL, para cazar el fallo del primer toque en la rejilla móvil.
+       Duerme salvo que la URL traiga `?diag=1`: sin esa marca no engancha
+       ni un oyente. Se borra, con su `<script>`, en cuanto el fallo esté
+       cazado. No tiene dependencias, así que su sitio en el orden da igual. -->
+  <script src="js/diagnostico-toques.js"></script>
   <script src="js/movil-flechas.js"></script>
   <script src="js/movil-cartel.js"></script>
   <script src="js/movil-visor.js"></script>
@@ -508,6 +513,11 @@
   <script src="js/movil-arrastre.js"></script>
   <script src="js/movil-puerta.js"></script>
   <script>
+  /* TEMPORAL, y va lo PRIMERO a propósito: engancha en captura sobre
+     `document`, así que ve los eventos antes que ningún oyente del sitio y
+     también los que alguno se quede. Sin `?diag=1` no hace nada. */
+  window.DiagnosticoToques.init();
+
   /* El contenido llega por red, así que la galería no puede construirse hasta
      que esté. El preloader ya está en pantalla desde el marcado, sin que nadie
      tenga que arrancarlo, así que la espera no se ve.
