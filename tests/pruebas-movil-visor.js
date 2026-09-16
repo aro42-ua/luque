@@ -31,8 +31,9 @@ var MV_PROYECTOS = [
     ficha: { cliente: 'Casa Salitre', anio: '2024', papel: 'Producción' } }
 ];
 
-/* El marcado de las diez referencias que `MovilVisor.init` exige desde la
-   Tarea 4: la escena de siempre más las seis del HUD. Vive en un solo sitio
+/* El marcado de las catorce referencias que `MovilVisor.init` exige: la
+   escena de siempre, las seis del HUD, la tira, las dos flechas laterales y
+   las dos del cartel. Vive en un solo sitio
    porque los tres arneses de abajo (`conVisor` y los dos `conEscena`) lo
    necesitan igual, letra por letra. */
 var MV_MARCADO =
@@ -42,7 +43,15 @@ var MV_MARCADO =
   '<button id="mvCerrar"></button><p id="mvTitulo"></p>' +
   '<span id="mvContador"></span>' +
   '<nav id="mvTira" class="mvisor-tira" hidden></nav>' +
-  '</div></div></div>';
+  '</div>' +
+  /* Las flechas y el cartel van FUERA de `#mvHud`, igual que en index.html: no
+     se duermen con él. Aquí eso sólo importa porque el atrapa-foco recorre
+     `#mvRaiz` entero, y un nodo enfocable de más dentro del diálogo cambiaría
+     qué es «el último» —por eso son `<div>` y no botones—. */
+  '<div id="mvFlechaIzquierda" hidden></div>' +
+  '<div id="mvFlechaDerecha" hidden></div>' +
+  '<div id="mvCartel" hidden><p id="mvCartelTexto"></p></div>' +
+  '</div></div>';
 
 function mvRefsDesde(caja) {
   return {
@@ -55,7 +64,11 @@ function mvRefsDesde(caja) {
     cerrar:   caja.querySelector('#mvCerrar'),
     titulo:   caja.querySelector('#mvTitulo'),
     contador: caja.querySelector('#mvContador'),
-    tira:     caja.querySelector('#mvTira')
+    tira:     caja.querySelector('#mvTira'),
+    flechaIzquierda: caja.querySelector('#mvFlechaIzquierda'),
+    flechaDerecha:   caja.querySelector('#mvFlechaDerecha'),
+    cartel:          caja.querySelector('#mvCartel'),
+    cartelTexto:     caja.querySelector('#mvCartelTexto')
   };
 }
 
@@ -866,5 +879,155 @@ describe('MovilVisor — los dedos de la tira no entran en la máquina de gestos
         { pointerId: 1, clientX: 120, clientY: 100, bubbles: true }));
       return ido;
     }), []);
+  });
+});
+
+/* El aviso de que has cambiado de TRABAJO, que es la razón de ser del cartel.
+   Lo que se fija aquí no es cómo se ve —eso es CSS y no se puede juzgar sin
+   fotos— sino CUÁNDO sale, que es lo único que puede equivocarse en silencio:
+   un cartel en cada parada deja de significar nada a la segunda foto, y uno
+   que no vuelve a salir deja el salto tan callado como estaba. */
+describe('MovilVisor — el cartel del título', function () {
+
+  function conLado(lado, fn) {
+    var antes = window.Movil;
+    window.Movil = { actual: function () { return lado; } };
+    try { return fn(); } finally { window.Movil = antes; }
+  }
+
+  /* El `retirar` del final no es limpieza de adorno: cada `mostrar` deja un
+     `setTimeout` de segundo y medio vivo, y la suite entera tarda más que eso.
+     Sin cancelarlo, el temporizador de una prueba se dispararía en mitad de
+     otra —sobre el nodo que el módulo tenga puesto para entonces— y la
+     escondría a media comprobación. */
+  function conEntrada(fn) {
+    return conVisorSobre(MV_PROYECTOS, function (refs) {
+      return conLado('movil', function () {
+        try { return fn(refs); } finally { MovilCartel.retirar(); }
+      });
+    });
+  }
+
+  function cartel(refs) {
+    return { texto: refs.cartelTexto.textContent, oculto: refs.cartel.hidden };
+  }
+
+  function ir(valor, pieza) {
+    MovilVisor.aplicar({ tipo: 'proyecto', valor: valor, pieza: pieza });
+  }
+
+  prueba('entrar en un trabajo anuncia su nombre', function () {
+    igual(conEntrada(function (refs) {
+      ir('niebla', 1);
+      return cartel(refs);
+    }), { texto: 'Niebla', oculto: false });
+  });
+
+  /* La mitad del encargo. Se retira a mano en medio para simular que el plazo
+     ya corrió: lo que se comprueba es que la parada siguiente NO lo vuelve a
+     sacar, no que siga puesto de antes. */
+  prueba('pasar de foto dentro del mismo trabajo no lo repite', function () {
+    igual(conEntrada(function (refs) {
+      ir('niebla', 1);
+      MovilCartel.retirar();
+      ir('niebla', 2);
+      return cartel(refs).oculto;
+    }), true);
+  });
+
+  /* La ficha es una parada del eje vertical como cualquier otra, y sigue
+     siendo el mismo trabajo. */
+  prueba('ir a la ficha del mismo trabajo tampoco lo repite', function () {
+    igual(conEntrada(function (refs) {
+      ir('niebla', 1);
+      MovilCartel.retirar();
+      ir('niebla', 'ficha');
+      return cartel(refs).oculto;
+    }), true);
+  });
+
+  prueba('cambiar de trabajo lo vuelve a sacar, con el nombre nuevo', function () {
+    igual(conEntrada(function (refs) {
+      ir('niebla', 1);
+      MovilCartel.retirar();
+      ir('oleaje', null);
+      return cartel(refs);
+    }), { texto: 'Oleaje', oculto: false });
+  });
+
+  /* Cerrar puede pillar el cartel a medio camino. Sin retirarlo a mano, el
+     velo con el nombre encima sobreviviría al visor y se vería sobre la
+     rejilla hasta que el temporizador se acordara. */
+  prueba('cerrar el visor se lleva el cartel por delante', function () {
+    igual(conEntrada(function (refs) {
+      ir('niebla', 1);
+      MovilVisor.aplicar({ tipo: 'todos', valor: null, pieza: null });
+      return cartel(refs).oculto;
+    }), true);
+  });
+
+  /* Y el motivo de que `proyectoPuesto` vuelva a `null` al cerrar: salir a la
+     rejilla y volver a entrar en el mismo trabajo es justo cuando el nombre
+     hace falta otra vez. */
+  prueba('volver a entrar en el mismo trabajo lo anuncia de nuevo', function () {
+    igual(conEntrada(function (refs) {
+      ir('niebla', 1);
+      MovilVisor.aplicar({ tipo: 'todos', valor: null, pieza: null });
+      ir('niebla', 1);
+      return cartel(refs);
+    }), { texto: 'Niebla', oculto: false });
+  });
+
+  // ---- Las flechas, cableadas ------------------------------------
+
+  /* `MovilFlechas` tiene sus propias pruebas; lo que falta comprobar aquí es
+     que el visor le pasa las salidas del sitio donde ESTÁ, y no las de otra
+     parte.
+
+     Lista propia y no `MV_PROYECTOS` porque el último de aquélla, `salitre`,
+     llega sin el campo `piezas` —a propósito: es el proyecto con el que las
+     demás pruebas fijan que `ordenDe` aguanta un proyecto incompleto— y
+     `pintar` sí lee `p.piezas.length` para el contador. Nadie había tenido que
+     PARAR en él hasta ahora. */
+  var TRES = [
+    { id: 'niebla',  titulo: 'Niebla',  categoria: 'editorial', tipo: 'foto',
+      piezas: [{ url: 'a' }, { url: 'b' }],
+      ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de arte' } },
+    { id: 'oleaje',  titulo: 'Oleaje',  categoria: 'cortometraje', tipo: 'video',
+      piezas: [],
+      ficha: { cliente: 'Marca Norte', anio: '2025', papel: 'Fotografía' } },
+    { id: 'litoral', titulo: 'Litoral', categoria: 'videoclip', tipo: 'video',
+      piezas: [],
+      ficha: { cliente: 'Casa Sur', anio: '2024', papel: 'Producción' } }
+  ];
+
+  function flechasEn(valor, pieza) {
+    return conVisorSobre(TRES, function (refs) {
+      return conLado('movil', function () {
+        try {
+          MovilVisor.aplicar({ tipo: 'proyecto', valor: valor, pieza: pieza });
+          return { izquierda: !refs.flechaIzquierda.hidden,
+                   derecha:   !refs.flechaDerecha.hidden };
+        } finally { MovilCartel.retirar(); }
+      });
+    });
+  }
+
+  prueba('en el primer trabajo sólo se ve la flecha de la derecha', function () {
+    igual(flechasEn('niebla', 1), { izquierda: false, derecha: true });
+  });
+
+  prueba('en el último trabajo sólo se ve la flecha de la izquierda', function () {
+    igual(flechasEn('litoral', null), { izquierda: true, derecha: false });
+  });
+
+  prueba('en el trabajo de en medio se ven las dos', function () {
+    igual(flechasEn('oleaje', null), { izquierda: true, derecha: true });
+  });
+
+  /* El eje vertical no toca las flechas: bajar a la ficha del primer trabajo
+     deja la izquierda apagada igual. */
+  prueba('moverse por el eje vertical no cambia las flechas', function () {
+    igual(flechasEn('niebla', 'ficha'), { izquierda: false, derecha: true });
   });
 });

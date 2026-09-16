@@ -276,4 +276,47 @@ describe('MovilRecorrido', function () {
     igual(MovilRecorrido.alternarFicha(en('fantasma', 2), ORDEN, null),
           en('fantasma', 2));
   });
+
+  // ---- Qué gestos llevan a alguna parte ---------------------------
+
+  /* Lo que sostiene las flechas laterales del visor: una flecha que se pinta
+     siempre no dice nada, y la que se pinta en un extremo miente. Las claves
+     son las del DEDO, no las de la pantalla. */
+
+  prueba('en el primer proyecto no se puede ir hacia atrás', function () {
+    igual(MovilRecorrido.salidas(en('niebla', 1), ORDEN).derecha, false);
+  });
+
+  prueba('en el primer proyecto sí se puede ir hacia delante', function () {
+    igual(MovilRecorrido.salidas(en('niebla', 1), ORDEN).izquierda, true);
+  });
+
+  /* La esquina opuesta: última parada del eje vertical Y último proyecto del
+     horizontal. Las dos flechas que se apagan son una de cada eje. */
+  prueba('en la ficha del último proyecto no queda nada por delante', function () {
+    igual(MovilRecorrido.salidas(en('litoral', 'ficha'), ORDEN),
+          { arriba: false, abajo: true, izquierda: false, derecha: true });
+  });
+
+  prueba('en medio del portafolio los cuatro gestos llevan a alguna parte', function () {
+    igual(MovilRecorrido.salidas(en('bruma', 4), ORDEN),
+          { arriba: true, abajo: true, izquierda: true, derecha: true });
+  });
+
+  /* El eje vertical de un vídeo tiene dos paradas, así que desde el vídeo se
+     sube a la ficha y no se baja a ninguna parte. Si `salidas` se escribiera
+     con las piezas en vez de con `mover`, aquí daría `arriba: false` —cero
+     piezas— y el gesto que sí funciona quedaría sin anunciar. */
+  prueba('en un vídeo se sube a la ficha y nada más', function () {
+    igual(MovilRecorrido.salidas(en('reflejo', null), ORDEN),
+          { arriba: true, abajo: false, izquierda: true, derecha: true });
+  });
+
+  /* `mover` devuelve el estado tal cual cuando el proyecto no está en el
+     orden. Ninguna salida, que es lo honesto: no hay eje que recorrer. */
+  prueba('un proyecto que no está en el orden no ofrece ninguna salida', function () {
+    igual(MovilRecorrido.salidas(en('fantasma', 2), ORDEN),
+          { arriba: false, abajo: false, izquierda: false, derecha: false });
+  });
+
 });

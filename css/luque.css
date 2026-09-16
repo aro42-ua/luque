@@ -1882,6 +1882,112 @@ body.es-movil .mvisor-tira button[aria-current="true"]{
   outline-color:var(--yellow);
 }
 
+/* ── Las flechas laterales ───────────────────────────────────────
+   Fuera del HUD y por tanto fuera de `.dormido`: el HUD se apaga a los tres
+   segundos y estas no. Es la razón entera de que el contenedor sea hermano de
+   `.mvisor-hud` y no hijo suyo.
+
+   `pointer-events:none` en toda la rama, sin excepción y a diferencia del HUD
+   —donde las pastillas lo recuperan una a una—: no son controles, y el
+   deslizamiento de los dos ejes tiene que atravesarlas igual que atraviesa el
+   resto del visor. `touch-action:none` por el mismo motivo que
+   `.mvisor-hud-arriba`: para que nada de aquí le devuelva al navegador un
+   gesto que `js/movil-gestos.js` interpreta por su cuenta. */
+body.es-movil .mvisor-flechas{
+  position:absolute; inset:0;
+  pointer-events:none;
+  touch-action:none;
+}
+
+/* Un chevrón fino y a pelo, SIN la pastilla amarilla del HUD, y es una
+   renuncia consciente y no un descuido.
+
+   La pastilla existe porque el amarillo suelto sobre una foto clara da 1,07:1
+   y el negro sobre una oscura ~1,2:1; con fondo propio son 17,6:1 pase lo que
+   pase. Aquí se paga ese contraste a cambio de discreción, y se puede pagar
+   porque estas flechas no son el canal de nada: son decorativas
+   (`aria-hidden`), y quien no las vea sigue teniendo el título, el contador,
+   la tira y el cartel. La `drop-shadow` negra las sostiene sobre fotos claras
+   —mejora el borde, no lo mide—. Si sobre fotos de verdad se pierden,
+   devolverles la pastilla es añadir aquí el `background` y el `padding`.
+
+   El elemento ES el chevrón: dos bordes de una caja vacía girada 45°. Girar
+   con `transform` no toca la caja de posicionamiento, así que el centrado
+   vertical puede seguir haciéndose con `margin-top` sin pelearse con el giro. */
+body.es-movil .mvisor-flecha{
+  position:absolute;
+  top:50%; margin-top:-8px;
+  width:16px; height:16px;
+  border:solid var(--yellow);
+  border-width:0 2px 2px 0;
+  opacity:.72;
+  filter:drop-shadow(0 0 2px rgba(0,0,0,.95));
+}
+
+body.es-movil .mvisor-flecha[hidden]{ display:none; }
+
+/* Los 24px laterales son los mismos del HUD y por el mismo motivo, que allí
+   está escrito entero: la franja de ~20px de los bordes se la queda el gesto
+   de «atrás» del navegador. Aquí no hay nada que pulsar, pero una flecha
+   medio comida por el borde tampoco se lee. */
+body.es-movil .mvisor-flecha-izquierda{ left:24px;  transform:rotate(135deg); }
+body.es-movil .mvisor-flecha-derecha{   right:24px; transform:rotate(-45deg); }
+
+/* ── El cartel del título ────────────────────────────────────────
+   Lo que hace que cambiar de trabajo se note. El velo oscuro no es decorado:
+   es lo que garantiza que el nombre se lea sobre cualquier foto sin tener que
+   meterlo en una pastilla, y se va con el cartel, así que la foto queda limpia
+   segundo y medio después.
+
+   Va por encima del HUD —después en el marcado— a propósito: durante ese
+   segundo y medio lo que importa es el nombre del trabajo nuevo, no las
+   pastillas. */
+body.es-movil .mvisor-cartel{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  padding:0 24px;
+  background:rgba(0,0,0,.55);
+  pointer-events:none;
+  touch-action:none;
+  opacity:0;
+}
+
+body.es-movil .mvisor-cartel[hidden]{ display:none; }
+
+/* El reparto de `MovilCartel.DURACION`, que son 1480ms: entra en 180 (12,16%),
+   aguanta hasta los 1080 (72,97%) y se va en los 400 restantes. Si esos
+   números y la constante dejan de cuadrar, el cartel se queda puesto sin
+   opacidad o lo esconde el temporizador a media transición. */
+body.es-movil .mvisor-cartel.puesto{
+  animation:mvisor-cartel 1480ms ease forwards;
+}
+
+@keyframes mvisor-cartel{
+  0%      { opacity:0; }
+  12.16%  { opacity:1; }
+  72.97%  { opacity:1; }
+  100%    { opacity:0; }
+}
+
+body.es-movil .mvisor-cartel-texto{
+  margin:0;
+  color:var(--yellow);
+  font-size:clamp(1.6rem, 9vw, 2.6rem);
+  line-height:1.1;
+  text-align:center;
+  text-wrap:balance;
+}
+
+/* Con movimiento reducido el cartel sale y se va sin fundidos, pero sale: lo
+   que se pide es menos movimiento, no menos aviso —y este aviso es la razón
+   de ser del cartel—. Aguanta opaco el plazo entero y lo retira el mismo
+   `setTimeout` de siempre. Es la misma regla que el HUD de aquí al lado. */
+@media (prefers-reduced-motion: reduce){
+  body.es-movil .mvisor-cartel.puesto{ animation-name:mvisor-cartel-plano; }
+}
+
+@keyframes mvisor-cartel-plano{ from{ opacity:1; } to{ opacity:1; } }
+
 /* Con movimiento reducido el HUD desaparece sin transición en vez de quedarse
    puesto: lo que se pide es menos movimiento, no menos función. Es la misma
    regla que el sitio ya aplica al centrado por teclado de la galería. */

@@ -353,6 +353,23 @@
        aria-label="Visor de trabajos" hidden>
     <div class="mvisor-escena" id="movilVisorEscena"></div>
 
+    <!-- Las dos flechas laterales y el cartel del título. Van FUERA de
+         `.mvisor-hud`: el HUD se duerme a los tres segundos y estos no, que es
+         el motivo entero de que existan.
+
+         Los dos son decorativos —`aria-hidden`—: lo que dicen ya lo dicen el
+         título, el contador y la tira, con palabras y sin depender de la vista.
+         El cartel además repetiría en voz alta, a cada deslizamiento, un
+         nombre que el HUD acaba de repintar. -->
+    <div class="mvisor-flechas" aria-hidden="true">
+      <div class="mvisor-flecha mvisor-flecha-izquierda" id="movilVisorFlechaIzquierda" hidden></div>
+      <div class="mvisor-flecha mvisor-flecha-derecha" id="movilVisorFlechaDerecha" hidden></div>
+    </div>
+
+    <div class="mvisor-cartel" id="movilVisorCartel" aria-hidden="true" hidden>
+      <p class="mvisor-cartel-texto" id="movilVisorCartelTexto"></p>
+    </div>
+
     <!-- Pastillas amarillas con texto negro. Medido en la spec: el amarillo
          suelto sobre una foto clara da 1,07:1 de contraste y el negro suelto
          sobre una foto oscura ~1,2:1 — el mismo fallo cambiado de lado, y como
@@ -478,6 +495,8 @@
        undefined y abrir el visor lanza un TypeError. La suite no puede cazarlo
        porque tests/test.html carga sus scripts por su cuenta. -->
   <script src="js/movil-tira.js"></script>
+  <script src="js/movil-flechas.js"></script>
+  <script src="js/movil-cartel.js"></script>
   <script src="js/movil-visor.js"></script>
   <!-- Va ANTES de movil-puerta.js, que lo usa en `entrada()`. Sin esta línea
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError
@@ -551,7 +570,11 @@
       cerrar:   document.getElementById('movilVisorCerrar'),
       titulo:   document.getElementById('movilVisorTitulo'),
       contador: document.getElementById('movilVisorContador'),
-      tira:     document.getElementById('movilVisorTira')
+      tira:     document.getElementById('movilVisorTira'),
+      flechaIzquierda: document.getElementById('movilVisorFlechaIzquierda'),
+      flechaDerecha:   document.getElementById('movilVisorFlechaDerecha'),
+      cartel:          document.getElementById('movilVisorCartel'),
+      cartelTexto:     document.getElementById('movilVisorCartelTexto')
     }, window.Datos.PROYECTOS);
     window.Router.alCambiar(function (ruta) {
       window.MovilVisor.aplicar(ruta);

@@ -113,6 +113,36 @@ window.MovilRecorrido = (function () {
     return estado;
   }
 
+  /* Qué gestos llevan a alguna parte desde donde estás. Se pregunta a `mover`
+     en vez de repetir aquí las reglas de los dos ejes: los bordes —la primera
+     pieza, la ficha, el primer y el último proyecto— ya están escritos una vez
+     en `recortar`, y una segunda copia se desincronizaría en cuanto el eje
+     cambiara.
+
+     Se comparan los dos campos y no las referencias: `mover` devuelve el mismo
+     objeto cuando no hay eje que recorrer, pero en el tope del eje vertical
+     devuelve uno NUEVO con los mismos valores (`en(proyecto, ps[recortar(...)])`).
+     Con `!==` a secas, el último gesto de cada eje se anunciaría como posible.
+
+     Contesta por los cuatro gestos aunque hoy sólo se pinten dos flechas, las
+     del eje horizontal: la pregunta que este módulo sabe contestar es «qué
+     lleva a alguna parte», y media respuesta por un eje sería una función con
+     forma de su único consumidor. Cuesta lo mismo.
+
+     Las claves son gestos del DEDO, igual que en `mover`. Quien pinte una
+     flecha tiene que invertirlas: eso lo hace `MovilFlechas`, y en un solo
+     sitio. */
+  var GESTOS = ['arriba', 'abajo', 'izquierda', 'derecha'];
+
+  function salidas(estado, orden) {
+    var s = {};
+    GESTOS.forEach(function (g) {
+      var d = mover(estado, g, orden);
+      s[g] = d.proyecto !== estado.proyecto || d.pieza !== estado.pieza;
+    });
+    return s;
+  }
+
   /* El atajo del botón de ficha. La ficha es la ÚLTIMA parada del eje, así que
      llegar a ella deslizando cuesta tantos gestos como piezas tenga el
      proyecto: diez en `la-boquerona`. Esto la pone a un toque, en los dos
@@ -139,6 +169,7 @@ window.MovilRecorrido = (function () {
     desdeRuta: desdeRuta,
     aRuta: aRuta,
     mover: mover,
+    salidas: salidas,
     alternarFicha: alternarFicha
   };
 })();
