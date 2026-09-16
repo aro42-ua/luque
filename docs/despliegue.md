@@ -866,6 +866,32 @@ Comprobado contra `https://lidialuque.com` con cache-bust: el `index.html`
 vivo lleva el enlace a `instagram.com/luque.rea` junto al correo y el
 teléfono, y `/panel` y `/docs/*` siguen dando 302.
 
+### Las flechas laterales y el cartel del visor móvil (2026-09-16)
+
+**Desplegado el commit `0934752` de `main`** —la fusión del PR #39—, versión
+`cce9c165-1e39-4453-8982-ad70cdea9e4a`, 198 archivos exportados y **11
+subidos** (185 ya estaban; `wrangler` leyó 221, por el `.wrangler/tmp` que se
+escribe él mismo dentro del directorio de recursos —ver la nota del despliegue
+anterior—).
+
+En el visor móvil, cambiar de trabajo deslizándose de lado no se notaba: entraba
+una foto nueva desplazándose, igual que al pasar de foto dentro del mismo
+trabajo. Ahora el nombre del trabajo nuevo aparece grande sobre un velo oscuro
+durante segundo y medio, y sólo al cambiar de trabajo —no al pasar de foto ni
+al bajar a la ficha—. Le acompañan dos chevrones laterales que se apagan en
+los extremos de la lista.
+
+Comprobado contra `https://lidialuque.com`: `/js/movil-cartel.js` y
+`/js/movil-flechas.js` responden 200, el `index.html` vivo trae las ocho
+referencias del marcado nuevo y los dos `<script>`, y `/panel` sigue dando 302.
+
+**Lo que este despliegue NO deja comprobado, y hace falta un teléfono de
+verdad:** las flechas renuncian a propósito a la pastilla amarilla del HUD
+—son un chevrón fino con `drop-shadow`, al 72% de opacidad—, y esa renuncia
+sólo se puede juzgar sobre fotos claras reales. Si se pierden, devolverles el
+`background` y el `padding` de la pastilla son dos líneas en `css/luque.css`.
+El velo del cartel no depende de la foto y sí quedó comprobado en local.
+
 ### Nada debajo de «Contacto» (2026-09-15)
 
 **Desplegado el commit `2cefd34` de `main`** —la fusión del PR #36—, versión
