@@ -55,6 +55,12 @@
      pruebas-movil-animacion.js. -->
 <script src="../js/movil-animacion.js"></script>
 <script src="../js/movil-tira.js"></script>
+<!-- Los dos van ANTES de movil-visor.js, que los cablea en `init` y los
+     pinta en cada parada. Ninguno toca el DOM al cargarse: sólo definen
+     window.MovilFlechas y window.MovilCartel. Ver pruebas-movil-flechas.js y
+     pruebas-movil-cartel.js. -->
+<script src="../js/movil-flechas.js"></script>
+<script src="../js/movil-cartel.js"></script>
 <!-- movil-visor.js no toca el DOM al cargarse: sólo define window.MovilVisor.
      `ordenDe` es pura y se prueba sola; lo que sí construye nodos —`aplicar`,
      que pinta la escena— recibe su contenedor del arnés de DOM.
@@ -164,6 +170,8 @@
 <script src="pruebas-movil-ficha.js"></script>
 <script src="pruebas-movil-animacion.js"></script>
 <script src="pruebas-movil-tira.js"></script>
+<script src="pruebas-movil-flechas.js"></script>
+<script src="pruebas-movil-cartel.js"></script>
 <script src="pruebas-movil-visor.js"></script>
 <script src="pruebas-movil-visor-zoom.js"></script>
 <script src="pruebas-movil-hud.js"></script>

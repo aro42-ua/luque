@@ -16,6 +16,19 @@ window.MovilVisor = (function () {
 
   var raiz = null, escena = null, orden = [], aqui = null, elCerrar = null;
 
+  /* De qué trabajo es la parada que hay puesta. Es lo único que distingue
+     «he cambiado de trabajo» de «he cambiado de foto dentro del mismo», y el
+     cartel sale sólo en el primer caso: si saliera en cada parada, el aviso
+     dejaría de significar nada a la segunda foto.
+
+     Se vuelve a `null` al cerrar, y no es un detalle: sin eso, salir de un
+     trabajo a la rejilla y volver a entrar en él mismo no anunciaría nada,
+     que es justo cuando el nombre hace más falta. Es la misma variable, con
+     el mismo nombre y por un motivo parecido, que `MovilTira.proyectoPuesto`;
+     no se comparte porque aquella vive dentro de la tira y responde a otra
+     pregunta —si hay que reconstruir las miniaturas—. */
+  var proyectoPuesto = null;
+
   /* La dirección del último gesto que movió el recorrido, a la espera de que
      `pintar` la consuma. Se CONSUME UNA VEZ y se olvida (ver `pintar`): así,
      llegar a una pieza por la URL o por el botón de atrás del navegador —que
@@ -100,6 +113,15 @@ window.MovilVisor = (function () {
       if (n === aqui.pieza) return;
       window.Router.ir('proyecto', aqui.proyecto, n);
     });
+    /* Ni las flechas ni el cartel navegan ni escuchan nada: sólo se pintan.
+       Por eso sus `init` no reciben función de vuelta, a diferencia del HUD y
+       de la tira. */
+    window.MovilFlechas.init({
+      izquierda: refs.flechaIzquierda,
+      derecha:   refs.flechaDerecha
+    });
+    window.MovilCartel.init({ raiz: refs.cartel, texto: refs.cartelTexto });
+    proyectoPuesto = null;
     engancharGestos();
   }
 
@@ -149,6 +171,11 @@ window.MovilVisor = (function () {
     if (!aqui) return;
     aqui = null;
     piezaRecordada = null;
+    proyectoPuesto = null;
+    /* El cartel se retira A MANO y no se deja al temporizador: cerrar puede
+       pillarlo a medio camino, y un velo con un nombre encima sobreviviendo
+       al visor durante un segundo se vería sobre la rejilla. */
+    window.MovilCartel.retirar();
     raiz.hidden = true;
     document.body.classList.remove('mvisor-abierto');
     escena.innerHTML = '';
@@ -194,6 +221,13 @@ window.MovilVisor = (function () {
     window.MovilAnimacion.aplicar(nodo, direccion);
     window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
     window.MovilTira.pintar(p, aqui.pieza);
+    /* Se le pasa `aqui`, el estado ya movido, y no el destino de nada: las
+       flechas dicen qué hay DESDE donde acabas de caer. */
+    window.MovilFlechas.pintar(window.MovilRecorrido.salidas(aqui, orden));
+    if (p.id !== proyectoPuesto) {
+      proyectoPuesto = p.id;
+      window.MovilCartel.mostrar(p.titulo);
+    }
   }
 
   /* La foto, con carga progresiva. Se pinta primero una PREVIA que ya está
