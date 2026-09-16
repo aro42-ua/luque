@@ -866,6 +866,27 @@ Comprobado contra `https://lidialuque.com` con cache-bust: el `index.html`
 vivo lleva el enlace a `instagram.com/luque.rea` junto al correo y el
 teléfono, y `/panel` y `/docs/*` siguen dando 302.
 
+### Un diagnóstico temporal, que HAY QUE QUITAR (2026-09-16, segundo)
+
+**Desplegado el commit `0b9301d` de `main`** —la fusión del PR #40—, versión
+`4e550fb0-f719-4860-bdc4-2693661d2a7e`, 199 archivos exportados y **3 subidos**.
+
+No arregla nada: pone un instrumento. `js/diagnostico-toques.js` apunta
+`pointerdown`, `pointerup`, `click`, `touchstart` y `touchend` con la PILA de
+elementos bajo el dedo, y los pinta en un panel. Está dormido salvo que la URL
+traiga `?diag=1`, y el panel es `pointer-events:none` para no falsear lo que
+mide. Se puso para cazar el fallo del primer toque de la rejilla móvil, que
+está contado entero en `docs/estado-conocido.md`.
+
+**El fallo dejó de reproducirse antes de que nadie mirara el diagnóstico, y
+sigue sin explicación.** Ángel decidió dejar el instrumento puesto unos días
+por si vuelve.
+
+**PENDIENTE, y es una deuda con fecha: quitarlo.** Son tres cosas —el archivo
+`js/diagnostico-toques.js`, su `<script>` en `index.html` y la llamada a
+`DiagnosticoToques.init()` del guión de arranque— y un despliegue. Mientras
+esté puesto, cada visita paga una petición de unos 3 KB que no usa.
+
 ### Las flechas laterales y el cartel del visor móvil (2026-09-16)
 
 **Desplegado el commit `0934752` de `main`** —la fusión del PR #39—, versión

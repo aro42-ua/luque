@@ -287,6 +287,48 @@ estorba pero lo que peor deja la descubribilidad de las categorías.
 Falta decidir cuál. Antes de decidir, conviene mirarlo en la pantalla de quien
 lo pidió: puede que ahí se vea distinto de lo que sale medido aquí.
 
+## Sin explicar: el primer toque de la rejilla móvil, que se arregló solo (2026-09-16)
+
+Ángel reportó que, tras cruzar la puerta de la portada móvil, **el primer
+toque sobre un proyecto no abría nada y el segundo sí**. Sólo la primera vez
+por visita; la foto no reaccionaba de ninguna forma; la URL no cambiaba; y ya
+pasaba antes del despliegue de ese día. Tras desplegar dos veces —las dos
+tocando `index.html`— **dejó de pasar, sin que nadie arreglara nada**.
+
+Queda escrito porque un fallo que desaparece solo puede volver, y porque
+volver a diagnosticarlo desde cero costaría otra tarde. **Esto ya está
+descartado con evidencia, no por descarte:**
+
+- **El router.** El camino de `replaceState` avisa a mano (`js/router.js`, el
+  cuerpo de `ir`), así que no se pierde ningún aviso. Y con la URL sin cambiar,
+  ni siquiera se llegaba ahí.
+- **Un reflujo de la rejilla al llegar las fotos.** `.hoja-boton` fija su alto
+  con `aspect-ratio:1 / var(--proporcion)` desde los datos, no desde la imagen:
+  las celdas no se mueven cuando cargan las portadas.
+- **El clásico de iOS del primer toque sobre algo con `:hover`.** No hay
+  ninguna regla `:hover` que alcance a la rejilla.
+- **Que la portada se quedara tapando.** `.hoja-hero.fuera` es
+  `pointer-events:none` y `MovilPuerta` quita el nodo a los `SALIDA_MS`.
+- **El impulso del deslizamiento.** Desplazar la rejilla antes de pulsar no lo
+  arreglaba.
+- **Lo desplegado ese día** (las flechas y el cartel del visor): ya pasaba
+  antes, y `.mvisor` con el visor cerrado es `display:none`.
+
+**La hipótesis que queda viva, y la que explica que se arreglara sola:** una
+caché mezclada en el teléfono —un `index.html` viejo con archivos JS nuevos, o
+al revés—, que un despliegue que cambia el HTML deshace.
+
+**La pista técnica, medida sobre esta misma web:** en el hero se observó un
+`pointerdown` sobre un elemento y un `pointerup` sobre otro **en el mismo
+punto**; cuando eso pasa, el navegador dispara el `click` sobre el ancestro
+común de los dos, que puede no ser el botón — y entonces el oyente de
+`movil-hoja.js` no corre y no pasa nada. Es el mecanismo que produce
+exactamente este síntoma. Lo que nunca se llegó a ver es qué lo provocaba sobre
+la rejilla.
+
+**Hay un diagnóstico puesto para cazarlo si vuelve**, y hay que acordarse de
+quitarlo: ver la sección de `docs/despliegue.md` del 2026-09-16.
+
 ## La portada móvil (bloque 4d) y el visor móvil (bloque 4f)
 
 **El visor de la portada móvil ya no es el de escritorio.** Hasta el bloque
