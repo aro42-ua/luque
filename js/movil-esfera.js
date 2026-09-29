@@ -210,6 +210,80 @@ window.MovilEsfera = (function () {
     return estado(q, QUIETA, e.objetivo, true);
   }
 
+  /* Dónde y cómo de grande. El lado de referencia es el corto, con el alto
+     rebajado a tres cuartos para dejar sitio al pie: así en apaisado la
+     tesela de delante (alto = 1,25 × ancho) sigue cabiendo. El centro va un
+     poco por encima de la mitad por la misma razón.
+     PERSPECTIVA es la distancia del ojo en radios: con 3, la de delante sale
+     a 1,5 veces su tamaño plano y la de detrás a 0,75, o sea que la de
+     detrás mide la mitad que la de delante. */
+  var PERSPECTIVA = 3;
+
+  function geometria(medidas) {
+    var lado = Math.min(medidas.ancho, medidas.alto * 0.75);
+    return {
+      radio: lado * 0.62,
+      tesela: lado * 0.56,
+      cx: medidas.ancho / 2,
+      cy: medidas.alto * 0.45
+    };
+  }
+
+  function acotar1(n) { return Math.max(-1, Math.min(1, n)); }
+  function grados(rad) { return rad * 180 / Math.PI; }
+
+  /* La luz es lineal por tramos y no una curva: 1 delante, 0,5 en el
+     ecuador, 0,15 detrás, que es lo que dice la spec, y se lee sin
+     calculadora. La inclinación es la mitad del ángulo real de la cara:
+     entera, las teselas del borde se verían de canto y dejarían de ser
+     fotos. */
+  function proyectar(e, puntos, medidas) {
+    var g = geometria(medidas);
+    var sFrente = PERSPECTIVA / (PERSPECTIVA - 1);
+    return puntos.map(function (punto) {
+      var p = rotar(e.q, punto);
+      var s = PERSPECTIVA / (PERSPECTIVA - p[2]);
+      return {
+        x: g.cx + p[0] * g.radio * s,
+        y: g.cy - p[1] * g.radio * s,
+        escala: s / sFrente,
+        luz: p[2] >= 0 ? 0.5 + 0.5 * p[2] : 0.5 + 0.35 * p[2],
+        z: Math.round((acotar1(p[2]) + 1) * 500),
+        inclinacion: {
+          x: grados(Math.asin(acotar1(p[1]))) * 0.5,
+          y: grados(Math.asin(acotar1(p[0]))) * 0.5
+        },
+        visible: p[2] > 0
+      };
+    });
+  }
+
+  var DIRECCIONES = {
+    derecha: [1, 0], izquierda: [-1, 0], arriba: [0, 1], abajo: [0, -1]
+  };
+
+  /* La vecina en una dirección, para las flechas del teclado y la rueda con
+     movimiento reducido: de las que caen dentro de un cono de 60° hacia ese
+     lado, la más cercana al frente. Se aceptan también las de detrás: son la
+     siguiente en esa dirección siguiendo la esfera. */
+  function vecina(e, puntos, direccion) {
+    var i = delante(e, puntos);
+    var d = DIRECCIONES[direccion];
+    if (i < 0 || !d) return i;
+    var mejor = i;
+    var mejorAngulo = Infinity;
+    for (var j = 0; j < puntos.length; j++) {
+      if (j === i) continue;
+      var p = rotar(e.q, puntos[j]);
+      var l = Math.hypot(p[0], p[1]);
+      if (l < 1e-6) continue;
+      if ((p[0] * d[0] + p[1] * d[1]) / l < 0.5) continue;
+      var angulo = Math.acos(acotar1(p[2]));
+      if (angulo < mejorAngulo) { mejorAngulo = angulo; mejor = j; }
+    }
+    return mejor;
+  }
+
   return {
     FRENTE: FRENTE,
     VEL_MAX: VEL_MAX,
@@ -228,6 +302,9 @@ window.MovilEsfera = (function () {
     apuntar: apuntar,
     arrastrar: arrastrar,
     soltar: soltar,
-    avanzar: avanzar
+    avanzar: avanzar,
+    geometria: geometria,
+    proyectar: proyectar,
+    vecina: vecina
   };
 })();

@@ -211,3 +211,113 @@ describe('MovilEsfera — orientación, inercia y muelle', function () {
     igual(e.animando, false);
   });
 });
+
+describe('MovilEsfera — proyección y vecinas', function () {
+
+  function cerca(a, b, tol, msg) {
+    if (Math.abs(a - b) > (tol || 1e-6)) {
+      throw new Error((msg ? msg + ': ' : '') + 'esperaba ~' + b + ' y recibió ' + a);
+    }
+  }
+
+  var P8 = MovilEsfera.reparto(8);
+  var MEDIDAS = { ancho: 390, alto: 844 };
+
+  prueba('la de delante va centrada, a escala 1 y con toda la luz', function () {
+    var e = MovilEsfera.inicial(P8);
+    var g = MovilEsfera.geometria(MEDIDAS);
+    var p = MovilEsfera.proyectar(e, P8, MEDIDAS)[0];
+    cerca(p.x, g.cx, 1e-6);
+    cerca(p.y, g.cy, 1e-6);
+    cerca(p.escala, 1, 1e-6);
+    cerca(p.luz, 1, 1e-6);
+    cerca(p.inclinacion.x, 0, 1e-4);
+    cerca(p.inclinacion.y, 0, 1e-4);
+    igual(p.visible, true);
+    igual(p.z, 1000);
+  });
+
+  prueba('más atrás es más pequeña, más oscura y se pinta debajo', function () {
+    var e = MovilEsfera.inicial(P8);
+    var proy = MovilEsfera.proyectar(e, P8, MEDIDAS);
+    var zs = P8.map(function (pt) { return MovilEsfera.rotar(e.q, pt)[2]; });
+    var orden = zs.map(function (z, i) { return i; })
+                  .sort(function (a, b) { return zs[b] - zs[a]; });
+    for (var i = 1; i < orden.length; i++) {
+      var antes = proy[orden[i - 1]];
+      var ahora = proy[orden[i]];
+      cierto(antes.escala >= ahora.escala, 'escala');
+      cierto(antes.luz >= ahora.luz, 'luz');
+      cierto(antes.z >= ahora.z, 'z');
+    }
+  });
+
+  prueba('la luz vale 0,5 en el ecuador y 0,15 detrás', function () {
+    var e = MovilEsfera.inicial([[0, 0, 1]]);
+    var p = MovilEsfera.proyectar(e, [[1, 0, 0], [0, 0, -1]], MEDIDAS);
+    cerca(p[0].luz, 0.5, 1e-6);
+    cerca(p[1].luz, 0.15, 1e-6);
+  });
+
+  prueba('sólo el hemisferio de delante es visible', function () {
+    var e = MovilEsfera.inicial(P8);
+    MovilEsfera.proyectar(e, P8, MEDIDAS).forEach(function (p, i) {
+      igual(p.visible, MovilEsfera.rotar(e.q, P8[i])[2] > 0, 'punto ' + i);
+    });
+  });
+
+  /* Las teselas son siempre derechas: da igual cuánto giro haya acumulado
+     la esfera (incluido el giro en el plano de la pantalla que dejan varios
+     arrastres en diagonal), la que queda delante no se inclina. */
+  prueba('la de delante no se inclina aunque la esfera acumule giro', function () {
+    var e = MovilEsfera.inicial(P8);
+    for (var i = 0; i < 12; i++) e = MovilEsfera.arrastrar(e, 37, -23, 390, 0);
+    e = MovilEsfera.traer(e, P8[5]);
+    var p = MovilEsfera.proyectar(e, P8, MEDIDAS)[5];
+    cerca(p.inclinacion.x, 0, 1e-3);
+    cerca(p.inclinacion.y, 0, 1e-3);
+  });
+
+  /* A la derecha, la cara mira a la derecha: rotateY positivo. Arriba, mira
+     arriba: rotateX positivo (en CSS la y va hacia abajo, y rotateX(+) lleva
+     la normal hacia arriba). */
+  prueba('las de los lados se inclinan hacia fuera', function () {
+    var e = MovilEsfera.inicial([[0, 0, 1]]);
+    var d = Math.SQRT1_2;
+    var p = MovilEsfera.proyectar(e, [[d, 0, d], [0, d, d]], MEDIDAS);
+    cierto(p[0].inclinacion.y > 0, 'derecha: ' + p[0].inclinacion.y);
+    cierto(p[0].x > MovilEsfera.geometria(MEDIDAS).cx, 'derecha x');
+    cierto(p[1].inclinacion.x > 0, 'arriba: ' + p[1].inclinacion.x);
+    cierto(p[1].y < MovilEsfera.geometria(MEDIDAS).cy, 'arriba y');
+  });
+
+  prueba('la tesela de delante mide lo mismo en vertical y en apaisado con el mismo lado corto', function () {
+    var g1 = MovilEsfera.geometria({ ancho: 390, alto: 844 });
+    var g2 = MovilEsfera.geometria({ ancho: 844, alto: 390 });
+    cierto(g1.tesela > 0 && g2.tesela > 0, 'positivas');
+    cierto(g2.tesela * 1.25 < 390, 'en apaisado la de delante cabe de alto');
+  });
+
+  prueba('proyectar sin puntos da una lista vacía', function () {
+    igual(MovilEsfera.proyectar(MovilEsfera.inicial([]), [], MEDIDAS), []);
+  });
+
+  prueba('vecina en cada dirección cae hacia ese lado', function () {
+    var e = MovilEsfera.inicial(P8);
+    var dirs = { derecha: [1, 0], izquierda: [-1, 0], arriba: [0, 1], abajo: [0, -1] };
+    Object.keys(dirs).forEach(function (nombre) {
+      var j = MovilEsfera.vecina(e, P8, nombre);
+      cierto(j !== 0, nombre + ': no encontró vecina');
+      var p = MovilEsfera.rotar(e.q, P8[j]);
+      var l = Math.hypot(p[0], p[1]);
+      var cos = (p[0] * dirs[nombre][0] + p[1] * dirs[nombre][1]) / l;
+      cierto(cos >= 0.5, nombre + ': coseno ' + cos);
+    });
+  });
+
+  prueba('vecina con un punto es él mismo, y sin puntos -1', function () {
+    var p1 = MovilEsfera.reparto(1);
+    igual(MovilEsfera.vecina(MovilEsfera.inicial(p1), p1, 'derecha'), 0);
+    igual(MovilEsfera.vecina(MovilEsfera.inicial([]), [], 'derecha'), -1);
+  });
+});
