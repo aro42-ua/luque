@@ -726,6 +726,59 @@ El cierre a buscadores (`robots.txt` y `X-Robots-Tag: noindex`) sigue puesto,
 pero ya no lo justifica la tipografía. Abrirlo es una decisión aparte, anotada
 en `docs/estado-conocido.md`.
 
+## La esfera móvil, desplegada sin fusionar (2026-09-29)
+
+Versión `58d043f1-3519-47a9-a411-8eac5e13d95d`, desde el commit `ffd869d` de la
+rama `claude/mobile-3d-sphere-gallery-719d99` (PR #41, **abierto**). Es el mismo
+caso que el bloque 4f, más abajo: Ángel lo pidió para probar la esfera en su
+teléfono con las portadas reales antes de decidir si entra en `main`. La rama
+trae sus nueve tareas, una revisión final de conjunto con sus dos arreglos y
+769 comprobaciones en verde.
+
+**Hay divergencia otra vez: producción va por delante de `main`.** Se cierra
+fusionando el PR #41 cuando la prueba en el teléfono lo apruebe (apartado 5 de
+`docs/comprobaciones-en-produccion.md`); si no la aprueba, se vuelve a desplegar
+`main`.
+
+Hecho desde Git Bash con `git archive ffd869d | tar -x` a un directorio
+temporal: 201 archivos, `panel/index.html` dentro, sin `.superpowers/`,
+`.worktrees/` ni `.wrangler/` (`wrangler` subió 19, 180 ya estaban).
+
+Comprobado contra `https://lidialuque.com`:
+
+- `js/movil-esfera.js` y `js/movil-globo.js` responden `200`; `js/movil-hoja.js`
+  y `js/diagnostico-toques.js` responden `404`, o sea que **el diagnóstico de
+  toques ya no está en producción**.
+- El `index.html` publicado carga los dos módulos y lleva `id="esfera"`.
+- Existen las ocho miniaturas de 250 que la esfera deriva de las portadas de
+  1500 (`MovilGlobo.miniaturaDe`), y la portada de 1500 del primer trabajo.
+- Sigue cerrado a buscadores (`x-robots-tag: noindex`).
+- A 375×812 en el panel del navegador, las portadas reales cargan y el DOM las
+  coloca bien (la de delante centrada, pie y pastilla en su sitio). Las
+  **capturas** del panel sobre el dominio real salen recortadas con densidad de
+  píxeles 2 y no sirven para juzgar el aspecto: eso queda para el teléfono.
+
+### La esfera asomaba por encima de la puerta (2026-09-29, segundo)
+
+Ángel vio en su teléfono que, al entrar, **aparecía la esfera un momento antes
+de la puerta amarilla**. Causa medida en producción: las teselas llevan
+`z-index` de hasta 1000 y `.esfera` no formaba contexto de apilamiento propio,
+así que dentro de `.hoja` le ganaban a `.hoja-hero` (`z-index:10`). La clase
+`con-hero`, que esconde la esfera, sólo llega cuando el preloader ha terminado
+de desvanecerse; durante ese fundido se veía la esfera encima del amarillo.
+Quitando `con-hero` con la puerta puesta, `elementFromPoint` en el centro daba
+la tesela de La Boquerona.
+
+Arreglo: `.esfera{ z-index:0 }` en `css/luque.css`, con la prueba
+`tests/pruebas-movil-esfera-capas.js` (CSS de verdad, sin `con-hero`), que
+caía antes y ahora pasa; suite 772/0. **Desplegado el commit `02116c9`** de la
+misma rama, versión `61e51920-fdf4-4ebc-a00a-4baaacc26e5a`. Comprobado en
+`lidialuque.com`: sin `con-hero`, en el centro queda la puerta.
+
+**Ojo con la caché:** `css/luque.css` se sirve con `Cache-Control: public,
+max-age=3600`, así que un navegador que cargó la web en la última hora puede
+seguir con la hoja vieja hasta una hora. En el panel hizo falta forzarla.
+
 ## Despliegue del bloque 4f sin fusionar (2026-09-05)
 
 Versión `f8dc8786-04be-4031-8021-ad75552a032f`. **Es el primer despliegue que no

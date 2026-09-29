@@ -1292,6 +1292,13 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
 ------------------------------------------------------------ */
 .esfera{
   position:absolute; inset:0;
+  /* OBLIGATORIO: contexto de apilamiento propio. Las teselas llevan `z-index`
+     de hasta 1000 y, sin esto, competían con la puerta amarilla
+     (`.hoja-hero`, `z-index:10`) dentro de `.hoja` y le ganaban: en
+     producción se veía la esfera un momento por encima del amarillo, durante
+     el fundido del preloader y antes de que llegue `con-hero` (2026-09-29).
+     Con `z-index:0` todo lo de la esfera queda debajo de la puerta. */
+  z-index:0;
   touch-action:pinch-zoom;
   -webkit-user-select:none; user-select:none;
   -webkit-tap-highlight-color:transparent;
