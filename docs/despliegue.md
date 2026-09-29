@@ -729,13 +729,14 @@ en `docs/estado-conocido.md`.
 ## La esfera móvil, desplegada sin fusionar (2026-09-29)
 
 Versión `58d043f1-3519-47a9-a411-8eac5e13d95d`, desde el commit `ffd869d` de la
-rama `claude/mobile-3d-sphere-gallery-719d99` (PR #41, **abierto**). Es el mismo
+rama `claude/mobile-3d-sphere-gallery-719d99` (PR #41, abierto entonces). Es el mismo
 caso que el bloque 4f, más abajo: Ángel lo pidió para probar la esfera en su
 teléfono con las portadas reales antes de decidir si entra en `main`. La rama
 trae sus nueve tareas, una revisión final de conjunto con sus dos arreglos y
 769 comprobaciones en verde.
 
-**Hay divergencia otra vez: producción va por delante de `main`.** Se cierra
+**Hubo divergencia otra vez: producción iba por delante de `main`** —ya
+cerrada, ver «La divergencia de la esfera, cerrada» más abajo—. Se cerraba
 fusionando el PR #41 cuando la prueba en el teléfono lo apruebe (apartado 5 de
 `docs/comprobaciones-en-produccion.md`); si no la aprueba, se vuelve a desplegar
 `main`.
@@ -778,6 +779,39 @@ misma rama, versión `61e51920-fdf4-4ebc-a00a-4baaacc26e5a`. Comprobado en
 **Ojo con la caché:** `css/luque.css` se sirve con `Cache-Control: public,
 max-age=3600`, así que un navegador que cargó la web en la última hora puede
 seguir con la hoja vieja hasta una hora. En el panel hizo falta forzarla.
+
+### La divergencia de la esfera, cerrada (2026-09-29, tercero)
+
+Las dos secciones de arriba dejaban producción por delante de `main`, y ya no
+lo está. El PR #41 se fusionó (`52d4a64`) antes de que se subieran el arreglo
+de la puerta y las dos anotaciones; los llevó a `main` el PR #42 (`75aefc5`).
+
+**Desplegado el commit `75aefc5` de `main`**, versión
+`d5d7f390-404f-44a7-b895-f4189164f1ba`. Es el mismo código que `02116c9`, que
+ya estaba en el escaparate —sin contar `docs/` no cambia ni una línea—: se
+volvió a desplegar sólo para que lo servido salga de `main`. `wrangler` subió
+un archivo, 199 ya estaban.
+
+### La esfera recogida, con presencia delante y ramas (2026-09-29, cuarto)
+
+**Desplegado el commit `10df16f` de `main`** (fusión del PR #43), versión
+`c67dab20-06df-4aad-b991-a42e29d733fb`. Pedido por Ángel: la esfera un poco más
+pequeña (radio de 0,62 a 0,5 del lado corto), las portadas que no están delante
+más pequeñas con la profundidad (`presencia` en `MovilEsfera.proyectar`:
+ecuador ~0,47, detrás 0,3), y una rama amarilla del centro de la esfera a cada
+portada, todas unidas en un nudo (`pintarRamas` en `MovilGlobo`). Suite
+781/0.
+
+Exportado con `git archive 10df16f | tar -x` desde Git Bash: 202 archivos,
+`panel/index.html` dentro y ningún directorio de trabajo; `wrangler` subió 5,
+195 ya estaban. Comprobado contra `https://lidialuque.com`: la portada y los
+dos módulos de la esfera responden `200`, lo servido lleva `pintarRamas`, el
+radio de 0,5, las reglas de `.esfera-nudo` y el `z-index:0` de `.esfera`;
+`/panel/` responde `302` hacia Access y sigue el `x-robots-tag: noindex`.
+
+**Desde aquí `main` vuelve a ser lo que sirve `lidialuque.com`.** Con la
+práctica de siempre: esta anotación deja `main` un commit por delante de lo
+servido, y sólo en `docs/`.
 
 ## Despliegue del bloque 4f sin fusionar (2026-09-05)
 
