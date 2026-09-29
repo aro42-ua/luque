@@ -74,3 +74,67 @@ describeAsync('La esfera — la puerta la tapa aunque no haya `con-hero`', funct
     });
   });
 });
+
+/* Los colores de la esfera sobre fondo amarillo (petición de Ángel,
+   2026-09-29): ramas y nudo negros, el pie en negro, la pastilla invertida y
+   el velo de la profundidad en AMARILLO —las de atrás se funden con el fondo
+   en vez de oscurecerse, decisión de Ángel—. Con la hoja de verdad, porque
+   todo esto vive sólo en css/luque.css. */
+describeAsync('La esfera — fondo amarillo y ramas negras', function () {
+
+  var AMARILLO = 'rgb(255, 255, 0)';
+  var NEGRO = 'rgb(10, 10, 10)';
+
+  var MARCADO =
+    '<section class="hoja">' +
+      '<div class="esfera">' +
+        '<div class="esfera-ramas"><span class="esfera-nudo"></span>' +
+          '<span class="esfera-rama"></span></div>' +
+        '<ul class="esfera-lista"><li class="esfera-tesela">' +
+          '<button class="esfera-boton" type="button"><span class="esfera-velo"></span></button>' +
+        '</li></ul>' +
+        '<p class="esfera-pie"><span class="esfera-titulo">Niebla</span></p>' +
+        '<a class="esfera-contacto" href="#/contacto">Contacto</a>' +
+      '</div>' +
+    '</section>';
+
+  function conLaHoja(d) {
+    return new Promise(function (ok, mal) {
+      var l = d.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = '../css/luque.css';
+      l.onload = function () { ok(); };
+      l.onerror = function () {
+        mal(new Error('el arnés no pudo cargar css/luque.css. Esta sección '
+          + 'necesita un servidor: python -m http.server'));
+      };
+      d.head.appendChild(l);
+    });
+  }
+
+  return ArnesDom.conDocumento({ html: MARCADO }, function (w, d) {
+    d.body.className = 'es-movil';
+    return conLaHoja(d).then(function () {
+      function css(sel, prop) { return w.getComputedStyle(d.querySelector(sel))[prop]; }
+
+      prueba('el fondo de la esfera es amarillo', function () {
+        igual(css('.hoja', 'backgroundColor'), AMARILLO);
+      });
+
+      prueba('las ramas y el nudo son negros', function () {
+        igual([css('.esfera-rama', 'backgroundColor'), css('.esfera-nudo', 'backgroundColor')],
+              [NEGRO, NEGRO]);
+      });
+
+      prueba('las de atrás se funden hacia amarillo', function () {
+        igual(css('.esfera-velo', 'backgroundColor'), AMARILLO);
+      });
+
+      prueba('el pie se lee en negro y la pastilla va invertida', function () {
+        igual([css('.esfera-pie', 'color'),
+               css('.esfera-contacto', 'backgroundColor'), css('.esfera-contacto', 'color')],
+              [NEGRO, NEGRO, AMARILLO]);
+      });
+    });
+  });
+});

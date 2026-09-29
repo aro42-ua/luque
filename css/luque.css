@@ -1254,13 +1254,14 @@ body.es-movil .navbar{ display:none !important; }
 body.es-movil .hoja{
   position:fixed; inset:0;
   /* Desde la esfera (2026-09-29) la hoja ya no se desplaza: el dedo gira la
-     esfera, y el negro es el fondo sobre el que sólo brillan las fotos. */
+     esfera. El fondo es el amarillo de la casa, con ramas negras (petición
+     de Ángel, 2026-09-29; antes fue negro). */
   overflow:hidden;
   /* OBLIGATORIO. Sin esto, tirar hacia abajo desde lo alto dispara el
      pull-to-refresh de Chrome de Android y la web se recarga en mitad del
      recorrido. Por omisión la web se recarga: hay que apagarlo a propósito. */
   overscroll-behavior-y:contain;
-  background:var(--black);
+  background:var(--yellow);
   z-index:5;
 }
 
@@ -1312,7 +1313,7 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
 .esfera-rama{
   position:absolute; left:0; top:0;
   height:1px; margin-top:-0.5px;
-  background:var(--yellow);
+  background:var(--black);
   transform-origin:0 50%;
 }
 .esfera-rama[hidden],
@@ -1321,7 +1322,7 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
   position:absolute; left:0; top:0;
   width:7px; height:7px; margin:-3.5px 0 0 -3.5px;
   border-radius:50%;
-  background:var(--yellow);
+  background:var(--black);
 }
 .esfera-tesela{
   position:absolute; left:0; top:0;
@@ -1342,9 +1343,12 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
   pointer-events:none;
   -webkit-user-drag:none;
 }
-/* La profundidad es un velo negro con opacidad, no `filter`: un filtro
-   sobre ocho imágenes en movimiento es lo que da tirones en un teléfono. */
-.esfera-velo{ position:absolute; inset:0; background:var(--black); pointer-events:none; }
+/* La profundidad es un velo con opacidad, no `filter`: un filtro sobre ocho
+   imágenes en movimiento es lo que da tirones en un teléfono. El velo es del
+   color del FONDO, así que las de atrás se funden con el amarillo en vez de
+   oscurecerse y la de delante es la única nítida (decisión de Ángel,
+   2026-09-29). */
+.esfera-velo{ position:absolute; inset:0; background:var(--yellow); pointer-events:none; }
 /* El número sólo se ve cuando falta la foto: un hueco numerado se lee
    como «falta esa». Con foto, quien nombra el trabajo es el pie. */
 .esfera-numero{
@@ -1357,17 +1361,19 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
 }
 .esfera-tesela.sin-foto img{ display:none; }
 .esfera-tesela.sin-foto .esfera-numero{ display:block; }
-.esfera-boton:focus-visible{ outline:3px solid var(--yellow); outline-offset:3px; }
+.esfera-boton:focus-visible{ outline:3px solid var(--black); outline-offset:3px; }
 
 /* El pie y la pastilla van por encima de cualquier tesela: el `z-index` de
-   las teselas llega a 2001 (impares para ellas, pares para las ramas). 24px a los lados, como tenía la rejilla, para no
-   caer en la franja del gesto de «atrás». */
+   las teselas llega a 2001 (impares para ellas, pares para las ramas).
+   24px a los lados, como tenía la rejilla, para no caer en la franja del
+   gesto de «atrás». Sobre el amarillo, el pie va en negro y la pastilla se
+   invierte: negra con el texto amarillo. */
 .esfera-pie{
   position:absolute; left:24px; right:24px;
   bottom:calc(28px + env(safe-area-inset-bottom));
   margin:0;
   z-index:3001;
-  color:var(--yellow);
+  color:var(--black);
   pointer-events:none;
 }
 .esfera-titulo{
@@ -1380,17 +1386,17 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
   position:absolute; right:24px;
   top:calc(20px + env(safe-area-inset-top));
   z-index:3002;
-  background:var(--yellow); color:var(--black);
+  background:var(--black); color:var(--yellow);
   padding:.4rem .8rem; line-height:1.2;
   font:inherit; text-decoration:none;
 }
 /* El mismo halo que las pastillas del visor: lleva el blanco a 48px de
    alto sin cambiar lo que se ve. */
 .esfera-contacto::before{ content:""; position:absolute; inset:-8px -4px; }
-.esfera-contacto:focus-visible{ outline:2px solid var(--yellow); outline-offset:4px; }
+.esfera-contacto:focus-visible{ outline:2px solid var(--black); outline-offset:4px; }
 /* El aviso de «no hay trabajos» ya se centra solo (`.galeria-vacia`, más
-   arriba); sobre el negro de la esfera sólo cambia el color. */
-body.es-movil .hoja .galeria-vacia{ color:var(--yellow); }
+   arriba); sobre el amarillo de la esfera va en negro. */
+body.es-movil .hoja .galeria-vacia{ color:var(--black); }
 
 /* ------------------------------------------------------------
    LA HOJA QUE SE DESLIZA
