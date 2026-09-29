@@ -147,3 +147,153 @@ describe('MovilGlobo — teselas, dibujo y carga', function () {
     }, {}, []);
   });
 });
+
+describe('MovilGlobo — dedo, rueda y teclado', function () {
+
+  function puntero(el, tipo, x, y) {
+    el.dispatchEvent(new PointerEvent(tipo, { clientX: x, clientY: y, bubbles: true }));
+  }
+  function botonDe(marco, id) { return teselaDe(marco, id).querySelector('button'); }
+  function lateralVisible(g) {
+    var delante = g.delante();
+    return g.proyeccion().filter(function (p) { return p.visible && p.id !== delante; })[0];
+  }
+
+  prueba('un toque en la de delante la abre', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var b = botonDe(marco, 'niebla');
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointerup', 195, 380);
+      igual(abiertos, ['niebla']);
+    });
+  });
+
+  /* Review Focus 1: con la captura de puntero, el `pointerup` llega a la
+     raíz y no al botón. La tesela se decide en el `pointerdown`. */
+  prueba('un pointerup que llega a la raíz abre igual', function () {
+    conGlobo(function (g, marco, abiertos) {
+      puntero(botonDe(marco, 'niebla'), 'pointerdown', 195, 380);
+      puntero(marco.querySelector('#e'), 'pointerup', 196, 381);
+      igual(abiertos, ['niebla']);
+    });
+  });
+
+  prueba('un toque en una lateral no la abre: la trae delante', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var lat = lateralVisible(g);
+      cierto(lat, 'con 8 tiene que haber alguna lateral visible');
+      var b = botonDe(marco, lat.id);
+      puntero(b, 'pointerdown', 300, 300);
+      puntero(b, 'pointerup', 300, 300);
+      igual(abiertos, []);
+      cierto(hastaQuieto(g) < 400, 'no se paró');
+      igual(g.delante(), lat.id);
+    });
+  });
+
+  prueba('arrastrar gira sin abrir, y al soltar se asienta en una portada', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var b = botonDe(marco, 'niebla');
+      var antes = g.estado().q;
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointermove', 245, 380);
+      puntero(b, 'pointermove', 320, 390);
+      puntero(b, 'pointerup', 320, 390);
+      igual(abiertos, []);
+      cierto(MovilEsfera.distancia(antes, g.estado().q) > 0.3, 'no giró');
+      cierto(hastaQuieto(g) < 400, 'no se paró');
+      var alante = g.proyeccion().filter(function (p) { return p.id === g.delante(); })[0];
+      cierto(Math.abs(alante.luz - 1) < 1e-3, 'la de delante no quedó centrada');
+    });
+  });
+
+  prueba('un temblor por debajo del umbral sigue siendo un toque', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var b = botonDe(marco, 'niebla');
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointermove', 199, 383);
+      puntero(b, 'pointerup', 199, 383);
+      igual(abiertos, ['niebla']);
+    });
+  });
+
+  prueba('pointercancel no abre nunca', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var b = botonDe(marco, 'niebla');
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointercancel', 195, 380);
+      igual(abiertos, []);
+    });
+  });
+
+  prueba('con movimiento reducido, soltar asienta sin animar', function () {
+    conGlobo(function (g, marco) {
+      var b = botonDe(marco, 'niebla');
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointermove', 320, 380);
+      puntero(b, 'pointerup', 320, 380);
+      igual(g.estado().animando, false);
+    }, { reducido: true });
+  });
+
+  /* Un clic de ratón o de dedo trae `detail` ≥ 1 y ya lo atendió el
+     `pointerup`; sólo el de teclado (Intro, espacio) trae `detail` 0. */
+  prueba('Intro sobre la de delante la abre; un clic de puntero no abre dos veces', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var b = botonDe(marco, 'niebla');
+      b.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      igual(abiertos, []);
+      b.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+      igual(abiertos, ['niebla']);
+    });
+  });
+
+  prueba('la flecha derecha trae la vecina de la derecha', function () {
+    conGlobo(function (g, marco) {
+      var antes = g.proyeccion();
+      var xDelante = antes.filter(function (p) { return p.id === 'niebla'; })[0].x;
+      marco.querySelector('#e').dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      var nueva = g.delante();
+      cierto(nueva !== 'niebla', 'no cambió');
+      var xNueva = antes.filter(function (p) { return p.id === nueva; })[0].x;
+      cierto(xNueva > xDelante, 'la nueva no estaba a la derecha');
+      igual(document.activeElement, botonDe(marco, nueva));
+    }, { reducido: true });
+  });
+
+  prueba('la rueda gira la esfera', function () {
+    conGlobo(function (g, marco) {
+      var antes = g.estado().q;
+      marco.querySelector('#e').dispatchEvent(
+        new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true }));
+      cierto(MovilEsfera.distancia(antes, g.estado().q) > 0.01, 'no giró');
+    });
+  });
+
+  prueba('congelada no atiende toques; al descongelar vuelve', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var b = botonDe(marco, 'niebla');
+      MovilGlobo.congelar();
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointerup', 195, 380);
+      igual(abiertos, []);
+      MovilGlobo.descongelar();
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointerup', 195, 380);
+      igual(abiertos, ['niebla']);
+    });
+  });
+
+  prueba('con un solo trabajo, arrastrar y soltar vuelve a dejarlo delante', function () {
+    conGlobo(function (g, marco) {
+      var b = botonDe(marco, 'niebla');
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointermove', 300, 380);
+      puntero(b, 'pointerup', 300, 380);
+      hastaQuieto(g);
+      var p = g.proyeccion()[0];
+      cierto(Math.abs(p.luz - 1) < 1e-3, 'luz ' + p.luz);
+    }, {}, globoProyectos().slice(0, 1));
+  });
+});

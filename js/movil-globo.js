@@ -12,6 +12,13 @@ window.MovilGlobo = (function () {
      250: la grande ya está en la caché y bajar sería gastar sin ganar nada. */
   var LUZ_GRANDE = 0.7;
 
+  /* Menos de esto entre el `pointerdown` y el `pointerup` es un toque, no un
+     arrastre. 8 px absorben el temblor de un dedo sin tragarse un giro corto. */
+  var UMBRAL_TOQUE = 8;
+  /* Con un solo trabajo no hay a dónde girar: el arrastre se resiste y el
+     muelle lo devuelve. */
+  var RESISTENCIA_SOLO = 0.35;
+
   var actual = null;
 
   /* La portada llega en 1500; su miniatura de 250 sale del mismo nombre,
@@ -46,6 +53,10 @@ window.MovilGlobo = (function () {
     var estado = window.MovilEsfera.inicial([]);
     var categoria = null;
     var primeraGrande = true;
+    var gesto = null;
+    var congelado = false;
+    var pendiente = false;
+    var ultimoT = null;
 
     function total() { return window.MovilEsfera.numero(proyectos.length - 1); }
 
@@ -182,6 +193,152 @@ window.MovilGlobo = (function () {
       if (!estado.animando) anunciar();
     }
 
+    /* El reloj sólo corre mientras hay movimiento: quieta, la esfera no gasta
+       ni un fotograma. */
+    function programar() {
+      if (pendiente || congelado || !estado.animando) return;
+      pendiente = true;
+      fotograma(function (t) {
+        pendiente = false;
+        var ms = ultimoT === null ? 16 : Math.max(0, Math.min(64, t - ultimoT));
+        ultimoT = t;
+        avanzar(ms);
+        if (estado.animando) programar();
+        else ultimoT = null;
+      });
+    }
+
+    function soltarAhora(msDesdeUltimo) {
+      estado = window.MovilEsfera.soltar(estado, puntos,
+        { reducido: reducido, msDesdeUltimo: msDesdeUltimo });
+      dibujar();
+      if (estado.animando) programar();
+      else anunciar();
+    }
+
+    function llevarA(k) {
+      estado = window.MovilEsfera.apuntar(estado, puntos[k], reducido);
+      dibujar();
+      if (estado.animando) programar();
+      else anunciar();
+    }
+
+    /* Qué hace un toque sobre la tesela de índice `i` (lista completa): la
+       de delante se abre; una lateral visible se trae delante, sin abrirla,
+       para que nunca se abra por accidente algo que se veía pequeño y de
+       lado; cualquier otra cosa (fondo, una de detrás) sólo asienta la
+       esfera, por si el toque la pilló girando. */
+    function tocar(i) {
+      var k = visibles.indexOf(i);
+      if (k < 0) { soltarAhora(Infinity); return; }
+      if (i === indiceDelante()) {
+        estado = window.MovilEsfera.traer(estado, puntos[k]);
+        dibujar();
+        anunciar();
+        alAbrir(proyectos[i].id);
+        return;
+      }
+      var pr = window.MovilEsfera.proyectar(estado, [puntos[k]], medir())[0];
+      if (pr.visible) llevarA(k);
+      else soltarAhora(Infinity);
+    }
+
+    function indiceDeEvento(e) {
+      var li = e.target && e.target.closest ? e.target.closest('li.esfera-tesela') : null;
+      return li && lista.contains(li) ? Number(li.dataset.indice) : -1;
+    }
+
+    /* El toque se decide con `pointerdown`/`pointerup` y NO con `click`, y la
+       tesela sale del `pointerdown`. Es la lección de
+       `js/diagnostico-toques.js` (retirado con la rejilla): si el `down` y el
+       `up` caen en elementos distintos, el navegador manda el `click` al
+       ancestro común y el botón no se entera. En una esfera que se mueve bajo
+       el dedo eso pasaría a menudo; con la captura de abajo, el `up` llega
+       SIEMPRE a la raíz. */
+    raiz.addEventListener('pointerdown', function (e) {
+      if (congelado || !visibles.length) return;
+      gesto = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
+                t: e.timeStamp, indice: indiceDeEvento(e), movido: false };
+      /* Pillar la esfera en marcha la para, como una peonza bajo el dedo. */
+      estado = { q: estado.q, vel: { h: 0, v: 0 }, objetivo: null, animando: false };
+      try { raiz.setPointerCapture(e.pointerId); } catch (sinPunteroActivo) {}
+    });
+
+    raiz.addEventListener('pointermove', function (e) {
+      if (!gesto) return;
+      if (!gesto.movido &&
+          Math.hypot(e.clientX - gesto.x0, e.clientY - gesto.y0) < UMBRAL_TOQUE) return;
+      gesto.movido = true;
+      var f = visibles.length === 1 ? RESISTENCIA_SOLO : 1;
+      estado = window.MovilEsfera.arrastrar(estado,
+        (e.clientX - gesto.x) * f, (e.clientY - gesto.y) * f,
+        medir().ancho, e.timeStamp - gesto.t);
+      gesto.x = e.clientX;
+      gesto.y = e.clientY;
+      gesto.t = e.timeStamp;
+      dibujar();
+    });
+
+    raiz.addEventListener('pointerup', function (e) {
+      if (!gesto) return;
+      var g = gesto;
+      gesto = null;
+      if (!g.movido && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < UMBRAL_TOQUE) {
+        tocar(g.indice);
+        return;
+      }
+      soltarAhora(e.timeStamp - g.t);
+    });
+
+    /* Una llamada entrante o el gesto de sistema del borde se quedan el dedo:
+       nunca es un toque, y la esfera tiene que asentarse igual. */
+    raiz.addEventListener('pointercancel', function () {
+      if (!gesto) return;
+      gesto = null;
+      soltarAhora(Infinity);
+    });
+
+    /* Sólo el clic de TECLADO (Intro o espacio sobre un botón) trae
+       `detail` 0; el de dedo o ratón ya lo atendió `pointerup`. */
+    lista.addEventListener('click', function (e) {
+      if (e.detail !== 0 || congelado) return;
+      var i = indiceDeEvento(e);
+      if (i >= 0) tocar(i);
+    });
+
+    var TECLAS = { ArrowRight: 'derecha', ArrowLeft: 'izquierda',
+                   ArrowUp: 'arriba', ArrowDown: 'abajo' };
+
+    raiz.addEventListener('keydown', function (e) {
+      var dir = TECLAS[e.key];
+      if (!dir || congelado || !visibles.length) return;
+      e.preventDefault();
+      var k = window.MovilEsfera.vecina(estado, puntos, dir);
+      if (k < 0) return;
+      llevarA(k);
+      teselas[visibles[k]].querySelector('button').focus({ preventScroll: true });
+    });
+
+    /* La rueda, para la ventana de escritorio estrechada: gira en vertical, y
+       con mayúsculas en horizontal. Con movimiento reducido cada golpe salta
+       a la vecina, porque girar un poco y volver al sitio sería movimiento
+       sin resultado. */
+    raiz.addEventListener('wheel', function (e) {
+      if (congelado || !visibles.length) return;
+      e.preventDefault();
+      var dx = e.shiftKey ? -e.deltaY : -e.deltaX;
+      var dy = e.shiftKey ? 0 : -e.deltaY;
+      if (reducido) {
+        var dir = Math.abs(dx) > Math.abs(dy)
+          ? (dx < 0 ? 'derecha' : 'izquierda')
+          : (dy < 0 ? 'abajo' : 'arriba');
+        llevarA(window.MovilEsfera.vecina(estado, puntos, dir));
+        return;
+      }
+      estado = window.MovilEsfera.arrastrar(estado, dx * 0.5, dy * 0.5, medir().ancho, 16);
+      soltarAhora(0);
+    }, { passive: false });
+
     function elementoDe(id) {
       for (var i = 0; i < proyectos.length; i++) {
         if (proyectos[i].id === id) return teselas[i].querySelector('button');
@@ -202,17 +359,23 @@ window.MovilGlobo = (function () {
       },
       avanzar: avanzar,
       redibujar: dibujar,
-      elementoDe: elementoDe
+      elementoDe: elementoDe,
+      congelar: function () { congelado = true; gesto = null; },
+      descongelar: function () { congelado = false; programar(); }
     };
   }
 
   function elementoDe(id) { return actual ? actual.elementoDe(id) : null; }
   function redibujar() { if (actual) actual.redibujar(); }
+  function congelar() { if (actual) actual.congelar(); }
+  function descongelar() { if (actual) actual.descongelar(); }
 
   return {
     miniaturaDe: miniaturaDe,
     init: init,
     elementoDe: elementoDe,
-    redibujar: redibujar
+    redibujar: redibujar,
+    congelar: congelar,
+    descongelar: descongelar
   };
 })();
