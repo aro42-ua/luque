@@ -271,17 +271,28 @@ window.MovilGlobo = (function () {
       return !!el && !lista.contains(el);
     }
 
+    /* El gesto es de UN dedo, el primero. Con dos, cada `pointermove`
+       alternaba entre ellos y el delta pasaba a ser la distancia entre los
+       dedos: la esfera daba tirones de lado a lado (revisión final). Los
+       eventos de cualquier otro puntero se ignoran. */
+    function esDelGesto(e) { return gesto !== null && e.pointerId === gesto.id; }
+
     raiz.addEventListener('pointerdown', function (e) {
       if (congelado || !visibles.length || esAjeno(e)) return;
-      gesto = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
-                t: e.timeStamp, indice: indiceDeEvento(e), movido: false };
+      if (gesto !== null && e.pointerId !== gesto.id) return;
+      /* `enMarcha`: la esfera giraba por inercia cuando llegó el dedo. Un
+         toque así es para FRENARLA, como en cualquier lista con inercia, y
+         no puede abrir la portada que pasaba por delante en ese instante. */
+      gesto = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
+                t: e.timeStamp, indice: indiceDeEvento(e), movido: false,
+                enMarcha: estado.animando && estado.objetivo === null };
       /* Pillar la esfera en marcha la para, como una peonza bajo el dedo. */
       estado = { q: estado.q, vel: { h: 0, v: 0 }, objetivo: null, animando: false };
       try { raiz.setPointerCapture(e.pointerId); } catch (sinPunteroActivo) {}
     });
 
     raiz.addEventListener('pointermove', function (e) {
-      if (!gesto) return;
+      if (!esDelGesto(e)) return;
       if (!gesto.movido &&
           Math.hypot(e.clientX - gesto.x0, e.clientY - gesto.y0) < UMBRAL_TOQUE) return;
       gesto.movido = true;
@@ -296,11 +307,12 @@ window.MovilGlobo = (function () {
     });
 
     raiz.addEventListener('pointerup', function (e) {
-      if (!gesto) return;
+      if (!esDelGesto(e)) return;
       var g = gesto;
       gesto = null;
       if (!g.movido && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < UMBRAL_TOQUE) {
-        tocar(g.indice);
+        if (g.enMarcha) soltarAhora(Infinity);
+        else tocar(g.indice);
         return;
       }
       soltarAhora(e.timeStamp - g.t);
@@ -308,8 +320,8 @@ window.MovilGlobo = (function () {
 
     /* Una llamada entrante o el gesto de sistema del borde se quedan el dedo:
        nunca es un toque, y la esfera tiene que asentarse igual. */
-    raiz.addEventListener('pointercancel', function () {
-      if (!gesto) return;
+    raiz.addEventListener('pointercancel', function (e) {
+      if (!esDelGesto(e)) return;
       gesto = null;
       soltarAhora(Infinity);
     });

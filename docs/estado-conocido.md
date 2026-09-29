@@ -1713,6 +1713,13 @@ pudo moverse de trabajo por su eje horizontal).
   empieza en un `a` o `button` que no es una tesela no es de la esfera; si lo
   fuera, la captura de puntero se quedaría el clic.
 
+**Y dos más de la revisión final, también con prueba:** tocar una esfera que
+gira por inercia la FRENA y no abre la portada que pasaba por delante; y el
+gesto es del primer dedo (`pointerId`), así que un segundo dedo no la hace
+temblar. `.esfera` va con `touch-action:pinch-zoom` y no `none`, para no quitar
+el zoom de la portada; que el pellizco del navegador conviva bien con la esfera
+está en `docs/comprobaciones-en-produccion.md`, apartado 5.
+
 **El contacto volvió a ser capa en el móvil**, la misma que en escritorio, y
 `Contacto.colocar` ya no existe. «Volver a los trabajos» se ve también en
 móvil: allí no hay Escape ni barra.

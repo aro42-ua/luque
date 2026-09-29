@@ -165,11 +165,13 @@ sólo se ve desplegado. En un iPhone y, si se puede, en un Android.
 | [ ] | 6 | Arrastrar hacia abajo desde lo alto | Gira la esfera; la página **no** se recarga ni se desplaza |
 | [ ] | 7 | Abrir un trabajo, pasar a otro en el visor y cerrar | Delante queda el último que se estaba viendo |
 | [ ] | 8 | Pastilla «Contacto», y luego «Volver a los trabajos» | Abre la capa amarilla y vuelve a la esfera |
+| [ ] | 9 | Lanzar la esfera y tocarla para frenarla | Se frena y se asienta; **no** abre nada |
+| [ ] | 10 | Pellizcar con dos dedos sobre la esfera | La página amplía (zoom del navegador) y la esfera no da tirones |
 
 Si la fila 3 da tirones, lo primero es bajar `PERSPECTIVA` o la inclinación en
 `js/movil-esfera.js`, y después el número de teselas que cambian a la foto de
 1500 (`LUZ_GRANDE` en `js/movil-globo.js`). Si la 6 recarga, la sospechosa es
-`touch-action:none` sobre `.esfera` en `css/luque.css`.
+`touch-action:pinch-zoom` sobre `.esfera` en `css/luque.css`.
 
 ## Lo que salió distinto
 

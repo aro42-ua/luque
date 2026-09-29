@@ -1282,13 +1282,17 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
 /* ------------------------------------------------------------
    LA ESFERA — ver js/movil-globo.js y js/movil-esfera.js
    Cada tesela se coloca con un solo `transform` que calcula el JS; aquí
-   sólo va lo que no se mueve. `touch-action:none` es OBLIGATORIO: sin él
-   el navegador se queda el arrastre para desplazar o ampliar la página y
-   la esfera no gira.
+   sólo va lo que no se mueve. `touch-action:pinch-zoom` es OBLIGATORIO:
+   quita al navegador el arrastre de un dedo, que sin esto desplazaría la
+   página en vez de girar la esfera, y le deja el pellizco. `none` también
+   giraría, pero quitaría el zoom de toda la portada, que es la regresión de
+   accesibilidad que la puerta ya rechazó (`.hoja-hero`, más abajo). Cuando
+   el navegador se queda el pellizco, la esfera recibe `pointercancel` y se
+   asienta (revisión final, 2026-09-29).
 ------------------------------------------------------------ */
 .esfera{
   position:absolute; inset:0;
-  touch-action:none;
+  touch-action:pinch-zoom;
   -webkit-user-select:none; user-select:none;
   -webkit-tap-highlight-color:transparent;
 }

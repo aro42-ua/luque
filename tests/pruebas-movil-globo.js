@@ -249,6 +249,45 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
     });
   });
 
+  /* Revisión final: tocar para FRENAR una esfera que gira por inercia es el
+     gesto de cualquier lista con inercia, y no puede abrir la portada que
+     pasaba por delante en ese instante. */
+  prueba('tocar para frenar una esfera que gira no abre nada, sólo la asienta', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var raiz = marco.querySelector('#e');
+      puntero(raiz, 'pointerdown', 100, 400);
+      puntero(raiz, 'pointermove', 200, 400);
+      puntero(raiz, 'pointermove', 300, 400);
+      puntero(raiz, 'pointerup', 300, 400);
+      igual([g.estado().animando, g.estado().objetivo], [true, null]);
+      var b = botonDe(marco, g.delante());
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointerup', 195, 380);
+      igual(abiertos, []);
+      cierto(hastaQuieto(g) < 400, 'no se paró');
+    });
+  });
+
+  /* Revisión final: con dos dedos, cada `pointermove` alternaba entre los
+     dos y la esfera daba tirones de lado a lado. El gesto es del PRIMER
+     dedo; el segundo se ignora. */
+  function punteroDe(el, tipo, x, y, id) {
+    el.dispatchEvent(new PointerEvent(tipo, { clientX: x, clientY: y, pointerId: id, bubbles: true }));
+  }
+  prueba('un segundo dedo no mueve la esfera ni roba el toque del primero', function () {
+    conGlobo(function (g, marco, abiertos) {
+      var b = botonDe(marco, 'niebla');
+      var q = g.estado().q;
+      punteroDe(b, 'pointerdown', 195, 380, 1);
+      punteroDe(b, 'pointerdown', 300, 380, 2);
+      punteroDe(b, 'pointermove', 340, 300, 2);
+      punteroDe(b, 'pointerup', 340, 300, 2);
+      igual(g.estado().q, q);
+      punteroDe(b, 'pointerup', 195, 380, 1);
+      igual(abiertos, ['niebla']);
+    });
+  });
+
   prueba('pointercancel no abre nunca', function () {
     conGlobo(function (g, marco, abiertos) {
       var b = botonDe(marco, 'niebla');
