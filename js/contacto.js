@@ -1,6 +1,6 @@
 window.Contacto = (function () {
 
-  /* La hoja de contacto tiene dos vidas, y la decide el lado (js/movil.js):
+  /* La hoja de contacto es una capa amarilla, la misma en los dos lados:
 
      En ESCRITORIO es una capa amarilla que se pone delante de la galería
      cuando la ruta es `#/contacto`, y se quita cuando deja de serlo. No es
@@ -14,12 +14,10 @@ window.Contacto = (function () {
      lector de pantalla mientras la hoja está delante: eso es cosa de
      css/luque.css (`body.contacto-abierto .gallery`).
 
-     En el MÓVIL no es una hoja: es el final del recorrido. Como la portada
-     es scroll, el contacto va debajo de las imágenes —decisión de Ángel,
-     2026-09-12—, sin enlace ni página aparte. `colocar` mueve la MISMA
-     sección dentro de `.hoja`, detrás de la rejilla, y el CSS le quita todo
-     lo de capa. La ruta `#/contacto` en ese lado no abre nada: baja hasta la
-     sección, que ya está a la vista, y se queda ahí.
+     En el MÓVIL es la MISMA capa, abierta desde la pastilla «Contacto» que
+     flota sobre la esfera (index.html, `.esfera-contacto`). Hasta el
+     2026-09-29 se mudaba al pie de la rejilla, porque la portada era scroll;
+     la esfera ocupa la pantalla entera y ya no hay pie al que bajar.
 
      Quién manda en escritorio: el Router, igual que en la galería y el visor.
      Este módulo no decide si está abierto; se lo dice la ruta. Abrir es
@@ -31,55 +29,23 @@ window.Contacto = (function () {
   var enlaces = [];
   var abierto = false;
   var quienAbrio = null;
-  var lado = 'escritorio';
-  var sitioOriginal = null;   // { padre, siguiente } de donde nació la sección
   var ganchos = { congelar: function () {}, descongelar: function () {} };
 
   /* Guarda las referencias sin tocar el DOM ni suscribirse a nada: es lo que
-     las pruebas llaman en vez de `init`, para ejercitar `aplicar` y `colocar`
-     sobre un marcado propio. `enlaces` son los que abren la hoja desde fuera
-     —hoy sólo el de la barra—: se marcan como activos mientras está abierta,
-     como la categoría activa de la barra. `opciones.hoja` es el contenedor
-     móvil al que se muda la sección; sin él, `colocar` no mueve nada. */
+     las pruebas llaman en vez de `init`, para ejercitar `aplicar` sobre un
+     marcado propio. `enlaces` son los que abren la hoja desde fuera —la barra
+     en escritorio, la pastilla de la esfera en el móvil—: se marcan como
+     activos mientras está abierta, como la categoría activa de la barra. */
   function preparar(nodo, opciones) {
     raiz = nodo;
     enlaces = Array.prototype.slice.call(
       document.querySelectorAll('a[href="#/contacto"]'));
     ganchos = { congelar: function () {}, descongelar: function () {} };
-    ganchos.hoja = null;
     if (opciones) {
       if (opciones.congelar)    ganchos.congelar    = opciones.congelar;
       if (opciones.descongelar) ganchos.descongelar = opciones.descongelar;
-      if (opciones.hoja)        ganchos.hoja        = opciones.hoja;
     }
     abierto = false;
-    lado = 'escritorio';
-    sitioOriginal = raiz && raiz.parentNode
-      ? { padre: raiz.parentNode, siguiente: raiz.nextSibling } : null;
-  }
-
-  /* Muda la sección al lado que toca. Lo llama index.html desde las dos
-     ramas de `Movil.init`, que corren de forma síncrona al arrancar y cada
-     vez que el ancho cruza el umbral: al pasar a móvil la sección se cuelga
-     al final de `.hoja`; al volver, a donde nació. Mover un nodo conserva
-     sus oyentes, así que no hay nada que volver a cablear.
-
-     Cruzar a móvil con la hoja abierta la cierra sin tocar la ruta: en ese
-     lado no hay capa que cerrar, y dejar `body.contacto-abierto` puesto
-     escondería la portada entera (`body.contacto-abierto .hoja`). */
-  function colocar(nuevoLado) {
-    lado = nuevoLado;
-    if (!raiz) return;
-    if (lado === 'movil') {
-      if (abierto) desmontar();
-      raiz.setAttribute('aria-hidden', 'false');
-      if (ganchos.hoja && raiz.parentNode !== ganchos.hoja) ganchos.hoja.appendChild(raiz);
-    } else {
-      if (!abierto) raiz.setAttribute('aria-hidden', 'true');
-      if (sitioOriginal && raiz.parentNode !== sitioOriginal.padre) {
-        sitioOriginal.padre.insertBefore(raiz, sitioOriginal.siguiente);
-      }
-    }
   }
 
   function marcarEnlaces(activa) {
@@ -90,14 +56,6 @@ window.Contacto = (function () {
     });
   }
 
-  function desmontar() {
-    abierto = false;
-    document.body.classList.remove('contacto-abierto');
-    marcarEnlaces(false);
-    ganchos.descongelar();
-    quienAbrio = null;
-  }
-
   /* La única transición de estado. Es idempotente a propósito: el Router
      avisa en cada cambio de ruta, también en los que no tienen que ver con
      la hoja, y volver a aplicar el mismo estado no debe mover el foco ni
@@ -105,13 +63,6 @@ window.Contacto = (function () {
   function aplicar(ruta) {
     if (!raiz) return;
     var quiere = ruta.tipo === 'contacto';
-
-    /* En el móvil la sección ya está a la vista, al pie de la portada: la
-       ruta sólo baja hasta ella. Nada de clases ni de foco. */
-    if (lado === 'movil') {
-      if (quiere && raiz.scrollIntoView) raiz.scrollIntoView({ block: 'start' });
-      return;
-    }
 
     if (quiere === abierto) return;
     abierto = quiere;
@@ -166,7 +117,6 @@ window.Contacto = (function () {
     var nodo = document.getElementById('contacto');
     if (!nodo) return;
     preparar(nodo, {
-      hoja:        document.getElementById('hoja'),
       congelar:    function () { window.Galeria.congelar(); },
       descongelar: function () { window.Galeria.descongelar(); }
     });
@@ -189,14 +139,12 @@ window.Contacto = (function () {
 
     /* Se suscribe ANTES de `Router.init()` —index.html lo garantiza—: el
        Router avisa de forma síncrona al arrancar, y un enlace en frío a
-       `#/contacto` tiene que encontrar a alguien escuchando. `Movil.init`
-       también corre antes, así que `colocar` ya ha decidido el lado. */
+       `#/contacto` tiene que encontrar a alguien escuchando. */
     window.Router.alCambiar(aplicar);
   }
 
   return {
     preparar: preparar,
-    colocar: colocar,
     aplicar: aplicar,
     abierto: estaAbierto,
     abrir: abrir,

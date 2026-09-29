@@ -847,33 +847,14 @@
   .contacto-volver:focus-visible{ opacity:1; text-decoration-color:var(--black); }
   .contacto-volver:focus-visible{ outline:none; }
 
-  /* EN EL MÓVIL NO ES UNA HOJA: es el final del recorrido. `Contacto.colocar`
-     (js/contacto.js) mueve la sección dentro de `.hoja`, detrás de la
-     rejilla, y aquí se le quita todo lo de capa: deja de ser fija, se ve
-     siempre y no responde a la ruta. Se lee después del último trabajo,
-     separada por la misma regla fina que sus filas. Los 72 de abajo son los
-     que llevaba la rejilla: el hueco para el indicador de inicio de iOS pasa
-     a llevarlo el contacto, que ahora es lo último. */
-  body.es-movil .hoja-rejilla{ padding-bottom:28px; }
-  body.es-movil .hoja .contacto{
-    position:static;
-    display:block;
-    visibility:visible;
-    opacity:1;
-    transition:none;
-    z-index:auto;
-    margin:0 24px;
-    padding:28px 0 72px;
-    border-top:1px solid rgba(10,10,10,0.25);
-  }
-  /* Con la puerta delante, la rejilla va en visibility:hidden; el contacto
-     también, o se colaría por debajo en el tabulador. */
-  body.es-movil .hoja.con-hero .contacto{ visibility:hidden; }
+  /* En el móvil es la misma capa que en escritorio (js/contacto.js). Sólo
+     cambian los tamaños: el titular y el correo se ajustan al ancho de un
+     teléfono. «Volver a los trabajos» se queda visible: en un teléfono no hay
+     Escape ni barra, y es la única salida. */
+  body.es-movil .contacto{ padding:88px 24px calc(48px + env(safe-area-inset-bottom)); }
   body.es-movil .contacto-titulo{ font-size:clamp(2.4rem, 13vw, 4rem); }
   body.es-movil .contacto-correo{ margin-left:-12px; padding:10px 12px; font-size:clamp(1.15rem, 5.4vw, 1.6rem); }
   body.es-movil .contacto-datos{ max-width:none; }
-  /* Sin capa no hay nada a lo que volver. */
-  body.es-movil .contacto-volver{ display:none; }
 
   /* ============================================================
      RESPONSIVE
