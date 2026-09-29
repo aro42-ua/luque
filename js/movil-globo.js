@@ -57,6 +57,7 @@ window.MovilGlobo = (function () {
     var congelado = false;
     var pendiente = false;
     var ultimoT = null;
+    var recordado = null;
 
     function total() { return window.MovilEsfera.numero(proyectos.length - 1); }
 
@@ -346,6 +347,36 @@ window.MovilGlobo = (function () {
       return null;
     }
 
+    /* La misma regla que tenía `MovilHoja.filtrarDesdeRuta`: abrir un
+       proyecto o la hoja de contacto no dice nada del filtro. Lo que sí hace
+       abrir un proyecto es apuntarlo, porque el visor puede moverse de
+       trabajo por su eje horizontal y al cerrar hay que dejar delante el
+       ÚLTIMO, no el que se tocó.
+
+       El foco se mueve sólo si ya estaba dentro de la esfera: es el caso del
+       visor que al cerrar devuelve el foco a la tesela que lo abrió
+       (js/movil-visor.js), y esta función corre DESPUÉS de aquélla porque
+       index.html la suscribe después. Si el foco estaba en otro sitio, no se
+       le roba. */
+    function aplicar(ruta) {
+      if (ruta.tipo === 'proyecto') { recordado = ruta.valor; return; }
+      if (ruta.tipo === 'contacto') return;
+      var cat = ruta.tipo === 'categoria' ? ruta.valor : null;
+      if (cat !== categoria) reconstruir(cat);
+      if (recordado === null) return;
+      var id = recordado;
+      recordado = null;
+      var i = -1;
+      for (var n = 0; n < proyectos.length; n++) if (proyectos[n].id === id) i = n;
+      var k = visibles.indexOf(i);
+      if (k < 0) return;
+      var enfocado = raiz.contains(document.activeElement);
+      estado = window.MovilEsfera.traer(estado, puntos[k]);
+      dibujar();
+      anunciar();
+      if (enfocado) teselas[i].querySelector('button').focus({ preventScroll: true });
+    }
+
     pintar();
     reconstruir(null);
 
@@ -360,6 +391,7 @@ window.MovilGlobo = (function () {
       avanzar: avanzar,
       redibujar: dibujar,
       elementoDe: elementoDe,
+      aplicar: aplicar,
       congelar: function () { congelado = true; gesto = null; },
       descongelar: function () { congelado = false; programar(); }
     };
@@ -367,6 +399,7 @@ window.MovilGlobo = (function () {
 
   function elementoDe(id) { return actual ? actual.elementoDe(id) : null; }
   function redibujar() { if (actual) actual.redibujar(); }
+  function aplicar(ruta) { if (actual) actual.aplicar(ruta); }
   function congelar() { if (actual) actual.congelar(); }
   function descongelar() { if (actual) actual.descongelar(); }
 
@@ -375,6 +408,7 @@ window.MovilGlobo = (function () {
     init: init,
     elementoDe: elementoDe,
     redibujar: redibujar,
+    aplicar: aplicar,
     congelar: congelar,
     descongelar: descongelar
   };

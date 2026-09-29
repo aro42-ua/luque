@@ -297,3 +297,103 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
     }, {}, globoProyectos().slice(0, 1));
   });
 });
+
+describe('MovilGlobo — la ruta', function () {
+
+  var TODOS = { tipo: 'todos', valor: null, pieza: null };
+  function categoria(c) { return { tipo: 'categoria', valor: c, pieza: null }; }
+  function proyecto(id) { return { tipo: 'proyecto', valor: id, pieza: 1 }; }
+  function enLaEsfera(marco) {
+    return Array.prototype.filter.call(marco.querySelectorAll('li.esfera-tesela'),
+      function (li) { return !li.hidden; }).map(function (li) { return li.dataset.id; });
+  }
+
+  prueba('una categoría deja sólo las suyas y conserva los números', function () {
+    conGlobo(function (g, marco) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      igual(enLaEsfera(marco), ['oleaje', 'reflejo', 'salitre', 'resaca']);
+      igual(teselaDe(marco, 'oleaje').querySelector('.esfera-numero').textContent, '03');
+      igual(g.delante(), 'oleaje');
+      igual(marco.querySelector('#m').textContent, 'videoclip 03/08');
+    });
+  });
+
+  prueba('las de la categoría se reparten por toda la esfera', function () {
+    conGlobo(function (g) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      igual(g.proyeccion().length, 4);
+    });
+  });
+
+  prueba('volver a todos las devuelve todas', function () {
+    conGlobo(function (g, marco) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      MovilGlobo.aplicar(TODOS);
+      igual(enLaEsfera(marco).length, 8);
+    });
+  });
+
+  /* Review Focus 4. */
+  prueba('una categoría sin trabajos deja la esfera vacía sin lanzar', function () {
+    conGlobo(function (g, marco) {
+      MovilGlobo.aplicar(categoria('cortometraje'));
+      igual(enLaEsfera(marco), []);
+      igual(g.delante(), null);
+      igual(marco.querySelector('#t').textContent, '');
+    });
+  });
+
+  prueba('una categoría con un solo trabajo lo deja delante', function () {
+    conGlobo(function (g) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      igual(g.delante(), 'oleaje');
+    }, {}, globoProyectos().slice(0, 3));
+  });
+
+  prueba('abrir un proyecto no toca el filtro ni la esfera', function () {
+    conGlobo(function (g, marco) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var q = g.estado().q;
+      MovilGlobo.aplicar(proyecto('reflejo'));
+      igual(enLaEsfera(marco).length, 4);
+      igual(g.estado().q, q);
+    });
+  });
+
+  prueba('el contacto no toca el filtro', function () {
+    conGlobo(function (g, marco) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      MovilGlobo.aplicar({ tipo: 'contacto', valor: null, pieza: null });
+      igual(enLaEsfera(marco).length, 4);
+    });
+  });
+
+  /* Review Focus 5: quien llega por un enlace a un trabajo, o se mueve de
+     trabajo dentro del visor, al cerrar lo encuentra delante. */
+  prueba('al salir del visor trae delante el último trabajo abierto', function () {
+    conGlobo(function (g) {
+      MovilGlobo.aplicar(proyecto('bruma'));
+      MovilGlobo.aplicar(proyecto('marea'));
+      MovilGlobo.aplicar(TODOS);
+      igual(g.delante(), 'marea');
+      igual(g.estado().animando, false);
+    });
+  });
+
+  prueba('si el último abierto no es de la categoría, delante queda la primera', function () {
+    conGlobo(function (g) {
+      MovilGlobo.aplicar(proyecto('bruma'));
+      MovilGlobo.aplicar(categoria('videoclip'));
+      igual(g.delante(), 'oleaje');
+    });
+  });
+
+  prueba('al volver, si el foco estaba en la esfera pasa a la de delante', function () {
+    conGlobo(function (g, marco) {
+      teselaDe(marco, 'niebla').querySelector('button').focus();
+      MovilGlobo.aplicar(proyecto('marea'));
+      MovilGlobo.aplicar(TODOS);
+      igual(document.activeElement, teselaDe(marco, 'marea').querySelector('button'));
+    });
+  });
+});
