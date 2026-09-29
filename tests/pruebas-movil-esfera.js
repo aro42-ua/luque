@@ -298,6 +298,24 @@ describe('MovilEsfera — proyección y vecinas', function () {
     cierto(g2.tesela * 1.25 < 390, 'en apaisado la de delante cabe de alto');
   });
 
+  /* Petición de Ángel, 2026-09-29: la esfera un poco más pequeña, y las que
+     no están delante más pequeñas todavía, para que la de delante tenga más
+     presencia. */
+  prueba('el radio es la mitad del lado corto', function () {
+    cerca(MovilEsfera.geometria(MEDIDAS).radio, 195, 1e-9);
+  });
+
+  prueba('una del ecuador queda por debajo de la mitad de la de delante', function () {
+    var e = MovilEsfera.inicial([[0, 0, 1]]);
+    var p = MovilEsfera.proyectar(e, [[1, 0, 0]], MEDIDAS)[0];
+    cierto(p.escala < 0.5, 'escala ' + p.escala);
+  });
+
+  prueba('una de detrás baja a más o menos un 30 %', function () {
+    var e = MovilEsfera.inicial([[0, 0, 1]]);
+    cerca(MovilEsfera.proyectar(e, [[0, 0, -1]], MEDIDAS)[0].escala, 0.3, 0.02);
+  });
+
   prueba('proyectar sin puntos da una lista vacía', function () {
     igual(MovilEsfera.proyectar(MovilEsfera.inicial([]), [], MEDIDAS), []);
   });

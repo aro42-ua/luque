@@ -48,6 +48,8 @@ window.MovilGlobo = (function () {
     var alAbrir = opciones.alAbrir || function () {};
 
     var teselas = [];     // por índice en la lista COMPLETA
+    var ramas = [];       // ídem: la rama que va del centro a cada tesela
+    var nudo = null;
     var visibles = [];    // índices en la lista completa, en el orden de `puntos`
     var puntos = [];
     var estado = window.MovilEsfera.inicial([]);
@@ -61,7 +63,32 @@ window.MovilGlobo = (function () {
 
     function total() { return window.MovilEsfera.numero(proyectos.length - 1); }
 
+    /* Las ramas: del centro de la esfera, una línea hasta cada portada, y un
+       nudo donde se juntan todas (petición de Ángel, 2026-09-29). Van en una
+       capa hermana de la lista y SIN contexto de apilamiento propio, para que
+       cada rama pueda colarse en el orden justo por debajo de su tesela
+       (ver `dibujar`). Son dibujo, no contenido: fuera del lector. */
+    function pintarRamas() {
+      var vieja = raiz.querySelector('.esfera-ramas');
+      if (vieja) vieja.parentNode.removeChild(vieja);
+      var capa = document.createElement('div');
+      capa.className = 'esfera-ramas';
+      capa.setAttribute('aria-hidden', 'true');
+      nudo = document.createElement('span');
+      nudo.className = 'esfera-nudo';
+      capa.appendChild(nudo);
+      ramas = proyectos.map(function (p) {
+        var r = document.createElement('span');
+        r.className = 'esfera-rama';
+        r.dataset.id = p.id;
+        capa.appendChild(r);
+        return r;
+      });
+      raiz.insertBefore(capa, lista);
+    }
+
     function pintar() {
+      pintarRamas();
       lista.innerHTML = '';
       teselas = proyectos.map(function (p, i) {
         var li = document.createElement('li');
@@ -112,8 +139,10 @@ window.MovilGlobo = (function () {
       proyectos.forEach(function (p, i) {
         var dentro = cat === null || p.categoria === cat;
         teselas[i].hidden = !dentro;
+        ramas[i].hidden = !dentro;
         if (dentro) visibles.push(i);
       });
+      nudo.hidden = !visibles.length;
       puntos = window.MovilEsfera.reparto(visibles.length);
       estado = window.MovilEsfera.inicial(puntos);
       dibujar();
@@ -144,6 +173,11 @@ window.MovilGlobo = (function () {
       var ancho = g.tesela;
       var alto = g.tesela * 1.25;
       var proy = window.MovilEsfera.proyectar(estado, puntos, medidas);
+      var centro = 'translate3d(' + g.cx.toFixed(1) + 'px,' + g.cy.toFixed(1) + 'px,0)';
+      /* El nudo está en el centro de la esfera, o sea a media profundidad:
+         el mismo `z` que tendría una tesela en el ecuador. */
+      nudo.style.transform = centro;
+      nudo.style.zIndex = '1000';
       proy.forEach(function (pr, k) {
         var i = visibles[k];
         var li = teselas[i];
@@ -159,8 +193,20 @@ window.MovilGlobo = (function () {
           'perspective(' + Math.round(ancho * 3) + 'px) ' +
           'rotateY(' + pr.inclinacion.y.toFixed(2) + 'deg) ' +
           'rotateX(' + pr.inclinacion.x.toFixed(2) + 'deg)';
-        li.style.zIndex = String(pr.z);
+        /* Pares para las ramas, impares para las teselas: así cada rama cae
+           JUSTO por debajo de su tesela y por encima de todo lo que está más
+           atrás, que es lo que hace que la rama de una portada de delante
+           cruce por encima de las de detrás y se esconda bajo la suya. */
+        li.style.zIndex = String(2 * pr.z + 1);
         li.querySelector('.esfera-velo').style.opacity = (1 - pr.luz).toFixed(3);
+
+        var rama = ramas[i];
+        var dx = pr.x - g.cx;
+        var dy = pr.y - g.cy;
+        rama.style.width = Math.hypot(dx, dy).toFixed(1) + 'px';
+        rama.style.transform = centro + ' rotate(' + Math.atan2(dy, dx).toFixed(4) + 'rad)';
+        rama.style.zIndex = String(2 * pr.z);
+        rama.style.opacity = (0.7 * pr.luz).toFixed(3);
 
         var detras = !pr.visible;
         if (li.classList.contains('detras') !== detras || !li.dataset.pintada) {
@@ -412,7 +458,7 @@ window.MovilGlobo = (function () {
       estado: function () { return estado; },
       proyeccion: function () {
         return window.MovilEsfera.proyectar(estado, puntos, medir()).map(function (pr, k) {
-          return { id: proyectos[visibles[k]].id, x: pr.x, luz: pr.luz, visible: pr.visible };
+          return { id: proyectos[visibles[k]].id, x: pr.x, y: pr.y, luz: pr.luz, visible: pr.visible };
         });
       },
       avanzar: avanzar,
