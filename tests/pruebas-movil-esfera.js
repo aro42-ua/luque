@@ -67,3 +67,147 @@ describe('MovilEsfera — números, cuaterniones y reparto', function () {
     cerca(MovilEsfera.distancia(MovilEsfera.slerp(a, b, 0.5), a), Math.PI / 4);
   });
 });
+
+describe('MovilEsfera — orientación, inercia y muelle', function () {
+
+  function cerca(a, b, tol, msg) {
+    if (Math.abs(a - b) > (tol || 1e-6)) {
+      throw new Error((msg ? msg + ': ' : '') + 'esperaba ~' + b + ' y recibió ' + a);
+    }
+  }
+  function zDe(estado, punto) { return MovilEsfera.rotar(estado.q, punto)[2]; }
+
+  /* Corre el reloj a 16 ms por paso hasta que la esfera se para, con tope:
+     si no se para en 400 pasos (6,4 s) la prueba lo dice en vez de colgarse. */
+  function hastaQuieta(estado, puntos) {
+    for (var i = 0; i < 400 && estado.animando; i++) {
+      estado = MovilEsfera.avanzar(estado, 16, puntos);
+    }
+    return { estado: estado, pasos: i };
+  }
+
+  var P8 = MovilEsfera.reparto(8);
+
+  prueba('inicial deja el trabajo 01 delante', function () {
+    var e = MovilEsfera.inicial(P8);
+    cerca(zDe(e, P8[0]), 1);
+    igual(MovilEsfera.delante(e, P8), 0);
+    igual(e.animando, false);
+  });
+
+  prueba('sin puntos, inicial es la identidad y delante es -1', function () {
+    var e = MovilEsfera.inicial([]);
+    igual(e.q, [1, 0, 0, 0]);
+    igual(MovilEsfera.delante(e, []), -1);
+  });
+
+  prueba('traer(k) deja k delante para todo k', function () {
+    var e = MovilEsfera.inicial(P8);
+    for (var k = 0; k < P8.length; k++) {
+      e = MovilEsfera.traer(e, P8[k]);
+      cerca(zDe(e, P8[k]), 1, 1e-6, 'k=' + k);
+      igual(MovilEsfera.delante(e, P8), k);
+    }
+  });
+
+  /* El sentido del gesto: arrastrar a la derecha lleva el punto de delante a
+     la derecha; arrastrar hacia abajo lo lleva hacia abajo (y negativa). */
+  prueba('arrastrar sigue al dedo en los dos ejes', function () {
+    var e = MovilEsfera.inicial(P8);
+    var der = MovilEsfera.rotar(MovilEsfera.arrastrar(e, 40, 0, 400, 16).q, P8[0]);
+    var aba = MovilEsfera.rotar(MovilEsfera.arrastrar(e, 0, 40, 400, 16).q, P8[0]);
+    cierto(der[0] > 0.1, 'derecha: x=' + der[0]);
+    cierto(aba[1] < -0.1, 'abajo: y=' + aba[1]);
+  });
+
+  prueba('cruzar el ancho entero gira unos 180°', function () {
+    var e = MovilEsfera.inicial(P8);
+    var d = MovilEsfera.arrastrar(e, 400, 0, 400, 16);
+    cerca(MovilEsfera.distancia(e.q, d.q), Math.PI, 1e-6);
+  });
+
+  /* Review Focus 2: dos muestras casi simultáneas darían una velocidad
+     absurda y la esfera giraría segundos como una peonza. */
+  prueba('la velocidad tiene tope', function () {
+    var e = MovilEsfera.arrastrar(MovilEsfera.inicial(P8), 120, 90, 400, 0.01);
+    cierto(Math.hypot(e.vel.h, e.vel.v) <= MovilEsfera.VEL_MAX + 1e-12,
+           'vel=' + Math.hypot(e.vel.h, e.vel.v));
+  });
+
+  prueba('con ms = 0 la velocidad no se toca', function () {
+    var e = MovilEsfera.inicial(P8);
+    igual(MovilEsfera.arrastrar(e, 30, 0, 400, 0).vel, { h: 0, v: 0 });
+  });
+
+  prueba('al soltar con velocidad sigue girando, frena y se asienta', function () {
+    var e = MovilEsfera.inicial(P8);
+    e = MovilEsfera.arrastrar(e, 30, 5, 400, 16);
+    e = MovilEsfera.arrastrar(e, 30, 5, 400, 16);
+    e = MovilEsfera.soltar(e, P8, { reducido: false, msDesdeUltimo: 10 });
+    igual(e.animando, true);
+    var r = hastaQuieta(e, P8);
+    cierto(r.pasos < 400, 'no se paró');
+    var k = MovilEsfera.delante(r.estado, P8);
+    cerca(zDe(r.estado, P8[k]), 1, 1e-3, 'la de delante queda centrada');
+  });
+
+  prueba('al asentarse gana la más cercana al frente', function () {
+    var e = MovilEsfera.arrastrar(MovilEsfera.inicial(P8), 25, 10, 400, 0);
+    var esperada = MovilEsfera.delante(e, P8);
+    e = MovilEsfera.soltar(e, P8, { reducido: false, msDesdeUltimo: 500 });
+    var r = hastaQuieta(e, P8);
+    igual(MovilEsfera.delante(r.estado, P8), esperada);
+    cerca(zDe(r.estado, P8[esperada]), 1, 1e-3);
+  });
+
+  /* Quien suelta el dedo tras dejarlo quieto no quiere inercia: la velocidad
+     que quedaba apuntada es de antes de pararse. */
+  prueba('soltar tras quedarse quieto no lanza la esfera', function () {
+    var e = MovilEsfera.arrastrar(MovilEsfera.inicial(P8), 60, 0, 400, 16);
+    e = MovilEsfera.soltar(e, P8, { reducido: false, msDesdeUltimo: 300 });
+    igual(e.vel, { h: 0, v: 0 });
+  });
+
+  prueba('con movimiento reducido soltar asienta sin animar', function () {
+    var e = MovilEsfera.arrastrar(MovilEsfera.inicial(P8), 60, 20, 400, 16);
+    var k = MovilEsfera.delante(e, P8);
+    e = MovilEsfera.soltar(e, P8, { reducido: true, msDesdeUltimo: 0 });
+    igual(e.animando, false);
+    cerca(zDe(e, P8[k]), 1, 1e-6);
+  });
+
+  prueba('apuntar anima hasta dejar el punto delante', function () {
+    var e = MovilEsfera.apuntar(MovilEsfera.inicial(P8), P8[3], false);
+    igual(e.animando, true);
+    var r = hastaQuieta(e, P8);
+    cierto(r.pasos < 400, 'no se paró');
+    igual(MovilEsfera.delante(r.estado, P8), 3);
+    cerca(zDe(r.estado, P8[3]), 1, 1e-3);
+  });
+
+  prueba('apuntar con movimiento reducido salta', function () {
+    var e = MovilEsfera.apuntar(MovilEsfera.inicial(P8), P8[3], true);
+    igual(e.animando, false);
+    cerca(zDe(e, P8[3]), 1, 1e-6);
+  });
+
+  prueba('avanzar sobre una esfera quieta no la mueve', function () {
+    var e = MovilEsfera.inicial(P8);
+    igual(MovilEsfera.avanzar(e, 16, P8), e);
+  });
+
+  prueba('con un solo punto, arrastrar y soltar vuelve a dejarlo delante', function () {
+    var p1 = MovilEsfera.reparto(1);
+    var e = MovilEsfera.arrastrar(MovilEsfera.inicial(p1), 80, 0, 400, 16);
+    e = MovilEsfera.soltar(e, p1, { reducido: false, msDesdeUltimo: 10 });
+    var r = hastaQuieta(e, p1);
+    cerca(zDe(r.estado, p1[0]), 1, 1e-3);
+  });
+
+  prueba('sin puntos, soltar y avanzar no lanzan', function () {
+    var e = MovilEsfera.arrastrar(MovilEsfera.inicial([]), 80, 0, 400, 16);
+    e = MovilEsfera.soltar(e, [], { reducido: false, msDesdeUltimo: 10 });
+    e = MovilEsfera.avanzar(e, 16, []);
+    igual(e.animando, false);
+  });
+});

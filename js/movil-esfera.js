@@ -101,8 +101,118 @@ window.MovilEsfera = (function () {
     return 2 * Math.acos(Math.min(1, d));
   }
 
+  /* Los números del movimiento. Afinarlos es trabajo de teléfono, no de
+     suite: las pruebas fijan la forma (frena, se para, gana la más cercana),
+     no estos valores.
+     - TAU_INERCIA: cuánto tarda la velocidad en caer a un 37 %. 325 ms es la
+       constante que usa el desplazamiento de iOS, y se siente familiar.
+     - TAU_MUELLE: lo mismo para el asiento en la portada; corto para que se
+       note como un encaje y no como una segunda inercia.
+     - VEL_MAX: tope de giro (Review Focus 2). 0,02 rad/ms son ~1,1° por ms,
+       un golpe de dedo enérgico; por encima sólo hay ruido de muestreo.
+     - QUIETO_MS: si el dedo lleva este tiempo parado al soltar, no se lanza. */
+  var TAU_INERCIA = 325;
+  var TAU_MUELLE = 90;
+  var UMBRAL_VEL = 0.0004;
+  var UMBRAL_ANG = 0.001;
+  var VEL_MAX = 0.02;
+  var QUIETO_MS = 80;
+  var QUIETA = { h: 0, v: 0 };
+
+  function estado(q, vel, objetivo, animando) {
+    return { q: q, vel: vel, objetivo: objetivo, animando: animando };
+  }
+
+  /* Gira alrededor de los ejes de la PANTALLA y no de los de la esfera: por
+     eso la rotación nueva se multiplica por la izquierda. Si se multiplicara
+     por la derecha, tras medio giro arrastrar a la derecha movería la esfera
+     hacia la izquierda. */
+  function girar(q, h, v) {
+    return normalizar(mult(mult(eje(1, 0, 0, v), eje(0, 1, 0, h)), q));
+  }
+
+  function delante(e, puntos) {
+    var mejor = -1;
+    var mejorZ = -Infinity;
+    for (var i = 0; i < puntos.length; i++) {
+      var z = rotar(e.q, puntos[i])[2];
+      if (z > mejorZ) { mejorZ = z; mejor = i; }
+    }
+    return mejor;
+  }
+
+  function traer(e, punto) {
+    var p = rotar(e.q, punto);
+    return estado(normalizar(mult(arco(p, FRENTE), e.q)), QUIETA, null, false);
+  }
+
+  function inicial(puntos) {
+    var e = estado([1, 0, 0, 0], QUIETA, null, false);
+    return puntos.length ? traer(e, puntos[0]) : e;
+  }
+
+  function apuntar(e, punto, reducido) {
+    if (reducido) return traer(e, punto);
+    return estado(e.q, QUIETA, traer(e, punto).q, true);
+  }
+
+  function acotar(vel) {
+    var r = Math.hypot(vel.h, vel.v);
+    if (r <= VEL_MAX) return vel;
+    return { h: vel.h * VEL_MAX / r, v: vel.v * VEL_MAX / r };
+  }
+
+  /* Cruzar el ancho entero gira media vuelta (π). La velocidad se suaviza
+     con la anterior porque las muestras de un dedo vienen con ruido, y con
+     `ms = 0` —dos eventos en el mismo instante— no se toca: dividir por cero
+     da Infinity, y un Infinity en la velocidad es un NaN en la esfera. */
+  function arrastrar(e, dx, dy, ancho, ms) {
+    var k = Math.PI / Math.max(ancho, 1);
+    var h = dx * k;
+    var v = dy * k;
+    var vel = e.vel;
+    if (ms > 0) {
+      vel = acotar({ h: 0.7 * h / ms + 0.3 * e.vel.h, v: 0.7 * v / ms + 0.3 * e.vel.v });
+    }
+    return estado(girar(e.q, h, v), vel, null, false);
+  }
+
+  function asentar(e, puntos) {
+    var i = delante(e, puntos);
+    var quieta = estado(e.q, QUIETA, null, false);
+    return i < 0 ? quieta : traer(quieta, puntos[i]);
+  }
+
+  function soltar(e, puntos, opciones) {
+    if (!puntos.length) return estado(e.q, QUIETA, null, false);
+    if (opciones.reducido) return asentar(e, puntos);
+    var vel = opciones.msDesdeUltimo > QUIETO_MS ? QUIETA : e.vel;
+    return estado(e.q, vel, null, true);
+  }
+
+  /* Un paso del reloj. Dos fases: primero la inercia, que frena por
+     rozamiento; cuando la velocidad cae bajo el umbral, se fija como objetivo
+     la portada más cercana y el muelle la encaja. Termina siempre con una
+     portada exactamente delante. */
+  function avanzar(e, ms, puntos) {
+    if (!e.animando) return e;
+    if (!puntos.length) return estado(e.q, QUIETA, null, false);
+    if (e.objetivo === null) {
+      if (Math.hypot(e.vel.h, e.vel.v) > UMBRAL_VEL) {
+        var f = Math.exp(-ms / TAU_INERCIA);
+        return estado(girar(e.q, e.vel.h * ms, e.vel.v * ms),
+                      { h: e.vel.h * f, v: e.vel.v * f }, null, true);
+      }
+      e = estado(e.q, QUIETA, asentar(e, puntos).q, true);
+    }
+    var q = slerp(e.q, e.objetivo, 1 - Math.exp(-ms / TAU_MUELLE));
+    if (distancia(q, e.objetivo) < UMBRAL_ANG) return estado(e.objetivo, QUIETA, null, false);
+    return estado(q, QUIETA, e.objetivo, true);
+  }
+
   return {
     FRENTE: FRENTE,
+    VEL_MAX: VEL_MAX,
     numero: numero,
     reparto: reparto,
     mult: mult,
@@ -111,6 +221,13 @@ window.MovilEsfera = (function () {
     rotar: rotar,
     arco: arco,
     slerp: slerp,
-    distancia: distancia
+    distancia: distancia,
+    inicial: inicial,
+    delante: delante,
+    traer: traer,
+    apuntar: apuntar,
+    arrastrar: arrastrar,
+    soltar: soltar,
+    avanzar: avanzar
   };
 })();
