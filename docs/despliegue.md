@@ -868,6 +868,10 @@ teléfono, y `/panel` y `/docs/*` siguen dando 302.
 
 ### Un diagnóstico temporal, que HAY QUE QUITAR (2026-09-16, segundo)
 
+**Retirado el 2026-09-29**, con la rejilla que vigilaba: la portada móvil pasó a
+ser una esfera (`docs/estado-conocido.md`, «La esfera de la portada móvil»). El
+próximo despliegue lo quita también de producción.
+
 **Desplegado el commit `0b9301d` de `main`** —la fusión del PR #40—, versión
 `4e550fb0-f719-4860-bdc4-2693661d2a7e`, 199 archivos exportados y **3 subidos**.
 

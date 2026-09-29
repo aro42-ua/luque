@@ -4,7 +4,7 @@ window.FichaDato = (function () {
      hueco que se VE: una fila con el rótulo puesto y el valor en blanco se lee
      como «la web está rota», y `######` se lee como «este dato no lo tenemos».
      Es la misma idea que el número dentro del marco oscuro de la foto que no
-     llega (`.hoja-celda.sin-foto`, en css/luque.css). */
+     llega (`.esfera-tesela.sin-foto`, en css/luque.css). */
   var HUECO = '######';
 
   /* Un dato de ficha, listo para meter en un `dd`.

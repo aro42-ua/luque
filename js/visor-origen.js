@@ -45,12 +45,12 @@ window.VisorOrigen = (function () {
 
      Y no vale con consultar aquí la media query cuando `actual()` sea `null`:
      en ese mismo instante `body.es-movil` tampoco estaría puesto, `.hoja`
-     seguiría en `display:none` y la celda devolvería un rectángulo en ceros —
+     seguiría en `display:none` y la tesela devolvería un rectángulo en ceros —
      el mismo defecto con otro disfraz. Lo que hace falta es que el lado esté
      decidido Y aplicado, y eso sólo lo garantiza el orden de arranque. */
   function elemento(id) {
     if (window.Movil.actual() === 'movil') {
-      return window.MovilHoja.elementoDe(document.getElementById('hojaRejilla'), id);
+      return window.MovilGlobo.elementoDe(id);
     }
     return window.Galeria.elementoDe(id);
   }

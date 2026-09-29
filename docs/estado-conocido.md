@@ -329,7 +329,19 @@ la rejilla.
 **Hay un diagnóstico puesto para cazarlo si vuelve**, y hay que acordarse de
 quitarlo: ver la sección de `docs/despliegue.md` del 2026-09-16.
 
+**Cerrado el 2026-09-29 sin cazarlo.** La rejilla y `js/diagnostico-toques.js`
+se retiraron con la llegada de la esfera. La esfera decide el toque con
+`pointerdown`/`pointerup` y captura de puntero, y no con `click`, que es justo
+el mecanismo que el diagnóstico apuntaba como sospechoso; la tesela sale del
+`pointerdown`. Si el fallo vuelve en la esfera, empezar por ahí.
+
 ## La portada móvil (bloque 4d) y el visor móvil (bloque 4f)
+
+**Desde el 2026-09-29 la portada móvil ya no es una rejilla: es una esfera**
+(`js/movil-esfera.js` + `js/movil-globo.js`, spec
+`docs/superpowers/specs/2026-09-29-esfera-movil-design.md`). Lo que esta
+sección cuenta de `MovilHoja` y de la rejilla es historia; el visor de dos ejes
+sigue exactamente igual.
 
 **El visor de la portada móvil ya no es el de escritorio.** Hasta el bloque
 4f, tocar un trabajo en la rejilla abría `js/visor.js`, pensado para un ratón.
@@ -1671,3 +1683,52 @@ proyectos **no** pasa por el desmontaje (`rematar()`). Cualquier estado nuevo qu
 dependa del modo (foto o vídeo, ficha, lupa) tiene que auto-curarse en
 `renderizar()`, como ya hacen la lupa, la ficha y el indicador de carga. Tres
 fallos del desarrollo salieron de olvidar esto.
+
+## La esfera de la portada móvil (2026-09-29)
+
+**Quién hace qué.** `js/movil-esfera.js` (`window.MovilEsfera`) es puro: reparto
+de Fibonacci a partir del número de trabajos, orientación con cuaterniones,
+inercia y muelle, proyección a pantalla y la vecina de cada lado; el tiempo
+entra como argumento. `js/movil-globo.js` (`window.MovilGlobo`) lo cablea:
+pinta una tesela por trabajo, aplica la proyección con un solo `transform` por
+tesela (con `perspective()` dentro, sin `preserve-3d`), atiende dedo, rueda y
+teclado, y sigue la ruta.
+
+**Los números del movimiento se afinan en un teléfono, no en la suite:**
+`TAU_INERCIA`, `TAU_MUELLE`, `VEL_MAX`, `PERSPECTIVA` (en `movil-esfera.js`) y
+`LUZ_GRANDE`, `UMBRAL_TOQUE` (en `movil-globo.js`). Las pruebas fijan la forma
+—frena, se para, gana la más cercana, la velocidad tiene tope—, no los valores.
+
+**`MovilGlobo.aplicar` se suscribe al Router DETRÁS de `MovilVisor.aplicar`, a
+propósito.** Al cerrar, el visor devuelve el foco a la tesela que lo abrió, y
+la esfera tiene que correr después para pasarlo a la que deja delante (el visor
+pudo moverse de trabajo por su eje horizontal).
+
+**Dos trampas que salieron al mirarlo en el panel y ya tienen prueba:**
+- `MovilGlobo.init` corre en `index.html` antes de que `Movil.init` ponga
+  `body.es-movil`; en ese instante `.hoja` está en `display:none` y la raíz
+  mide 0×0. `dibujar()` no escribe con medidas nulas, y la rama móvil de
+  `Movil.init` llama a `MovilGlobo.redibujar()`.
+- La pastilla «Contacto» vive dentro de la raíz de la esfera. Un gesto que
+  empieza en un `a` o `button` que no es una tesela no es de la esfera; si lo
+  fuera, la captura de puntero se quedaría el clic.
+
+**Y dos más de la revisión final, también con prueba:** tocar una esfera que
+gira por inercia la FRENA y no abre la portada que pasaba por delante; y el
+gesto es del primer dedo (`pointerId`), así que un segundo dedo no la hace
+temblar. `.esfera` va con `touch-action:pinch-zoom` y no `none`, para no quitar
+el zoom de la portada; que el pellizco del navegador conviva bien con la esfera
+está en `docs/comprobaciones-en-produccion.md`, apartado 5.
+
+**El contacto volvió a ser capa en el móvil**, la misma que en escritorio, y
+`Contacto.colocar` ya no existe. «Volver a los trabajos» se ve también en
+móvil: allí no hay Escape ni barra.
+
+**Categorías:** `#/categoria/<nombre>` deja en la esfera sólo las de esa
+categoría, las **reparte de nuevo** por toda la superficie y **conserva su
+número** de la lista completa. Decisión tomada al escribir la spec, pendiente
+de que Ángel la vea en su teléfono.
+
+**En local las teselas salen grises con su número**, porque toda foto da 404.
+El número sólo se ve cuando falta la foto (`.sin-foto`); con fotos, quien
+nombra el trabajo es el pie.

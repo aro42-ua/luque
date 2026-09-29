@@ -149,6 +149,30 @@ de direcciones, y hay que volver a mirar las filas 2 y 3 después del cambio.
 Si se decide dejarlo, quitar la clase de `js/movil-visor.js` o dejar dicho en
 `docs/estado-conocido.md` que se queda a propósito sin reglas.
 
+## 5. La esfera de la portada móvil (2026-09-29)
+
+Fuente: `docs/estado-conocido.md`, «La esfera de la portada móvil». En local
+toda foto da 404, así que lo que depende de las portadas de verdad y del tacto
+sólo se ve desplegado. En un iPhone y, si se puede, en un Android.
+
+| | # | Qué se mira | Qué tiene que pasar |
+|---|---|---|---|
+| [ ] | 1 | Cruzar la puerta amarilla | Aparece la esfera sobre negro, con La Boquerona delante y su nombre en el pie |
+| [ ] | 2 | Mirar las portadas reales | Se leen, el recorte a 4:5 no corta nada importante y el velo oscurece lo justo |
+| [ ] | 3 | Arrastrar en cualquier dirección y soltar | Gira siguiendo el dedo, sigue un poco por inercia y se asienta con una portada centrada; sin tirones |
+| [ ] | 4 | Tocar la portada de delante **nada más cruzar la puerta** | Abre el visor a la **primera** |
+| [ ] | 5 | Tocar una portada lateral | No abre: la gira hasta delante |
+| [ ] | 6 | Arrastrar hacia abajo desde lo alto | Gira la esfera; la página **no** se recarga ni se desplaza |
+| [ ] | 7 | Abrir un trabajo, pasar a otro en el visor y cerrar | Delante queda el último que se estaba viendo |
+| [ ] | 8 | Pastilla «Contacto», y luego «Volver a los trabajos» | Abre la capa amarilla y vuelve a la esfera |
+| [ ] | 9 | Lanzar la esfera y tocarla para frenarla | Se frena y se asienta; **no** abre nada |
+| [ ] | 10 | Pellizcar con dos dedos sobre la esfera | La página amplía (zoom del navegador) y la esfera no da tirones |
+
+Si la fila 3 da tirones, lo primero es bajar `PERSPECTIVA` o la inclinación en
+`js/movil-esfera.js`, y después el número de teselas que cambian a la foto de
+1500 (`LUZ_GRANDE` en `js/movil-globo.js`). Si la 6 recarga, la sospechosa es
+`touch-action:pinch-zoom` sobre `.esfera` en `css/luque.css`.
+
 ## Lo que salió distinto
 
 Commit desplegado: `______`. Fecha: `______`.

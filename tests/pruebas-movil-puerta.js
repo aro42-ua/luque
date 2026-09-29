@@ -10,15 +10,15 @@ describe('MovilPuerta — el hero deslizante', function () {
   var MARCO =
     '<div>' +
       '<div class="hoja-hero" id="h" style="height:800px"></div>' +
-      '<ol class="hoja-rejilla" id="r"></ol>' +
+      '<div class="esfera" id="r"></div>' +
     '</div>';
 
   function conElHero(ruta, fn) {
     return ArnesDom.conElemento(MARCO, function (raiz) {
       var hero = raiz.querySelector('#h');
-      var rejilla = raiz.querySelector('#r');
-      MovilPuerta.entrada(hero, raiz, rejilla, ruta);
-      return fn(hero, raiz, rejilla);
+      var esfera = raiz.querySelector('#r');
+      MovilPuerta.entrada(hero, raiz, esfera, ruta);
+      return fn(hero, raiz, esfera);
     });
   }
 
@@ -172,17 +172,17 @@ describe('MovilPuerta — el hero deslizante', function () {
 
      Lo que se mira NO es `heroIdo()`: con las dos versiones acaba valiendo
      `true`, y por eso el resto de pruebas de esta sección no distinguen una
-     de otra. Se mira el hero y la rejilla de la entrada VIGENTE. Con `cerrada`
+     de otra. Se mira el hero y la esfera de la entrada VIGENTE. Con `cerrada`
      local y `mia === generacion`, el oyente caduco cierra su propia puerta y
      el vigente llega a cerrar la suya. Con una bandera compartida, el caduco
      la pone y el vigente sale por la puerta de atrás sin tocar nada. */
   prueba('la tecla cierra la puerta de ahora, no la de una entrada anterior', function () {
     igual(conElHero(rutaPortada(), function () {
-      return conElHero(rutaPortada(), function (hero, raiz, rejilla) {
+      return conElHero(rutaPortada(), function (hero, raiz, esfera) {
         document.dispatchEvent(new KeyboardEvent('keydown',
           { key: 'Enter', bubbles: true }));
         return [MovilPuerta.heroIdo(), hero.classList.contains('fuera'),
-                rejilla.getAttribute('aria-hidden')];
+                esfera.getAttribute('aria-hidden')];
       });
     }), [true, true, null]);
   });
@@ -196,17 +196,17 @@ describe('MovilPuerta — el hero deslizante', function () {
     }), 'el segundo gesto tiene que ser inofensivo');
   });
 
-  /* Mientras el hero está delante, la rejilla no puede leerse por detrás, y la
+  /* Mientras el hero está delante, la esfera no puede leerse por detrás, y la
      hoja lleva `con-hero` para que el CSS de la Tarea 6 no la deje
      desplazarse por detrás. Las dos marcas se ponen juntas al entrar y tienen
      que irse juntas al cruzar: una que se quedara puesta con el hero ya ido
      diría lo contrario de lo que pasa. */
-  prueba('con el hero puesto, la rejilla queda oculta al lector', function () {
-    igual(conElHero(rutaPortada(), function (hero, raiz, rejilla) {
-      var antes = [rejilla.getAttribute('aria-hidden'),
+  prueba('con el hero puesto, la esfera queda oculta al lector', function () {
+    igual(conElHero(rutaPortada(), function (hero, raiz, esfera) {
+      var antes = [esfera.getAttribute('aria-hidden'),
                    raiz.classList.contains('con-hero')];
       deslizarArriba(hero);
-      return [antes, [rejilla.getAttribute('aria-hidden'),
+      return [antes, [esfera.getAttribute('aria-hidden'),
                       raiz.classList.contains('con-hero')]];
     }), [['true', true], [null, false]]);
   });
