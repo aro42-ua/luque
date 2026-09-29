@@ -468,3 +468,80 @@ describe('MovilGlobo — la ruta', function () {
     });
   });
 });
+
+/* Las ramas: del centro de la esfera sale una línea hasta cada portada, y todas
+   se juntan en un nudo (petición de Ángel, 2026-09-29). Cada rama va JUSTO
+   por debajo de su propia portada en el orden de pintado, para que la de una
+   portada de delante pase por encima de las de detrás y se esconda bajo la
+   suya, como en 3D. Con `medir` fijo a 390×844 el centro es (195, 379.8). */
+describe('MovilGlobo — las ramas', function () {
+
+  function ramaDe(marco, id) {
+    return marco.querySelector('.esfera-rama[data-id="' + id + '"]');
+  }
+  function visibles(marco, sel) {
+    return Array.prototype.filter.call(marco.querySelectorAll(sel),
+      function (el) { return !el.hidden; });
+  }
+
+  prueba('hay una rama por portada, fuera del lector de pantalla', function () {
+    conGlobo(function (g, marco) {
+      igual(visibles(marco, '.esfera-rama').length, 8);
+      igual(marco.querySelector('.esfera-ramas').getAttribute('aria-hidden'), 'true');
+    });
+  });
+
+  /* El navegador reescribe los números al leer `style.transform` (195.0px
+     vuelve como 195px), así que se extraen y se comparan con tolerancia. */
+  function origen(el) {
+    var m = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(el.style.transform);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  }
+  function enElCentro(el) {
+    var o = origen(el);
+    return !!o && Math.abs(o[0] - 195) < 0.1 && Math.abs(o[1] - 379.8) < 0.1;
+  }
+
+  prueba('todas salen del centro de la esfera', function () {
+    conGlobo(function (g, marco) {
+      visibles(marco, '.esfera-rama').forEach(function (r) {
+        cierto(enElCentro(r), r.dataset.id + ': ' + r.style.transform);
+      });
+    });
+  });
+
+  prueba('cada rama llega al centro de su portada', function () {
+    conGlobo(function (g, marco) {
+      var p = g.proyeccion().filter(function (x) { return x.id === 'bruma'; })[0];
+      var r = ramaDe(marco, 'bruma');
+      var largo = Math.hypot(p.x - 195, p.y - 379.8);
+      cierto(Math.abs(parseFloat(r.style.width) - largo) < 0.2,
+             r.style.width + ' contra ' + largo);
+    });
+  });
+
+  prueba('cada rama va justo por debajo de su portada', function () {
+    conGlobo(function (g, marco) {
+      ['niebla', 'bruma', 'resaca'].forEach(function (id) {
+        igual(Number(ramaDe(marco, id).style.zIndex),
+              Number(teselaDe(marco, id).style.zIndex) - 1, id);
+      });
+    });
+  });
+
+  prueba('el nudo está en el centro', function () {
+    conGlobo(function (g, marco) {
+      var n = marco.querySelector('.esfera-nudo');
+      cierto(n, 'no hay nudo');
+      cierto(enElCentro(n), n.style.transform);
+    });
+  });
+
+  prueba('con una categoría sólo quedan las ramas de sus portadas', function () {
+    conGlobo(function (g, marco) {
+      MovilGlobo.aplicar({ tipo: 'categoria', valor: 'videoclip', pieza: null });
+      igual(visibles(marco, '.esfera-rama').map(function (r) { return r.dataset.id; }),
+            ['oleaje', 'reflejo', 'salitre', 'resaca']);
+    });
+  });
+});

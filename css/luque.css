@@ -1304,6 +1304,25 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
   -webkit-tap-highlight-color:transparent;
 }
 .esfera-lista{ list-style:none; margin:0; padding:0; position:absolute; inset:0; }
+/* Las ramas (js/movil-globo.js, `pintarRamas`). La capa NO lleva `z-index`:
+   cada rama se ordena por su cuenta entre las teselas, justo por debajo de la
+   suya. Se colocan con un `transform` desde el centro y giran desde su
+   extremo izquierdo, que es el nudo. */
+.esfera-ramas{ position:absolute; inset:0; pointer-events:none; }
+.esfera-rama{
+  position:absolute; left:0; top:0;
+  height:1px; margin-top:-0.5px;
+  background:var(--yellow);
+  transform-origin:0 50%;
+}
+.esfera-rama[hidden],
+.esfera-nudo[hidden]{ display:none; }
+.esfera-nudo{
+  position:absolute; left:0; top:0;
+  width:7px; height:7px; margin:-3.5px 0 0 -3.5px;
+  border-radius:50%;
+  background:var(--yellow);
+}
 .esfera-tesela{
   position:absolute; left:0; top:0;
   transform-origin:50% 50%;
@@ -1341,13 +1360,13 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
 .esfera-boton:focus-visible{ outline:3px solid var(--yellow); outline-offset:3px; }
 
 /* El pie y la pastilla van por encima de cualquier tesela: el `z-index` de
-   las teselas llega a 1000. 24px a los lados, como tenía la rejilla, para no
+   las teselas llega a 2001 (impares para ellas, pares para las ramas). 24px a los lados, como tenía la rejilla, para no
    caer en la franja del gesto de «atrás». */
 .esfera-pie{
   position:absolute; left:24px; right:24px;
   bottom:calc(28px + env(safe-area-inset-bottom));
   margin:0;
-  z-index:1001;
+  z-index:3001;
   color:var(--yellow);
   pointer-events:none;
 }
@@ -1360,7 +1379,7 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
 .esfera-contacto{
   position:absolute; right:24px;
   top:calc(20px + env(safe-area-inset-top));
-  z-index:1002;
+  z-index:3002;
   background:var(--yellow); color:var(--black);
   padding:.4rem .8rem; line-height:1.2;
   font:inherit; text-decoration:none;

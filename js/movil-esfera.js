@@ -213,16 +213,17 @@ window.MovilEsfera = (function () {
   /* Dónde y cómo de grande. El lado de referencia es el corto, con el alto
      rebajado a tres cuartos para dejar sitio al pie: así en apaisado la
      tesela de delante (alto = 1,25 × ancho) sigue cabiendo. El centro va un
-     poco por encima de la mitad por la misma razón.
+     poco por encima de la mitad por la misma razón. El radio es la mitad del
+     lado: era 0,62 y Ángel pidió la esfera un poco más recogida (2026-09-29).
      PERSPECTIVA es la distancia del ojo en radios: con 3, la de delante sale
-     a 1,5 veces su tamaño plano y la de detrás a 0,75, o sea que la de
-     detrás mide la mitad que la de delante. */
+     a 1,5 veces su tamaño plano y la de detrás a 0,75. Encima de eso va la
+     `presencia`, más abajo. */
   var PERSPECTIVA = 3;
 
   function geometria(medidas) {
     var lado = Math.min(medidas.ancho, medidas.alto * 0.75);
     return {
-      radio: lado * 0.62,
+      radio: lado * 0.5,
       tesela: lado * 0.56,
       cx: medidas.ancho / 2,
       cy: medidas.alto * 0.45
@@ -237,6 +238,16 @@ window.MovilEsfera = (function () {
      calculadora. La inclinación es la mitad del ángulo real de la cara:
      entera, las teselas del borde se verían de canto y dejarían de ser
      fotos. */
+  /* La presencia: una reducción que se suma a la de la perspectiva, para que
+     la de delante mande. Sin ella, una portada del ecuador medía dos tercios
+     de la de delante y competía con ella (petición de Ángel, 2026-09-29).
+     Con ella, delante 1, ecuador ~0,47, detrás 0,3. Cuadrática en la
+     profundidad para que la caída se note ya en las vecinas del frente. */
+  function presencia(z) {
+    var t = (acotar1(z) + 1) / 2;
+    return 0.6 + 0.4 * t * t;
+  }
+
   function proyectar(e, puntos, medidas) {
     var g = geometria(medidas);
     var sFrente = PERSPECTIVA / (PERSPECTIVA - 1);
@@ -246,7 +257,7 @@ window.MovilEsfera = (function () {
       return {
         x: g.cx + p[0] * g.radio * s,
         y: g.cy - p[1] * g.radio * s,
-        escala: s / sFrente,
+        escala: s / sFrente * presencia(p[2]),
         luz: p[2] >= 0 ? 0.5 + 0.5 * p[2] : 0.5 + 0.35 * p[2],
         z: Math.round((acotar1(p[2]) + 1) * 500),
         inclinacion: {
