@@ -726,6 +726,38 @@ El cierre a buscadores (`robots.txt` y `X-Robots-Tag: noindex`) sigue puesto,
 pero ya no lo justifica la tipografía. Abrirlo es una decisión aparte, anotada
 en `docs/estado-conocido.md`.
 
+## La esfera móvil, desplegada sin fusionar (2026-09-29)
+
+Versión `58d043f1-3519-47a9-a411-8eac5e13d95d`, desde el commit `ffd869d` de la
+rama `claude/mobile-3d-sphere-gallery-719d99` (PR #41, **abierto**). Es el mismo
+caso que el bloque 4f, más abajo: Ángel lo pidió para probar la esfera en su
+teléfono con las portadas reales antes de decidir si entra en `main`. La rama
+trae sus nueve tareas, una revisión final de conjunto con sus dos arreglos y
+769 comprobaciones en verde.
+
+**Hay divergencia otra vez: producción va por delante de `main`.** Se cierra
+fusionando el PR #41 cuando la prueba en el teléfono lo apruebe (apartado 5 de
+`docs/comprobaciones-en-produccion.md`); si no la aprueba, se vuelve a desplegar
+`main`.
+
+Hecho desde Git Bash con `git archive ffd869d | tar -x` a un directorio
+temporal: 201 archivos, `panel/index.html` dentro, sin `.superpowers/`,
+`.worktrees/` ni `.wrangler/` (`wrangler` subió 19, 180 ya estaban).
+
+Comprobado contra `https://lidialuque.com`:
+
+- `js/movil-esfera.js` y `js/movil-globo.js` responden `200`; `js/movil-hoja.js`
+  y `js/diagnostico-toques.js` responden `404`, o sea que **el diagnóstico de
+  toques ya no está en producción**.
+- El `index.html` publicado carga los dos módulos y lleva `id="esfera"`.
+- Existen las ocho miniaturas de 250 que la esfera deriva de las portadas de
+  1500 (`MovilGlobo.miniaturaDe`), y la portada de 1500 del primer trabajo.
+- Sigue cerrado a buscadores (`x-robots-tag: noindex`).
+- A 375×812 en el panel del navegador, las portadas reales cargan y el DOM las
+  coloca bien (la de delante centrada, pie y pastilla en su sitio). Las
+  **capturas** del panel sobre el dominio real salen recortadas con densidad de
+  píxeles 2 y no sirven para juzgar el aspecto: eso queda para el teléfono.
+
 ## Despliegue del bloque 4f sin fusionar (2026-09-05)
 
 Versión `f8dc8786-04be-4031-8021-ad75552a032f`. **Es el primer despliegue que no
