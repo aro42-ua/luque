@@ -1,6 +1,6 @@
 /* «Una puerta que se cruza dos veces deja de ser una puerta»: el nodo se quita
    del documento, no se esconde, porque escondido seguiría siendo alcanzable
-   con el tabulador y un lector de pantalla lo leería por detrás de una rejilla
+   con el tabulador y un lector de pantalla lo leería por detrás de una esfera
    que ya está delante.
 
    Va en `describeAsync` y con el contenedor montado a mano, no sobre
@@ -44,12 +44,12 @@ describeAsync('MovilPuerta — el hero se va del documento al cruzar', function 
      el umbral son 200 de verdad y el gesto de abajo tiene que ganárselo. */
   raiz.innerHTML =
     '<div class="hoja-hero" id="ha" style="height:800px"></div>' +
-    '<ol class="hoja-rejilla" id="ra"></ol>';
+    '<div class="esfera" id="ra"></div>';
 
   var hero = raiz.querySelector('#ha');
-  var rejilla = raiz.querySelector('#ra');
+  var esfera = raiz.querySelector('#ra');
 
-  MovilPuerta.entrada(hero, raiz, rejilla, { tipo: 'todos', valor: null, pieza: null });
+  MovilPuerta.entrada(hero, raiz, esfera, { tipo: 'todos', valor: null, pieza: null });
 
   /* Cruza por POSICIÓN —400px de recorrido contra los 200 del cuarto de
      pantalla— y no por golpe, por el mismo motivo que el `deslizarArriba` de

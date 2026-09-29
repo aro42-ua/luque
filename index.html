@@ -245,13 +245,19 @@
         <span class="hoja-pista-lectores">Desliza hacia arriba, o baja con la rueda, o pulsa Intro, para ver los trabajos.</span>
       </span>
     </div>
-    <ol class="hoja-rejilla" id="hojaRejilla"></ol>
-    <!-- En el móvil el contacto no es una página aparte: `Contacto.colocar`
-         (js/contacto.js) mueve aquí, detrás de la rejilla, la misma sección
-         `#contacto` de abajo, y el CSS la deja en el flujo del recorrido,
-         después del último trabajo. Al cruzar a escritorio vuelve a su
-         sitio. Decisión de Ángel, 2026-09-12: como la portada es scroll,
-         el contacto va debajo de las imágenes. -->
+    <!-- La esfera (js/movil-globo.js): una tesela por trabajo, que el dedo
+         gira en cualquier dirección. Sustituye a la rejilla desde el
+         2026-09-29 (docs/superpowers/specs/2026-09-29-esfera-movil-design.md).
+         El pie nombra la portada de delante y cambia al asentarse; la
+         pastilla abre la misma capa de contacto que en escritorio. -->
+    <div class="esfera" id="esfera">
+      <ul class="esfera-lista" id="esferaLista" aria-label="Trabajos"></ul>
+      <p class="esfera-pie" aria-live="polite">
+        <span class="esfera-titulo" id="esferaTitulo"></span>
+        <span class="esfera-meta" id="esferaMeta"></span>
+      </p>
+      <a class="esfera-contacto" href="#/contacto">Contacto</a>
+    </div>
   </section>
 
   <!-- ============================================================
@@ -260,8 +266,8 @@
        por la ruta `#/contacto` (js/contacto.js). Nace con aria-hidden y
        visibility:hidden; no tapa nada hasta que se pide, y se cierra desde
        la barra —«Contacto» alterna—, con Escape o con «Volver a los
-       trabajos». En el móvil, `Contacto.colocar` la mueve al pie de la
-       portada (`.hoja`) y es una sección más del recorrido, sin ruta.
+       trabajos». En el móvil es la misma capa, abierta desde la pastilla
+       de la esfera.
 
        Los datos —correo, teléfono e Instagram— los dio Ángel el
        2026-09-12. Se cambian aquí, en el marcado; no hay ningún otro sitio
@@ -459,7 +465,11 @@
   <script src="js/contacto.js"></script>
   <script src="js/movil-gestos.js"></script>
   <script src="js/movil.js"></script>
-  <script src="js/movil-hoja.js"></script>
+  <script src="js/movil-esfera.js"></script>
+  <!-- Va DETRÁS de movil-esfera.js, que usa en todo lo que calcula, y
+       ANTES del script de arranque. Sin él, `window.MovilGlobo` es undefined
+       y el arranque lanza antes de `Router.init()`. -->
+  <script src="js/movil-globo.js"></script>
   <!-- Va ANTES de movil-visor.js, que lo usa en `aplicar()` y en
        `siguienteRuta()`. Sin esta línea `window.MovilRecorrido` es undefined y
        cualquier deslizamiento dentro del visor móvil lanza un TypeError, igual
@@ -495,11 +505,6 @@
        undefined y abrir el visor lanza un TypeError. La suite no puede cazarlo
        porque tests/test.html carga sus scripts por su cuenta. -->
   <script src="js/movil-tira.js"></script>
-  <!-- TEMPORAL, para cazar el fallo del primer toque en la rejilla móvil.
-       Duerme salvo que la URL traiga `?diag=1`: sin esa marca no engancha
-       ni un oyente. Se borra, con su `<script>`, en cuanto el fallo esté
-       cazado. No tiene dependencias, así que su sitio en el orden da igual. -->
-  <script src="js/diagnostico-toques.js"></script>
   <script src="js/movil-flechas.js"></script>
   <script src="js/movil-cartel.js"></script>
   <script src="js/movil-visor.js"></script>
@@ -507,16 +512,12 @@
        `window.MovilArrastre` es undefined y `entrada()` lanza un TypeError
        DESPUÉS de haber puesto `con-hero` y `aria-hidden`, o sea antes de
        registrar ninguno de los tres oyentes: el amarillo se queda delante, la
-       rejilla oculta detrás, y no hay forma de cruzar la puerta ni con el
+       esfera oculta detrás, y no hay forma de cruzar la puerta ni con el
        dedo, ni con la rueda, ni con el teclado. La suite no puede cazarlo
        porque tests/test.html carga sus scripts por su cuenta. -->
   <script src="js/movil-arrastre.js"></script>
   <script src="js/movil-puerta.js"></script>
   <script>
-  /* TEMPORAL, y va lo PRIMERO a propósito: engancha en captura sobre
-     `document`, así que ve los eventos antes que ningún oyente del sitio y
-     también los que alguno se quede. Sin `?diag=1` no hace nada. */
-  window.DiagnosticoToques.init();
 
   /* El contenido llega por red, así que la galería no puede construirse hasta
      que esté. El preloader ya está en pantalla desde el marcado, sin que nadie
@@ -537,7 +538,7 @@
        frío a `#/contacto` tiene que encontrar la hoja escuchando. */
     window.Contacto.init();
 
-    /* La portada móvil se construye siempre, aunque estemos en escritorio: es
+    /* La esfera móvil se construye siempre, aunque estemos en escritorio: es
        lo que permite cruzar el umbral de ancho sin reconstruir nada y sin
        perder la posición. Sus imágenes son perezosas y el bloque va con
        display:none en escritorio, así que el navegador no las pide.
@@ -550,19 +551,22 @@
        misma razón por la que `Galeria.init()` (arriba) ya se suscribe antes
        de llegar aquí, y por la que su filtro de escritorio sí funciona en la
        carga inicial. */
-    var rejilla = document.getElementById('hojaRejilla');
-    window.MovilHoja.pintar(rejilla, window.Datos.PROYECTOS, function (id) {
-      /* Hasta el bloque 4e el visor que se abre es el de escritorio. La URL ya
-         es la correcta, así que 4e lo sustituye sin tocar esta línea. */
-      window.Router.ir('proyecto', id);
+    var esfera = document.getElementById('esfera');
+    window.MovilGlobo.init({
+      raiz:   esfera,
+      lista:  document.getElementById('esferaLista'),
+      titulo: document.getElementById('esferaTitulo'),
+      meta:   document.getElementById('esferaMeta')
+    }, window.Datos.PROYECTOS, {
+      alAbrir: function (id) { window.Router.ir('proyecto', id); }
     });
-    window.Router.alCambiar(function (ruta) {
-      window.MovilHoja.filtrarDesdeRuta(rejilla, ruta);
-    });
+    /* Girar el teléfono cambia el lado corto: las teselas se recolocan sin
+       perder cuál está delante. */
+    window.addEventListener('resize', function () { window.MovilGlobo.redibujar(); });
 
     /* El visor móvil se suscribe aquí, y aquí quiere decir ANTES de
        `Router.init()`, por el mismo motivo que ya obligó a subir a
-       `MovilHoja.pintar` y a `Movil.init`: `Router.init()` avisa a sus
+       `MovilGlobo.init` y a `Movil.init`: `Router.init()` avisa a sus
        suscriptores de forma SÍNCRONA, así que quien se suscribe después se
        pierde la ruta inicial y un enlace en frío a un trabajo no abriría
        nada.
@@ -589,6 +593,14 @@
     window.Router.alCambiar(function (ruta) {
       window.MovilVisor.aplicar(ruta);
     });
+    /* DETRÁS del visor y no delante: al cerrar, el visor devuelve el foco a
+       la tesela que lo abrió, y la esfera tiene que correr después para
+       trasladarlo a la que deja delante —el visor pudo moverse de trabajo—.
+       Sigue estando antes de `Router.init()`, que es lo que hace falta para
+       el aviso de la ruta inicial. */
+    window.Router.alCambiar(function (ruta) {
+      window.MovilGlobo.aplicar(ruta);
+    });
 
     /* La puerta de entrada se elige UNA vez, aquí, y no se vuelve a elegir: el
        ancho de este instante decide qué hero se arma (más abajo) y de qué
@@ -601,7 +613,7 @@
 
     /* Esto va ANTES de `Router.init()`, y es la ronda de arreglos de la Tarea 4
        quien lo subió aquí desde debajo del aviso de error. El motivo es el
-       mismo que el del comentario de arriba sobre `MovilHoja.pintar`, aplicado
+       mismo que el del comentario de arriba sobre `MovilGlobo.init`, aplicado
        a otro suscriptor: `Router.init()` avisa de forma SÍNCRONA, y el
        suscriptor del visor abre el trabajo de la ruta inicial ahí mismo. Al
        abrir, el visor pregunta a `js/visor-origen.js` de dónde sale el vuelo, y
@@ -614,8 +626,8 @@
 
        No basta con decidir el lado: hace falta que `body.es-movil` esté
        APLICADO, porque es esa clase la que enciende `body.es-movil .hoja{
-       display:block}` (css/luque.css) y saca a la rejilla de `display:none`.
-       Una celda en un subárbol apagado mide todo ceros, que es el mismo defecto
+       display:block}` (css/luque.css) y saca a la esfera de `display:none`.
+       Una tesela en un subárbol apagado mide todo ceros, que es el mismo defecto
        con otro disfraz. La rama `movil` de aquí abajo pone la clase de forma
        síncrona, así que al llegar a `Router.init()` las dos cosas están hechas.
 
@@ -625,11 +637,13 @@
        `Hero.rematar()` por la guarda `if (puertaMovil)`; en el arranque
        estrecho la rama `movil` sólo añade una clase y se salta la retirada de
        `#hojaHero` por la guarda `if (!puertaMovil)`. Ninguna de las dos toca al
-       Router, al Hero ni a la rejilla, y `Hero.init()` sigue yendo el último. */
+       Router, al Hero ni a la esfera, y `Hero.init()` sigue yendo el último. */
     window.Movil.init(consultaMovil, {
       movil: function () {
         document.body.classList.add('es-movil');
-        window.Contacto.colocar('movil');
+        /* La esfera se pintó con `.hoja` aún apagada, a 0×0: ahora que el
+           lado móvil está encendido ya se puede medir. */
+        window.MovilGlobo.redibujar();
         /* Quien entró por la puerta de escritorio nunca arma `#hojaHero`:
            `MovilPuerta.entrada()` sólo se llama con la puerta móvil (más abajo),
            y es quien engancha el dedo, la rueda y el teclado que lo cierran.
@@ -645,7 +659,6 @@
       },
       escritorio: function () {
         document.body.classList.remove('es-movil');
-        window.Contacto.colocar('escritorio');
         /* Quien entró por la puerta móvil nunca corre `rematarEntrada()`:
            esa puerta le cede el remate a `MovilPuerta.entrada()` (más abajo) y
            no pasa nunca por el botón ENTRAR de escritorio. Sin este rescate,
@@ -712,7 +725,7 @@
       window.Hero.init({ alCargar: function () {
         window.MovilPuerta.entrada(document.getElementById('hojaHero'),
                                  document.getElementById('hoja'),
-                                 rejilla,
+                                 esfera,
                                  window.Router.rutaActual());
       } });
     } else {

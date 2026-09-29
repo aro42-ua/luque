@@ -117,8 +117,8 @@ window.Contacto = (function () {
     var nodo = document.getElementById('contacto');
     if (!nodo) return;
     preparar(nodo, {
-      congelar:    function () { window.Galeria.congelar(); },
-      descongelar: function () { window.Galeria.descongelar(); }
+      congelar:    function () { window.Galeria.congelar(); window.MovilGlobo.congelar(); },
+      descongelar: function () { window.Galeria.descongelar(); window.MovilGlobo.descongelar(); }
     });
 
     /* Los enlaces que abren la hoja alternan, como una categoría: pulsado

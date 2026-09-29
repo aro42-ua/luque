@@ -134,6 +134,12 @@ window.MovilGlobo = (function () {
     function dibujar() {
       if (!visibles.length) return;
       var medidas = medir();
+      /* Una raíz sin medidas es una esfera que todavía no se ve: en
+         index.html `init` corre antes de que `Movil.init` ponga
+         `body.es-movil`, con `.hoja` aún en `display:none`. Dibujar ahí
+         dejaría todas las teselas a 0 px; se espera al `redibujar()` que
+         llega cuando el lado móvil se enciende. */
+      if (!medidas.ancho || !medidas.alto) return;
       var g = window.MovilEsfera.geometria(medidas);
       var ancho = g.tesela;
       var alto = g.tesela * 1.25;
@@ -256,8 +262,17 @@ window.MovilGlobo = (function () {
        ancestro común y el botón no se entera. En una esfera que se mueve bajo
        el dedo eso pasaría a menudo; con la captura de abajo, el `up` llega
        SIEMPRE a la raíz. */
+    /* Un gesto que empieza en un enlace o un botón que no es una tesela —la
+       pastilla «Contacto», que vive dentro de la raíz— no es de la esfera.
+       Sin esta guarda, la captura de abajo se quedaba el puntero y el clic
+       nunca llegaba al enlace: medido en el panel, la pastilla no abría nada. */
+    function esAjeno(e) {
+      var el = e.target && e.target.closest ? e.target.closest('a, button') : null;
+      return !!el && !lista.contains(el);
+    }
+
     raiz.addEventListener('pointerdown', function (e) {
-      if (congelado || !visibles.length) return;
+      if (congelado || !visibles.length || esAjeno(e)) return;
       gesto = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
                 t: e.timeStamp, indice: indiceDeEvento(e), movido: false };
       /* Pillar la esfera en marcha la para, como una peonza bajo el dedo. */

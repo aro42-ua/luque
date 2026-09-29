@@ -138,6 +138,20 @@ describe('MovilGlobo — teselas, dibujo y carga', function () {
     }, { medir: function () { return medidas; } });
   });
 
+  /* Medido en el panel: `MovilGlobo.init` corre en index.html ANTES de que
+     `Movil.init` ponga `body.es-movil`, así que la primera vez la raíz mide
+     0×0. Con eso escrito, las teselas se quedaban a 0 px para siempre. */
+  prueba('con la raíz sin medidas no escribe tamaños a cero, y redibujar los pone', function () {
+    var medidas = { ancho: 0, alto: 0 };
+    conGlobo(function (g, marco) {
+      var li = teselaDe(marco, 'niebla');
+      igual(li.style.width, '');
+      medidas = { ancho: 390, alto: 844 };
+      MovilGlobo.redibujar();
+      cierto(parseFloat(li.style.width) > 100, 'ancho ' + li.style.width);
+    }, { medir: function () { return medidas; } });
+  });
+
   prueba('sin trabajos no pinta teselas, no lanza y delante es null', function () {
     conGlobo(function (g, marco) {
       igual(marco.querySelectorAll('li').length, 0);
@@ -214,6 +228,24 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
       puntero(b, 'pointermove', 199, 383);
       puntero(b, 'pointerup', 199, 383);
       igual(abiertos, ['niebla']);
+    });
+  });
+
+  /* Medido en el panel: la pastilla «Contacto» vive dentro de la raíz, y el
+     `pointerdown` de la esfera capturaba el puntero y se quedaba el clic. Un
+     gesto que empieza en un enlace o botón ajeno a las teselas no es de la
+     esfera. */
+  prueba('un gesto que empieza en la pastilla de contacto no es de la esfera', function () {
+    conGlobo(function (g, marco) {
+      var a = document.createElement('a');
+      a.href = '#/contacto';
+      a.textContent = 'Contacto';
+      marco.querySelector('#e').appendChild(a);
+      var q = g.estado().q;
+      puntero(a, 'pointerdown', 350, 30);
+      puntero(a, 'pointermove', 200, 300);
+      puntero(a, 'pointerup', 200, 300);
+      igual(g.estado().q, q);
     });
   });
 

@@ -1,6 +1,6 @@
 window.MovilPuerta = (function () {
 
-  /* La puerta del hero: el amarillo con LUQUE! que hay delante de la rejilla y
+  /* La puerta del hero: el amarillo con LUQUE! que hay delante de la esfera y
      que se cruza una vez por visita.
 
      Vivía en `js/movil-hoja.js` hasta el bloque 4e, y salió de allí porque el
@@ -27,7 +27,7 @@ window.MovilPuerta = (function () {
 
   function heroIdo() { return ido; }
 
-  function entrada(hero, hoja, rejilla, ruta) {
+  function entrada(hero, hoja, esfera, ruta) {
     var mia = ++generacion;
     var cerrada = false;
     ido = false;
@@ -49,7 +49,7 @@ window.MovilPuerta = (function () {
     }
 
     hoja.classList.add('con-hero');
-    rejilla.setAttribute('aria-hidden', 'true');
+    esfera.setAttribute('aria-hidden', 'true');
 
     /* La puerta se cruza una vez.
 
@@ -84,7 +84,7 @@ window.MovilPuerta = (function () {
        aunque otro oyente se le haya adelantado.
 
        Quien lo fija es la prueba «la tecla cierra la puerta de ahora, no la de
-       una entrada anterior», y mira el hero y la rejilla de la entrada vigente
+       una entrada anterior», y mira el hero y la esfera de la entrada vigente
        y NO `heroIdo()`, que acaba valiendo `true` con las dos versiones. */
     function cerrarPuerta() {
       /* Quitar esta guarda es un mutante equivalente, y no hay prueba que lo
@@ -108,14 +108,14 @@ window.MovilPuerta = (function () {
       if (mia === generacion) ido = true;
       hero.classList.add('fuera');
       /* Se quita al cruzar, y no sólo se pone al entrar: el CSS de la Tarea 6
-         le da el significado «mientras el hero está delante, la rejilla no se
-         desplaza por detrás», y dejarla puesta con el hero ya ido diría lo
+         le da el significado «mientras el hero está delante, la esfera no se
+         ve por detrás», y dejarla puesta con el hero ya ido diría lo
          contrario de lo que pasa. */
       hoja.classList.remove('con-hero');
-      rejilla.removeAttribute('aria-hidden');
+      esfera.removeAttribute('aria-hidden');
       /* El nodo se QUITA, no se esconde: escondido seguiría siendo alcanzable
          con el tabulador y un lector de pantalla lo leería por detrás de una
-         rejilla que ya está delante. */
+         esfera que ya está delante. */
       setTimeout(quitarNodo, SALIDA_MS);
     }
 
