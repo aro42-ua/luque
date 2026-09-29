@@ -758,6 +758,27 @@ Comprobado contra `https://lidialuque.com`:
   **capturas** del panel sobre el dominio real salen recortadas con densidad de
   píxeles 2 y no sirven para juzgar el aspecto: eso queda para el teléfono.
 
+### La esfera asomaba por encima de la puerta (2026-09-29, segundo)
+
+Ángel vio en su teléfono que, al entrar, **aparecía la esfera un momento antes
+de la puerta amarilla**. Causa medida en producción: las teselas llevan
+`z-index` de hasta 1000 y `.esfera` no formaba contexto de apilamiento propio,
+así que dentro de `.hoja` le ganaban a `.hoja-hero` (`z-index:10`). La clase
+`con-hero`, que esconde la esfera, sólo llega cuando el preloader ha terminado
+de desvanecerse; durante ese fundido se veía la esfera encima del amarillo.
+Quitando `con-hero` con la puerta puesta, `elementFromPoint` en el centro daba
+la tesela de La Boquerona.
+
+Arreglo: `.esfera{ z-index:0 }` en `css/luque.css`, con la prueba
+`tests/pruebas-movil-esfera-capas.js` (CSS de verdad, sin `con-hero`), que
+caía antes y ahora pasa; suite 772/0. **Desplegado el commit `02116c9`** de la
+misma rama, versión `61e51920-fdf4-4ebc-a00a-4baaacc26e5a`. Comprobado en
+`lidialuque.com`: sin `con-hero`, en el centro queda la puerta.
+
+**Ojo con la caché:** `css/luque.css` se sirve con `Cache-Control: public,
+max-age=3600`, así que un navegador que cargó la web en la última hora puede
+seguir con la hoja vieja hasta una hora. En el panel hizo falta forzarla.
+
 ## Despliegue del bloque 4f sin fusionar (2026-09-05)
 
 Versión `f8dc8786-04be-4031-8021-ad75552a032f`. **Es el primer despliegue que no
