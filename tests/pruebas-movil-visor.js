@@ -300,3 +300,221 @@ describe('MovilVisor — controles, ficha y teclado', function () {
     igual(llamadas, 1);
   });
 });
+
+/* Los gestos (js/movil-visor-gestos.js). El reloj va inyectado —`ahora`—
+   porque la velocidad del dedo decide adónde va la foto, y los eventos
+   sintéticos de una prueba llegan casi en el mismo milisegundo: con su
+   `timeStamp` todo sería un golpe rapidísimo. `paso` es cuánto avanza el
+   reloj entre un evento y el siguiente: 1000 ms es un arrastre lento (sólo
+   decide la distancia), 10 ms un golpe. */
+describe('MovilVisor — los gestos', function () {
+
+  function conGestos(fn, extra) {
+    var reloj = { t: 0, paso: 1000 };
+    var o = { ahora: function () { reloj.t += reloj.paso; return reloj.t; } };
+    Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+    return conVisor(function (v) { v.reloj = reloj; return fn(v); }, o);
+  }
+
+  function dedo(v, tipo, x, y, id) {
+    v.refs.raiz.dispatchEvent(new PointerEvent(tipo,
+      { clientX: x, clientY: y, pointerId: id || 1, bubbles: true }));
+  }
+  function arrastrar(v, x0, y0, x1, y1) {
+    dedo(v, 'pointerdown', x0, y0);
+    dedo(v, 'pointermove', (x0 + x1) / 2, (y0 + y1) / 2);
+    dedo(v, 'pointermove', x1, y1);
+    dedo(v, 'pointerup', x1, y1);
+  }
+  function tocar(v, x, y) { dedo(v, 'pointerdown', x, y); dedo(v, 'pointerup', x, y); }
+  function pista(v) { return v.refs.pista.style.transform.replace(/\s/g, ''); }
+  function foto(v) {
+    return v.refs.pista.querySelector('.mvisor-diapo[aria-hidden="false"] img');
+  }
+
+  prueba('mientras se arrastra, la pista sigue al dedo', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      dedo(v, 'pointerdown', 300, 400);
+      dedo(v, 'pointermove', 250, 400);
+      dedo(v, 'pointermove', 200, 402);
+      igual(pista(v), 'translate3d(-100px,0px,0px)');
+      dedo(v, 'pointerup', 200, 402);
+    });
+  });
+
+  prueba('arrastrar más de un 30 % a la izquierda pasa a la siguiente', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 150, 400);
+      igual(v.rutas, [['proyecto', 'niebla', 3]]);
+    });
+  });
+
+  prueba('y a la derecha, a la anterior', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 100, 400, 250, 400);
+      igual(v.rutas, [['proyecto', 'niebla', 1]]);
+    });
+  });
+
+  prueba('un arrastre corto y lento vuelve sin cambiar de foto', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 240, 400);
+      igual([v.rutas, pista(v)], [[], 'translate3d(0px,0px,0px)']);
+    });
+  });
+
+  prueba('un golpe corto y rápido pasa igual', function () {
+    conGestos(function (v) {
+      v.reloj.paso = 10;
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 260, 400);
+      igual(v.rutas, [['proyecto', 'niebla', 3]]);
+    });
+  });
+
+  prueba('en la primera, arrastrar a la derecha se resiste y no pasa', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      dedo(v, 'pointerdown', 100, 400);
+      dedo(v, 'pointermove', 200, 400);
+      dedo(v, 'pointermove', 300, 400);
+      var tirando = pista(v);
+      dedo(v, 'pointerup', 300, 400);
+      igual([tirando, v.rutas], ['translate3d(70px,0px,0px)', []]);
+    });
+  });
+
+  prueba('bajar la foto la encoge y apaga el fondo mientras se arrastra', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      dedo(v, 'pointerdown', 200, 300);
+      dedo(v, 'pointermove', 200, 400);
+      dedo(v, 'pointermove', 200, 511);
+      var diapo = foto(v).parentNode;
+      /* 211 px de 844: medio camino hasta el cierre total, escala 0,875. */
+      cierto(/scale\(0\.87/.test(diapo.style.transform), diapo.style.transform);
+      cierto(Number(v.refs.fondo.style.opacity) < 0.6, 'fondo ' + v.refs.fondo.style.opacity);
+      dedo(v, 'pointerup', 200, 511);
+    });
+  });
+
+  prueba('bajar más de un 15 % del alto cierra el visor', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 200, 300, 200, 500);
+      igual(v.rutas, [['todos', null, undefined]]);
+    });
+  });
+
+  prueba('bajar poco devuelve la foto a su sitio', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 200, 300, 200, 360);
+      var diapo = foto(v).parentNode;
+      igual([v.rutas, v.refs.fondo.style.opacity], [[], '1']);
+      cierto(/scale\(1\)/.test(diapo.style.transform), diapo.style.transform);
+    });
+  });
+
+  prueba('subir abre la ficha', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 200, 600, 200, 350);
+      igual(v.rutas, [['proyecto', 'niebla', 'ficha']]);
+    });
+  });
+
+  prueba('con la ficha abierta, bajarla vuelve a la foto', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      arrastrar(v, 200, 500, 200, 700);
+      igual(v.rutas, [['proyecto', 'niebla', 2]]);
+    });
+  });
+
+  prueba('un toque alterna los controles, después de esperar al doble toque', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      v.correr();                                   // se duermen
+      tocar(v, 200, 400);
+      var antes = v.refs.controles.classList.contains('dormidos');
+      v.correr();                                   // vence la espera del toque simple
+      igual([antes, v.refs.controles.classList.contains('dormidos')], [true, false]);
+    });
+  });
+
+  prueba('dos toques amplían en el punto y no alternan los controles', function () {
+    conGestos(function (v) {
+      v.reloj.paso = 50;
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      v.correr();
+      tocar(v, 100, 200);
+      tocar(v, 100, 200);
+      v.correr();
+      cierto(/scale\(2\.5\)/.test(foto(v).style.transform), foto(v).style.transform);
+      igual(v.refs.controles.classList.contains('dormidos'), true);
+    });
+  });
+
+  prueba('ampliada, un dedo la pasea y no pasa de foto; dos toques más la encajan', function () {
+    conGestos(function (v) {
+      v.reloj.paso = 50;
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      tocar(v, 150, 300);
+      tocar(v, 150, 300);
+      var ampliada = foto(v).style.transform;
+      v.reloj.paso = 1000;
+      /* Hacia la derecha y abajo: la caja del arnés vive fuera de pantalla, así
+         que el doble toque deja la foto acotada contra el borde izquierdo y
+         el de arriba, y sólo en este sentido le queda camino. */
+      arrastrar(v, 250, 380, 300, 400);
+      var paseada = foto(v).style.transform;
+      v.reloj.paso = 50;
+      tocar(v, 150, 300);
+      tocar(v, 150, 300);
+      igual(v.rutas, []);
+      cierto(paseada !== ampliada, 'no se paseó: ' + paseada);
+      igual(foto(v).style.transform, '');
+    });
+  });
+
+  prueba('un segundo dedo no mueve el carrusel', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      dedo(v, 'pointerdown', 150, 400, 1);
+      dedo(v, 'pointerdown', 250, 400, 2);
+      dedo(v, 'pointermove', 100, 400, 1);
+      dedo(v, 'pointermove', 300, 400, 2);
+      dedo(v, 'pointerup', 300, 400, 2);
+      dedo(v, 'pointerup', 100, 400, 1);
+      igual([v.rutas, pista(v)], [[], 'translate3d(0px,0px,0px)']);
+    });
+  });
+
+  prueba('un dedo nuevo corta la animación en curso', function () {
+    var cortadas = 0;
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 150, 400);
+      dedo(v, 'pointerdown', 200, 400);
+      dedo(v, 'pointerup', 200, 400);
+      igual([cortadas > 0, v.rutas], [true, []]);
+    }, { animar: function () { return function () { cortadas++; }; } });
+  });
+
+  prueba('un gesto que empieza en la × no es del carrusel', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      v.refs.cerrar.dispatchEvent(new PointerEvent('pointerdown',
+        { clientX: 370, clientY: 30, pointerId: 1, bubbles: true }));
+      v.refs.cerrar.dispatchEvent(new PointerEvent('pointermove',
+        { clientX: 200, clientY: 30, pointerId: 1, bubbles: true }));
+      igual(pista(v), 'translate3d(0px,0px,0px)');
+    });
+  });
+});

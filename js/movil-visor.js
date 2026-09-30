@@ -49,6 +49,7 @@ window.MovilVisor = (function () {
         return window.MovilGlobo && window.MovilGlobo.origenDe
           ? window.MovilGlobo.origenDe(id, pieza) : null;
       },
+      ahora: o.ahora || function () { return performance.now(); },
       temporizar: o.temporizar || function (f, ms) { return setTimeout(f, ms); },
       cancelar: o.cancelar || function (id) { clearTimeout(id); }
     };
