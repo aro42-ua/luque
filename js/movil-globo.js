@@ -18,6 +18,12 @@ window.MovilGlobo = (function () {
   /* Con un solo trabajo no hay a dónde girar: el arrastre se resiste y el
      muelle lo devuelve. */
   var RESISTENCIA_SOLO = 0.35;
+  /* Lo que tarda cada foto de la corona en llegar a su sitio, y el escalonado
+     entre una y la siguiente. Tienen que casar con las transiciones de
+     `.esfera-foto` en css/luque.css: aquí sólo se usan para saber cuándo se
+     puede quitar del DOM una foto que vuelve. */
+  var CORONA_MS = 320;
+  var CORONA_PASO = 20;
 
   var actual = null;
 
@@ -60,6 +66,9 @@ window.MovilGlobo = (function () {
     var pendiente = false;
     var ultimoT = null;
     var recordado = null;
+    /* La corona abierta: `{ i, fotos: [{ boton, centro }] }`, o null. */
+    var corona = null;
+    var capaCorona = null;
 
     function total() { return window.MovilEsfera.numero(proyectos.length - 1); }
 
@@ -85,6 +94,16 @@ window.MovilGlobo = (function () {
         return r;
       });
       raiz.insertBefore(capa, lista);
+
+      /* La capa de la corona va DESPUÉS de la lista y por encima de las
+         teselas (css/luque.css); no recibe toques salvo en sus fotos. */
+      var viejaCorona = raiz.querySelector('.esfera-corona');
+      if (viejaCorona) viejaCorona.parentNode.removeChild(viejaCorona);
+      capaCorona = document.createElement('div');
+      capaCorona.className = 'esfera-corona';
+      capaCorona.setAttribute('role', 'group');
+      capaCorona.setAttribute('aria-hidden', 'true');
+      lista.parentNode.insertBefore(capaCorona, lista.nextSibling);
     }
 
     function pintar() {
@@ -134,6 +153,7 @@ window.MovilGlobo = (function () {
        categorías salen con `hidden` y las que quedan se reparten por TODA la
        superficie, conservando su número de la lista completa. */
     function reconstruir(cat) {
+      cerrarCorona(false);
       categoria = cat;
       visibles = [];
       proyectos.forEach(function (p, i) {
@@ -189,7 +209,7 @@ window.MovilGlobo = (function () {
         li.style.transform =
           'translate3d(' + (pr.x - ancho / 2).toFixed(1) + 'px,' +
                            (pr.y - alto / 2).toFixed(1) + 'px,0) ' +
-          'scale(' + pr.escala.toFixed(4) + ') ' +
+          'scale(' + (pr.escala * (corona && corona.i === i ? window.MovilCorona.ENCOGIDA : 1)).toFixed(4) + ') ' +
           'perspective(' + Math.round(ancho * 3) + 'px) ' +
           'rotateY(' + pr.inclinacion.y.toFixed(2) + 'deg) ' +
           'rotateX(' + pr.inclinacion.x.toFixed(2) + 'deg)';
@@ -281,19 +301,134 @@ window.MovilGlobo = (function () {
        para que nunca se abra por accidente algo que se veía pequeño y de
        lado; cualquier otra cosa (fondo, una de detrás) sólo asienta la
        esfera, por si el toque la pilló girando. */
-    function tocar(i) {
+    function tocar(i, enfocar) {
       var k = visibles.indexOf(i);
       if (k < 0) { soltarAhora(Infinity); return; }
       if (i === indiceDelante()) {
         estado = window.MovilEsfera.traer(estado, puntos[k]);
         dibujar();
         anunciar();
-        alAbrir(proyectos[i].id);
+        /* Con fotos, el primer toque abre la corona; sin ellas no hay nada
+           que desplegar y se va al visor como antes. */
+        if (proyectos[i].piezas && proyectos[i].piezas.length) abrirCorona(i, enfocar);
+        else alAbrir(proyectos[i].id);
         return;
       }
       var pr = window.MovilEsfera.proyectar(estado, [puntos[k]], medir())[0];
       if (pr.visible) llevarA(k);
       else soltarAhora(Infinity);
+    }
+
+    /* LA CORONA (spec docs/superpowers/specs/2026-09-30-esfera-corona-design.md).
+       Las fotos del trabajo de delante salen de detrás de su portada y se
+       colocan alrededor (`MovilCorona.colocar`). Cada foto nace en el centro
+       de la portada, pequeña y transparente, y la transición de
+       css/luque.css la lleva a su sitio; al cerrar, el camino inverso. */
+    function portadaEnReposo(medidas) {
+      var g = window.MovilEsfera.geometria(medidas);
+      return { x: g.cx, y: g.cy, ancho: g.tesela, alto: g.tesela * 1.25 };
+    }
+
+    function trasladar(x, y, escala) {
+      return 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) scale(' + escala + ')';
+    }
+
+    function abrirCorona(i, enfocar) {
+      cerrarCorona(false);
+      var p = proyectos[i];
+      var medidas = medir();
+      var portada = portadaEnReposo(medidas);
+      var sitio = window.MovilCorona.colocar(p.piezas.length, portada, medidas);
+      capaCorona.setAttribute('aria-label', 'Fotos de ' + p.titulo);
+      capaCorona.removeAttribute('aria-hidden');
+      var fotos = p.piezas.map(function (pieza, k) {
+        var f = sitio.fotos[k];
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'esfera-foto';
+        b.dataset.pieza = String(k + 1);
+        b.setAttribute('aria-label', 'Abrir la foto ' + (k + 1) + ' de ' + p.titulo);
+        b.style.setProperty('--i', String(k));
+        b.style.width = f.ancho.toFixed(1) + 'px';
+        b.style.height = f.alto.toFixed(1) + 'px';
+        var img = document.createElement('img');
+        img.alt = '';
+        img.decoding = 'async';
+        img.draggable = false;
+        img.src = pieza.miniatura || pieza.url;
+        /* Una miniatura que no llega deja el hueco gris, como las teselas, y
+           no el icono de imagen rota del navegador. */
+        img.addEventListener('error', function () { b.classList.add('sin-foto'); });
+        b.appendChild(img);
+        var centro = trasladar(portada.x - f.ancho / 2, portada.y - f.alto / 2, 0.3);
+        b.style.transform = centro;
+        capaCorona.appendChild(b);
+        return { boton: b, centro: centro,
+                 destino: trasladar(f.x - f.ancho / 2, f.y - f.alto / 2, 1) };
+      });
+      /* Un reflujo entre la posición de salida y la de llegada: sin él el
+         navegador calcula el estilo una sola vez y no hay transición. */
+      void capaCorona.offsetWidth;
+      fotos.forEach(function (f) {
+        f.boton.style.transform = f.destino;
+        f.boton.classList.add('fuera');
+      });
+      corona = { i: i, fotos: fotos };
+      raiz.classList.add('con-corona');
+      teselas[i].classList.remove('volviendo');
+      teselas[i].classList.add('en-corona');
+      dibujar();
+      if (enfocar && fotos.length) fotos[0].boton.focus({ preventScroll: true });
+    }
+
+    /* `animar` a falso cuando lo que viene detrás ya se mueve —un arrastre, la
+       rueda, un filtro, el visor—: la corona se va de golpe y no estorba. */
+    function cerrarCorona(animar) {
+      if (!corona) return;
+      var c = corona;
+      corona = null;
+      raiz.classList.remove('con-corona');
+      capaCorona.setAttribute('aria-hidden', 'true');
+      var li = teselas[c.i];
+      li.classList.remove('en-corona');
+      var suave = animar && !reducido;
+      c.fotos.forEach(function (f) {
+        f.boton.classList.remove('fuera');
+        f.boton.classList.add('saliendo');
+        f.boton.tabIndex = -1;
+        if (suave) f.boton.style.transform = f.centro;
+      });
+      function quitar() {
+        c.fotos.forEach(function (f) {
+          if (f.boton.parentNode) f.boton.parentNode.removeChild(f.boton);
+        });
+      }
+      if (suave) {
+        setTimeout(quitar, CORONA_MS + CORONA_PASO * c.fotos.length);
+        li.classList.add('volviendo');
+        setTimeout(function () { li.classList.remove('volviendo'); }, CORONA_MS);
+      } else {
+        quitar();
+      }
+      dibujar();
+    }
+
+    function abrirPieza(n) {
+      if (corona) alAbrir(proyectos[corona.i].id, n);
+    }
+
+    /* Un toque con la corona abierta: una foto abre esa foto; la portada, la
+       primera; cualquier otra cosa (el fondo, otra portada) la cierra. */
+    function tocarConCorona(g) {
+      if (g.foto) abrirPieza(g.foto);
+      else if (g.indice === corona.i) abrirPieza(1);
+      else cerrarCorona(true);
+    }
+
+    function piezaDeEvento(e) {
+      var b = e.target && e.target.closest ? e.target.closest('.esfera-foto') : null;
+      return b && capaCorona.contains(b) && !b.classList.contains('saliendo')
+        ? Number(b.dataset.pieza) : 0;
     }
 
     function indiceDeEvento(e) {
@@ -314,7 +449,7 @@ window.MovilGlobo = (function () {
        nunca llegaba al enlace: medido en el panel, la pastilla no abría nada. */
     function esAjeno(e) {
       var el = e.target && e.target.closest ? e.target.closest('a, button') : null;
-      return !!el && !lista.contains(el);
+      return !!el && !lista.contains(el) && !capaCorona.contains(el);
     }
 
     /* El gesto es de UN dedo, el primero. Con dos, cada `pointermove`
@@ -331,7 +466,8 @@ window.MovilGlobo = (function () {
          no puede abrir la portada que pasaba por delante en ese instante. */
       gesto = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
                 t: e.timeStamp, indice: indiceDeEvento(e), movido: false,
-                enMarcha: estado.animando && estado.objetivo === null };
+                enMarcha: estado.animando && estado.objetivo === null,
+                foto: piezaDeEvento(e) };
       /* Pillar la esfera en marcha la para, como una peonza bajo el dedo. */
       estado = { q: estado.q, vel: { h: 0, v: 0 }, objetivo: null, animando: false };
       try { raiz.setPointerCapture(e.pointerId); } catch (sinPunteroActivo) {}
@@ -341,6 +477,8 @@ window.MovilGlobo = (function () {
       if (!esDelGesto(e)) return;
       if (!gesto.movido &&
           Math.hypot(e.clientX - gesto.x0, e.clientY - gesto.y0) < UMBRAL_TOQUE) return;
+      /* Empezar a girar cierra la corona, y el mismo gesto sigue girando. */
+      if (!gesto.movido && corona) cerrarCorona(false);
       gesto.movido = true;
       var f = visibles.length === 1 ? RESISTENCIA_SOLO : 1;
       estado = window.MovilEsfera.arrastrar(estado,
@@ -358,6 +496,7 @@ window.MovilGlobo = (function () {
       gesto = null;
       if (!g.movido && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < UMBRAL_TOQUE) {
         if (g.enMarcha) soltarAhora(Infinity);
+        else if (corona) tocarConCorona(g);
         else tocar(g.indice);
         return;
       }
@@ -377,14 +516,36 @@ window.MovilGlobo = (function () {
     lista.addEventListener('click', function (e) {
       if (e.detail !== 0 || congelado) return;
       var i = indiceDeEvento(e);
-      if (i >= 0) tocar(i);
+      if (corona) {
+        if (i === corona.i) abrirPieza(1);
+        else if (i >= 0) cerrarCorona(true);
+        return;
+      }
+      if (i >= 0) tocar(i, true);
+    });
+
+    /* Intro o espacio sobre una foto de la corona: el mismo criterio que el
+       clic de teclado de las teselas, `detail` 0. En la raíz y no en la capa:
+       la capa se crea en `pintar()`, que corre después de enganchar esto. */
+    raiz.addEventListener('click', function (e) {
+      if (e.detail !== 0 || congelado) return;
+      var n = piezaDeEvento(e);
+      if (n) abrirPieza(n);
     });
 
     var TECLAS = { ArrowRight: 'derecha', ArrowLeft: 'izquierda',
                    ArrowUp: 'arriba', ArrowDown: 'abajo' };
 
     raiz.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && corona) {
+        e.preventDefault();
+        var portada = teselas[corona.i].querySelector('button');
+        cerrarCorona(true);
+        portada.focus({ preventScroll: true });
+        return;
+      }
       var dir = TECLAS[e.key];
+      if (dir && corona) cerrarCorona(true);
       if (!dir || congelado || !visibles.length) return;
       e.preventDefault();
       var k = window.MovilEsfera.vecina(estado, puntos, dir);
@@ -400,6 +561,7 @@ window.MovilGlobo = (function () {
     raiz.addEventListener('wheel', function (e) {
       if (congelado || !visibles.length) return;
       e.preventDefault();
+      cerrarCorona(false);
       var dx = e.shiftKey ? -e.deltaY : -e.deltaX;
       var dy = e.shiftKey ? 0 : -e.deltaY;
       if (reducido) {
@@ -432,7 +594,7 @@ window.MovilGlobo = (function () {
        index.html la suscribe después. Si el foco estaba en otro sitio, no se
        le roba. */
     function aplicar(ruta) {
-      if (ruta.tipo === 'proyecto') { recordado = ruta.valor; return; }
+      if (ruta.tipo === 'proyecto') { recordado = ruta.valor; cerrarCorona(false); return; }
       if (ruta.tipo === 'contacto') return;
       var cat = ruta.tipo === 'categoria' ? ruta.valor : null;
       if (cat !== categoria) reconstruir(cat);
@@ -464,6 +626,7 @@ window.MovilGlobo = (function () {
       avanzar: avanzar,
       redibujar: dibujar,
       elementoDe: elementoDe,
+      corona: function () { return corona ? proyectos[corona.i].id : null; },
       aplicar: aplicar,
       congelar: function () { congelado = true; gesto = null; },
       descongelar: function () { congelado = false; programar(); }

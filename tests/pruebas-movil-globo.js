@@ -6,14 +6,14 @@
      del tamaño de la caja del arnés. */
 function globoProyectos() {
   return [
-    { id: 'niebla',  titulo: 'Niebla',  categoria: 'editorial', portadaUrl: 'x-niebla-1500.jpg' },
-    { id: 'bruma',   titulo: 'Bruma',   categoria: 'editorial', portadaUrl: 'x-bruma-1500.jpg' },
-    { id: 'oleaje',  titulo: 'Oleaje',  categoria: 'videoclip', portadaUrl: 'x-oleaje-1500.jpg' },
-    { id: 'reflejo', titulo: 'Reflejo', categoria: 'videoclip', portadaUrl: 'x-reflejo-1500.jpg' },
-    { id: 'marea',   titulo: 'Marea',   categoria: 'editorial', portadaUrl: 'x-marea-1500.jpg' },
-    { id: 'salitre', titulo: 'Salitre', categoria: 'videoclip', portadaUrl: 'x-salitre-1500.jpg' },
-    { id: 'espuma',  titulo: 'Espuma',  categoria: 'editorial', portadaUrl: 'x-espuma-1500.jpg' },
-    { id: 'resaca',  titulo: 'Resaca',  categoria: 'videoclip', portadaUrl: 'x-resaca-1500.jpg' }
+    { id: 'niebla',  titulo: 'Niebla',  categoria: 'editorial', portadaUrl: 'x-niebla-1500.jpg', piezas: [{ url: 'x-niebla-p1-3000.jpg', miniatura: 'x-niebla-p1-250.jpg' }, { url: 'x-niebla-p2-3000.jpg', miniatura: 'x-niebla-p2-250.jpg' }, { url: 'x-niebla-p3-3000.jpg', miniatura: 'x-niebla-p3-250.jpg' }, { url: 'x-niebla-p4-3000.jpg', miniatura: 'x-niebla-p4-250.jpg' }, { url: 'x-niebla-p5-3000.jpg', miniatura: 'x-niebla-p5-250.jpg' }] },
+    { id: 'bruma',   titulo: 'Bruma',   categoria: 'editorial', portadaUrl: 'x-bruma-1500.jpg', piezas: [{ url: 'x-bruma-p1-3000.jpg', miniatura: 'x-bruma-p1-250.jpg' }, { url: 'x-bruma-p2-3000.jpg', miniatura: 'x-bruma-p2-250.jpg' }, { url: 'x-bruma-p3-3000.jpg', miniatura: 'x-bruma-p3-250.jpg' }] },
+    { id: 'oleaje',  titulo: 'Oleaje',  categoria: 'videoclip', portadaUrl: 'x-oleaje-1500.jpg', piezas: [{ url: 'x-oleaje-p1-3000.jpg', miniatura: 'x-oleaje-p1-250.jpg' }, { url: 'x-oleaje-p2-3000.jpg', miniatura: 'x-oleaje-p2-250.jpg' }, { url: 'x-oleaje-p3-3000.jpg', miniatura: 'x-oleaje-p3-250.jpg' }] },
+    { id: 'reflejo', titulo: 'Reflejo', categoria: 'videoclip', portadaUrl: 'x-reflejo-1500.jpg', piezas: [{ url: 'x-reflejo-p1-3000.jpg', miniatura: 'x-reflejo-p1-250.jpg' }, { url: 'x-reflejo-p2-3000.jpg', miniatura: 'x-reflejo-p2-250.jpg' }, { url: 'x-reflejo-p3-3000.jpg', miniatura: 'x-reflejo-p3-250.jpg' }] },
+    { id: 'marea',   titulo: 'Marea',   categoria: 'editorial', portadaUrl: 'x-marea-1500.jpg', piezas: [{ url: 'x-marea-p1-3000.jpg', miniatura: 'x-marea-p1-250.jpg' }, { url: 'x-marea-p2-3000.jpg', miniatura: 'x-marea-p2-250.jpg' }, { url: 'x-marea-p3-3000.jpg', miniatura: 'x-marea-p3-250.jpg' }] },
+    { id: 'salitre', titulo: 'Salitre', categoria: 'videoclip', portadaUrl: 'x-salitre-1500.jpg', piezas: [{ url: 'x-salitre-p1-3000.jpg', miniatura: 'x-salitre-p1-250.jpg' }, { url: 'x-salitre-p2-3000.jpg', miniatura: 'x-salitre-p2-250.jpg' }, { url: 'x-salitre-p3-3000.jpg', miniatura: 'x-salitre-p3-250.jpg' }] },
+    { id: 'espuma',  titulo: 'Espuma',  categoria: 'editorial', portadaUrl: 'x-espuma-1500.jpg', piezas: [{ url: 'x-espuma-p1-3000.jpg', miniatura: 'x-espuma-p1-250.jpg' }, { url: 'x-espuma-p2-3000.jpg', miniatura: 'x-espuma-p2-250.jpg' }, { url: 'x-espuma-p3-3000.jpg', miniatura: 'x-espuma-p3-250.jpg' }] },
+    { id: 'resaca',  titulo: 'Resaca',  categoria: 'videoclip', portadaUrl: 'x-resaca-1500.jpg', piezas: [{ url: 'x-resaca-p1-3000.jpg', miniatura: 'x-resaca-p1-250.jpg' }, { url: 'x-resaca-p2-3000.jpg', miniatura: 'x-resaca-p2-250.jpg' }, { url: 'x-resaca-p3-3000.jpg', miniatura: 'x-resaca-p3-250.jpg' }] }
   ];
 }
 
@@ -27,7 +27,7 @@ function conGlobo(fn, opciones, lista) {
   return ArnesDom.conElemento(GLOBO_MARCO, function (marco) {
     var abiertos = [];
     var o = {
-      alAbrir: function (id) { abiertos.push(id); },
+      alAbrir: function (id, pieza) { abiertos.push(pieza == null ? id : id + '/' + pieza); },
       fotograma: function () {},
       reducido: false,
       medir: function () { return { ancho: 390, alto: 844 }; }
@@ -173,12 +173,12 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
     return g.proyeccion().filter(function (p) { return p.visible && p.id !== delante; })[0];
   }
 
-  prueba('un toque en la de delante la abre', function () {
+  prueba('un toque en la de delante abre su corona', function () {
     conGlobo(function (g, marco, abiertos) {
       var b = botonDe(marco, 'niebla');
       puntero(b, 'pointerdown', 195, 380);
       puntero(b, 'pointerup', 195, 380);
-      igual(abiertos, ['niebla']);
+      igual([abiertos, g.corona()], [[], 'niebla']);
     });
   });
 
@@ -188,7 +188,7 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
     conGlobo(function (g, marco, abiertos) {
       puntero(botonDe(marco, 'niebla'), 'pointerdown', 195, 380);
       puntero(marco.querySelector('#e'), 'pointerup', 196, 381);
-      igual(abiertos, ['niebla']);
+      igual([abiertos, g.corona()], [[], 'niebla']);
     });
   });
 
@@ -227,7 +227,7 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
       puntero(b, 'pointerdown', 195, 380);
       puntero(b, 'pointermove', 199, 383);
       puntero(b, 'pointerup', 199, 383);
-      igual(abiertos, ['niebla']);
+      igual([abiertos, g.corona()], [[], 'niebla']);
     });
   });
 
@@ -284,7 +284,7 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
       punteroDe(b, 'pointerup', 340, 300, 2);
       igual(g.estado().q, q);
       punteroDe(b, 'pointerup', 195, 380, 1);
-      igual(abiertos, ['niebla']);
+      igual([abiertos, g.corona()], [[], 'niebla']);
     });
   });
 
@@ -309,13 +309,13 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
 
   /* Un clic de ratón o de dedo trae `detail` ≥ 1 y ya lo atendió el
      `pointerup`; sólo el de teclado (Intro, espacio) trae `detail` 0. */
-  prueba('Intro sobre la de delante la abre; un clic de puntero no abre dos veces', function () {
+  prueba('Intro sobre la de delante abre su corona; un clic de puntero no la abre dos veces', function () {
     conGlobo(function (g, marco, abiertos) {
       var b = botonDe(marco, 'niebla');
       b.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
       igual(abiertos, []);
       b.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
-      igual(abiertos, ['niebla']);
+      igual([abiertos, g.corona()], [[], 'niebla']);
     });
   });
 
@@ -352,7 +352,7 @@ describe('MovilGlobo — dedo, rueda y teclado', function () {
       MovilGlobo.descongelar();
       puntero(b, 'pointerdown', 195, 380);
       puntero(b, 'pointerup', 195, 380);
-      igual(abiertos, ['niebla']);
+      igual([abiertos, g.corona()], [[], 'niebla']);
     });
   });
 
@@ -543,5 +543,140 @@ describe('MovilGlobo — las ramas', function () {
       igual(visibles(marco, '.esfera-rama').map(function (r) { return r.dataset.id; }),
             ['oleaje', 'reflejo', 'salitre', 'resaca']);
     });
+  });
+});
+
+/* La corona: al tocar la portada de delante, sus fotos salen de detrás y se
+   colocan alrededor (spec docs/superpowers/specs/2026-09-30-esfera-corona-design.md).
+   En el juego de prueba Niebla tiene cinco piezas y las demás tres. */
+describe('MovilGlobo — la corona', function () {
+
+  function puntero(el, tipo, x, y) {
+    el.dispatchEvent(new PointerEvent(tipo, { clientX: x, clientY: y, bubbles: true }));
+  }
+  function tocar(el, x, y) { puntero(el, 'pointerdown', x, y); puntero(el, 'pointerup', x, y); }
+  function botonDe(marco, id) { return teselaDe(marco, id).querySelector('button'); }
+  function fotos(marco) { return marco.querySelectorAll('.esfera-foto:not(.saliendo)'); }
+  function abrir(marco) { tocar(botonDe(marco, 'niebla'), 195, 380); }
+
+  prueba('el primer toque abre la corona con una foto por pieza, y no el visor', function () {
+    conGlobo(function (g, marco, abiertos) {
+      abrir(marco);
+      igual([g.corona(), fotos(marco).length, abiertos], ['niebla', 5, []]);
+    });
+  });
+
+  prueba('cada foto lleva su etiqueta y su miniatura', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      var f = fotos(marco)[2];
+      igual([f.getAttribute('aria-label'), f.querySelector('img').getAttribute('src')],
+            ['Abrir la foto 3 de Niebla', 'x-niebla-p3-250.jpg']);
+    });
+  });
+
+  prueba('con la corona abierta la portada encoge', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      cierto(teselaDe(marco, 'niebla').classList.contains('en-corona'), 'sin en-corona');
+      cierto(/scale\(0\.7/.test(teselaDe(marco, 'niebla').style.transform),
+             teselaDe(marco, 'niebla').style.transform);
+    });
+  });
+
+  prueba('tocar una foto abre el visor en esa foto', function () {
+    conGlobo(function (g, marco, abiertos) {
+      abrir(marco);
+      tocar(fotos(marco)[2], 60, 60);
+      igual(abiertos, ['niebla/3']);
+    });
+  });
+
+  prueba('tocar la portada con la corona abierta abre la foto 1', function () {
+    conGlobo(function (g, marco, abiertos) {
+      abrir(marco);
+      abrir(marco);
+      igual(abiertos, ['niebla/1']);
+    });
+  });
+
+  prueba('tocar el fondo la cierra sin abrir nada', function () {
+    conGlobo(function (g, marco, abiertos) {
+      abrir(marco);
+      tocar(marco.querySelector('#e'), 20, 800);
+      igual([g.corona(), fotos(marco).length, abiertos], [null, 0, []]);
+    });
+  });
+
+  prueba('arrastrar la cierra y la esfera gira', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      var q = g.estado().q;
+      var b = botonDe(marco, 'niebla');
+      puntero(b, 'pointerdown', 195, 380);
+      puntero(b, 'pointermove', 260, 380);
+      puntero(b, 'pointermove', 320, 380);
+      puntero(b, 'pointerup', 320, 380);
+      igual(g.corona(), null);
+      cierto(MovilEsfera.distancia(q, g.estado().q) > 0.3, 'no giró');
+    });
+  });
+
+  prueba('Intro abre la corona con el foco en la primera foto, y Escape la cierra', function () {
+    conGlobo(function (g, marco) {
+      var b = botonDe(marco, 'niebla');
+      b.focus();
+      b.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+      igual(g.corona(), 'niebla');
+      igual(document.activeElement, fotos(marco)[0]);
+      marco.querySelector('#e').dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      igual(g.corona(), null);
+      igual(document.activeElement, b);
+    });
+  });
+
+  prueba('Intro sobre una foto abre esa foto', function () {
+    conGlobo(function (g, marco, abiertos) {
+      abrir(marco);
+      fotos(marco)[1].dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+      igual(abiertos, ['niebla/2']);
+    });
+  });
+
+  prueba('filtrar por categoría la cierra', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      MovilGlobo.aplicar({ tipo: 'categoria', valor: 'editorial', pieza: null });
+      igual([g.corona(), fotos(marco).length], [null, 0]);
+    });
+  });
+
+  prueba('abrir un proyecto por la ruta la cierra', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      MovilGlobo.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 3 });
+      igual(g.corona(), null);
+    });
+  });
+
+  /* Visto en el panel: sin esto, una miniatura que no llega enseña el icono
+     de imagen rota del navegador. Queda el hueco gris, como en las teselas. */
+  prueba('una foto que no carga deja el hueco sin el icono roto', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      var f = fotos(marco)[0];
+      f.querySelector('img').dispatchEvent(new Event('error'));
+      cierto(f.classList.contains('sin-foto'));
+    });
+  });
+
+  prueba('un trabajo sin fotos abre el visor directamente', function () {
+    var lista = globoProyectos();
+    lista[0].piezas = [];
+    conGlobo(function (g, marco, abiertos) {
+      abrir(marco);
+      igual([abiertos, g.corona()], [['niebla'], null]);
+    }, {}, lista);
   });
 });
