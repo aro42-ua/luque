@@ -579,6 +579,17 @@ window.MovilGlobo = (function () {
       soltarAhora(0);
     }, { passive: false });
 
+    /* De dónde sale la foto del visor y adónde vuelve al cerrar: la foto
+       `pieza` de la corona si está abierta para ese trabajo; si no, la
+       portada. */
+    function origenDe(id, pieza) {
+      if (corona && proyectos[corona.i].id === id) {
+        var f = corona.fotos[pieza - 1];
+        if (f) return f.boton;
+      }
+      return elementoDe(id);
+    }
+
     function elementoDe(id) {
       for (var i = 0; i < proyectos.length; i++) {
         if (proyectos[i].id === id) return teselas[i].querySelector('button');
@@ -598,7 +609,14 @@ window.MovilGlobo = (function () {
        index.html la suscribe después. Si el foco estaba en otro sitio, no se
        le roba. */
     function aplicar(ruta) {
-      if (ruta.tipo === 'proyecto') { recordado = ruta.valor; cerrarCorona(false); return; }
+      if (ruta.tipo === 'proyecto') {
+        recordado = ruta.valor;
+        /* La corona sigue abierta detrás del visor del MISMO trabajo, para
+           que al cerrar la foto vuelva a su hueco (visor premium,
+           2026-09-30); el de otro trabajo —un enlace— la cierra. */
+        if (corona && proyectos[corona.i].id !== ruta.valor) cerrarCorona(false);
+        return;
+      }
       if (ruta.tipo === 'contacto') return;
       var cat = ruta.tipo === 'categoria' ? ruta.valor : null;
       if (cat !== categoria) reconstruir(cat);
@@ -630,6 +648,7 @@ window.MovilGlobo = (function () {
       avanzar: avanzar,
       redibujar: dibujar,
       elementoDe: elementoDe,
+      origenDe: origenDe,
       corona: function () { return corona ? proyectos[corona.i].id : null; },
       aplicar: aplicar,
       congelar: function () { congelado = true; gesto = null; },
@@ -638,6 +657,7 @@ window.MovilGlobo = (function () {
   }
 
   function elementoDe(id) { return actual ? actual.elementoDe(id) : null; }
+  function origenDe(id, pieza) { return actual ? actual.origenDe(id, pieza) : null; }
   function redibujar() { if (actual) actual.redibujar(); }
   function aplicar(ruta) { if (actual) actual.aplicar(ruta); }
   function congelar() { if (actual) actual.congelar(); }
@@ -647,6 +667,7 @@ window.MovilGlobo = (function () {
     miniaturaDe: miniaturaDe,
     init: init,
     elementoDe: elementoDe,
+    origenDe: origenDe,
     redibujar: redibujar,
     aplicar: aplicar,
     congelar: congelar,

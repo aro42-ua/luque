@@ -652,11 +652,36 @@ describe('MovilGlobo — la corona', function () {
     });
   });
 
-  prueba('abrir un proyecto por la ruta la cierra', function () {
+  /* Visor premium (2026-09-30): la corona sigue abierta detrás del visor del
+     MISMO trabajo, para que al cerrar la foto vuelva a su hueco. */
+  prueba('el visor del mismo trabajo deja la corona abierta, también al volver', function () {
     conGlobo(function (g, marco) {
       abrir(marco);
       MovilGlobo.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 3 });
+      var durante = g.corona();
+      MovilGlobo.aplicar({ tipo: 'todos', valor: null, pieza: null });
+      igual([durante, g.corona(), fotos(marco).length], ['niebla', 'niebla', 5]);
+    });
+  });
+
+  prueba('el visor de otro trabajo la cierra', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      MovilGlobo.aplicar({ tipo: 'proyecto', valor: 'bruma', pieza: 1 });
       igual(g.corona(), null);
+    });
+  });
+
+  /* De dónde sale la foto del visor y adónde vuelve: la foto de la corona si
+     está abierta para ese trabajo; si no, la portada. */
+  prueba('origenDe da la foto de la corona, o la portada si no está abierta', function () {
+    conGlobo(function (g, marco) {
+      igual(MovilGlobo.origenDe('niebla', 3), botonDe(marco, 'niebla'));
+      abrir(marco);
+      igual(MovilGlobo.origenDe('niebla', 3), fotos(marco)[2]);
+      igual(MovilGlobo.origenDe('niebla', 9), botonDe(marco, 'niebla'));
+      igual(MovilGlobo.origenDe('bruma', 1), botonDe(marco, 'bruma'));
+      igual(MovilGlobo.origenDe('no-existe', 1), null);
     });
   });
 
