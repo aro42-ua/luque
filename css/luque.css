@@ -1410,7 +1410,10 @@ body.es-movil .hoja .galeria-vacia{ color:var(--black); }
    su sitio, escalonada por `--i`; los 320 y 20 ms casan con `CORONA_MS` y
    `CORONA_PASO` de js/movil-globo.js.
 ------------------------------------------------------------ */
-.esfera-corona{ position:absolute; inset:0; z-index:2500; pointer-events:none; }
+/* `z-index:2000`: justo por debajo de la portada de delante (2001 asentada,
+   impares para las teselas en js/movil-globo.js) y por encima de cualquier
+   otra (1999 como mucho). Así las fotos salen DE DETRÁS de la portada. */
+.esfera-corona{ position:absolute; inset:0; z-index:2000; pointer-events:none; }
 .esfera-foto{
   position:absolute; left:0; top:0;
   padding:0; border:0; overflow:hidden;
@@ -1418,9 +1421,12 @@ body.es-movil .hoja .galeria-vacia{ color:var(--black); }
   cursor:pointer;
   pointer-events:auto;
   opacity:0;
+  /* La cascada (2026-09-30): cada foto tarda 480 ms y arranca 45 ms después
+     de la anterior, con la deceleración de la casa. Con 20 ms, el escalonado
+     de antes, se leía como si salieran todas a la vez. */
   transition:
-    transform 320ms cubic-bezier(.2,.8,.2,1) calc(var(--i, 0) * 20ms),
-    opacity 240ms ease calc(var(--i, 0) * 20ms);
+    transform 480ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i, 0) * 45ms),
+    opacity 320ms ease calc(var(--i, 0) * 45ms);
 }
 .esfera-foto img{
   display:block; width:100%; height:100%;
@@ -1430,7 +1436,14 @@ body.es-movil .hoja .galeria-vacia{ color:var(--black); }
 }
 .esfera-foto.fuera{ opacity:1; }
 .esfera-foto.sin-foto img{ display:none; }
-.esfera-foto.saliendo{ opacity:0; pointer-events:none; }
+/* La vuelta, más rápida que la salida y en orden inverso (`--j`), con una
+   curva que acelera hacia dentro: se recoge. */
+.esfera-foto.saliendo{
+  opacity:0; pointer-events:none;
+  transition:
+    transform 260ms cubic-bezier(0.5, 0, 0.75, 0) calc(var(--j, 0) * 25ms),
+    opacity 200ms ease calc(var(--j, 0) * 25ms + 60ms);
+}
 .esfera-foto:focus-visible{ outline:3px solid var(--black); outline-offset:3px; }
 /* La portada abierta encoge (el JS le escribe `scale`) con transición mientras
    abre y mientras vuelve; el resto de la esfera se apaga hacia el amarillo
@@ -1444,6 +1457,7 @@ body.es-movil .hoja .galeria-vacia{ color:var(--black); }
 .esfera.con-corona .esfera-nudo{ opacity:.2 !important; }
 @media (prefers-reduced-motion: reduce){
   .esfera-foto,
+  .esfera-foto.saliendo,
   .esfera-tesela,
   .esfera-tesela.en-corona,
   .esfera-tesela.volviendo{ transition:none; }

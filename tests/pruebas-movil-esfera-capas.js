@@ -138,3 +138,30 @@ describeAsync('La esfera — fondo amarillo y ramas negras', function () {
     });
   });
 });
+
+/* Las fotos de la corona salen DE DETRÁS de la portada abierta (2026-09-30):
+   la capa va por debajo de la portada de delante —que asentada lleva
+   `z-index` 2001 (`MovilGlobo`, impares para las teselas)— y por encima de
+   cualquier otra tesela (1999 como mucho). */
+describeAsync('La corona — sale de detrás de la portada', function () {
+  var MARCADO = '<section class="hoja"><div class="esfera"><div class="esfera-corona"></div></div></section>';
+  function conLaHoja(d) {
+    return new Promise(function (ok, mal) {
+      var l = d.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = '../css/luque.css';
+      l.onload = function () { ok(); };
+      l.onerror = function () { mal(new Error('el arnés no pudo cargar css/luque.css')); };
+      d.head.appendChild(l);
+    });
+  }
+  return ArnesDom.conDocumento({ html: MARCADO }, function (w, d) {
+    d.body.className = 'es-movil';
+    return conLaHoja(d).then(function () {
+      prueba('la capa de la corona queda entre la portada de delante y el resto', function () {
+        var z = Number(w.getComputedStyle(d.querySelector('.esfera-corona')).zIndex);
+        cierto(z < 2001 && z > 1999, 'z-index ' + z);
+      });
+    });
+  });
+});

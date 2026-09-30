@@ -671,6 +671,18 @@ describe('MovilGlobo — la corona', function () {
     });
   });
 
+  /* La cascada (2026-09-30): al cerrar, vuelven en orden INVERSO, así que la
+     última en salir es la primera en volver. `--j` es su turno de vuelta. */
+  prueba('al cerrar vuelven en orden inverso', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      var todas = Array.prototype.slice.call(marco.querySelectorAll('.esfera-foto'));
+      tocar(marco.querySelector('#e'), 20, 800);
+      igual(todas.map(function (b) { return b.style.getPropertyValue('--j'); }),
+            ['4', '3', '2', '1', '0']);
+    });
+  });
+
   prueba('un trabajo sin fotos abre el visor directamente', function () {
     var lista = globoProyectos();
     lista[0].piezas = [];

@@ -18,12 +18,13 @@ window.MovilGlobo = (function () {
   /* Con un solo trabajo no hay a dónde girar: el arrastre se resiste y el
      muelle lo devuelve. */
   var RESISTENCIA_SOLO = 0.35;
-  /* Lo que tarda cada foto de la corona en llegar a su sitio, y el escalonado
-     entre una y la siguiente. Tienen que casar con las transiciones de
-     `.esfera-foto` en css/luque.css: aquí sólo se usan para saber cuándo se
-     puede quitar del DOM una foto que vuelve. */
-  var CORONA_MS = 320;
-  var CORONA_PASO = 20;
+  /* Lo que tarda cada foto de la corona en VOLVER detrás de la portada, y el
+     escalonado entre una y la siguiente. Tienen que casar con la transición de
+     `.esfera-foto.saliendo` en css/luque.css: aquí sólo se usan para saber
+     cuándo se puede quitar del DOM una foto que vuelve. La salida (480 ms,
+     45 ms de escalonado) vive entera en el CSS. */
+  var CORONA_MS = 260;
+  var CORONA_PASO = 25;
 
   var actual = null;
 
@@ -392,7 +393,10 @@ window.MovilGlobo = (function () {
       var li = teselas[c.i];
       li.classList.remove('en-corona');
       var suave = animar && !reducido;
-      c.fotos.forEach(function (f) {
+      /* `--j` es el turno de vuelta: la última en salir es la primera en
+         volver, y la cascada se lee como un recogerse, no como otra salida. */
+      c.fotos.forEach(function (f, k) {
+        f.boton.style.setProperty('--j', String(c.fotos.length - 1 - k));
         f.boton.classList.remove('fuera');
         f.boton.classList.add('saliendo');
         f.boton.tabIndex = -1;
