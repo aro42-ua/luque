@@ -1,1033 +1,720 @@
-/* Lo que se fija aquí es la conversión que `js/movil-recorrido.js` avisa por
-   escrito que hace falta, en el comentario sobre `indiceDeProyecto`: en el
-   `orden` que ese módulo consume, `piezas` es un NÚMERO —cuántas tiene el
-   proyecto— y no el array que el mismo nombre designa en `contenido.json` y en
-   `Datos.PROYECTOS`.
+/* El visor móvil (spec docs/superpowers/specs/2026-09-30-visor-premium-design.md):
+   un carrusel de las fotos de UN trabajo, sobre negro, con la ficha como panel
+   que sube desde abajo. Va sobre `ArnesDom.conElemento`, dentro del documento,
+   con tres cosas falsificadas para que ninguna prueba dependa del reloj ni de
+   la ruta de verdad:
 
-   Equivocarse no da error: `array >= 1` es `NaN >= 1`, o sea `false`, y
-   `paradas()` trataría como vídeo a todo proyecto de fotos. El eje vertical
-   dejaría de bajar por las fotos y bajaría directo a la ficha, en los doce
-   trabajos, sin una sola excepción en consola. Por eso la conversión vive en
-   una función con nombre y con prueba, y no suelta dentro de `init`. */
+   - `animar` termina al instante: escribe el fotograma final y avisa.
+   - `temporizar` guarda las esperas (dormir los controles, el toque simple)
+     y la prueba las corre cuando quiere con `correr()`.
+   - `Router.ir` sólo apunta adónde se quiso ir; la prueba llama a
+     `MovilVisor.aplicar` a mano cuando quiere simular que la ruta cambió.
 
-/* Los tres llevan `ficha` porque el eje vertical siempre acaba en ella y
-   `MovilFicha.de` (js/movil-ficha.js) la lee sin guarda, igual que
-   `VisorFicha.pintar` en el escritorio: un proyecto de `contenido.json` la
-   trae siempre. Sin este campo, cualquier prueba de este fichero que llegue a
-   la parada `'ficha'` revienta con «Cannot read properties of undefined
-   (reading 'cliente')». Valores distintos en cada uno para que una prueba que
-   lea la ficha pintada no pueda confundir un proyecto con otro. Sin `enlace`:
-   `Plataforma.boton` devuelve `null` sin él y la ficha se pinta igual, que es
-   lo que hoy hacen los ocho proyectos reales de `contenido.json`. */
+   `Movil.actual` se fija en 'movil' mientras dura cada prueba. */
 var MV_PROYECTOS = [
-  { id: 'niebla',  titulo: 'Niebla',  categoria: 'editorial',
-    tipo: 'foto',  piezas: [{ url: 'a' }, { url: 'b' }, { url: 'c' }],
-    ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de arte' } },
-  { id: 'oleaje',  titulo: 'Oleaje',  categoria: 'cortometraje',
-    tipo: 'video', piezas: [],
-    ficha: { cliente: 'Marca Norte', anio: '2025', papel: 'Dirección de fotografía' } },
-  { id: 'salitre', titulo: 'Salitre', categoria: 'editorial',
-    tipo: 'video',
-    ficha: { cliente: 'Casa Salitre', anio: '2024', papel: 'Producción' } }
+  { id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'fotos',
+    portadaUrl: 'x-niebla-p1-1500.jpg',
+    piezas: [{ url: 'x-niebla-p1-3000.jpg', miniatura: 'x-niebla-p1-250.jpg' },
+             { url: 'x-niebla-p2-3000.jpg', miniatura: 'x-niebla-p2-250.jpg' },
+             { url: 'x-niebla-p3-3000.jpg', miniatura: 'x-niebla-p3-250.jpg' }],
+    ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de fotografía' } },
+  { id: 'oleaje', titulo: 'Oleaje', categoria: 'videoclip', tipo: 'fotos',
+    portadaUrl: 'x-oleaje-1500.jpg', piezas: [],
+    ficha: { cliente: 'Marca Norte', anio: '2025', papel: 'Operadora de cámara' } }
 ];
 
-/* El marcado de las catorce referencias que `MovilVisor.init` exige: la
-   escena de siempre, las seis del HUD, la tira, las dos flechas laterales y
-   las dos del cartel. Vive en un solo sitio
-   porque los tres arneses de abajo (`conVisor` y los dos `conEscena`) lo
-   necesitan igual, letra por letra. */
 var MV_MARCADO =
-  '<div><div id="mvRaiz" hidden><div id="mvEscena"></div>' +
-  '<div id="mvHud"><button id="mvCat"></button><ul id="mvCats"></ul>' +
-  '<button id="mvFicha" aria-pressed="false"></button>' +
-  '<button id="mvCerrar"></button><p id="mvTitulo"></p>' +
-  '<span id="mvContador"></span>' +
-  '<nav id="mvTira" class="mvisor-tira" hidden></nav>' +
-  '</div>' +
-  /* Las flechas y el cartel van FUERA de `#mvHud`, igual que en index.html: no
-     se duermen con él. Aquí eso sólo importa porque el atrapa-foco recorre
-     `#mvRaiz` entero, y un nodo enfocable de más dentro del diálogo cambiaría
-     qué es «el último» —por eso son `<div>` y no botones—. */
-  '<div id="mvFlechaIzquierda" hidden></div>' +
-  '<div id="mvFlechaDerecha" hidden></div>' +
-  '<div id="mvCartel" hidden><p id="mvCartelTexto"></p></div>' +
+  '<div style="position:relative;width:390px;height:844px">' +
+  '<div id="mvRaiz" hidden>' +
+    '<div id="mvFondo"></div>' +
+    '<div id="mvPista"></div>' +
+    '<div id="mvControles">' +
+      '<p id="mvTitulo"></p><button id="mvCerrar" type="button">×</button>' +
+      '<div><span id="mvProgreso"></span></div>' +
+      '<span id="mvContador"></span><button id="mvVerFicha" type="button">Ficha</button>' +
+    '</div>' +
+    '<section id="mvFicha" aria-hidden="true"></section>' +
   '</div></div>';
 
-function mvRefsDesde(caja) {
-  return {
-    raiz:     caja.querySelector('#mvRaiz'),
-    escena:   caja.querySelector('#mvEscena'),
-    hud:      caja.querySelector('#mvHud'),
-    cat:      caja.querySelector('#mvCat'),
-    cats:     caja.querySelector('#mvCats'),
-    ficha:    caja.querySelector('#mvFicha'),
-    cerrar:   caja.querySelector('#mvCerrar'),
-    titulo:   caja.querySelector('#mvTitulo'),
-    contador: caja.querySelector('#mvContador'),
-    tira:     caja.querySelector('#mvTira'),
-    flechaIzquierda: caja.querySelector('#mvFlechaIzquierda'),
-    flechaDerecha:   caja.querySelector('#mvFlechaDerecha'),
-    cartel:          caja.querySelector('#mvCartel'),
-    cartelTexto:     caja.querySelector('#mvCartelTexto')
-  };
-}
+function mvRuta(valor, pieza) { return { tipo: 'proyecto', valor: valor, pieza: pieza }; }
+var MV_TODOS = { tipo: 'todos', valor: null, pieza: null };
 
-/* Ayudante ÚNICO y compartido por `conVisor` y los dos `conEscena` de más
-   abajo: construye las diez referencias, llama a `MovilVisor.init` y falsea
-   `window.Datos` con `porId` y `CATEGORIAS` —esta última porque desde la
-   Tarea 4 `pintar()` llama a `MovilHud.pintar`, que la lee—.
-
-   Antes de la Tarea 4 este cuerpo estaba copiado tres veces, una por cada
-   arnés, con sólo dos referencias. Al ampliar `refs` a ocho se hizo evidente
-   que una cuarta copia —la de este mismo bloque— habría sido la señal de que
-   copiar ya no compensaba, así que se extrae aquí. */
-function conVisorSobre(proyectos, fn) {
+function conVisor(fn, opciones) {
   return ArnesDom.conElemento(MV_MARCADO, function (caja) {
-    var refs = mvRefsDesde(caja);
-    MovilVisor.init(refs, proyectos);
-    var antes = window.Datos;
+    var rutas = [];
+    var pendientes = [];
+    var antes = { actual: window.Movil.actual, ir: window.Router.ir, datos: window.Datos };
+    window.Movil.actual = function () { return 'movil'; };
+    window.Router.ir = function (tipo, valor, pieza) { rutas.push([tipo, valor, pieza]); };
     window.Datos = {
-      /* Las cuatro de verdad y en el orden en que las declara
-         `js/reglas-contenido.js`, que es su única fuente. El ejemplo del plan
-         traía una `foto-fija` que no existe; dejarla aquí, con
-         `pruebas-movil-hud.js` usando las buenas al lado, invitaba a escribir
-         mañana una prueba contra una categoría inventada. */
-      CATEGORIAS: ['foto-stills', 'editorial', 'videoclip', 'cortometraje'],
       porId: function (id) {
-        for (var i = 0; i < proyectos.length; i++) {
-          if (proyectos[i].id === id) return proyectos[i];
-        }
-        return null;
+        return MV_PROYECTOS.filter(function (p) { return p.id === id; })[0] || null;
       }
     };
-    try { return fn(refs); }
-    finally {
-      window.Datos = antes;
-      document.body.classList.remove('mvisor-abierto');
+    var refs = {
+      raiz: caja.querySelector('#mvRaiz'),
+      fondo: caja.querySelector('#mvFondo'),
+      pista: caja.querySelector('#mvPista'),
+      controles: caja.querySelector('#mvControles'),
+      titulo: caja.querySelector('#mvTitulo'),
+      cerrar: caja.querySelector('#mvCerrar'),
+      progreso: caja.querySelector('#mvProgreso'),
+      contador: caja.querySelector('#mvContador'),
+      verFicha: caja.querySelector('#mvVerFicha'),
+      ficha: caja.querySelector('#mvFicha')
+    };
+    var o = {
+      animar: function (el, desde, hasta, ms, curva, alTerminar) {
+        Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+        if (alTerminar) alTerminar();
+        return function () {};
+      },
+      medir: function () { return { ancho: 390, alto: 844 }; },
+      reducido: false,
+      origen: function () { return null; },
+      temporizar: function (f) { pendientes.push(f); return pendientes.length; },
+      cancelar: function (id) { pendientes[id - 1] = null; }
+    };
+    Object.keys(opciones || {}).forEach(function (k) { o[k] = opciones[k]; });
+    MovilVisor.init(refs, MV_PROYECTOS, o);
+    try {
+      return fn({
+        caja: caja, refs: refs, rutas: rutas,
+        correr: function () {
+          var p = pendientes.slice();
+          pendientes.length = 0;
+          p.forEach(function (f) { if (f) f(); });
+        }
+      });
+    } finally {
+      MovilVisor.aplicar(MV_TODOS);
+      window.Movil.actual = antes.actual;
+      window.Router.ir = antes.ir;
+      window.Datos = antes.datos;
     }
   });
 }
 
-describe('MovilVisor — el orden que consume MovilRecorrido', function () {
-
-  prueba('convierte piezas a NÚMERO, que es lo que espera MovilRecorrido', function () {
-    igual(MovilVisor.ordenDe(MV_PROYECTOS), [
-      { id: 'niebla',  piezas: 3 },
-      { id: 'oleaje',  piezas: 0 },
-      { id: 'salitre', piezas: 0 }
-    ]);
+function mvDiapos(refs) {
+  return Array.prototype.map.call(refs.pista.querySelectorAll('.mvisor-diapo'), function (d) {
+    return d.dataset.pieza;
   });
+}
 
-  /* La red de seguridad de la conversión: un proyecto SIN el campo `piezas`
-     —los de vídeo de `contenido.json` lo traen vacío, pero nada garantiza que
-     esté— tiene que dar 0 y no `undefined`. Con `undefined`, `paradas()` haría
-     `undefined >= 1`, que también es `false`, así que hoy acertaría por
-     casualidad; se fija el 0 para que siga acertando cuando el criterio
-     cambie. */
-  prueba('un proyecto sin el campo piezas cuenta 0, no undefined', function () {
-    igual(MovilVisor.ordenDe([{ id: 'x' }]), [{ id: 'x', piezas: 0 }]);
-  });
+function mvTecla(refs, key) {
+  refs.raiz.dispatchEvent(new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true }));
+}
 
-  prueba('una lista vacía da un orden vacío, no revienta', function () {
-    igual(MovilVisor.ordenDe([]), []);
-  });
+describe('MovilVisor — abre, pinta y cierra según la ruta', function () {
 
-  /* Que el orden sea el de la lista es lo que hace que el eje horizontal
-     recorra los trabajos en el mismo orden en que se ven en la rejilla. Si
-     `ordenDe` reordenara, deslizar iría a un trabajo que no es el de al
-     lado. */
-  prueba('respeta el orden de la lista, que es el de la rejilla', function () {
-    var ids = MovilVisor.ordenDe(MV_PROYECTOS).map(function (o) { return o.id; });
-    igual(ids, ['niebla', 'oleaje', 'salitre']);
-  });
-});
-
-/* `aplicar` toca el DOM y pregunta por `Movil.actual()`, así que necesita un
-   contenedor y un lado. El contenedor lo da el arnés de DOM; el lado se falsea
-   sustituyendo `window.Movil` y devolviéndolo al terminar.
-
-   Se falsea en vez de llamar a `Movil.init` con una consulta de mentira porque
-   `Movil.init` engancha un oyente `change` que no se puede desenganchar: cada
-   prueba dejaría uno vivo, y la siguiente correría con los de todas las
-   anteriores encima. */
-describe('MovilVisor — abre y cierra según la ruta', function () {
-
-  function conLado(lado, fn) {
-    var antes = window.Movil;
-    window.Movil = { actual: function () { return lado; } };
-    try { return fn(); } finally { window.Movil = antes; }
-  }
-
-  /* Desde la Tarea 2, `pintar` le pide el proyecto entero a `window.Datos`, y
-     desde la Tarea 4 también pinta el HUD, que necesita las seis referencias
-     nuevas y `Datos.CATEGORIAS`. Este bloque sólo comprueba `estado()` y
-     `raiz.hidden`, no lo que se pinta, pero `pintar` corre igual y revienta si
-     falta cualquiera de las dos cosas. Ver `conVisorSobre`, arriba. */
-  function conVisor(fn) {
-    return conVisorSobre(MV_PROYECTOS, function (refs) {
-      return fn(refs.raiz, refs.escena);
+  prueba('empieza cerrado y una ruta de proyecto lo abre en esa foto', function () {
+    conVisor(function (v) {
+      igual(v.refs.raiz.hidden, true);
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      igual([v.refs.raiz.hidden, MovilVisor.estado()],
+            [false, { proyecto: 'niebla', pieza: 2, ficha: false }]);
     });
-  }
-
-  var RUTA_NIEBLA = { tipo: 'proyecto', valor: 'niebla', pieza: null };
-  var RUTA_TODOS  = { tipo: 'todos', valor: null, pieza: null };
-
-  prueba('una ruta de proyecto abre el visor', function () {
-    igual(conVisor(function (raiz) {
-      conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-      return raiz.hidden;
-    }), false);
   });
 
-  prueba('y deja el recorrido en la primera pieza de ese proyecto', function () {
-    igual(conVisor(function () {
-      conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-      return MovilVisor.estado();
-    }), { proyecto: 'niebla', pieza: 1 });
+  prueba('una ruta sin pieza abre en la primera', function () {
+    conVisor(function () {
+      MovilVisor.aplicar(mvRuta('niebla', null));
+      igual(MovilVisor.estado().pieza, 1);
+    });
   });
 
-  /* Un proyecto de vídeo no tiene piezas: su primera parada es `null`, la del
-     propio vídeo. Que salga `null` y no 1 es lo que hace que bajar llegue a la
-     ficha en un solo gesto, que es la razón entera de que el eje vertical
-     signifique «más sobre este trabajo» y no «más fotos». */
-  prueba('en un proyecto de vídeo la primera parada es el vídeo, no una pieza',
-    function () {
-    igual(conVisor(function () {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'oleaje', pieza: null });
-      });
-      return MovilVisor.estado();
-    }), { proyecto: 'oleaje', pieza: null });
+  prueba('pinta la foto con su vecina a cada lado', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      igual(mvDiapos(v.refs), ['1', '2', '3']);
+      var t = Array.prototype.map.call(v.refs.pista.querySelectorAll('.mvisor-diapo'),
+        function (d) { return d.style.transform.replace(/\s/g, ''); });
+      igual(t, ['translate3d(-390px,0px,0px)', 'translate3d(0px,0px,0px)',
+                'translate3d(390px,0px,0px)']);
+    });
   });
 
-  prueba('el segundo tramo de la ruta lleva a esa pieza', function () {
-    igual(conVisor(function () {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 3 });
-      });
-      return MovilVisor.estado();
-    }), { proyecto: 'niebla', pieza: 3 });
+  prueba('en la primera sólo hay siguiente, y en la última sólo anterior', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      var primera = mvDiapos(v.refs);
+      MovilVisor.aplicar(mvRuta('niebla', 3));
+      igual([primera, mvDiapos(v.refs)], [['1', '2'], ['2', '3']]);
+    });
   });
 
-  prueba('una ruta que no es de proyecto lo cierra', function () {
-    igual(conVisor(function (raiz) {
-      conLado('movil', function () {
-        MovilVisor.aplicar(RUTA_NIEBLA);
-        MovilVisor.aplicar(RUTA_TODOS);
-      });
-      return { oculto: raiz.hidden, estado: MovilVisor.estado() };
-    }), { oculto: true, estado: null });
+  prueba('la foto arranca con su miniatura, marcada como previa', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var img = v.refs.pista.querySelector('.mvisor-diapo[data-pieza="2"] img');
+      igual([img.getAttribute('src'), img.classList.contains('previa'), img.alt],
+            ['x-niebla-p2-250.jpg', true, 'Niebla, foto 2 de 3']);
+    });
   });
 
-  /* La guarda de lado, que es la mitad móvil de la pareja: la otra mitad está
-     en el suscriptor de `Visor.init` (js/visor.js). Sin las dos, los dos
-     visores abrirían el mismo trabajo a la vez sobre la misma pantalla. */
-  prueba('en escritorio no responde, aunque la ruta sea de proyecto', function () {
-    igual(conVisor(function (raiz) {
-      conLado('escritorio', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-      return { oculto: raiz.hidden, estado: MovilVisor.estado() };
-    }), { oculto: true, estado: null });
+  prueba('título, contador y línea de progreso', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      igual([v.refs.titulo.textContent, v.refs.contador.textContent],
+            ['Niebla', '02 / 03']);
+      cierto(Math.abs(parseFloat(v.refs.progreso.style.width) - 66.667) < 0.01,
+             v.refs.progreso.style.width);
+    });
   });
 
-  /* Cerrar dos veces seguidas pasa de verdad: llegar a la portada desde la
-     portada avisa igual, porque `Router.decidir` devuelve 'avisar' cuando el
-     hash no cambia. Tiene que ser inofensivo. */
-  prueba('cerrar estando ya cerrado no rompe nada', function () {
-    igual(conVisor(function (raiz) {
-      conLado('movil', function () {
-        MovilVisor.aplicar(RUTA_TODOS);
-        MovilVisor.aplicar(RUTA_TODOS);
-      });
-      return raiz.hidden;
-    }), true);
-  });
-});
-
-describe('MovilVisor — qué pinta cada parada del eje', function () {
-
-  function conLado(lado, fn) {
-    var antes = window.Movil;
-    window.Movil = { actual: function () { return lado; } };
-    try { return fn(); } finally { window.Movil = antes; }
-  }
-
-  /* Estos proyectos llevan `portadaUrl` porque es lo que `Datos.establecer`
-     resuelve y lo que la rejilla ya tiene cargado; es la vista previa de la
-     carga progresiva. Se usan URLs de mentira y no `data:` porque aquí no se
-     espera a ningún evento de carga: sólo se mira QUÉ se pide primero. */
-  var MV_CON_FOTOS = [{
-    id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'foto',
-    portadaUrl: 'portada-niebla.jpg',
-    ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de arte' },
-    /* Las dos primeras llevan `miniatura`, como las 65 del contenido real; la
-       tercera no, para fijar qué pasa cuando falta. */
-    piezas: [{ url: 'pieza-1.jpg', miniatura: 'mini-1.jpg' },
-             { url: 'pieza-2.jpg', miniatura: 'mini-2.jpg' },
-             { url: 'pieza-3.jpg' }]
-  }];
-
-  /* `Datos.porId` es a quien `pintar` le pide el proyecto entero, porque
-     `orden` sólo guarda `{id, piezas}`; `Datos.CATEGORIAS` es lo que desde la
-     Tarea 4 lee `MovilHud.pintar`. Las dos las falsea `conVisorSobre`, arriba,
-     sobre la lista de la prueba, para no depender del contenido real. */
-  function conEscena(proyectos, fn) {
-    return conVisorSobre(proyectos, function (refs) { return fn(refs.escena); });
-  }
-
-  /* La mitad que importa de la carga progresiva: lo PRIMERO que se pide es la
-     portada, que la rejilla ya tiene descargada. Medido el 2026-09-04 sobre el
-     visor de escritorio: pedir la pieza entera de primeras eran 1371 ms de
-     espera contra 4 ms con la imagen ya en caché. */
-  prueba('la foto arranca con la portada, que la rejilla ya tiene cargada', function () {
-    igual(conEscena(MV_CON_FOTOS, function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 1 });
-      });
-      return escena.querySelector('img').getAttribute('src');
-    }), 'portada-niebla.jpg');
+  prueba('al abrir enfoca la ×, y al cerrar devuelve el foco a quien lo tenía', function () {
+    conVisor(function (v) {
+      var antes = document.createElement('button');
+      v.caja.appendChild(antes);
+      antes.focus();
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      var dentro = document.activeElement;
+      MovilVisor.aplicar(MV_TODOS);
+      igual([dentro, v.refs.raiz.hidden, document.activeElement],
+            [v.refs.cerrar, true, antes]);
+    });
   });
 
-  /* Las demás paradas NO arrancan con la portada, sino con SU miniatura: la
-     tira de abajo ya la tiene descargada, y es la misma foto —borrosa, pero la
-     que toca—. Hasta este arreglo el móvil pintaba la portada en todas las
-     paradas, así que mientras bajaba la pieza (de 4 a 12 segundos, medido con
-     la sonda en el iPhone de Ángel el 2026-09-11) se veía OTRA foto con el
-     rótulo «08/10». Es lo que el escritorio hace desde `VisorCarga.vistaPrevia`
-     y el móvil no había copiado, porque cuando se escribió no tenía tira. */
-  prueba('las demás paradas arrancan con su propia miniatura, no con la portada', function () {
-    igual(conEscena(MV_CON_FOTOS, function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
-      });
-      return escena.querySelector('img').getAttribute('src');
-    }), 'mini-2.jpg');
+  prueba('fuera del lado móvil no hace nada', function () {
+    conVisor(function (v) {
+      window.Movil.actual = function () { return 'escritorio'; };
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      igual(v.refs.raiz.hidden, true);
+    });
   });
 
-  /* Sin miniatura no hay previa que valga: se pide la pieza entera y punto,
-     igual que hace el escritorio. Pintar la portada aquí sería volver a
-     enseñar otra foto. */
-  prueba('una pieza sin miniatura arranca con la pieza entera, no con la portada', function () {
-    igual(conEscena(MV_CON_FOTOS, function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 3 });
-      });
-      return escena.querySelector('img').getAttribute('src');
-    }), 'pieza-3.jpg');
-  });
-
-  prueba('la foto lleva texto alternativo con el trabajo y la pieza', function () {
-    igual(conEscena(MV_CON_FOTOS, function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
-      });
-      return escena.querySelector('img').alt;
-    }), 'Niebla, pieza 2 de 3');
-  });
-
-  /* La ficha es el FONDO del eje vertical, no un panel aparte, así que se pinta
-     en la misma escena y sustituye a la foto. */
-  prueba('la parada ficha pinta la ficha técnica, no una foto', function () {
-    igual(conEscena(MV_CON_FOTOS, function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 'ficha' });
-      });
-      return { fichas: escena.querySelectorAll('.mvisor-ficha').length,
-               fotos:  escena.querySelectorAll('img').length };
-    }), { fichas: 1, fotos: 0 });
-  });
-
-  prueba('la ficha lleva los tres campos y el recuento de piezas', function () {
-    igual(conEscena(MV_CON_FOTOS, function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 'ficha' });
-      });
-      var dts = escena.querySelectorAll('dt');
-      var out = [];
-      for (var i = 0; i < dts.length; i++) out.push(dts[i].textContent);
-      return out;
-    }), ['Cliente', 'Año', 'Papel', 'Piezas']);
-  });
-
-  /* Cambiar de parada VACÍA la escena antes de pintar. Sin esto, deslizar
-     acumularía una <img> encima de otra y la memoria crecería con cada gesto. */
-  prueba('cambiar de parada no acumula nodos en la escena', function () {
-    igual(conEscena(MV_CON_FOTOS, function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 1 });
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 'ficha' });
-      });
-      return escena.childNodes.length;
-    }), 1);
+  prueba('un trabajo que no existe no lo abre', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('no-existe', 1));
+      igual(v.refs.raiz.hidden, true);
+    });
   });
 });
 
-describe('MovilVisor — el proyecto de vídeo', function () {
+describe('MovilVisor — controles, ficha y teclado', function () {
 
-  function conLado(lado, fn) {
-    var antes = window.Movil;
-    window.Movil = { actual: function () { return lado; } };
-    try { return fn(); } finally { window.Movil = antes; }
-  }
-
-  /* `vimeo: null` es el estado REAL de los seis proyectos de vídeo de
-     `contenido.json` hasta que el estudio suba los suyos, así que el camino de
-     degradación es hoy el camino normal y merece prueba antes que el otro. */
-  var MV_VIDEO = [{
-    id: 'oleaje', titulo: 'Oleaje', categoria: 'cortometraje', tipo: 'video',
-    portadaUrl: 'poster-oleaje.jpg', vimeo: null,
-    ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de fotografía' },
-    piezas: []
-  }];
-
-  /* Mismo ayudante compartido que las dos secciones de arriba. `porId` sale
-     igual de `conVisorSobre` buscando en `MV_VIDEO`, así que ya no hace falta
-     el atajo `function () { return MV_VIDEO[0]; }` que tenía este bloque. */
-  function conEscena(fn) {
-    return conVisorSobre(MV_VIDEO, function (refs) { return fn(refs.escena); });
-  }
-
-  prueba('sin vimeo se ve el póster, no un rectángulo negro', function () {
-    igual(conEscena(function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'oleaje', pieza: null });
-      });
-      return escena.querySelector('img').getAttribute('src');
-    }), 'poster-oleaje.jpg');
+  prueba('la × vuelve a la portada', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      v.refs.cerrar.click();
+      igual(v.rutas, [['todos', null, undefined]]);
+    });
   });
 
-  prueba('y no se cuela ningún iframe cuando no hay vídeo que enseñar', function () {
-    igual(conEscena(function (escena) {
-      conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'oleaje', pieza: null });
-      });
-      return escena.querySelectorAll('iframe').length;
-    }), 0);
-  });
-});
-
-describe('MovilVisor — del dedo a la ruta', function () {
-
-  var MV_ORDEN = [
-    { id: 'niebla',  piezas: 3 },
-    { id: 'oleaje',  piezas: 0 },
-    { id: 'salitre', piezas: 2 }
-  ];
-
-  function en(proyecto, pieza) { return { proyecto: proyecto, pieza: pieza }; }
-
-  /* Deslizar a la izquierda trae el trabajo SIGUIENTE: los nombres son los del
-     dedo, no los del contenido, y la inversión vive en `MovilRecorrido.mover`.
-     Aquí sólo se comprueba que este módulo no la duplique ni la deshaga. */
-  prueba('deslizar a la izquierda lleva al trabajo siguiente, por su portada',
-    function () {
-    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'izquierda', MV_ORDEN),
-          { tipo: 'proyecto', valor: 'oleaje', pieza: null });
+  prueba('los controles se duermen solos y vuelven con el foco', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      var despiertos = !v.refs.controles.classList.contains('dormidos');
+      v.correr();
+      var dormidos = v.refs.controles.classList.contains('dormidos');
+      /* `focusin` a mano: el navegador no lo dispara si su ventana no tiene
+         el foco del sistema, que es lo normal mientras corre la suite. */
+      v.refs.verFicha.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      igual([despiertos, dormidos, v.refs.controles.classList.contains('dormidos')],
+            [true, true, false]);
+    });
   });
 
-  prueba('deslizar arriba baja una parada dentro del mismo trabajo', function () {
-    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'arriba', MV_ORDEN),
-          { tipo: 'proyecto', valor: 'niebla', pieza: 2 });
+  prueba('el botón Ficha pide la ficha', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      v.refs.verFicha.click();
+      igual(v.rutas, [['proyecto', 'niebla', 'ficha']]);
+    });
   });
 
-  /* En un proyecto de vídeo la única parada antes de la ficha es el propio
-     vídeo, así que bajar llega a los créditos en UN gesto. Es la razón entera
-     de que el eje vertical signifique «más sobre este trabajo»: seis de los
-     doce proyectos son de vídeo, y un eje que significara «más fotos» no haría
-     nada en la mitad del portafolio. */
-  prueba('en un vídeo, bajar llega a la ficha en un solo gesto', function () {
-    igual(MovilVisor.siguienteRuta(en('oleaje', null), 'arriba', MV_ORDEN),
-          { tipo: 'proyecto', valor: 'oleaje', pieza: 'ficha' });
+  prueba('la ruta de ficha abre el panel sobre la foto que había', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      igual([v.refs.ficha.classList.contains('abierta'), v.refs.ficha.getAttribute('aria-hidden'),
+             v.refs.ficha.querySelector('.mvisor-ficha-titulo').textContent,
+             MovilVisor.estado()],
+            [true, 'false', 'Niebla', { proyecto: 'niebla', pieza: 2, ficha: true }]);
+    });
   });
 
-  /* Recortar en vez de dar la vuelta: al llegar al final la serie se detiene,
-     para que no se confunda dónde termina. `mover` devuelve el MISMO estado, y
-     este módulo lo traduce a `null` para no llamar al router sin necesidad. */
-  prueba('en el último trabajo, seguir deslizando no sale al vacío', function () {
-    igual(MovilVisor.siguienteRuta(en('salitre', 1), 'izquierda', MV_ORDEN), null);
+  prueba('volver de la ficha regresa a la foto que había', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      v.refs.ficha.querySelector('[data-volver]').click();
+      igual(v.rutas, [['proyecto', 'niebla', 2]]);
+    });
   });
 
-  prueba('en la primera parada, subir no sale del trabajo', function () {
-    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'abajo', MV_ORDEN), null);
+  prueba('un enlace directo a la ficha la abre sobre la primera foto', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      igual([MovilVisor.estado().pieza, mvDiapos(v.refs)], [1, ['1', '2']]);
+    });
   });
 
-  /* El toque no navega: en la Tarea 4 despierta el HUD. Lo que no puede es
-     moverse por la rejilla, porque entonces sería imposible volver a encender
-     el HUD sin cambiar de foto. */
-  prueba('un toque no mueve el recorrido', function () {
-    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'toque', MV_ORDEN), null);
+  prueba('un trabajo sin fotos abre la ficha, y volver cierra el visor', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('oleaje', null));
+      var abierta = v.refs.ficha.classList.contains('abierta');
+      v.refs.ficha.querySelector('[data-volver]').click();
+      igual([abierta, mvDiapos(v.refs), v.rutas], [true, [], [['todos', null, undefined]]]);
+    });
   });
 
-  /* El pellizco se recibe y no mueve. Este bloque no amplía —eso es el 4g—,
-     pero lo que no puede pasar es que se cuele como deslizamiento y cambie de
-     trabajo mientras alguien intenta ampliar. */
-  prueba('un pellizco no mueve el recorrido', function () {
-    igual(MovilVisor.siguienteRuta(en('niebla', 1), 'pellizco', MV_ORDEN), null);
+  prueba('las flechas pasan de foto y no se salen de la serie', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      mvTecla(v.refs, 'ArrowLeft');
+      mvTecla(v.refs, 'ArrowRight');
+      igual(v.rutas, [['proyecto', 'niebla', 2]]);
+    });
   });
 
-  /* `MovilGestos.soltar` devuelve `null` para la zona muerta: el arrastre corto
-     o diagonal que no quiso tocar ni quiso deslizar. */
-  prueba('la zona muerta no mueve el recorrido', function () {
-    igual(MovilVisor.siguienteRuta(en('niebla', 1), null, MV_ORDEN), null);
+  prueba('flecha arriba abre la ficha', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      mvTecla(v.refs, 'ArrowUp');
+      igual(v.rutas, [['proyecto', 'niebla', 'ficha']]);
+    });
   });
 
-  prueba('con el visor cerrado no hay ruta a la que ir', function () {
-    igual(MovilVisor.siguienteRuta(null, 'izquierda', MV_ORDEN), null);
-  });
-});
-
-/* El hallazgo de la revisión final del bloque 4f: `#movilVisor` se declara
-   `role="dialog" aria-modal="true"` en index.html, pero hasta esta ronda
-   `MovilVisor` no tocaba el foco para nada. Sin envolvente el tabulador se
-   escapaba a la rejilla de detrás; sin foco de entrada el diálogo se abría
-   sin que el teclado supiera que había pasado nada; y sin devolución el foco
-   se perdía en el `<body>` al cerrar.
-
-   El envolvente se reutiliza de `window.VisorFoco.atrapar` (js/visor-foco.js),
-   que ya sabe A QUIÉN se puede enfocar; aquí sólo se comprueba CUÁNDO se
-   engancha y CUÁNDO se suelta, que es lo que le toca a este módulo. Por eso
-   estas pruebas espían `VisorFoco.atrapar` en vez de reconstruir su lista de
-   enfocables: reconstruirla aquí sería duplicar lo que ya prueba
-   `tests/pruebas-visor-foco.js` bajo otro nombre.
-
-   Necesita `window.VisorFoco` de verdad y no un doble: test.html lo carga
-   ahora antes de `js/movil-visor.js`, en el mismo orden relativo que ya usa
-   index.html (ver el comentario de esa línea en tests/test.html). */
-describe('MovilVisor — el foco del diálogo (VisorFoco)', function () {
-
-  function conLado(lado, fn) {
-    var antes = window.Movil;
-    window.Movil = { actual: function () { return lado; } };
-    try { return fn(); } finally { window.Movil = antes; }
-  }
-
-  var RUTA_NIEBLA = { tipo: 'proyecto', valor: 'niebla', pieza: null };
-  var RUTA_TODOS  = { tipo: 'todos', valor: null, pieza: null };
-
-  function conVisor(fn) {
-    return conVisorSobre(MV_PROYECTOS, fn);
-  }
-
-  function tabular(shift) {
-    var e = new KeyboardEvent('keydown',
-      { key: 'Tab', shiftKey: !!shift, bubbles: true, cancelable: true });
-    document.dispatchEvent(e);
-    return e.defaultPrevented;
-  }
-
-  prueba('al abrir, el foco entra en el diálogo por el botón de cerrar', function () {
-    igual(conVisor(function (refs) {
-      conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-      var dentro = document.activeElement === refs.cerrar;
-      conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
-      return dentro;
-    }), true);
+  prueba('Escape cierra la ficha si está abierta, y si no el visor', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      mvTecla(v.refs, 'Escape');
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      mvTecla(v.refs, 'Escape');
+      igual(v.rutas, [['proyecto', 'niebla', 2], ['todos', null, undefined]]);
+    });
   });
 
-  /* El último control del diálogo NO es `cerrar` desde que existe la tira:
-     sus botones son controles de verdad y entran en el ciclo del tabulador,
-     porque son la única forma de saltar a una pieza con el teclado. Sacarlos
-     del atrapa-foco dejaría la tira utilizable sólo con el dedo.
-
-     Por eso estas dos pruebas calculan el último del DOM en vez de nombrarlo:
-     lo que fijan es que el Tab DA LA VUELTA, no quién está al final. Nombrarlo
-     las rompía cada vez que el HUD ganaba un control, que es lo que pasó al
-     entrar la tira. */
-
-  function ultimoEnfocable(raiz) {
-    /* El MISMO selector y el MISMO filtro que `VisorFoco.enfocables`
-       (js/visor-foco.js), y no sólo el selector: aquella función además
-       descarta lo que no se ve, y un ayudante que se saltara ese filtro
-       coincidiría con ella por casualidad de los datos y no por
-       construcción. El día que un control enfocable-por-selector quede
-       oculto —la tira sin pintar, un botón dentro de un contenedor
-       `hidden`—, esta prueba fijaría como «último» un nodo que el
-       atrapa-foco real nunca trata como tal. */
-    var todos = Array.prototype.filter.call(
-      raiz.querySelectorAll('button:not([disabled]), [role="slider"]'),
-      function (el) {
-        return el.offsetParent !== null &&
-               getComputedStyle(el).visibility !== 'hidden';
-      });
-    return todos[todos.length - 1];
-  }
-
-  prueba('con el foco en el último control, el Tab da la vuelta al primero', function () {
-    igual(conVisor(function (refs) {
-      conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-      var ultimo = ultimoEnfocable(refs.raiz);
-      ultimo.focus();
-      var consumido = tabular(false);
-      var r = { consumido: consumido,
-                foco: document.activeElement === refs.cat,
-                ultimoNoEsCerrar: ultimo !== refs.cerrar };
-      conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
-      return r;
-    }), { consumido: true, foco: true, ultimoNoEsCerrar: true });
-  });
-
-  prueba('con el foco en el primer control, Shift+Tab da la vuelta al último', function () {
-    igual(conVisor(function (refs) {
-      conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-      var ultimo = ultimoEnfocable(refs.raiz);
-      refs.cat.focus();
-      var consumido = tabular(true);
-      var r = { consumido: consumido, foco: document.activeElement === ultimo };
-      conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
-      return r;
-    }), { consumido: true, foco: true });
-  });
-
-  /* La devolución no depende de la rejilla ni de `VisorOrigen`: guarda quien
-     tenía el foco justo antes de abrir —normalmente el botón que se tocó— y
-     se lo devuelve al cerrar. Es el mismo patrón que ya usa `js/visor.js`
-     con `elementoQueAbrio`, pero sin acoplarse a cuál de las dos portadas
-     abrió el visor, que es justo lo que decide `js/visor-origen.js` para el
-     escritorio y que aquí no hace falta preguntar. */
-  prueba('al cerrar, el foco vuelve a quien lo tenía antes de abrir', function () {
-    igual(conVisor(function () {
-      var externo = document.createElement('button');
-      document.body.appendChild(externo);
-      try {
-        externo.focus();
-        conLado('movil', function () {
-          MovilVisor.aplicar(RUTA_NIEBLA);
-          MovilVisor.aplicar(RUTA_TODOS);
-        });
-        return document.activeElement === externo;
-      } finally {
-        document.body.removeChild(externo);
-      }
-    }), true);
-  });
-
-  prueba('al cerrar, el foco no se pierde en el <body>', function () {
-    igual(conVisor(function () {
-      conLado('movil', function () {
-        MovilVisor.aplicar(RUTA_NIEBLA);
-        MovilVisor.aplicar(RUTA_TODOS);
-      });
-      return document.activeElement === document.body;
-    }), false);
-  });
-
-  /* El oyente tiene que sobrevivir exactamente mientras el diálogo está
-     abierto: ni un tic menos —el Tab del punto anterior no se atraparía— ni
-     uno más —seguiría atrapando el Tab del resto de la página después de
-     cerrar, que es el fallo que el propio encargo llama «peor que el que
-     arreglas»—. Las dos pruebas de abajo espían `VisorFoco.atrapar` en vez de
-     mirar el resultado del Tab, porque tras cerrar `raiz` queda oculto y
-     `atrapar` no encontraría a nadie que enfocar aunque siguiera enganchado:
-     sin el espía, un oyente que sobreviviera al cierre pasaría la prueba
-     igual, por la razón equivocada. */
-  prueba('abrir engancha el oyente: el Tab SÍ llama a VisorFoco.atrapar', function () {
-    igual(conVisor(function () {
-      var antes = window.VisorFoco.atrapar;
-      var llamadas = 0;
-      window.VisorFoco.atrapar = function () { llamadas++; };
-      try {
-        conLado('movil', function () { MovilVisor.aplicar(RUTA_NIEBLA); });
-        tabular(false);
-      } finally {
-        window.VisorFoco.atrapar = antes;
-        conLado('movil', function () { MovilVisor.aplicar(RUTA_TODOS); });
-      }
-      return llamadas;
-    }), 1);
-  });
-
-  prueba('cerrar desengancha el oyente: el Tab deja de llamar a VisorFoco.atrapar',
-    function () {
-    igual(conVisor(function () {
-      conLado('movil', function () {
-        MovilVisor.aplicar(RUTA_NIEBLA);
-        MovilVisor.aplicar(RUTA_TODOS);
-      });
-      var antes = window.VisorFoco.atrapar;
-      var llamadas = 0;
-      window.VisorFoco.atrapar = function () { llamadas++; };
-      try { tabular(false); } finally { window.VisorFoco.atrapar = antes; }
-      return llamadas;
-    }), 0);
-  });
-});
-
-/* La animación de entrada del bloque 4f: quién decide la CLASE es
-   MovilAnimacion.claseDe, ya probada sola en pruebas-movil-animacion.js; lo
-   que le toca fijar a este módulo es CUÁNDO se la pasa a `MovilAnimacion.
-   aplicar` — que es tras un deslizamiento de verdad, y sólo una vez.
-
-   `window.Router` se falsea, y no por comodidad: `soltarEn` llama a
-   `Router.ir` de verdad, y el router real de esta misma página cambiaría
-   `location.hash`, contaminando el historial y el estado de todas las
-   pruebas que corren después en el mismo documento. Falsearlo deja capturar
-   la ruta que pide el gesto sin tocar nada fuera de esta prueba, y la
-   llamada a `MovilVisor.aplicar` con esa ruta hace a mano lo que el
-   suscriptor real del router haría al recibirla. */
-describe('MovilVisor — la animación de entrada tras un deslizamiento', function () {
-
-  function conLado(lado, fn) {
-    var antes = window.Movil;
-    window.Movil = { actual: function () { return lado; } };
-    try { return fn(); } finally { window.Movil = antes; }
-  }
-
-  var MV_CON_VIDEO = [
-    { id: 'niebla', titulo: 'Niebla', categoria: 'editorial', tipo: 'foto',
-      piezas: [{ url: 'a' }, { url: 'b' }] },
-    { id: 'oleaje', titulo: 'Oleaje', categoria: 'cortometraje', tipo: 'video',
-      piezas: [] }
-  ];
-
-  /* Simula UN deslizamiento real de verdad de principio a fin: dispara los
-     eventos de puntero sobre la raíz, deja que `soltarEn` decida la
-     intención con `MovilGestos`, y hace a mano lo que el router real haría
-     al recibir la ruta que `soltarEn` le pide —llamar de vuelta a
-     `MovilVisor.aplicar`—, sin tocar `location.hash`. Devuelve la ruta
-     capturada por si la prueba la necesita. */
-  function deslizarIzquierda(raiz) {
-    var antesRouter = window.Router;
-    var capturada = null;
-    window.Router = { ir: function (tipo, valor, pieza) {
-      capturada = { tipo: tipo, valor: valor, pieza: pieza };
-    } };
+  prueba('Tab queda atrapado en el diálogo (VisorFoco)', function () {
+    var llamadas = 0;
+    var antes = window.VisorFoco.atrapar;
+    window.VisorFoco.atrapar = function () { llamadas++; };
     try {
-      raiz.dispatchEvent(new PointerEvent('pointerdown',
-        { clientX: 200, clientY: 100, bubbles: true }));
-      raiz.dispatchEvent(new PointerEvent('pointerup',
-        { clientX: 120, clientY: 100, bubbles: true }));
-    } finally {
-      window.Router = antesRouter;
-    }
-    if (capturada) MovilVisor.aplicar(capturada);
-    return capturada;
-  }
-
-  prueba('un deslizamiento real anima la pieza nueva con la clase de esa dirección',
-    function () {
-    igual(conVisorSobre(MV_CON_VIDEO, function (refs) {
-      return conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 1 });
-        var ruta = deslizarIzquierda(refs.raiz);
-        return {
-          fueAOleaje: ruta && ruta.valor === 'oleaje',
-          animada: refs.escena.firstChild.classList.contains('mvisor-entra-der')
-        };
+      conVisor(function (v) {
+        MovilVisor.aplicar(mvRuta('niebla', 1));
+        mvTecla(v.refs, 'Tab');
       });
-    }), { fueAOleaje: true, animada: true });
-  });
-
-  /* El cuidado del encargo: la dirección se consume UNA vez. Llegar a la
-     parada siguiente por otra vía —aquí, una `MovilVisor.aplicar` directa,
-     que es exactamente lo que hace el suscriptor del router al entrar por la
-     URL o al volver con el botón de atrás— no puede heredar la animación del
-     deslizamiento anterior. */
-  prueba('la parada siguiente, sin gesto detrás, no hereda la animación', function () {
-    igual(conVisorSobre(MV_CON_VIDEO, function (refs) {
-      return conLado('movil', function () {
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 1 });
-        deslizarIzquierda(refs.raiz);
-        MovilVisor.aplicar({ tipo: 'proyecto', valor: 'niebla', pieza: 2 });
-        return refs.escena.firstChild.className;
-      });
-    }), 'mvisor-foto');
+    } finally { window.VisorFoco.atrapar = antes; }
+    igual(llamadas, 1);
   });
 });
 
-/* El botón de ficha cableado: lo que se fija aquí no es a dónde lleva —eso es
-   de `MovilRecorrido.alternarFicha` y tiene sus propias pruebas— sino que
-   `MovilVisor` recuerde la pieza correcta y llame al router con ella. */
-describe('MovilVisor — el botón de ficha', function () {
+/* Los gestos (js/movil-visor-gestos.js). El reloj va inyectado —`ahora`—
+   porque la velocidad del dedo decide adónde va la foto, y los eventos
+   sintéticos de una prueba llegan casi en el mismo milisegundo: con su
+   `timeStamp` todo sería un golpe rapidísimo. `paso` es cuánto avanza el
+   reloj entre un evento y el siguiente: 1000 ms es un arrastre lento (sólo
+   decide la distancia), 10 ms un golpe. */
+describe('MovilVisor — los gestos', function () {
 
-  function conRuta(ruta, fn) {
-    return conVisorSobre(MV_PROYECTOS, function (refs) {
-      var antesMovil = window.Movil, antesRouter = window.Router;
-      var ido = [];
-      window.Movil = { actual: function () { return 'movil'; } };
-      window.Router = { ir: function (t, v, p) { ido.push([t, v, p]); } };
-      try {
-        MovilVisor.aplicar(ruta);
-        return fn(refs, ido);
-      } finally {
-        window.Movil = antesMovil;
-        window.Router = antesRouter;
+  function conGestos(fn, extra) {
+    var reloj = { t: 0, paso: 1000 };
+    var o = { ahora: function () { reloj.t += reloj.paso; return reloj.t; } };
+    Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+    return conVisor(function (v) { v.reloj = reloj; return fn(v); }, o);
+  }
+
+  function dedo(v, tipo, x, y, id) {
+    v.refs.raiz.dispatchEvent(new PointerEvent(tipo,
+      { clientX: x, clientY: y, pointerId: id || 1, bubbles: true }));
+  }
+  function arrastrar(v, x0, y0, x1, y1) {
+    dedo(v, 'pointerdown', x0, y0);
+    dedo(v, 'pointermove', (x0 + x1) / 2, (y0 + y1) / 2);
+    dedo(v, 'pointermove', x1, y1);
+    dedo(v, 'pointerup', x1, y1);
+  }
+  function tocar(v, x, y) { dedo(v, 'pointerdown', x, y); dedo(v, 'pointerup', x, y); }
+  function pista(v) { return v.refs.pista.style.transform.replace(/\s/g, ''); }
+  function foto(v) {
+    return v.refs.pista.querySelector('.mvisor-diapo[aria-hidden="false"] img');
+  }
+
+  prueba('mientras se arrastra, la pista sigue al dedo', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      dedo(v, 'pointerdown', 300, 400);
+      dedo(v, 'pointermove', 250, 400);
+      dedo(v, 'pointermove', 200, 402);
+      igual(pista(v), 'translate3d(-100px,0px,0px)');
+      dedo(v, 'pointerup', 200, 402);
+    });
+  });
+
+  prueba('arrastrar más de un 30 % a la izquierda pasa a la siguiente', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 150, 400);
+      igual(v.rutas, [['proyecto', 'niebla', 3]]);
+    });
+  });
+
+  prueba('y a la derecha, a la anterior', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 100, 400, 250, 400);
+      igual(v.rutas, [['proyecto', 'niebla', 1]]);
+    });
+  });
+
+  prueba('un arrastre corto y lento vuelve sin cambiar de foto', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 240, 400);
+      igual([v.rutas, pista(v)], [[], 'translate3d(0px,0px,0px)']);
+    });
+  });
+
+  prueba('un golpe corto y rápido pasa igual', function () {
+    conGestos(function (v) {
+      v.reloj.paso = 10;
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 260, 400);
+      igual(v.rutas, [['proyecto', 'niebla', 3]]);
+    });
+  });
+
+  prueba('en la primera, arrastrar a la derecha se resiste y no pasa', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 1));
+      dedo(v, 'pointerdown', 100, 400);
+      dedo(v, 'pointermove', 200, 400);
+      dedo(v, 'pointermove', 300, 400);
+      var tirando = pista(v);
+      dedo(v, 'pointerup', 300, 400);
+      igual([tirando, v.rutas], ['translate3d(70px,0px,0px)', []]);
+    });
+  });
+
+  prueba('bajar la foto la encoge y apaga el fondo mientras se arrastra', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      dedo(v, 'pointerdown', 200, 300);
+      dedo(v, 'pointermove', 200, 400);
+      dedo(v, 'pointermove', 200, 511);
+      var diapo = foto(v).parentNode;
+      /* 211 px de 844: medio camino hasta el cierre total, escala 0,875. */
+      cierto(/scale\(0\.87/.test(diapo.style.transform), diapo.style.transform);
+      cierto(Number(v.refs.fondo.style.opacity) < 0.6, 'fondo ' + v.refs.fondo.style.opacity);
+      dedo(v, 'pointerup', 200, 511);
+    });
+  });
+
+  prueba('bajar más de un 15 % del alto cierra el visor', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 200, 300, 200, 500);
+      igual(v.rutas, [['todos', null, undefined]]);
+    });
+  });
+
+  prueba('bajar poco devuelve la foto a su sitio', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 200, 300, 200, 360);
+      var diapo = foto(v).parentNode;
+      igual([v.rutas, v.refs.fondo.style.opacity], [[], '1']);
+      cierto(/scale\(1\)/.test(diapo.style.transform), diapo.style.transform);
+    });
+  });
+
+  prueba('subir abre la ficha', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 200, 600, 200, 350);
+      igual(v.rutas, [['proyecto', 'niebla', 'ficha']]);
+    });
+  });
+
+  prueba('con la ficha abierta, bajarla vuelve a la foto', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      arrastrar(v, 200, 500, 200, 700);
+      igual(v.rutas, [['proyecto', 'niebla', 2]]);
+    });
+  });
+
+  prueba('un toque alterna los controles, después de esperar al doble toque', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      v.correr();                                   // se duermen
+      tocar(v, 200, 400);
+      var antes = v.refs.controles.classList.contains('dormidos');
+      v.correr();                                   // vence la espera del toque simple
+      igual([antes, v.refs.controles.classList.contains('dormidos')], [true, false]);
+    });
+  });
+
+  prueba('dos toques amplían en el punto y no alternan los controles', function () {
+    conGestos(function (v) {
+      v.reloj.paso = 50;
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      v.correr();
+      tocar(v, 100, 200);
+      tocar(v, 100, 200);
+      v.correr();
+      cierto(/scale\(2\.5\)/.test(foto(v).style.transform), foto(v).style.transform);
+      igual(v.refs.controles.classList.contains('dormidos'), true);
+    });
+  });
+
+  prueba('ampliada, un dedo la pasea y no pasa de foto; dos toques más la encajan', function () {
+    conGestos(function (v) {
+      v.reloj.paso = 50;
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      tocar(v, 150, 300);
+      tocar(v, 150, 300);
+      var ampliada = foto(v).style.transform;
+      v.reloj.paso = 1000;
+      /* Hacia la derecha y abajo: la caja del arnés vive fuera de pantalla, así
+         que el doble toque deja la foto acotada contra el borde izquierdo y
+         el de arriba, y sólo en este sentido le queda camino. */
+      arrastrar(v, 250, 380, 300, 400);
+      var paseada = foto(v).style.transform;
+      v.reloj.paso = 50;
+      tocar(v, 150, 300);
+      tocar(v, 150, 300);
+      igual(v.rutas, []);
+      cierto(paseada !== ampliada, 'no se paseó: ' + paseada);
+      igual(foto(v).style.transform, '');
+    });
+  });
+
+  prueba('un segundo dedo no mueve el carrusel', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      dedo(v, 'pointerdown', 150, 400, 1);
+      dedo(v, 'pointerdown', 250, 400, 2);
+      dedo(v, 'pointermove', 100, 400, 1);
+      dedo(v, 'pointermove', 300, 400, 2);
+      dedo(v, 'pointerup', 300, 400, 2);
+      dedo(v, 'pointerup', 100, 400, 1);
+      igual([v.rutas, pista(v)], [[], 'translate3d(0px,0px,0px)']);
+    });
+  });
+
+  prueba('un dedo nuevo corta la animación en curso', function () {
+    var cortadas = 0;
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 150, 400);
+      dedo(v, 'pointerdown', 200, 400);
+      dedo(v, 'pointerup', 200, 400);
+      igual([cortadas > 0, v.rutas], [true, []]);
+    }, { animar: function () { return function () { cortadas++; }; } });
+  });
+
+  prueba('un gesto que empieza en la × no es del carrusel', function () {
+    conGestos(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      v.refs.cerrar.dispatchEvent(new PointerEvent('pointerdown',
+        { clientX: 370, clientY: 30, pointerId: 1, bubbles: true }));
+      v.refs.cerrar.dispatchEvent(new PointerEvent('pointermove',
+        { clientX: 200, clientY: 30, pointerId: 1, bubbles: true }));
+      igual(pista(v), 'translate3d(0px,0px,0px)');
+    });
+  });
+});
+
+/* Las transiciones de abrir y cerrar: la foto sale del rectángulo de lo que
+   se tocó —la foto de la corona o la portada (`MovilGlobo.origenDe`)— y vuelve
+   a él al cerrar, mientras el fondo pasa a negro y de vuelta. Se apunta cada
+   llamada a `animar` para leer desde dónde y hasta dónde va cada cosa. */
+describe('MovilVisor — la foto que crece y vuelve', function () {
+
+  function conOrigen(fn, extra) {
+    var llamadas = [];
+    var origen = document.createElement('button');
+    origen.style.cssText = 'position:absolute;left:40px;top:100px;width:80px;height:100px';
+    var o = {
+      animar: function (el, desde, hasta, ms, curva, fin) {
+        llamadas.push({ el: el, desde: desde, hasta: hasta, ms: ms });
+        Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+        if (fin) fin();
+        return function () {};
+      },
+      origen: function () { return origen; }
+    };
+    Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+    return conVisor(function (v) {
+      v.caja.appendChild(origen);
+      return fn(v, llamadas);
+    }, o);
+  }
+
+  function de(llamadas, el) { return llamadas.filter(function (l) { return l.el === el; }); }
+
+  prueba('al abrir, la foto crece desde el origen hasta su sitio', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var diapo = v.refs.pista.querySelector('.mvisor-diapo[data-pieza="2"]');
+      var l = de(llamadas, diapo)[0];
+      cierto(l, 'la diapositiva no se animó');
+      cierto(/scale\(0\.\d+\)/.test(l.desde.transform), 'desde: ' + l.desde.transform);
+      igual([l.hasta.transform, l.ms], ['translate3d(0px,0px,0px)', 420]);
+    });
+  });
+
+  prueba('al abrir, el fondo se funde a negro a la vez', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var l = de(llamadas, v.refs.fondo)[0];
+      igual([l.desde.opacity, l.hasta.opacity, l.ms], ['0', '1', 420]);
+    });
+  });
+
+  prueba('al cerrar, la foto vuelve al origen, más deprisa, y el visor se esconde', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var diapo = v.refs.pista.querySelector('.mvisor-diapo[data-pieza="2"]');
+      llamadas.length = 0;
+      MovilVisor.aplicar(MV_TODOS);
+      var l = de(llamadas, diapo)[0];
+      cierto(l && /scale\(0\.\d+\)/.test(l.hasta.transform), 'hasta: ' + (l && l.hasta.transform));
+      igual([l.ms, de(llamadas, v.refs.fondo)[0].hasta.opacity, v.refs.raiz.hidden],
+            [300, '0', true]);
+    });
+  });
+
+  prueba('sin origen, entra y sale con un fundido del visor entero', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var entrada = de(llamadas, v.refs.raiz)[0];
+      MovilVisor.aplicar(MV_TODOS);
+      var salida = de(llamadas, v.refs.raiz)[1];
+      igual([entrada.hasta.opacity, salida.hasta.opacity], ['1', '0']);
+    }, { origen: function () { return null; } });
+  });
+
+  prueba('con movimiento reducido, sólo un fundido corto', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var diapo = v.refs.pista.querySelector('.mvisor-diapo[data-pieza="2"]');
+      var entrada = de(llamadas, v.refs.raiz)[0];
+      igual([de(llamadas, diapo).length, entrada.ms], [0, 150]);
+    }, { reducido: true });
+  });
+
+  prueba('reabrir mientras sale corta la salida y no lo deja escondido', function () {
+    var cortes = 0;
+    conOrigen(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(MV_TODOS);            // la salida queda en curso
+      MovilVisor.aplicar(mvRuta('niebla', 3));
+      igual([v.refs.raiz.hidden, cortes > 0, MovilVisor.estado().pieza], [false, true, 3]);
+    }, { animar: function (el, desde, hasta, ms, curva, fin) {
+      Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+      return function () { cortes++; };
+    } });
+  });
+});
+
+/* Lo que encontró la revisión final de la rama (2026-09-30). Cada prueba
+   reproduce un hallazgo; la animación de verdad escribe al cortarse lo que
+   devuelve `getComputedStyle`, que para un `transform` es SIEMPRE una
+   `matrix(...)`, y eso es lo que simula el `animar` de las dos primeras. */
+describe('MovilVisor — lo que encontró la revisión final', function () {
+
+  function dedo(v, tipo, x, y, id, el) {
+    (el || v.refs.raiz).dispatchEvent(new PointerEvent(tipo,
+      { clientX: x, clientY: y, pointerId: id || 1, bubbles: true }));
+  }
+  function arrastrar(v, x0, y0, x1, y1) {
+    dedo(v, 'pointerdown', x0, y0);
+    dedo(v, 'pointermove', (x0 + x1) / 2, (y0 + y1) / 2);
+    dedo(v, 'pointermove', x1, y1);
+    dedo(v, 'pointerup', x1, y1);
+  }
+
+  /* El primer paso de la pista se queda a medias y, al cortarlo, deja la
+     `matrix` que dejaría el navegador; todo lo demás termina al instante. */
+  function conPasoCortado(fn) {
+    var reloj = { t: 0 };
+    var cortado = false;
+    return conVisor(fn, {
+      ahora: function () { reloj.t += 1000; return reloj.t; },
+      animar: function (el, desde, hasta, ms, curva, fin) {
+        if (el.id === 'mvPista' && !cortado) {
+          cortado = true;
+          return function () { el.style.transform = 'matrix(1, 0, 0, 1, -180, 0)'; };
+        }
+        Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+        if (fin) fin();
+        return function () {};
       }
     });
   }
 
-  function enProyecto(valor, pieza) {
-    return { tipo: 'proyecto', valor: valor, pieza: pieza };
-  }
-
-  prueba('desde la pieza 2, el botón pide la ficha', function () {
-    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
-      refs.ficha.click();
-      return ido;
-    }), [['proyecto', 'niebla', 'ficha']]);
-  });
-
-  /* La razón de ser de `piezaRecordada`: volver donde estabas y no al
-     principio. Se llega a la ficha por el router, igual que llegaría un
-     deslizamiento, para que la prueba recorra el mismo camino que el dedo. */
-  prueba('desde la ficha, el botón vuelve a la pieza de la que saliste', function () {
-    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
-      MovilVisor.aplicar(enProyecto('niebla', 'ficha'));
-      refs.ficha.click();
-      return ido;
-    }), [['proyecto', 'niebla', 2]]);
-  });
-
-  /* El enlace en frío: se entra directamente por la ficha, así que no hay
-     pieza que recordar y se cae a la primera. */
-  prueba('entrando por la ficha, el botón lleva a la primera pieza', function () {
-    igual(conRuta(enProyecto('niebla', 'ficha'), function (refs, ido) {
-      refs.ficha.click();
-      return ido;
-    }), [['proyecto', 'niebla', 1]]);
-  });
-
-  /* Lo que recuerda es de ESTE proyecto. Sin olvidar al cambiar, salir de la
-     pieza 3 de `niebla`, pasar a `oleaje` y pedir su ficha te devolvería a una
-     pieza 3 que en `oleaje` no existe. */
-  prueba('cambiar de proyecto olvida la pieza recordada', function () {
-    igual(conRuta(enProyecto('niebla', 3), function (refs, ido) {
-      MovilVisor.aplicar(enProyecto('oleaje', null));
-      MovilVisor.aplicar(enProyecto('oleaje', 'ficha'));
-      refs.ficha.click();
-      return ido;
-    }), [['proyecto', 'oleaje', null]]);
-  });
-
-  prueba('el botón no hace nada con el visor cerrado', function () {
-    igual(conRuta({ tipo: 'todos', valor: null, pieza: null }, function (refs, ido) {
-      refs.ficha.click();
-      return ido;
-    }), []);
-  });
-
-  /* La tira se pinta en cada parada, igual que el HUD, y pulsar una miniatura
-     lleva al router con el número de pieza. Que no reconstruya en cada parada
-     lo fija `tests/pruebas-movil-tira.js`; aquí sólo se comprueba el cable. */
-  prueba('la tira se pinta con las piezas del trabajo abierto', function () {
-    igual(conRuta(enProyecto('niebla', 2), function (refs) {
-      return refs.tira.querySelectorAll('button').length;
-    }), 3);
-  });
-
-  prueba('pulsar una miniatura navega a esa pieza', function () {
-    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
-      refs.tira.querySelectorAll('button')[2].click();
-      return ido;
-    }), [['proyecto', 'niebla', 3]]);
-  });
-
-  /* La guarda «ya estoy aquí», igual que la del botón de ficha (arriba en
-     este mismo describe): pulsar la miniatura de la pieza en la que ya
-     estás no puede llegar al router como «avisar», porque eso repinta la
-     escena entera —vacía, recrea la <img> desde la portada, relanza la
-     animación— sobre la foto que ya se estaba mirando. */
-  prueba('pulsar la miniatura de la pieza actual no navega', function () {
-    igual(conRuta(enProyecto('niebla', 2), function (refs, ido) {
-      refs.tira.querySelectorAll('button')[1].click();
-      return ido;
-    }), []);
-  });
-});
-
-/* El caso real de la spec: desplazar la tira con el dedo es justo lo que
-   hace que el navegador se quede el gesto y dispare `pointercancel`. Sin
-   filtrar por origen, ese `pointercancel` (o el `pointerup` de un toque
-   corriente sobre la tira) llega a `soltarEn`, que no distingue soltar de
-   que el sistema te quite el gesto, y con recorrido de sobra navega a otra
-   pieza aunque el dedo nunca soltó sobre la foto. */
-describe('MovilVisor — los dedos de la tira no entran en la máquina de gestos', function () {
-
-  function conRuta(ruta, fn) {
-    return conVisorSobre(MV_PROYECTOS, function (refs) {
-      var antesMovil = window.Movil, antesRouter = window.Router;
-      var ido = [];
-      window.Movil = { actual: function () { return 'movil'; } };
-      window.Router = { ir: function (t, v, p) { ido.push([t, v, p]); } };
-      try {
-        MovilVisor.aplicar(ruta);
-        return fn(refs, ido);
-      } finally {
-        window.Movil = antesMovil;
-        window.Router = antesRouter;
-      }
+  prueba('tocar mientras pasa de foto termina el paso en vez de dejarla a medias', function () {
+    conPasoCortado(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 150, 400);
+      dedo(v, 'pointerdown', 200, 400);
+      dedo(v, 'pointerup', 200, 400);
+      igual(v.rutas, [['proyecto', 'niebla', 3]]);
     });
-  }
-
-  prueba('pointerdown + pointerup sobre un botón de la tira, con recorrido que en la foto navegaría, no llega al router', function () {
-    igual(conRuta({ tipo: 'proyecto', valor: 'niebla', pieza: 2 }, function (refs, ido) {
-      var boton = refs.tira.querySelectorAll('button')[0];
-      boton.dispatchEvent(new PointerEvent('pointerdown',
-        { pointerId: 1, clientX: 200, clientY: 100, bubbles: true }));
-      boton.dispatchEvent(new PointerEvent('pointerup',
-        { pointerId: 1, clientX: 120, clientY: 100, bubbles: true }));
-      return ido;
-    }), []);
   });
 
-  /* El caso real: `pointercancel` en vez de `pointerup`. */
-  prueba('pointerdown + pointercancel sobre un botón de la tira tampoco llega al router', function () {
-    igual(conRuta({ tipo: 'proyecto', valor: 'niebla', pieza: 2 }, function (refs, ido) {
-      var boton = refs.tira.querySelectorAll('button')[0];
-      boton.dispatchEvent(new PointerEvent('pointerdown',
-        { pointerId: 1, clientX: 200, clientY: 100, bubbles: true }));
-      boton.dispatchEvent(new PointerEvent('pointercancel',
-        { pointerId: 1, clientX: 120, clientY: 100, bubbles: true }));
-      return ido;
-    }), []);
+  prueba('un arrastre nuevo a mitad del paso parte de donde está la pista', function () {
+    conPasoCortado(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 150, 400);
+      dedo(v, 'pointerdown', 300, 400);
+      dedo(v, 'pointermove', 280, 400);
+      igual(v.refs.pista.style.transform.replace(/\s/g, ''), 'translate3d(-200px,0px,0px)');
+      dedo(v, 'pointerup', 280, 400);
+    });
   });
-});
 
-/* El aviso de que has cambiado de TRABAJO, que es la razón de ser del cartel.
-   Lo que se fija aquí no es cómo se ve —eso es CSS y no se puede juzgar sin
-   fotos— sino CUÁNDO sale, que es lo único que puede equivocarse en silencio:
-   un cartel en cada parada deja de significar nada a la segunda foto, y uno
-   que no vuelve a salir deja el salto tan callado como estaba. */
-describe('MovilVisor — el cartel del título', function () {
+  prueba('subir y volver a bajar deja el panel de la ficha limpio', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      dedo(v, 'pointerdown', 200, 600);
+      dedo(v, 'pointermove', 200, 500);
+      dedo(v, 'pointermove', 200, 660);
+      dedo(v, 'pointerup', 200, 660);
+      igual([v.refs.ficha.classList.contains('arrastrando'), v.refs.ficha.style.transition,
+             v.refs.ficha.style.transform], [false, '', '']);
+    }, { ahora: (function () { var t = 0; return function () { return (t += 1000); }; })() });
+  });
 
-  function conLado(lado, fn) {
-    var antes = window.Movil;
-    window.Movil = { actual: function () { return lado; } };
-    try { return fn(); } finally { window.Movil = antes; }
-  }
+  prueba('con la ficha abierta, tocar fuera de ella la cierra', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      dedo(v, 'pointerdown', 200, 100);
+      dedo(v, 'pointerup', 200, 100);
+      igual(v.rutas, [['proyecto', 'niebla', 2]]);
+    });
+  });
 
-  /* El `retirar` del final no es limpieza de adorno: cada `mostrar` deja un
-     `setTimeout` de segundo y medio vivo, y la suite entera tarda más que eso.
-     Sin cancelarlo, el temporizador de una prueba se dispararía en mitad de
-     otra —sobre el nodo que el módulo tenga puesto para entonces— y la
-     escondría a media comprobación. */
-  function conEntrada(fn) {
-    return conVisorSobre(MV_PROYECTOS, function (refs) {
-      return conLado('movil', function () {
-        try { return fn(refs); } finally { MovilCartel.retirar(); }
+  prueba('tocar dentro de la ficha no la cierra', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      dedo(v, 'pointerdown', 200, 700, 1, v.refs.ficha);
+      dedo(v, 'pointerup', 200, 700, 1, v.refs.ficha);
+      igual(v.rutas, []);
+    });
+  });
+
+  prueba('si el visor se cierra con el dedo en pantalla, moverlo no lanza', function () {
+    var errores = 0;
+    function contar() { errores++; }
+    window.addEventListener('error', contar);
+    try {
+      conVisor(function (v) {
+        MovilVisor.aplicar(mvRuta('niebla', 2));
+        dedo(v, 'pointerdown', 300, 400);
+        dedo(v, 'pointermove', 250, 400);
+        MovilVisor.aplicar(MV_TODOS);
+        dedo(v, 'pointermove', 200, 400);
+        dedo(v, 'pointerup', 200, 400);
       });
-    });
-  }
-
-  function cartel(refs) {
-    return { texto: refs.cartelTexto.textContent, oculto: refs.cartel.hidden };
-  }
-
-  function ir(valor, pieza) {
-    MovilVisor.aplicar({ tipo: 'proyecto', valor: valor, pieza: pieza });
-  }
-
-  prueba('entrar en un trabajo anuncia su nombre', function () {
-    igual(conEntrada(function (refs) {
-      ir('niebla', 1);
-      return cartel(refs);
-    }), { texto: 'Niebla', oculto: false });
-  });
-
-  /* La mitad del encargo. Se retira a mano en medio para simular que el plazo
-     ya corrió: lo que se comprueba es que la parada siguiente NO lo vuelve a
-     sacar, no que siga puesto de antes. */
-  prueba('pasar de foto dentro del mismo trabajo no lo repite', function () {
-    igual(conEntrada(function (refs) {
-      ir('niebla', 1);
-      MovilCartel.retirar();
-      ir('niebla', 2);
-      return cartel(refs).oculto;
-    }), true);
-  });
-
-  /* La ficha es una parada del eje vertical como cualquier otra, y sigue
-     siendo el mismo trabajo. */
-  prueba('ir a la ficha del mismo trabajo tampoco lo repite', function () {
-    igual(conEntrada(function (refs) {
-      ir('niebla', 1);
-      MovilCartel.retirar();
-      ir('niebla', 'ficha');
-      return cartel(refs).oculto;
-    }), true);
-  });
-
-  prueba('cambiar de trabajo lo vuelve a sacar, con el nombre nuevo', function () {
-    igual(conEntrada(function (refs) {
-      ir('niebla', 1);
-      MovilCartel.retirar();
-      ir('oleaje', null);
-      return cartel(refs);
-    }), { texto: 'Oleaje', oculto: false });
-  });
-
-  /* Cerrar puede pillar el cartel a medio camino. Sin retirarlo a mano, el
-     velo con el nombre encima sobreviviría al visor y se vería sobre la
-     rejilla hasta que el temporizador se acordara. */
-  prueba('cerrar el visor se lleva el cartel por delante', function () {
-    igual(conEntrada(function (refs) {
-      ir('niebla', 1);
-      MovilVisor.aplicar({ tipo: 'todos', valor: null, pieza: null });
-      return cartel(refs).oculto;
-    }), true);
-  });
-
-  /* Y el motivo de que `proyectoPuesto` vuelva a `null` al cerrar: salir a la
-     rejilla y volver a entrar en el mismo trabajo es justo cuando el nombre
-     hace falta otra vez. */
-  prueba('volver a entrar en el mismo trabajo lo anuncia de nuevo', function () {
-    igual(conEntrada(function (refs) {
-      ir('niebla', 1);
-      MovilVisor.aplicar({ tipo: 'todos', valor: null, pieza: null });
-      ir('niebla', 1);
-      return cartel(refs);
-    }), { texto: 'Niebla', oculto: false });
-  });
-
-  // ---- Las flechas, cableadas ------------------------------------
-
-  /* `MovilFlechas` tiene sus propias pruebas; lo que falta comprobar aquí es
-     que el visor le pasa las salidas del sitio donde ESTÁ, y no las de otra
-     parte.
-
-     Lista propia y no `MV_PROYECTOS` porque el último de aquélla, `salitre`,
-     llega sin el campo `piezas` —a propósito: es el proyecto con el que las
-     demás pruebas fijan que `ordenDe` aguanta un proyecto incompleto— y
-     `pintar` sí lee `p.piezas.length` para el contador. Nadie había tenido que
-     PARAR en él hasta ahora. */
-  var TRES = [
-    { id: 'niebla',  titulo: 'Niebla',  categoria: 'editorial', tipo: 'foto',
-      piezas: [{ url: 'a' }, { url: 'b' }],
-      ficha: { cliente: 'Estudio', anio: '2026', papel: 'Dirección de arte' } },
-    { id: 'oleaje',  titulo: 'Oleaje',  categoria: 'cortometraje', tipo: 'video',
-      piezas: [],
-      ficha: { cliente: 'Marca Norte', anio: '2025', papel: 'Fotografía' } },
-    { id: 'litoral', titulo: 'Litoral', categoria: 'videoclip', tipo: 'video',
-      piezas: [],
-      ficha: { cliente: 'Casa Sur', anio: '2024', papel: 'Producción' } }
-  ];
-
-  function flechasEn(valor, pieza) {
-    return conVisorSobre(TRES, function (refs) {
-      return conLado('movil', function () {
-        try {
-          MovilVisor.aplicar({ tipo: 'proyecto', valor: valor, pieza: pieza });
-          return { izquierda: !refs.flechaIzquierda.hidden,
-                   derecha:   !refs.flechaDerecha.hidden };
-        } finally { MovilCartel.retirar(); }
-      });
-    });
-  }
-
-  prueba('en el primer trabajo sólo se ve la flecha de la derecha', function () {
-    igual(flechasEn('niebla', 1), { izquierda: false, derecha: true });
-  });
-
-  prueba('en el último trabajo sólo se ve la flecha de la izquierda', function () {
-    igual(flechasEn('litoral', null), { izquierda: true, derecha: false });
-  });
-
-  prueba('en el trabajo de en medio se ven las dos', function () {
-    igual(flechasEn('oleaje', null), { izquierda: true, derecha: true });
-  });
-
-  /* El eje vertical no toca las flechas: bajar a la ficha del primer trabajo
-     deja la izquierda apagada igual. */
-  prueba('moverse por el eje vertical no cambia las flechas', function () {
-    igual(flechasEn('niebla', 'ficha'), { izquierda: false, derecha: true });
+    } finally { window.removeEventListener('error', contar); }
+    igual(errores, 0);
   });
 });

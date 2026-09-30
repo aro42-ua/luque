@@ -96,6 +96,9 @@ window.MovilZoom = (function () {
     TOPE: TOPE,
     inicial: inicial, ampliado: ampliado, maxEscala: maxEscala,
     distancia: distancia, pellizcar: pellizcar, arrastrar: arrastrar,
+    /* Exportada desde el visor premium (2026-09-30): el doble toque de
+       js/movil-visor-gestos.js construye un estado a mano y lo acota aquí. */
+    encajar: encajar,
     transformar: transformar
   };
 })();

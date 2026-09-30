@@ -138,3 +138,70 @@ describeAsync('La esfera — fondo amarillo y ramas negras', function () {
     });
   });
 });
+
+/* Las fotos de la corona salen DE DETRÁS de la portada abierta (2026-09-30):
+   la capa va por debajo de la portada de delante —que asentada lleva
+   `z-index` 2001 (`MovilGlobo`, impares para las teselas)— y por encima de
+   cualquier otra tesela (1999 como mucho). */
+describeAsync('La corona — sale de detrás de la portada', function () {
+  var MARCADO = '<section class="hoja"><div class="esfera"><div class="esfera-corona"></div></div></section>';
+  function conLaHoja(d) {
+    return new Promise(function (ok, mal) {
+      var l = d.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = '../css/luque.css';
+      l.onload = function () { ok(); };
+      l.onerror = function () { mal(new Error('el arnés no pudo cargar css/luque.css')); };
+      d.head.appendChild(l);
+    });
+  }
+  return ArnesDom.conDocumento({ html: MARCADO }, function (w, d) {
+    d.body.className = 'es-movil';
+    return conLaHoja(d).then(function () {
+      prueba('la capa de la corona queda entre la portada de delante y el resto', function () {
+        var z = Number(w.getComputedStyle(d.querySelector('.esfera-corona')).zIndex);
+        cierto(z < 2001 && z > 1999, 'z-index ' + z);
+      });
+    });
+  });
+});
+
+/* El panel de la ficha del visor (revisión final, 2026-09-30): mientras el dedo
+   lo sube tiene que verse, y el botón de la plataforma no puede ser amarillo
+   sobre su amarillo. */
+describeAsync('El visor — el panel de la ficha', function () {
+  var MARCADO = '<div class="mvisor"><section class="mvisor-ficha-panel arrastrando">' +
+    '<a class="pastilla-enlace" href="#">Ver en Vimeo</a></section></div>';
+  function conLaHoja(d) {
+    return new Promise(function (ok, mal) {
+      var l = d.createElement('link');
+      l.rel = 'stylesheet'; l.href = '../css/luque.css';
+      l.onload = function () { ok(); };
+      l.onerror = function () { mal(new Error('el arnés no pudo cargar css/luque.css')); };
+      d.head.appendChild(l);
+    });
+  }
+  return ArnesDom.conDocumento({ html: MARCADO }, function (w, d) {
+    d.body.className = 'es-movil';
+    return conLaHoja(d).then(function () {
+      /* Los paneles se crean DESPUÉS de cargar la hoja: uno que ya estuviera
+         en el documento pasaría a `hidden` con la transición de 380 ms de
+         retardo de su `visibility`, y mientras tanto se leería `visible`. */
+      prueba('mientras se arrastra, el panel se ve aunque no esté abierto', function () {
+        var visor = d.querySelector('.mvisor');
+        var quieto = d.createElement('section');
+        quieto.className = 'mvisor-ficha-panel';
+        var tirado = d.createElement('section');
+        tirado.className = 'mvisor-ficha-panel arrastrando';
+        visor.appendChild(quieto);
+        visor.appendChild(tirado);
+        igual([w.getComputedStyle(quieto).visibility, w.getComputedStyle(tirado).visibility],
+              ['hidden', 'visible']);
+      });
+      prueba('el botón de la plataforma es negro con el texto amarillo', function () {
+        var c = w.getComputedStyle(d.querySelector('.pastilla-enlace'));
+        igual([c.backgroundColor, c.color], ['rgb(10, 10, 10)', 'rgb(255, 255, 0)']);
+      });
+    });
+  });
+});

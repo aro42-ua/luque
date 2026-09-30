@@ -173,6 +173,27 @@ Si la fila 3 da tirones, lo primero es bajar `PERSPECTIVA` o la inclinación en
 1500 (`LUZ_GRANDE` en `js/movil-globo.js`). Si la 6 recarga, la sospechosa es
 `touch-action:pinch-zoom` sobre `.esfera` en `css/luque.css`.
 
+## 6. El visor premium y la cascada (2026-09-30)
+
+Fuente: `docs/estado-conocido.md`, «El visor móvil premium». Nada de esto se ha
+visto todavía en una pantalla: sólo la suite y el estado de la página.
+
+| | # | Qué se mira | Qué tiene que pasar |
+|---|---|---|---|
+| [ ] | 1 | Tocar una portada | Las fotos salen de detrás en cascada, una tras otra, y no a la vez |
+| [ ] | 2 | Tocar una foto de la corona | La foto crece desde su hueco hasta la pantalla y el fondo se funde a negro, sin tirones |
+| [ ] | 3 | Deslizar de lado | La foto sigue al dedo y asoma la siguiente; al soltar pasa o vuelve con suavidad |
+| [ ] | 4 | Deslizar en la primera hacia la derecha | Se resiste como una goma y vuelve |
+| [ ] | 5 | Bajar la foto | Encoge y se ve la esfera detrás; pasado un poco se cierra y la foto vuelve a su hueco en la corona |
+| [ ] | 6 | Subir | Sube la ficha amarilla; bajarla vuelve a la foto |
+| [ ] | 7 | Un toque / dos toques | Uno esconde o enseña los controles; dos amplían donde se tocó, y dos más vuelven |
+| [ ] | 8 | Pellizcar | Amplía la foto (no la página) y un dedo la pasea |
+| [ ] | 9 | Esperar sin tocar | Los controles se desvanecen a los 2,5 s |
+| [ ] | 10 | Fotos grandes en 4G | Se ve al instante la miniatura desenfocada y enfoca al llegar la grande |
+
+Si algo da tirones, los números están en `js/movil-carrusel.js` (física) y en
+las constantes de arriba de `js/movil-visor.js` (duraciones).
+
 ## Lo que salió distinto
 
 Commit desplegado: `______`. Fecha: `______`.
