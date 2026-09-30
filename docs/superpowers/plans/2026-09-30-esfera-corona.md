@@ -17,8 +17,9 @@ nueva).
   portada encogida ni con su vecina (a 390×844); la primera tiene `y` menor que
   la de la portada y `x` igual a su centro; la portada encogida mide el 70 %.
 - Implementación: portada ×0,7; foto de ancho `clamp(0,4 × portada.ancho, 48,
-  84)` y alto ×1,25; elipse de semiejes `portada/2 + 14 + foto/2`; ángulo
-  `−π/2 + 2πk/n`; centro acotado a la pantalla con el margen.
+  84)` y alto ×1,25; cada centro en la dirección de su ángulo `−π/2 + 2πk/n`,
+  en el borde de la portada ampliada (`portada/2 + 14 + foto/2`); centro
+  acotado a la pantalla con el margen. (Una elipse pisaba las esquinas.)
 
 ## Tarea 2 — La corona en `MovilGlobo`
 

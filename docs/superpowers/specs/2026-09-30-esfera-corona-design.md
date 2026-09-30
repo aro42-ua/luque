@@ -39,8 +39,9 @@ cualquiera de ellas lleve al visor en esa foto.
 - Al abrirse, la portada encoge al **70 %** y las demás portadas y ramas se
   apagan más hacia el amarillo, para que mande el trabajo abierto.
 - Las fotos son las miniaturas de 250, en **4:5**, de un ancho del orden del
-  40 % de la portada encogida (entre 48 y 84 px). Se colocan en una **elipse**
-  alrededor de la portada encogida, empezando **arriba** y en el sentido de las
+  40 % de la portada encogida (entre 48 y 84 px). Se colocan en un **marco**
+  alrededor de la portada encogida (una elipse pisaba sus esquinas en las
+  diagonales; ver `js/movil-corona.js`), empezando **arriba** y en el sentido de las
   agujas del reloj, sin salirse de la pantalla (margen 16 px). Sin marco ni
   sombra, como las teselas.
 - **Movimiento:** cada foto sale del centro de la portada, pequeña (30 %) y
