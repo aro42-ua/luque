@@ -1,520 +1,423 @@
 window.MovilVisor = (function () {
 
-  /* La conversión que `js/movil-recorrido.js` pide por escrito en el
-     comentario sobre `indiceDeProyecto`: allí `piezas` es un NÚMERO, aquí
-     arriba es un array. Equivocarse no da error —`array >= 1` es `NaN >= 1`,
-     `false`— y trataría como vídeo a todo proyecto de fotos, sin que nada
-     avise. Por eso la conversión tiene nombre, un solo sitio y prueba propia.
+  /* El visor móvil (spec docs/superpowers/specs/2026-09-30-visor-premium-design.md).
+     Sustituye al visor de dos ejes del bloque 4f: ahora es un carrusel de las
+     fotos de UN trabajo, sobre negro —para cambiar de trabajo se vuelve a la
+     esfera—, con la ficha como panel que sube desde abajo.
 
-     El `|| 0` cubre al proyecto que llega sin el campo: hoy los de vídeo lo
-     traen vacío, pero eso lo garantiza `contenido.json` y no este módulo. */
-  function ordenDe(proyectos) {
-    return proyectos.map(function (p) {
-      return { id: p.id, piezas: (p.piezas && p.piezas.length) || 0 };
-    });
-  }
+     Quién hace qué: `MovilCarrusel` (js/movil-carrusel.js) decide la física
+     —cuánto se mueve la foto con el dedo, adónde va al soltar, cuánto
+     tarda—; `MovilZoom`, el pellizco; `MovilFicha`, el contenido de la ficha;
+     `VisorFoco`, el tabulador atrapado. Aquí sólo se cablea.
 
-  var raiz = null, escena = null, orden = [], aqui = null, elCerrar = null;
+     Manda la ruta, como en todo el sitio: los gestos y los botones NAVEGAN
+     (`Router.ir`) y `aplicar` pinta lo que diga la ruta. Así la pantalla y la
+     URL nunca dicen cosas distintas, y Atrás funciona sin código propio. */
 
-  /* De qué trabajo es la parada que hay puesta. Es lo único que distingue
-     «he cambiado de trabajo» de «he cambiado de foto dentro del mismo», y el
-     cartel sale sólo en el primer caso: si saliera en cada parada, el aviso
-     dejaría de significar nada a la segunda foto.
+  var CURVA = 'cubic-bezier(0.16, 1, 0.3, 1)';
+  /* Los controles se duermen a los 2,5 s sin tocar. */
+  var DORMIR_MS = 2500;
+  var ENTRADA_MS = 420;
+  var SALIDA_MS = 300;
+  var FUNDIDO_REDUCIDO_MS = 150;
 
-     Se vuelve a `null` al cerrar, y no es un detalle: sin eso, salir de un
-     trabajo a la rejilla y volver a entrar en él mismo no anunciaría nada,
-     que es justo cuando el nombre hace más falta. Es la misma variable, con
-     el mismo nombre y por un motivo parecido, que `MovilTira.proyectoPuesto`;
-     no se comparte porque aquella vive dentro de la tira y responde a otra
-     pregunta —si hay que reconstruir las miniaturas—. */
-  var proyectoPuesto = null;
-
-  /* La dirección del último gesto que movió el recorrido, a la espera de que
-     `pintar` la consuma. Se CONSUME UNA VEZ y se olvida (ver `pintar`): así,
-     llegar a una pieza por la URL o por el botón de atrás del navegador —que
-     no pasan por `soltarEn`— la encuentra en `null` y la escena aparece sin
-     animar, en vez de arrastrar la dirección de un gesto anterior que ya no
-     viene a cuento. */
-  var direccionPendiente = null;
-
-  /* La última parada que NO era la ficha, para que el botón de ficha devuelva
-     a donde estabas y no al principio. Se olvida al cambiar de proyecto: la
-     pieza 3 de un trabajo no es la pieza 3 de otro, y en un proyecto de vídeo
-     no existe.
-
-     Vive aquí y no en `MovilRecorrido` porque aquél es puro y no guarda nada
-     entre llamadas; se le pasa como argumento. */
-  var piezaRecordada = null;
-
-  /* Quién tenía el foco justo antes de abrir —normalmente el botón de la
-     rejilla que se tocó—, para devolvérselo al cerrar. No se pregunta a
-     `js/visor-origen.js`, que hace lo mismo para el escritorio: aquél
-     necesita saber DE QUÉ portada salió el visor, y aquí no hace falta,
-     porque lo que estuviera enfocado antes de abrir ya es la respuesta. */
+  var refs = null;
+  var opciones = null;
+  /* `aqui` es null con el visor cerrado, y `{proyecto, pieza, ficha}` abierto.
+     `pieza` es un número (desde 1), o null en un trabajo sin fotos. */
+  var aqui = null;
+  var proyecto = null;
+  var diapos = {};          // pieza → elemento `.mvisor-diapo`
   var elFocoDeAntes = null;
+  var dormir = null;        // id del temporizador de los controles
+  var cierreEnCurso = null; // cancela la animación de salida si se reabre
 
-  /* `estado` es `null` cuando el visor está cerrado, y `{proyecto, pieza}`
-     cuando está abierto. No se usa el `{proyecto: null}` de
-     `MovilRecorrido.inicial` para representar «cerrado»: ese valor significa
-     «no hay ningún trabajo», que es otra cosa, y confundirlos dejaría el visor
-     abierto sobre nada cuando la lista viniera vacía. */
-  function estado() { return aqui; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
 
-  function init(refs, proyectos) {
-    raiz = refs.raiz;
-    escena = refs.escena;
-    elCerrar = refs.cerrar;
-    orden = ordenDe(proyectos);
-    aqui = null;
-    piezaRecordada = null;
-    window.MovilHud.init({
-      raiz:     refs.hud,
-      cat:      refs.cat,
-      cats:     refs.cats,
-      ficha:    refs.ficha,
-      cerrar:   refs.cerrar,
-      titulo:   refs.titulo,
-      contador: refs.contador
-    }, function (categoria) {
-      /* Elegir una categoría cierra el visor y deja la portada filtrada: es
-         una petición sobre QUÉ trabajos ver, y contestarla sin salir del
-         trabajo abierto dejaría la pantalla diciendo una cosa y la URL otra. */
-      if (categoria === 'todos') window.Router.ir('todos', null);
-      else window.Router.ir('categoria', categoria);
-    }, function () {
-      window.Router.ir('todos', null);
-    }, function () {
-      /* El botón no pinta: navega, igual que un deslizamiento, y el suscriptor
-         de siempre repinta. Es lo que impide que la pantalla diga una cosa y la
-         URL otra.
-
-         La dirección se pone a mano porque pulsar no es un dedo, pero la ficha
-         está ABAJO del eje y eso el recorrido ya lo enseñó en cada gesto: ir a
-         la ficha entra como si se hubiera deslizado «arriba» y volver como
-         «abajo». Sin esto la parada aparecería de golpe y el botón
-         contradiría el modelo espacial del eje. */
-      if (!aqui) return;
-      var destino = window.MovilRecorrido.alternarFicha(aqui, orden, piezaRecordada);
-      if (destino.pieza === aqui.pieza) return;
-      direccionPendiente = (destino.pieza === 'ficha') ? 'arriba' : 'abajo';
-      var ruta = window.MovilRecorrido.aRuta(destino);
-      window.Router.ir(ruta.tipo, ruta.valor, ruta.pieza);
-    });
-    /* La tira navega, no pinta, igual que el botón de ficha y que un
-       deslizamiento. `aqui` se lee en el momento del toque y no se captura al
-       cablear: la tira sigue puesta mientras cambias de parada. */
-    window.MovilTira.init(refs.tira, function (n) {
-      if (!aqui) return;
-      /* Guarda «ya estoy aquí», igual que la del botón de ficha más arriba:
-         sin ella, pulsar la miniatura de la pieza que ya se está viendo
-         llega al router como «avisar», que repinta la escena entera —la
-         vacía, recrea la <img> arrancando otra vez por la portada, relanza
-         la animación— sobre la foto que ya estaba puesta. */
-      if (n === aqui.pieza) return;
-      window.Router.ir('proyecto', aqui.proyecto, n);
-    });
-    /* Ni las flechas ni el cartel navegan ni escuchan nada: sólo se pintan.
-       Por eso sus `init` no reciben función de vuelta, a diferencia del HUD y
-       de la tira. */
-    window.MovilFlechas.init({
-      izquierda: refs.flechaIzquierda,
-      derecha:   refs.flechaDerecha
-    });
-    window.MovilCartel.init({ raiz: refs.cartel, texto: refs.cartelTexto });
-    proyectoPuesto = null;
-    engancharGestos();
-  }
-
-  /* El suscriptor del router, y la guarda simétrica a la de `js/visor.js`.
-     `abriendo` distingue ENTRAR al visor de moverse dentro de él ya abierto
-     —deslizar una pieza, cambiar de trabajo—: sólo la primera pide foco
-     inicial y engancha el tabulador; lo segundo pintaría de nuevo la escena
-     pero no debe arrancarle el foco a quien esté navegando con teclado. */
-  function aplicar(ruta) {
-    if (window.Movil.actual() !== 'movil') return;
-    if (ruta.tipo !== 'proyecto') { cerrar(); return; }
-
-    var nuevo = window.MovilRecorrido.desdeRuta(ruta, orden);
-    if (nuevo.proyecto === null) { cerrar(); return; }
-
-    var abriendo = (aqui === null);
-    if (abriendo) elFocoDeAntes = document.activeElement;
-
-    if (!aqui || aqui.proyecto !== nuevo.proyecto) piezaRecordada = null;
-    if (nuevo.pieza !== 'ficha') piezaRecordada = nuevo.pieza;
-    aqui = nuevo;
-    raiz.hidden = false;
-    /* `mvisor-abierto` es un gancho de estado que HOY ningún CSS usa. Se
-       nombra igual que `visor-abierto` del escritorio, que sí tiene reglas
-       —esconde la barra de navegación—, así que conviene decirlo aquí y no
-       dejar que se dé por hecho. El candidato natural es bloquear el
-       desplazamiento del cuerpo mientras el visor está abierto; está sin
-       decidir porque eso cambia cosas —la posición de desplazamiento al
-       cerrar, la barra de direcciones— que sólo se pueden juzgar en un
-       teléfono de verdad, y esa comprobación está pendiente. */
-    document.body.classList.add('mvisor-abierto');
-    pintar();
-    if (abriendo) {
-      document.addEventListener('keydown', alTeclado);
-      elCerrar.focus({ preventScroll: true });
-    }
-  }
-
-  /* A QUIÉN se puede enfocar lo decide `window.VisorFoco.atrapar`
-     (js/visor-foco.js); aquí sólo se le pasa la raíz y el evento, igual que
-     hace `js/visor.js`. */
-  function alTeclado(e) {
-    if (e.key === 'Tab') window.VisorFoco.atrapar(raiz, e);
-  }
-
-  function cerrar() {
-    if (!aqui) return;
-    aqui = null;
-    piezaRecordada = null;
-    proyectoPuesto = null;
-    /* El cartel se retira A MANO y no se deja al temporizador: cerrar puede
-       pillarlo a medio camino, y un velo con un nombre encima sobreviviendo
-       al visor durante un segundo se vería sobre la rejilla. */
-    window.MovilCartel.retirar();
-    raiz.hidden = true;
-    document.body.classList.remove('mvisor-abierto');
-    escena.innerHTML = '';
-    elFoto = null;
-    document.removeEventListener('keydown', alTeclado);
-    /* Devuelve el foco a quien lo tenía antes de abrir, y no si ese elemento
-       ya salió del documento —la rejilla pudo repintarse mientras el visor
-       estaba abierto—: `focus()` sobre un nodo huérfano no hace nada por su
-       cuenta, pero más vale no depender de ese silencio. */
-    if (elFocoDeAntes && document.contains(elFocoDeAntes)) {
-      elFocoDeAntes.focus({ preventScroll: true });
-    }
-    elFocoDeAntes = null;
-  }
-
-  /* Vacía la escena antes de cada parada: sin esto, deslizar acumularía una
-     <img> encima de otra y la memoria crecería con cada gesto. */
-  function pintar() {
-    var p = window.Datos.porId(aqui.proyecto);
-    if (!p) { cerrar(); return; }
-
-    var direccion = direccionPendiente;
-    direccionPendiente = null;
-
-    escena.innerHTML = '';
-    var nodo = (aqui.pieza === 'ficha') ? window.MovilFicha.de(p) :
-               (aqui.pieza === null)    ? videoDe(p) : fotoDe(p, aqui.pieza);
-    escena.appendChild(nodo);
-
-    /* Cada parada empieza encajada. Arrastrar el zoom de una foto a la
-       siguiente dejaria la nueva ampliada por un trozo cualquiera, sin que
-       nadie lo hubiera pedido y sin forma evidente de deshacerlo. Se reinician
-       `punteros` y `deLaTira` aquí como red de seguridad: por si algún
-       pointerup/pointercancel se pierde (llamada entrante, gesto del sistema),
-       estas entradas no quedarían marcadas para siempre. */
-    elFoto = (nodo.tagName === 'IMG') ? nodo : null;
-    zoom = window.MovilZoom.inicial();
-    base = null;
-    punteros = {};
-    deLaTira = {};
-    pintarZoom();
-
-    window.MovilAnimacion.aplicar(nodo, direccion);
-    window.MovilHud.pintar(p, aqui.pieza, p.piezas.length);
-    window.MovilTira.pintar(p, aqui.pieza);
-    /* Se le pasa `aqui`, el estado ya movido, y no el destino de nada: las
-       flechas dicen qué hay DESDE donde acabas de caer. */
-    window.MovilFlechas.pintar(window.MovilRecorrido.salidas(aqui, orden));
-    if (p.id !== proyectoPuesto) {
-      proyectoPuesto = p.id;
-      window.MovilCartel.mostrar(p.titulo);
-    }
-  }
-
-  /* La foto, con carga progresiva. Se pinta primero una PREVIA que ya está
-     descargada —la portada en la primera parada, la miniatura propia en las
-     demás; lo decide `vistaPrevia`, más abajo— y se cambia a la pieza entera
-     cuando llega. Medido el 2026-09-04 sobre el visor de escritorio en móvil:
-     pedir la pieza de primeras eran 1371 ms hasta ver algo, contra 4 ms con la
-     imagen ya en caché. Sin esto, cada deslizamiento en 4G es un segundo de
-     negro.
-
-     CONDICIÓN SOBRE EL CONTENIDO, no sobre este código: la portada y la pieza
-     tienen que ser la misma foto EN LA MISMA PROPORCIÓN. La escena usa
-     `object-fit:contain` (css/luque.css), así que la caja pintada la decide la
-     proporción de la imagen: si no coinciden, el cambio da un salto. En el
-     relleno coinciden (las dos 4:5); quien genere los recortes de las fotos del
-     estudio tiene que mantenerlo.
-
-     No se reutiliza `js/visor-carga.js`, que hace esto mismo para el
-     escritorio: aquel módulo guarda su raíz en una variable de módulo, y
-     llamarlo desde aquí la reapuntaría al marco móvil, dejando el indicador del
-     escritorio atado a un elemento que ya no se ve en cuanto se cruza el umbral
-     de ancho con el visor abierto. Quince líneas repetidas salen más baratas
-     que un fallo que sólo aparece girando una tableta. */
-  function fotoDe(p, numero) {
-    var pieza = p.piezas[numero - 1];
-    var plena = pieza.url;
-    var previa = vistaPrevia(p, numero);
-    var img = document.createElement('img');
-    img.className = 'mvisor-foto';
-    img.src = previa || plena;
-    img.alt = p.titulo + ', pieza ' + numero + ' de ' + p.piezas.length;
-    img.decoding = 'async';
-    if (previa && previa !== plena) relevar(img, plena);
-    return img;
-  }
-
-  /* Qué se pinta mientras baja la pieza entera. Lo mismo que decide
-     `VisorCarga.vistaPrevia` (js/visor-carga.js) para el escritorio, y por lo
-     mismo: la primera parada arranca con la PORTADA, que la rejilla ya tiene;
-     las demás con SU miniatura, que la tira de abajo ya pidió. Sin miniatura
-     no hay previa y se pide la pieza entera directamente.
-
-     Hasta el 2026-09-11 aquí se pintaba la portada en TODAS las paradas —el
-     visor móvil se escribió sin tira, y la portada era la única imagen ya
-     descargada—. Con la tira eso pasó a ser un error visible: la portada es
-     OTRA foto, y mientras la pieza bajaba (de 4 a 12 segundos, medido con una
-     sonda en el iPhone de Ángel) se veía con el rótulo «08/10» encima. Se leía
-     como «al deslizar siempre sale la misma imagen». La miniatura propia es la
-     foto que toca, borrosa, y comparte proporción con la pieza por
-     construcción, así que el relevo tampoco da salto. */
-  function vistaPrevia(p, numero) {
-    var pieza = p.piezas[numero - 1];
-    var propia = pieza && pieza.miniatura;
-    return (numero === 1 ? (p.portadaUrl || propia) : propia) || null;
-  }
-
-  /* Cambia a la foto entera cuando está descargada y decodificada, así que el
-     cambio no parpadea. El fallo NO releva a propósito: dejar la portada buena
-     en pantalla es mejor que cambiarla por una imagen rota. Y comprueba
-     `parentNode` porque el dedo puede haber deslizado a otra parada mientras
-     tanto, y esta <img> ya no estar en ninguna escena. */
-  function relevar(img, plena) {
-    var grande = new Image();
-    grande.addEventListener('load', function () {
-      if (img.parentNode) img.src = plena;
-    }, { once: true });
-    grande.src = plena;
-  }
-
-  /* Sin `vimeo` se enseña el póster y no un rectángulo negro, que es lo que la
-     spec pide en «Cuando algo falla». Hoy es el camino NORMAL y no el de
-     excepción: los seis proyectos de vídeo de `contenido.json` llevan
-     `vimeo: null` hasta que el estudio suba los suyos. */
-  function videoDe(p) {
-    if (!p.vimeo) {
-      var poster = document.createElement('img');
-      poster.className = 'mvisor-foto';
-      poster.src = p.portadaUrl;
-      poster.alt = p.titulo + ', fotograma del vídeo';
-      poster.decoding = 'async';
-      return poster;
-    }
-    var marco = document.createElement('iframe');
-    marco.className = 'mvisor-video';
-    marco.src = 'https://player.vimeo.com/video/' + p.vimeo;
-    marco.title = p.titulo;
-    marco.setAttribute('allow', 'fullscreen; picture-in-picture');
-    marco.setAttribute('allowfullscreen', '');
-    return marco;
-  }
-
-  /* Del dedo a la ruta. Devuelve `null` cuando la intención no mueve —el toque,
-     el pellizco, la zona muerta, y el borde de la serie— para no llamar al
-     router sin necesidad: `Router.decidir` trataría ese destino como «avisar» y
-     volveríamos a pintar la misma parada por nada.
-
-     Este módulo NO invierte las direcciones. `MovilRecorrido.mover` lleva
-     escrito que los nombres son los del DEDO y que la inversión vive allí y en
-     ningún otro sitio, porque si viviera en quien pinta, cada pantalla nueva
-     podría equivocarse de signo por su cuenta. Si algún día los gestos se
-     sienten al revés, el sitio donde mirar es `movil-recorrido.js`. */
-  function siguienteRuta(aqui, intencion, orden) {
-    if (!aqui) return null;
-    if (intencion !== 'izquierda' && intencion !== 'derecha'
-        && intencion !== 'arriba' && intencion !== 'abajo') return null;
-
-    var destino = window.MovilRecorrido.mover(aqui, intencion, orden);
-    if (destino.proyecto === aqui.proyecto && destino.pieza === aqui.pieza) {
-      return null;
-    }
-    return window.MovilRecorrido.aRuta(destino);
-  }
-
-  var gesto = null;
-
-  /* El estado del zoom vive aqui y no en `MovilZoom`, que es puro y no guarda
-     nada entre llamadas. `punteros` es cuantos dedos hay y donde, indexado por
-     `pointerId`: hace falta el mapa entero y no una cuenta, porque el pellizco
-     necesita las dos posiciones a la vez y el paseo necesita saber de donde
-     venia ESE dedo y no el otro.
-
-     `base` y `d0` se congelan al formarse una pareja de dedos y no se tocan
-     mientras siga siendo LA MISMA: el porque esta en `MovilZoom.pellizcar`.
-     `parCongelado` guarda de que pareja son, y el porque de eso esta en
-     `refrescarPar`. */
-  var zoom = null, base = null, d0 = 0, punteros = {}, tope = 1, elFoto = null;
-  var parCongelado = null;
-  var deLaTira = {};
-
-  /* Las dos cajas que `MovilZoom` necesita para acotar el paseo y que no puede
-     medir por su cuenta, porque es puro: la foto TAL Y COMO ESTA PINTADA y el
-     marco, que es la escena a pantalla completa. No son la misma con
-     `object-fit: contain`, y confundirlas es dejar que la foto se despegue del
-     marco por el eje de las franjas. */
-  function medidasDelPaseo() {
+  function porDefecto(o) {
+    o = o || {};
     return {
-      foto:  { ancho: elFoto.clientWidth,  alto: elFoto.clientHeight },
-      marco: { ancho: escena.clientWidth,  alto: escena.clientHeight }
+      animar: o.animar || animarDeVerdad,
+      medir: o.medir || function () {
+        var r = refs.raiz.getBoundingClientRect();
+        return { ancho: r.width || window.innerWidth, alto: r.height || window.innerHeight };
+      },
+      reducido: o.reducido !== undefined
+        ? o.reducido
+        : window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      origen: o.origen || function (id, pieza) {
+        return window.MovilGlobo && window.MovilGlobo.origenDe
+          ? window.MovilGlobo.origenDe(id, pieza) : null;
+      },
+      temporizar: o.temporizar || function (f, ms) { return setTimeout(f, ms); },
+      cancelar: o.cancelar || function (id) { clearTimeout(id); }
     };
   }
 
-  function dosDedos() {
-    var ids = Object.keys(punteros);
-    return ids.length === 2 ? [punteros[ids[0]], punteros[ids[1]]] : null;
+  /* La animación de verdad, con la Web Animations API: interrumpible y sin
+     librerías. `desde` y `hasta` son estilos (`transform`, `opacity`). Al
+     terminar deja `hasta` escrito en línea y suelta la animación, para que el
+     siguiente gesto parta de un estilo que se puede leer. Devuelve una
+     función que la corta DONDE ESTÉ, dejando escrito ese punto. */
+  function animarDeVerdad(el, desde, hasta, ms, curva, alTerminar) {
+    if (!(ms > 0) || !el.animate) {
+      escribir(el, hasta);
+      if (alTerminar) alTerminar();
+      return function () {};
+    }
+    var a = el.animate([desde, hasta], { duration: ms, easing: curva || CURVA, fill: 'forwards' });
+    var hecha = false;
+    a.onfinish = function () {
+      hecha = true;
+      escribir(el, hasta);
+      a.cancel();
+      if (alTerminar) alTerminar();
+    };
+    return function () {
+      if (hecha) return;
+      var c = window.getComputedStyle(el);
+      var ahora = {};
+      Object.keys(hasta).forEach(function (k) { ahora[k] = c[k]; });
+      escribir(el, ahora);
+      a.cancel();
+    };
   }
 
-  /* Congela `base` y `d0` cada vez que la PAREJA de dedos cambia, y no solo la
-     primera vez que hay dos. Con tres dedos en la pantalla —el pulgar o la
-     palma que se apoyan, que en un telefono pasa— levantar uno de la pareja
-     original deja dos dedos que nunca midieron `d0` juntos: arrastrar el `d0`
-     viejo hace que la foto salte de golpe en el siguiente `pointermove` sin
-     que ningun dedo se haya movido. Medido: A@150 y B@250 pellizcados a 3x,
-     entra C@470 y se levanta A, y la foto cae de 3x a 1x sola.
-
-     La identidad de la pareja son sus `pointerId` ordenados: comparar cuantos
-     dedos hay no basta, porque dos son dos antes y despues del cambio. */
-  function refrescarPar() {
-    var par = dosDedos();
-    if (!par || !elFoto) { base = null; parCongelado = null; return; }
-    var quienes = Object.keys(punteros).sort().join('/');
-    if (quienes === parCongelado) return;
-    parCongelado = quienes;
-    base = zoom;
-    d0 = window.MovilZoom.distancia(par[0], par[1]);
-    tope = window.MovilZoom.maxEscala(elFoto.naturalWidth, elFoto.clientWidth);
+  function escribir(el, estilos) {
+    Object.keys(estilos).forEach(function (k) { el.style[k] = estilos[k]; });
   }
 
-  /* El transform se QUITA al volver al encaje en vez de escribir la identidad,
-     y no es cosmetica: `MovilAnimacion.aplicar` entra la escena con una
-     animacion CSS que tambien es un transform, y un estilo en linea puesto ahi
-     se queda peleando con ella en cada parada. Sin ampliar no hay nada que
-     escribir, asi que no se escribe. */
-  function pintarZoom() {
-    if (!elFoto) return;
-    elFoto.style.transform = window.MovilZoom.ampliado(zoom)
-      ? window.MovilZoom.transformar(zoom)
-      : '';
+  function init(r, proyectos, o) {
+    refs = r;
+    opciones = porDefecto(o);
+    aqui = null;
+    proyecto = null;
+    diapos = {};
+    refs.pista.innerHTML = '';
+    refs.ficha.innerHTML = '';
+    refs.cerrar.addEventListener('click', salir);
+    refs.verFicha.addEventListener('click', function () { pedirFicha(); });
+    /* Con el foco del teclado en un control, los controles no se duermen. */
+    refs.controles.addEventListener('focusin', despertar);
+    if (window.MovilVisorGestos) window.MovilVisorGestos.enganchar(api());
   }
 
-  /* Los oyentes van en la RAÍZ y no en la escena: la escena la vacía `pintar`
-     en cada parada, así que un oyente puesto allí se iría con el primer
-     deslizamiento y el segundo no haría nada. La raíz sobrevive a todo el
-     recorrido.
+  function estado() {
+    return aqui ? { proyecto: aqui.proyecto, pieza: aqui.pieza, ficha: aqui.ficha } : null;
+  }
 
-     `pointer*` y no `touch*`: es lo que ya usa el resto del móvil
-     (`js/movil-puerta.js`) y lo que permite probar el gesto con un ratón en el
-     escritorio mientras se desarrolla.
+  function aplicar(ruta) {
+    if (!refs || window.Movil.actual() !== 'movil') return;
+    if (ruta.tipo !== 'proyecto') { cerrar(); return; }
+    var p = window.Datos.porId(ruta.valor);
+    if (!p) { cerrar(); return; }
 
-     `pointercancel` cuenta como soltar. El sistema lo dispara cuando se lleva
-     el gesto —una llamada entrante, el gesto de «atrás» del navegador desde el
-     borde— y sin tratarlo el contador de dedos de `MovilGestos` se quedaría en
-     uno para siempre, dejando el visor sordo hasta recargar. */
-  /* Los dedos que bajan sobre la tira no entran en la maquina de gestos: ni en
-     `punteros`, que es el mapa del pellizco, ni en `MovilGestos`. La tira la
-     desplaza el navegador por su cuenta (`touch-action:pan-x`), y desplazarla
-     es justo lo que hace que se quede el gesto y dispare `pointercancel`; sin
-     este filtro ese `pointercancel` llega a `soltarEn`, que no distingue
-     soltar de que te quiten el gesto, y navega. El defecto es anterior a la
-     tira —esta documentado en docs/estado-conocido.md con su repro— pero la
-     tira lo pasaba de raro a cotidiano.
+    var n = (p.piezas && p.piezas.length) || 0;
+    var abriendo = aqui === null;
+    var cambia = abriendo || aqui.proyecto !== p.id;
+    var ficha = ruta.pieza === 'ficha' || n === 0;
+    var pieza = null;
+    if (n > 0) {
+      if (typeof ruta.pieza === 'number' && ruta.pieza >= 1 && ruta.pieza <= n) pieza = ruta.pieza;
+      else if (!cambia && aqui.pieza) pieza = aqui.pieza;     // la ficha, sobre la foto que había
+      else pieza = 1;
+    }
+    if (abriendo) elFocoDeAntes = document.activeElement;
+    if (cierreEnCurso) { cierreEnCurso(); cierreEnCurso = null; }
+    if (cambia) { proyecto = p; montar(p); }
+    aqui = { proyecto: p.id, pieza: pieza, ficha: ficha };
 
-     Se filtra por ORIGEN y no con `stopPropagation` en el `pointerdown`:
-     aquello dejaria pasar el `pointerup` y el contador de dedos se
-     descuadraria, que es peor que el problema que arregla. */
+    pintarDiapos();
+    pintarControles();
+    pintarFicha();
 
-  function engancharGestos() {
-    gesto = window.MovilGestos.inicial();
-    zoom = window.MovilZoom.inicial();
+    if (abriendo) {
+      refs.raiz.hidden = false;
+      document.body.classList.add('mvisor-abierto');
+      document.addEventListener('keydown', alTeclado);
+      entrar();
+      refs.cerrar.focus({ preventScroll: true });
+    }
+    despertar();
+  }
 
-    raiz.addEventListener('pointerdown', function (e) {
-      if (e.target.closest && e.target.closest('.mvisor-tira')) {
-        deLaTira[e.pointerId] = true;
-        return;
+  /* Un trabajo nuevo: se vacía la pista y la ficha se rehace. */
+  function montar(p) {
+    refs.pista.innerHTML = '';
+    diapos = {};
+    refs.pista.style.transform = '';
+    refs.titulo.textContent = p.titulo;
+    refs.ficha.innerHTML = '';
+    refs.ficha.appendChild(window.MovilFicha.de(p));
+    var volver = document.createElement('button');
+    volver.type = 'button';
+    volver.className = 'mvisor-ficha-volver';
+    volver.setAttribute('data-volver', '');
+    volver.textContent = (p.piezas && p.piezas.length) ? 'Volver a las fotos' : 'Cerrar';
+    volver.addEventListener('click', cerrarFicha);
+    refs.ficha.appendChild(volver);
+  }
+
+  /* La foto de la pieza y su vecina a cada lado, colocadas a un ancho de
+     distancia. Se reutilizan las que ya estaban (su <img> ya cargada) y se
+     quitan las que se quedan lejos: la memoria no crece con el recorrido. */
+  function pintarDiapos() {
+    var n = aqui.pieza;
+    var ancho = opciones.medir().ancho;
+    var quiero = {};
+    if (n) [n - 1, n, n + 1].forEach(function (k) {
+      if (k >= 1 && k <= proyecto.piezas.length) quiero[k] = true;
+    });
+    Object.keys(diapos).forEach(function (k) {
+      if (!quiero[k]) { diapos[k].parentNode.removeChild(diapos[k]); delete diapos[k]; }
+    });
+    Object.keys(quiero).map(Number).sort(function (a, b) { return a - b; }).forEach(function (k) {
+      if (!diapos[k]) diapos[k] = crearDiapo(k);
+      var d = diapos[k];
+      d.style.transform = 'translate3d(' + ((k - n) * ancho) + 'px,0px,0px)';
+      d.setAttribute('aria-hidden', k === n ? 'false' : 'true');
+      refs.pista.appendChild(d);   // mantiene el orden del DOM
+    });
+    refs.pista.style.transform = 'translate3d(0px,0px,0px)';
+    precargar(n + 1);
+    precargar(n - 1);
+  }
+
+  /* La foto, con carga progresiva: primero su miniatura —ya descargada por la
+     corona—, desenfocada (`.previa`), y la de 1500 encima cuando llega. El
+     fallo no releva: mejor la miniatura que una imagen rota. */
+  function crearDiapo(k) {
+    var pieza = proyecto.piezas[k - 1];
+    var d = document.createElement('div');
+    d.className = 'mvisor-diapo';
+    d.dataset.pieza = String(k);
+    var img = document.createElement('img');
+    img.className = 'mvisor-foto';
+    img.alt = proyecto.titulo + ', foto ' + k + ' de ' + proyecto.piezas.length;
+    img.decoding = 'async';
+    img.draggable = false;
+    var previa = pieza.miniatura;
+    img.src = previa || pieza.url;
+    if (previa && previa !== pieza.url) {
+      img.classList.add('previa');
+      var grande = new Image();
+      grande.addEventListener('load', function () {
+        if (!img.parentNode) return;
+        img.src = pieza.url;
+        img.classList.remove('previa');
+      }, { once: true });
+      grande.src = pieza.url;
+    }
+    d.appendChild(img);
+    return d;
+  }
+
+  function precargar(k) {
+    if (!proyecto || k < 1 || k > proyecto.piezas.length) return;
+    var i = new Image();
+    i.src = proyecto.piezas[k - 1].url;
+  }
+
+  function pintarControles() {
+    var total = proyecto.piezas.length;
+    refs.verFicha.hidden = total === 0;
+    if (!aqui.pieza) {
+      refs.contador.textContent = '';
+      refs.progreso.style.width = '0%';
+      return;
+    }
+    refs.contador.textContent = pad(aqui.pieza) + ' / ' + pad(total);
+    refs.progreso.style.width = (aqui.pieza / total * 100).toFixed(3) + '%';
+  }
+
+  function pintarFicha() {
+    refs.ficha.classList.toggle('abierta', aqui.ficha);
+    refs.ficha.setAttribute('aria-hidden', aqui.ficha ? 'false' : 'true');
+    refs.ficha.style.transform = '';
+    refs.raiz.classList.toggle('con-ficha', aqui.ficha);
+  }
+
+  function despertar() {
+    refs.controles.classList.remove('dormidos');
+    if (dormir !== null) opciones.cancelar(dormir);
+    /* Sin guarda de «con el foco dentro no se duermen»: al abrir, el foco va
+       a la × —dentro de los controles— y en un teléfono no se dormirían
+       nunca. Quien navega con teclado los despierta con cada `focusin`. */
+    dormir = opciones.temporizar(function () {
+      dormir = null;
+      refs.controles.classList.add('dormidos');
+    }, DORMIR_MS);
+  }
+
+  function alternarControles() {
+    if (refs.controles.classList.contains('dormidos')) despertar();
+    else {
+      if (dormir !== null) { opciones.cancelar(dormir); dormir = null; }
+      refs.controles.classList.add('dormidos');
+    }
+  }
+
+  /* NAVEGAR. Nada de lo que sigue pinta: pide la ruta y `aplicar` pinta. */
+  function irA(pieza) {
+    if (!aqui) return;
+    window.Router.ir('proyecto', aqui.proyecto, pieza);
+  }
+
+  function pedirFicha() {
+    if (!aqui || aqui.ficha) return;
+    window.Router.ir('proyecto', aqui.proyecto, 'ficha');
+  }
+
+  function cerrarFicha() {
+    if (!aqui) return;
+    if (aqui.pieza) irA(aqui.pieza);
+    else salir();
+  }
+
+  /* Salir del visor es volver a la esfera. */
+  function salir() {
+    window.Router.ir('todos', null);
+  }
+
+  function alTeclado(e) {
+    if (!aqui) return;
+    if (e.key === 'Tab') { window.VisorFoco.atrapar(refs.raiz, e); return; }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (aqui.ficha && aqui.pieza) cerrarFicha(); else salir();
+      return;
+    }
+    if (aqui.ficha || !aqui.pieza) return;
+    if (e.key === 'ArrowUp') { e.preventDefault(); pedirFicha(); return; }
+    var paso = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    if (!paso) return;
+    e.preventDefault();
+    pasar(paso);
+  }
+
+  /* Pasar de foto con la pista animada: la vecina entra desde su lado y, al
+     llegar, se pide su ruta. En el extremo no pasa nada. */
+  function pasar(paso) {
+    var destino = aqui.pieza + paso;
+    if (destino < 1 || destino > proyecto.piezas.length) return;
+    var ancho = opciones.medir().ancho;
+    moverPista(0, -paso * ancho, opciones.reducido ? 0 : window.MovilCarrusel.duracion(ancho, 0),
+               function () { irA(destino); });
+  }
+
+  var cortarPista = null;
+  function moverPista(desde, hasta, ms, alTerminar) {
+    if (cortarPista) cortarPista();
+    cortarPista = opciones.animar(refs.pista,
+      { transform: 'translate3d(' + desde + 'px,0px,0px)' },
+      { transform: 'translate3d(' + hasta + 'px,0px,0px)' },
+      ms, CURVA, function () { cortarPista = null; if (alTerminar) alTerminar(); });
+  }
+
+  /* LA ENTRADA: la foto crece desde lo que se tocó —la foto de la corona, o
+     la portada— hasta su sitio, mientras el fondo se funde a negro. Es el
+     momento principal del visor. Con movimiento reducido, un fundido corto. */
+  function entrar() {
+    var diapo = aqui.pieza ? diapos[aqui.pieza] : null;
+    var desde = diapo ? rectanguloDe(opciones.origen(aqui.proyecto, aqui.pieza)) : null;
+    if (opciones.reducido || !desde) {
+      opciones.animar(refs.raiz, { opacity: '0' }, { opacity: '1' },
+                      opciones.reducido ? FUNDIDO_REDUCIDO_MS : ENTRADA_MS / 2, 'ease');
+      return;
+    }
+    refs.raiz.style.opacity = '';
+    opciones.animar(refs.fondo, { opacity: '0' }, { opacity: '1' }, ENTRADA_MS, CURVA);
+    opciones.animar(diapo, { transform: hacia(desde, diapo) },
+                    { transform: 'translate3d(0px,0px,0px)' }, ENTRADA_MS, CURVA);
+  }
+
+  /* LA SALIDA: el camino inverso, hacia la foto de la corona que corresponde a
+     la que se está viendo (o la portada), más rápido que la entrada. */
+  function cerrar() {
+    if (!aqui) return;
+    var pieza = aqui.pieza;
+    var id = aqui.proyecto;
+    var diapo = pieza ? diapos[pieza] : null;
+    aqui = null;
+    document.removeEventListener('keydown', alTeclado);
+    if (dormir !== null) { opciones.cancelar(dormir); dormir = null; }
+    var hasta = diapo ? rectanguloDe(opciones.origen(id, pieza)) : null;
+    var terminado = false;
+    function acabar() {
+      if (terminado) return;
+      terminado = true;
+      cierreEnCurso = null;
+      if (aqui) return;             // se reabrió mientras salía
+      refs.raiz.hidden = true;
+      refs.raiz.style.opacity = '';
+      refs.fondo.style.opacity = '';
+      refs.pista.innerHTML = '';
+      refs.pista.style.transform = '';
+      diapos = {};
+      proyecto = null;
+      refs.raiz.classList.remove('con-ficha', 'cerrando');
+      document.body.classList.remove('mvisor-abierto');
+      if (elFocoDeAntes && document.contains(elFocoDeAntes)) {
+        elFocoDeAntes.focus({ preventScroll: true });
       }
-      punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
-      gesto = window.MovilGestos.presionar(gesto, { x: e.clientX, y: e.clientY });
-      refrescarPar();
-    });
-
-    raiz.addEventListener('pointermove', function (e) {
-      if (deLaTira[e.pointerId]) return;
-      var antes = punteros[e.pointerId];
-      if (!antes) return;                 /* un dedo que no se poso aqui */
-      var ahora = { x: e.clientX, y: e.clientY };
-      punteros[e.pointerId] = ahora;
-      if (!elFoto) return;
-
-      var par = dosDedos();
-      if (par && base) {
-        zoom = window.MovilZoom.pellizcar(base, d0,
-          window.MovilZoom.distancia(par[0], par[1]), tope, medidasDelPaseo());
-        pintarZoom();
-        return;
-      }
-      if (!par && window.MovilZoom.ampliado(zoom)) {
-        zoom = window.MovilZoom.arrastrar(zoom, ahora.x - antes.x,
-          ahora.y - antes.y, medidasDelPaseo());
-        pintarZoom();
-      }
-    });
-
-    raiz.addEventListener('pointerup', function (e) {
-      if (deLaTira[e.pointerId]) { delete deLaTira[e.pointerId]; return; }
-      soltarEn(e);
-    });
-
-    raiz.addEventListener('pointercancel', function (e) {
-      if (deLaTira[e.pointerId]) { delete deLaTira[e.pointerId]; return; }
-      soltarEn(e);
-    });
+      elFocoDeAntes = null;
+    }
+    refs.raiz.classList.add('cerrando');
+    if (opciones.reducido || !hasta || !diapo) {
+      var cortar = opciones.animar(refs.raiz, { opacity: '1' }, { opacity: '0' },
+        opciones.reducido ? FUNDIDO_REDUCIDO_MS : SALIDA_MS, 'ease', acabar);
+      if (!terminado) cierreEnCurso = function () { cortar(); acabar(); };
+      return;
+    }
+    var actual = diapo.style.transform || 'translate3d(0px,0px,0px)';
+    opciones.animar(refs.fondo, { opacity: refs.fondo.style.opacity || '1' }, { opacity: '0' },
+                    SALIDA_MS, CURVA);
+    var cortarDiapo = opciones.animar(diapo, { transform: actual }, { transform: hacia(hasta, diapo) },
+                                      SALIDA_MS, CURVA, acabar);
+    if (!terminado) cierreEnCurso = function () { cortarDiapo(); acabar(); };
   }
 
-  function soltarEn(e) {
-    delete punteros[e.pointerId];
-    /* No basta con `if (!dosDedos()) base = null`: la pareja tambien cambia
-       cuando un dedo se levanta y deja exactamente dos (el caso del pulgar
-       que se apoyaba y se retira), y ese caso necesita recongelar `base`/`d0`
-       igual que el de `pointerdown`. `refrescarPar` ya cubre el caso de
-       menos de dos dedos, poniendo `base` a `null`. */
-    refrescarPar();
+  function rectanguloDe(el) {
+    if (!el || !el.getBoundingClientRect) return null;
+    var r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 ? r : null;
+  }
 
-    var r = window.MovilGestos.soltar(gesto, { x: e.clientX, y: e.clientY });
-    gesto = r.estado;
-    if (r.intencion === null) return;
+  /* El `transform` que lleva la diapositiva (a pantalla completa, con la foto
+     en `contain`) a cubrir el rectángulo `r`: se escala por el ANCHO de la
+     foto pintada y se centra en el de `r`. */
+  function hacia(r, diapo) {
+    var m = opciones.medir();
+    var img = diapo.querySelector('img');
+    var prop = (img && img.naturalWidth && img.naturalHeight)
+      ? img.naturalWidth / img.naturalHeight : r.width / r.height;
+    var anchoFoto = Math.min(m.ancho, m.alto * prop);
+    var raiz = refs.raiz.getBoundingClientRect();
+    var dx = (r.left + r.width / 2) - (raiz.left + m.ancho / 2);
+    var dy = (r.top + r.height / 2) - (raiz.top + m.alto / 2);
+    return 'translate3d(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px,0px) scale(' +
+      (r.width / anchoFoto).toFixed(4) + ')';
+  }
 
-    /* El toque despierta el HUD y no navega. Que no navegue es lo que hace
-       posible volver a encenderlo sin cambiar de foto, y por eso sigue
-       funcionando tambien con la foto ampliada: mirar una esquina de cerca y
-       querer leer el titulo no son cosas incompatibles. */
-    if (r.intencion === 'toque') { window.MovilHud.despertar(); return; }
-
-    /* Ampliada, el dedo estaba paseando la foto y no pidiendo otra parada. La
-       intencion se consume aqui y se tira: llegar al router con ella sacaria
-       del trabajo a quien solo queria mirar la esquina de la imagen. */
-    if (window.MovilZoom.ampliado(zoom)) return;
-
-    var ruta = siguienteRuta(aqui, r.intencion, orden);
-    if (!ruta) return;
-    direccionPendiente = r.intencion;
-    window.Router.ir(ruta.tipo, ruta.valor, ruta.pieza);
+  /* Lo que necesitan los gestos (js/movil-visor-gestos.js, Tarea 5), en un
+     solo sitio para que el otro módulo no toque el estado de éste. */
+  function api() {
+    return {
+      refs: function () { return refs; },
+      opciones: function () { return opciones; },
+      aqui: function () { return aqui; },
+      proyecto: function () { return proyecto; },
+      diapo: function () { return aqui && aqui.pieza ? diapos[aqui.pieza] : null; },
+      irA: irA, pedirFicha: pedirFicha, cerrarFicha: cerrarFicha, salir: salir,
+      moverPista: moverPista, alternarControles: alternarControles, despertar: despertar,
+      cortarPista: function () { if (cortarPista) { cortarPista(); cortarPista = null; } },
+      CURVA: CURVA
+    };
   }
 
   return {
-    ordenDe: ordenDe,
     init: init,
     aplicar: aplicar,
-    estado: estado,
-    siguienteRuta: siguienteRuta
+    estado: estado
   };
 })();

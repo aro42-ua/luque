@@ -1674,403 +1674,171 @@ body.es-movil .hoja-hero{
   body.es-movil .hoja-hero.fuera{ transform:none; opacity:0; }
 }
 
-/* ── El visor móvil (bloque 4f) ─────────────────────────────────────────────
-   Sólo existe bajo `body.es-movil`. En escritorio el marcado está en el DOM
-   pero con `hidden`, igual que la rejilla de la portada: es lo que permite
-   cruzar el umbral de ancho sin reconstruir nada. */
+/* ── El visor móvil (visor premium, 2026-09-30) ─────────────────────────────
+   Ver js/movil-visor.js y docs/superpowers/specs/2026-09-30-visor-premium-design.md.
+   Un carrusel de las fotos de un trabajo, sobre negro: la foto es lo único con
+   luz y el amarillo queda para los pocos controles. Sólo existe bajo
+   `body.es-movil`; en escritorio el marcado está en el DOM con `hidden`.
+
+   Lo que se mueve a cada fotograma —la pista, las diapositivas, la foto— sólo
+   anima `transform` y `opacity`; los tiempos y la curva viven en el JS
+   (Web Animations API), salvo las transiciones de estado de aquí abajo, que
+   usan la misma curva de la casa. */
 
 .mvisor{ display:none; }
 
-/* Dos cosas que no salen del código de este repositorio sino del
-   comportamiento de los móviles, y que sin ponerlas a propósito rompen el
-   recorrido en el dispositivo real aunque en un navegador de escritorio
-   encogido no se note.
-
-   `overscroll-behavior-y: contain` apaga el «tirar para recargar» de Chrome en
-   Android. El gesto «foto anterior» empieza deslizando hacia abajo desde
-   arriba, que es exactamente el gesto que recarga la página: sin esto, el
-   recorrido se interrumpe con una recarga a mitad. Ésta NO se interseca con
-   los ancestros —cada elemento decide la suya por su cuenta—, así que se
-   queda aquí, en el contenedor de todo el visor.
-
-   `touch-action` en cambio SÍ se interseca con el de todos los ancestros de
-   un punto, y por eso ya NO se pone `none` aquí. Antes estaba aquí, en
-   `.mvisor`, y eso apagaba también el `pan-x` de `.mvisor-tira`: el
-   `touch-action` efectivo de un dedo es la INTERSECCIÓN del suyo con el de
-   cada antecesor, así que `none` arriba anula cualquier `pan-x` de abajo,
-   sin que nada lo avise. Medido sobre `#/la-boquerona` a 375×812: con el
-   `none` aquí, la cadena hacia la tira daba `pan-x ∩ auto ∩ auto ∩ none =
-   none`, y la tira —574px de pista en un marco de 327— no se podía desplazar
-   con el dedo: sólo se alcanzaban unas 5 de las 10 piezas.
-
-   Se reparte en su lugar un `none` por cada descendiente que SÍ recibe el
-   dedo —`.mvisor-escena`, `.mvisor-hud-arriba`, `.mvisor-hud-pie`, más abajo
-   en este mismo fichero—, dejando `pan-x` sólo en `.mvisor-tira`. Los que se
-   quedan en `auto` aquí (`.mvisor`, `.mvisor-hud`, `.mvisor-hud-abajo`) nunca
-   ven un toque: `.mvisor-escena` cubre `.mvisor` entero (`position:absolute; inset:0`)
-   y se lleva el impacto primero, y `.mvisor-hud` y `.mvisor-hud-abajo` son `pointer-events:none`.
-   Ver el comentario de `.mvisor-tira`, más abajo, para la cadena completa. */
+/* `touch-action:none`: todos los gestos del visor —carrusel, bajar para
+   cerrar, subir para la ficha, pellizco— los interpreta el JS, y el navegador
+   no puede quedarse ninguno. `overscroll-behavior` apaga el «tirar para
+   recargar» de Chrome en Android, que es justo el gesto de cerrar. */
 body.es-movil .mvisor{
   display:block;
   position:fixed; inset:0;
   z-index:60;
-  background:var(--black);
-  overscroll-behavior-y:contain;
+  overscroll-behavior:contain;
+  touch-action:none;
+  -webkit-user-select:none; user-select:none;
+  -webkit-tap-highlight-color:transparent;
 }
-
 body.es-movil .mvisor[hidden]{ display:none; }
 
-/* La escena ocupa todo, y la foto se centra dentro sin recortarse.
-   `object-fit:contain` es lo que hace que la caja pintada la decida la
-   proporción de la imagen — de ahí la condición de la Tarea 2 sobre que la
-   portada y la pieza compartan proporción. Con `cover` no haría falta esa
-   condición, pero se recortarían las fotos del estudio. */
-/* `touch-action:none` propio: desde que `.mvisor` ya no lo pone (ver el
-   comentario de arriba), la escena es la que recibe el dedo del pellizco y
-   del paseo, que sigue interpretando `js/movil-gestos.js` a mano y no el
-   navegador. */
-body.es-movil .mvisor-escena{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  touch-action:none;
-}
+.mvisor-fondo{ position:absolute; inset:0; background:var(--black); }
 
-body.es-movil .mvisor-foto{
-  max-width:100%; max-height:100%;
+.mvisor-pista{ position:absolute; inset:0; will-change:transform; transition:opacity 320ms ease; }
+.mvisor.con-ficha .mvisor-pista{ opacity:.35; }
+
+.mvisor-diapo{
+  position:absolute; inset:0;
+  overflow:hidden;
+  transform-origin:50% 50%;
+}
+/* `contain` a pantalla completa: la foto no se recorta, y su caja es la de la
+   diapositiva, que es lo que da un centro fijo al zoom (`MovilZoom`) y a la
+   foto que crece al abrir. */
+.mvisor-foto{
+  display:block; width:100%; height:100%;
   object-fit:contain;
-  /* La foto no se arrastra ni se selecciona: el dedo que la toca está
-     deslizando, y el «arrastrar imagen» del navegador se comería el gesto. */
-  -webkit-user-drag:none; user-select:none;
+  transform-origin:50% 50%;
+  -webkit-user-drag:none;
+  transition:filter 250ms ease;
 }
+/* La miniatura mientras llega la foto de 1500: la misma imagen, desenfocada,
+   que es lo que hace que el relevo se lea como «enfoca» y no como «cambia». */
+.mvisor-foto.previa{ filter:blur(10px); }
 
-body.es-movil .mvisor-video{
-  width:100%; aspect-ratio:16/9; border:0;
+/* Los controles: arriba el título y la ×, abajo la línea de progreso, el
+   contador y «Ficha». Un velo muy suave arriba y abajo los sostiene cuando
+   una foto alta llega hasta el borde. Se duermen a los 2,5 s (JS). */
+.mvisor-controles{
+  position:absolute; inset:0;
+  pointer-events:none;
+  transition:opacity 200ms ease;
 }
+.mvisor-controles::before,
+.mvisor-controles::after{
+  content:""; position:absolute; left:0; right:0; height:120px;
+  pointer-events:none;
+}
+.mvisor-controles::before{ top:0; background:linear-gradient(rgba(10,10,10,.55), rgba(10,10,10,0)); }
+.mvisor-controles::after{ bottom:0; background:linear-gradient(rgba(10,10,10,0), rgba(10,10,10,.55)); }
+.mvisor-controles.dormidos{ opacity:0; }
+.mvisor-controles.dormidos *{ pointer-events:none !important; }
 
-/* La ficha es el fondo del eje vertical, así que ocupa la escena entera y no
-   flota encima de nada. */
-body.es-movil .mvisor-ficha{
-  padding:2rem 1.6rem;
-  max-width:34rem;
+.mvisor-arriba,
+.mvisor-abajo{
+  position:absolute; left:24px; right:24px; z-index:1;
+  display:flex; align-items:center;
   color:var(--yellow);
 }
+.mvisor-arriba{ top:calc(14px + env(safe-area-inset-top)); justify-content:space-between; gap:1rem; }
+.mvisor-abajo{ bottom:calc(20px + env(safe-area-inset-bottom)); gap:.9rem; font-size:.85rem; }
 
-body.es-movil .mvisor-ficha-titulo{
-  font-size:1.6rem; line-height:1.1; margin:0 0 1.4rem;
+.mvisor-titulo{
+  margin:0;
+  font-weight:700; font-size:1.05rem; line-height:1.15;
+  letter-spacing:var(--kerning);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 
-body.es-movil .mvisor-ficha-datos div{
-  display:flex; justify-content:space-between; gap:1rem;
-  padding:.55rem 0;
-  border-bottom:1px solid rgba(255,255,0,.25);
-}
-
-body.es-movil .mvisor-ficha-datos dt{ opacity:.7; }
-body.es-movil .mvisor-ficha-datos dd{ margin:0; text-align:right; }
-
-/* La animación de entrada del bloque 4f (js/movil-animacion.js decide CUÁL de
-   las cuatro toca). 200ms y no los ~620ms del vuelo de escritorio
-   (css/luque.css, `.visor.viajando`): aquello es un vuelo desde la portada que
-   se hace una vez al abrir; esto se repite en cada deslizamiento dentro del
-   visor, así que tiene que sentirse inmediato y no demorar el gesto
-   siguiente. `ease-out` porque lo que importa es que LLEGUE con brío y frene
-   suave, no que arranque despacio. */
-body.es-movil .mvisor-entra-der,
-body.es-movil .mvisor-entra-izq,
-body.es-movil .mvisor-entra-abajo,
-body.es-movil .mvisor-entra-arriba{
-  animation-duration:.2s;
-  animation-timing-function:ease-out;
-}
-body.es-movil .mvisor-entra-der{    animation-name:mvisor-entra-der; }
-body.es-movil .mvisor-entra-izq{    animation-name:mvisor-entra-izq; }
-body.es-movil .mvisor-entra-abajo{  animation-name:mvisor-entra-abajo; }
-body.es-movil .mvisor-entra-arriba{ animation-name:mvisor-entra-arriba; }
-
-@keyframes mvisor-entra-der{    from{ transform:translateX(100%);  } to{ transform:none; } }
-@keyframes mvisor-entra-izq{    from{ transform:translateX(-100%); } to{ transform:none; } }
-@keyframes mvisor-entra-abajo{  from{ transform:translateY(100%);  } to{ transform:none; } }
-@keyframes mvisor-entra-arriba{ from{ transform:translateY(-100%); } to{ transform:none; } }
-
-/* ── El HUD ────────────────────────────────────────────────────────────────
-   El padding lateral de 24px NO es decorativo. En Safari de iOS, arrastrar
-   desde el borde izquierdo hacia dentro vuelve a la página anterior, y en
-   Chrome de Android ocurre en los dos bordes; no se puede desactivar desde la
-   web. Un control dentro de esa franja de ~20px sería imposible de pulsar sin
-   que el navegador se lleve el gesto. Los 24 dan margen sobre los 20. */
-body.es-movil .mvisor-hud{
-  position:absolute; inset:0;
-  padding:1rem 24px;
-  display:flex; flex-direction:column; justify-content:space-between;
-  /* El HUD no intercepta el dedo: el deslizamiento tiene que pasar a través.
-     Los botones lo recuperan uno a uno, más abajo. */
-  pointer-events:none;
-  opacity:1;
-  transition:opacity .35s ease;
-}
-
-/* El HUD dormido no se ve Y no se puede pulsar. `opacity:0` a secas NO quita
-   el elemento del alcance del dedo: las pastillas seguían siendo pulsables
-   sin verse, y con una tira de diez miniaturas eso pasa de rareza a trampa —
-   tocar para despertar el HUD abriría una pieza al azar.
-
-   El `pointer-events` va en los DESCENDIENTES y no sólo en el contenedor: el
-   contenedor ya lo tiene en `none`, y un hijo con `auto` —que es como las
-   pastillas recuperan el dedo— lo recibe igual por mucho que el padre diga
-   `none`. Con el toque fuera de alcance cae en la raíz del visor, que es
-   justamente quien despierta el HUD (`soltarEn`, la rama del toque).
-
-   No se usa `visibility:hidden`, que además sacaría del tabulador: no
-   interpola, salta, y se llevaría por delante la transición de opacidad de
-   0,35s. Es el mismo razonamiento, con el mismo precio, que ya está escrito
-   para `.visor-ficha` en el escritorio. */
-body.es-movil .mvisor-hud.dormido{ opacity:0; }
-body.es-movil .mvisor-hud.dormido *{ pointer-events:none; }
-
-/* `touch-action:none` propio por adelantado: hoy nada de esta fila recibe
-   el dedo (el título y contador heredan `pointer-events:none` del HUD, y el
-   toque cae en `.mvisor-escena`, que también declina el toque), pero está
-   puesto de antemano para que cuando la fila gane un control pulsable no
-   herede un `auto` que le devuelva al navegador gestos que el visor
-   interpreta por su cuenta. Igual que `.mvisor-escena`. */
-body.es-movil .mvisor-hud-arriba,
-body.es-movil .mvisor-hud-pie{
-  display:flex; align-items:flex-start; justify-content:space-between;
-  gap:.6rem;
-  touch-action:none;
-}
-
-/* La fila de abajo pasa a ser una columna: la tira encima, el título y el
-   contador debajo, en su propia fila (`.mvisor-hud-pie`). */
-body.es-movil .mvisor-hud-abajo{
-  display:flex; flex-direction:column; gap:.6rem;
-}
-
-/* Las pastillas: amarillo con texto negro, 17,6:1 de contraste pase lo que
-   pase con la foto, porque el fondo del texto deja de ser la foto. Medido en
-   la spec: el amarillo suelto sobre foto clara da 1,07:1 y el negro suelto
-   sobre foto oscura ~1,2:1 — el mismo fallo cambiado de lado. */
-body.es-movil .mvisor-cat,
-body.es-movil .mvisor-cerrar,
-body.es-movil .mvisor-titulo,
-body.es-movil .mvisor-contador,
-body.es-movil .mvisor-cat-opcion,
-body.es-movil .mvisor-ficha-boton{
-  background:var(--yellow);
-  color:var(--black);
-  border:0;
-  padding:.4rem .8rem;
+.mvisor-cerrar,
+.mvisor-ver-ficha{
+  pointer-events:auto;
+  position:relative;
+  background:none; border:0; padding:0;
+  color:var(--yellow);
   font:inherit;
-  line-height:1.2;
-  margin:0;
-}
-
-body.es-movil .mvisor-cat,
-body.es-movil .mvisor-cerrar,
-body.es-movil .mvisor-cat-opcion,
-body.es-movil .mvisor-ficha-boton{
-  pointer-events:auto;
   cursor:pointer;
 }
+.mvisor-cerrar{ font-size:2rem; line-height:1; padding:.1rem .3rem; }
+/* El halo lleva el blanco de los dos botones a unos 48px sin cambiar lo que
+   se ve. */
+.mvisor-cerrar::before,
+.mvisor-ver-ficha::before{ content:""; position:absolute; inset:-12px -8px; }
+.mvisor-ver-ficha{ text-decoration:underline; text-underline-offset:.3em; text-decoration-thickness:1px; }
+.mvisor-ver-ficha[hidden]{ display:none; }
 
-body.es-movil .mvisor-cerrar{
-  font-size:1.3rem; line-height:1; padding:.35rem .7rem;
+.mvisor-progreso{ flex:1; height:2px; background:rgba(255,255,0,.22); }
+.mvisor-progreso span{
+  display:block; height:100%; width:0;
+  background:var(--yellow);
+  transition:width 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.mvisor-contador{ font-variant-numeric:tabular-nums; letter-spacing:.04em; }
 
-/* Las dos pastillas miden unos 32px de alto, por debajo de los 44px que
-   pide un dedo. El halo las lleva a 48px sin cambiar lo que se ve: es el
-   mismo truco que en el visor de escritorio. A los lados sólo sobresale 4px:
-   entre «Ficha» y la X sólo hay garantizado el `gap` de 0,6rem de la fila, y
-   dos halos de 8px se pisarían dentro de ese hueco. */
-body.es-movil .mvisor-cerrar,
-body.es-movil .mvisor-ficha-boton{ position:relative; }
-body.es-movil .mvisor-cerrar::before,
-body.es-movil .mvisor-ficha-boton::before{
-  content:""; position:absolute; inset:-8px -4px;
+body.es-movil .mvisor :focus-visible{ outline:2px solid var(--yellow); outline-offset:4px; }
+
+/* La ficha: un panel amarillo que sube desde abajo sobre la foto apagada. La
+   visibilidad salta al FINAL de la bajada y al PRINCIPIO de la subida, para
+   que cerrada no se tabule ni se lea, y abierta se vea moverse. */
+.mvisor-ficha-panel{
+  position:absolute; left:0; right:0; bottom:0; z-index:2;
+  max-height:80%; overflow:auto;
+  background:var(--yellow); color:var(--black);
+  padding:30px 24px calc(28px + env(safe-area-inset-bottom));
+  transform:translateY(100%);
+  visibility:hidden;
+  transition:transform 380ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 380ms;
 }
-
-body.es-movil .mvisor-cats{
-  position:absolute; top:3rem; left:24px;
-  list-style:none; margin:0; padding:0;
-  display:flex; flex-direction:column; gap:.3rem;
-  pointer-events:auto;
+.mvisor-ficha-panel.abierta{
+  transform:translateY(0);
+  visibility:visible;
+  transition:transform 380ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
 }
-
-body.es-movil .mvisor-cats[hidden]{ display:none; }
-
-body.es-movil .mvisor-titulo{ max-width:70%; }
-
-body.es-movil .mvisor :focus-visible{
-  outline:2px solid var(--yellow); outline-offset:4px;
+.mvisor-ficha-titulo{
+  margin:0 0 1.2rem;
+  font-size:clamp(2rem, 10vw, 3rem); font-weight:700; line-height:.95;
+  letter-spacing:var(--kerning);
 }
-
-/* ── La tira de miniaturas ─────────────────────────────────────────────────
-   Tres reglas del visor la dejarían muerta, y las tres se contradicen AQUÍ y
-   sólo aquí:
-
-   - `.mvisor-hud` es `pointer-events:none` para que el deslizamiento lo
-     atraviese; cada control lo recupera por su cuenta, y la tira también.
-   - `overscroll-behavior-x:contain` para que llegar al final de la tira no se
-     encadene con el gesto de «atrás» del navegador.
-   - El `touch-action:none` que interpreta el resto del visor —repartido hoy
-     entre `.mvisor-escena`, `.mvisor-hud-arriba` y `.mvisor-hud-pie`, ver el
-     comentario de `.mvisor` más arriba— se devuelve aquí como `pan-x`: la
-     tira es la ÚNICA parada de la cadena de ancestros que no lleva `none`,
-     así que es la única cuyo `touch-action` efectivo no acaba en `none ∩
-     algo = none`. El `touch-action` de un dedo se interseca con el de TODOS
-     sus ancestros; un solo `none` en cualquier punto de la cadena habría
-     bastado para anular este `pan-x`, sin avisar y sin que la suite —que no
-     ve CSS computado— pudiera atraparlo.
-
-   La barra de desplazamiento se esconde en los dos motores: en un teléfono no
-   se usa con el ratón y ocuparía alto sobre la foto. */
-body.es-movil .mvisor-tira{
-  display:flex; gap:6px;
-  overflow-x:auto;
-  overscroll-behavior-x:contain;
-  touch-action:pan-x;
-  pointer-events:auto;
-  scrollbar-width:none;
+.mvisor-ficha-datos{ margin:0; }
+.mvisor-ficha-datos div{
+  display:flex; justify-content:space-between; gap:1rem;
+  padding:.7rem 0;
+  border-top:1px solid rgba(10,10,10,.25);
 }
-body.es-movil .mvisor-tira[hidden]{ display:none; }
-body.es-movil .mvisor-tira::-webkit-scrollbar{ display:none; }
-
-body.es-movil .mvisor-tira button{
-  flex:0 0 auto;
-  width:52px; height:52px;
-  padding:0; border:0; background:none;
-  cursor:pointer;
-  outline:2px solid transparent;
-  outline-offset:2px;
-}
-
-body.es-movil .mvisor-tira img{
+.mvisor-ficha-datos div:last-child{ border-bottom:1px solid rgba(10,10,10,.25); }
+.mvisor-ficha-datos dt{ opacity:.6; }
+.mvisor-ficha-datos dd{ margin:0; text-align:right; }
+.mvisor-ficha-volver{
   display:block;
-  width:100%; height:100%;
-  object-fit:cover;
+  margin-top:1.6rem; padding:.6rem 0;
+  background:none; border:0; color:var(--black);
+  font:inherit; font-size:.72rem; font-weight:700;
+  letter-spacing:.28em; text-transform:uppercase;
+  text-decoration:underline; text-underline-offset:.5em;
+  cursor:pointer;
 }
+.mvisor-ficha-panel :focus-visible{ outline:2px solid var(--black); outline-offset:4px; }
 
-/* La actual se marca con un contorno y NO atenuando las demás: bajarle la
-   opacidad a las otras nueve para destacar una las hace ilegibles todas, y la
-   tira deja de servir para elegir. */
-body.es-movil .mvisor-tira button[aria-current="true"]{
-  outline-color:var(--yellow);
-}
-
-/* ── Las flechas laterales ───────────────────────────────────────
-   Fuera del HUD y por tanto fuera de `.dormido`: el HUD se apaga a los tres
-   segundos y estas no. Es la razón entera de que el contenedor sea hermano de
-   `.mvisor-hud` y no hijo suyo.
-
-   `pointer-events:none` en toda la rama, sin excepción y a diferencia del HUD
-   —donde las pastillas lo recuperan una a una—: no son controles, y el
-   deslizamiento de los dos ejes tiene que atravesarlas igual que atraviesa el
-   resto del visor. `touch-action:none` por el mismo motivo que
-   `.mvisor-hud-arriba`: para que nada de aquí le devuelva al navegador un
-   gesto que `js/movil-gestos.js` interpreta por su cuenta. */
-body.es-movil .mvisor-flechas{
-  position:absolute; inset:0;
-  pointer-events:none;
-  touch-action:none;
-}
-
-/* Un chevrón fino y a pelo, SIN la pastilla amarilla del HUD, y es una
-   renuncia consciente y no un descuido.
-
-   La pastilla existe porque el amarillo suelto sobre una foto clara da 1,07:1
-   y el negro sobre una oscura ~1,2:1; con fondo propio son 17,6:1 pase lo que
-   pase. Aquí se paga ese contraste a cambio de discreción, y se puede pagar
-   porque estas flechas no son el canal de nada: son decorativas
-   (`aria-hidden`), y quien no las vea sigue teniendo el título, el contador,
-   la tira y el cartel. La `drop-shadow` negra las sostiene sobre fotos claras
-   —mejora el borde, no lo mide—. Si sobre fotos de verdad se pierden,
-   devolverles la pastilla es añadir aquí el `background` y el `padding`.
-
-   El elemento ES el chevrón: dos bordes de una caja vacía girada 45°. Girar
-   con `transform` no toca la caja de posicionamiento, así que el centrado
-   vertical puede seguir haciéndose con `margin-top` sin pelearse con el giro. */
-body.es-movil .mvisor-flecha{
-  position:absolute;
-  top:50%; margin-top:-8px;
-  width:16px; height:16px;
-  border:solid var(--yellow);
-  border-width:0 2px 2px 0;
-  opacity:.72;
-  filter:drop-shadow(0 0 2px rgba(0,0,0,.95));
-}
-
-body.es-movil .mvisor-flecha[hidden]{ display:none; }
-
-/* Los 24px laterales son los mismos del HUD y por el mismo motivo, que allí
-   está escrito entero: la franja de ~20px de los bordes se la queda el gesto
-   de «atrás» del navegador. Aquí no hay nada que pulsar, pero una flecha
-   medio comida por el borde tampoco se lee. */
-body.es-movil .mvisor-flecha-izquierda{ left:24px;  transform:rotate(135deg); }
-body.es-movil .mvisor-flecha-derecha{   right:24px; transform:rotate(-45deg); }
-
-/* ── El cartel del título ────────────────────────────────────────
-   Lo que hace que cambiar de trabajo se note. El velo oscuro no es decorado:
-   es lo que garantiza que el nombre se lea sobre cualquier foto sin tener que
-   meterlo en una pastilla, y se va con el cartel, así que la foto queda limpia
-   segundo y medio después.
-
-   Va por encima del HUD —después en el marcado— a propósito: durante ese
-   segundo y medio lo que importa es el nombre del trabajo nuevo, no las
-   pastillas. */
-body.es-movil .mvisor-cartel{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-  padding:0 24px;
-  background:rgba(0,0,0,.55);
-  pointer-events:none;
-  touch-action:none;
-  opacity:0;
-}
-
-body.es-movil .mvisor-cartel[hidden]{ display:none; }
-
-/* El reparto de `MovilCartel.DURACION`, que son 1480ms: entra en 180 (12,16%),
-   aguanta hasta los 1080 (72,97%) y se va en los 400 restantes. Si esos
-   números y la constante dejan de cuadrar, el cartel se queda puesto sin
-   opacidad o lo esconde el temporizador a media transición. */
-body.es-movil .mvisor-cartel.puesto{
-  animation:mvisor-cartel 1480ms ease forwards;
-}
-
-@keyframes mvisor-cartel{
-  0%      { opacity:0; }
-  12.16%  { opacity:1; }
-  72.97%  { opacity:1; }
-  100%    { opacity:0; }
-}
-
-body.es-movil .mvisor-cartel-texto{
-  margin:0;
-  color:var(--yellow);
-  font-size:clamp(1.6rem, 9vw, 2.6rem);
-  line-height:1.1;
-  text-align:center;
-  text-wrap:balance;
-}
-
-/* Con movimiento reducido el cartel sale y se va sin fundidos, pero sale: lo
-   que se pide es menos movimiento, no menos aviso —y este aviso es la razón
-   de ser del cartel—. Aguanta opaco el plazo entero y lo retira el mismo
-   `setTimeout` de siempre. Es la misma regla que el HUD de aquí al lado. */
 @media (prefers-reduced-motion: reduce){
-  body.es-movil .mvisor-cartel.puesto{ animation-name:mvisor-cartel-plano; }
+  .mvisor-pista,
+  .mvisor-foto,
+  .mvisor-controles,
+  .mvisor-progreso span,
+  .mvisor-ficha-panel,
+  .mvisor-ficha-panel.abierta{ transition:none; }
 }
 
-@keyframes mvisor-cartel-plano{ from{ opacity:1; } to{ opacity:1; } }
-
-/* Con movimiento reducido el HUD desaparece sin transición en vez de quedarse
-   puesto: lo que se pide es menos movimiento, no menos función. Es la misma
-   regla que el sitio ya aplica al centrado por teclado de la galería. */
-@media (prefers-reduced-motion: reduce){
-  body.es-movil .mvisor-hud{ transition:none; }
-}
-
-/* La misma pastilla amarilla de la navbar y del HUD móvil, y a propósito: el
+/* La misma pastilla amarilla de la navbar, y a propósito: el
    sitio tiene UN lenguaje visual y un botón con aspecto propio sería un
    tercero. El contraste del negro sobre --yellow ya está razonado arriba.
 
