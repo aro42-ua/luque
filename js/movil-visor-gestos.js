@@ -93,9 +93,44 @@ window.MovilVisorGestos = (function () {
       if (cortarVuelta) { cortarVuelta(); cortarVuelta = null; }
     }
 
+    /* Dónde está la pista AHORA. Al cortar una animación de verdad, lo que
+       queda escrito es lo que devuelve `getComputedStyle`, que para un
+       `transform` es siempre una `matrix(...)` y nunca el `translate3d` que
+       se escribió (revisión final, 2026-09-30): leer sólo `translate3d` daba
+       0 y dejaba la pista varada a medio paso. */
     function pistaAhora() {
-      var m = /translate3d\(\s*(-?[\d.]+)px/.exec(refs.pista.style.transform || '');
+      var t = refs.pista.style.transform || '';
+      if (!t || t === 'none') return 0;
+      if (window.DOMMatrixReadOnly) {
+        try { return new window.DOMMatrixReadOnly(t).m41; } catch (noSeLee) {}
+      }
+      var m = /translate3d\(\s*(-?[\d.]+)px/.exec(t) ||
+              /matrix\(\s*[-\d.e]+,\s*[-\d.e]+,\s*[-\d.e]+,\s*[-\d.e]+,\s*(-?[\d.e]+)/.exec(t);
       return m ? Number(m[1]) : 0;
+    }
+
+    /* El panel de la ficha lo mueven los gestos con estilos en línea; al
+       soltar, pase lo que pase, vuelve a mandar su CSS (revisión final). */
+    function limpiarPanel() {
+      refs.ficha.classList.remove('arrastrando');
+      refs.ficha.style.transition = '';
+      refs.ficha.style.transform = '';
+    }
+
+    /* Una pista que se quedó a medio paso —un toque o un pellizco la
+       cortaron— termina el paso hacia donde iba más cerca, en vez de quedarse
+       con media foto de cada. */
+    function asentarPista() {
+      var aqui = v.aqui();
+      var desde = pistaAhora();
+      if (!aqui || !aqui.pieza || Math.abs(desde) < 0.5) return false;
+      var m = medidas();
+      var i = aqui.pieza - 1;
+      var destino = window.MovilCarrusel.destino(desde, 0, m.ancho, i, v.proyecto().piezas.length);
+      var hasta = (i - destino) * m.ancho;
+      v.moverPista(desde, hasta, o.reducido ? 0 : window.MovilCarrusel.duracion(hasta - desde, 0),
+                   destino !== i ? function () { v.irA(destino + 1); } : null);
+      return true;
     }
 
     refs.raiz.addEventListener('pointerdown', function (e) {
@@ -116,7 +151,8 @@ window.MovilVisorGestos = (function () {
         id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY,
         t0: t, t: t, vx: 0, vy: 0, eje: null,
         base: pistaAhora(),
-        panel: aqui.ficha
+        panel: aqui.ficha,
+        enPanel: refs.ficha.contains(e.target)
       };
       try { refs.raiz.setPointerCapture(e.pointerId); } catch (sinPunteroActivo) {}
     });
@@ -132,6 +168,9 @@ window.MovilVisorGestos = (function () {
         return;
       }
       if (!g || e.pointerId !== g.id) return;
+      /* El visor pudo cerrarse con el dedo aún en pantalla (Atrás durante un
+         arrastre): ese dedo ya no mueve nada. */
+      if (!v.aqui()) { g = null; return; }
       var t = o.ahora();
       var dt = Math.max(1, t - g.t);
       g.vx = 0.6 * (e.clientX - g.x) / dt + 0.4 * g.vx;
@@ -196,8 +235,13 @@ window.MovilVisorGestos = (function () {
       if (!g || e.pointerId !== g.id) return;
       var gg = g;
       g = null;
+      if (!v.aqui()) return;
       var dx = gg.x - gg.x0, dy = gg.y - gg.y0;
-      if (!cancelado && !gg.eje && Math.hypot(e.clientX - gg.x0, e.clientY - gg.y0) < TOQUE_PX) {
+      if (!gg.eje && Math.hypot(e.clientX - gg.x0, e.clientY - gg.y0) < TOQUE_PX) {
+        /* Antes que nada, una pista cortada a medio paso termina su paso. */
+        if (asentarPista() || cancelado) return;
+        /* Con la ficha abierta, tocar fuera de ella la cierra (spec §2). */
+        if (v.aqui().ficha && !gg.enPanel) { v.cerrarFicha(); return; }
         toque({ x: e.clientX, y: e.clientY });
         return;
       }
@@ -207,8 +251,7 @@ window.MovilVisorGestos = (function () {
       var m = medidas();
 
       if (gg.panel) {
-        refs.ficha.style.transition = '';
-        refs.ficha.style.transform = '';
+        limpiarPanel();
         if (!cancelado && dy > 0 && (dy > m.alto * 0.15 || gg.vy > 0.5)) v.cerrarFicha();
         return;
       }
@@ -226,14 +269,15 @@ window.MovilVisorGestos = (function () {
         return;
       }
 
+      /* Se limpia ANTES de decidir: un dedo que subió (panel a la vista) y
+         volvió a bajar cruzando el punto de partida acaba en la rama de
+         cerrar, y dejaba el panel con `transition:none` para siempre. */
+      limpiarPanel();
       if (dy >= 0) {
         if (!cancelado && window.MovilCarrusel.seCierra(dy, gg.vy, m.alto)) { v.salir(); return; }
         volverASuSitio();
         return;
       }
-      refs.ficha.classList.remove('arrastrando');
-      refs.ficha.style.transition = '';
-      refs.ficha.style.transform = '';
       if (!cancelado && window.MovilCarrusel.seAbreFicha(dy, gg.vy, m.alto)) v.pedirFicha();
     }
 

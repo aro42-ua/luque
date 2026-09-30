@@ -611,3 +611,110 @@ describe('MovilVisor — la foto que crece y vuelve', function () {
     } });
   });
 });
+
+/* Lo que encontró la revisión final de la rama (2026-09-30). Cada prueba
+   reproduce un hallazgo; la animación de verdad escribe al cortarse lo que
+   devuelve `getComputedStyle`, que para un `transform` es SIEMPRE una
+   `matrix(...)`, y eso es lo que simula el `animar` de las dos primeras. */
+describe('MovilVisor — lo que encontró la revisión final', function () {
+
+  function dedo(v, tipo, x, y, id, el) {
+    (el || v.refs.raiz).dispatchEvent(new PointerEvent(tipo,
+      { clientX: x, clientY: y, pointerId: id || 1, bubbles: true }));
+  }
+  function arrastrar(v, x0, y0, x1, y1) {
+    dedo(v, 'pointerdown', x0, y0);
+    dedo(v, 'pointermove', (x0 + x1) / 2, (y0 + y1) / 2);
+    dedo(v, 'pointermove', x1, y1);
+    dedo(v, 'pointerup', x1, y1);
+  }
+
+  /* El primer paso de la pista se queda a medias y, al cortarlo, deja la
+     `matrix` que dejaría el navegador; todo lo demás termina al instante. */
+  function conPasoCortado(fn) {
+    var reloj = { t: 0 };
+    var cortado = false;
+    return conVisor(fn, {
+      ahora: function () { reloj.t += 1000; return reloj.t; },
+      animar: function (el, desde, hasta, ms, curva, fin) {
+        if (el.id === 'mvPista' && !cortado) {
+          cortado = true;
+          return function () { el.style.transform = 'matrix(1, 0, 0, 1, -180, 0)'; };
+        }
+        Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+        if (fin) fin();
+        return function () {};
+      }
+    });
+  }
+
+  prueba('tocar mientras pasa de foto termina el paso en vez de dejarla a medias', function () {
+    conPasoCortado(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 150, 400);
+      dedo(v, 'pointerdown', 200, 400);
+      dedo(v, 'pointerup', 200, 400);
+      igual(v.rutas, [['proyecto', 'niebla', 3]]);
+    });
+  });
+
+  prueba('un arrastre nuevo a mitad del paso parte de donde está la pista', function () {
+    conPasoCortado(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      arrastrar(v, 300, 400, 150, 400);
+      dedo(v, 'pointerdown', 300, 400);
+      dedo(v, 'pointermove', 280, 400);
+      igual(v.refs.pista.style.transform.replace(/\s/g, ''), 'translate3d(-200px,0px,0px)');
+      dedo(v, 'pointerup', 280, 400);
+    });
+  });
+
+  prueba('subir y volver a bajar deja el panel de la ficha limpio', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      dedo(v, 'pointerdown', 200, 600);
+      dedo(v, 'pointermove', 200, 500);
+      dedo(v, 'pointermove', 200, 660);
+      dedo(v, 'pointerup', 200, 660);
+      igual([v.refs.ficha.classList.contains('arrastrando'), v.refs.ficha.style.transition,
+             v.refs.ficha.style.transform], [false, '', '']);
+    }, { ahora: (function () { var t = 0; return function () { return (t += 1000); }; })() });
+  });
+
+  prueba('con la ficha abierta, tocar fuera de ella la cierra', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      dedo(v, 'pointerdown', 200, 100);
+      dedo(v, 'pointerup', 200, 100);
+      igual(v.rutas, [['proyecto', 'niebla', 2]]);
+    });
+  });
+
+  prueba('tocar dentro de la ficha no la cierra', function () {
+    conVisor(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(mvRuta('niebla', 'ficha'));
+      dedo(v, 'pointerdown', 200, 700, 1, v.refs.ficha);
+      dedo(v, 'pointerup', 200, 700, 1, v.refs.ficha);
+      igual(v.rutas, []);
+    });
+  });
+
+  prueba('si el visor se cierra con el dedo en pantalla, moverlo no lanza', function () {
+    var errores = 0;
+    function contar() { errores++; }
+    window.addEventListener('error', contar);
+    try {
+      conVisor(function (v) {
+        MovilVisor.aplicar(mvRuta('niebla', 2));
+        dedo(v, 'pointerdown', 300, 400);
+        dedo(v, 'pointermove', 250, 400);
+        MovilVisor.aplicar(MV_TODOS);
+        dedo(v, 'pointermove', 200, 400);
+        dedo(v, 'pointerup', 200, 400);
+      });
+    } finally { window.removeEventListener('error', contar); }
+    igual(errores, 0);
+  });
+});

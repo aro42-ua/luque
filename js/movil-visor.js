@@ -235,6 +235,8 @@ window.MovilVisor = (function () {
     refs.ficha.classList.toggle('abierta', aqui.ficha);
     refs.ficha.setAttribute('aria-hidden', aqui.ficha ? 'false' : 'true');
     refs.ficha.style.transform = '';
+    refs.ficha.style.transition = '';
+    refs.ficha.classList.remove('arrastrando');
     refs.raiz.classList.toggle('con-ficha', aqui.ficha);
   }
 

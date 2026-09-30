@@ -1804,6 +1804,15 @@ body.es-movil .mvisor :focus-visible{ outline:2px solid var(--yellow); outline-o
   visibility:visible;
   transition:transform 380ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
 }
+/* Mientras el dedo lo sube, el panel se ve aunque aún no esté abierto: lo
+   mueve el JS con un `transform` en línea, sin transición (revisión final). */
+.mvisor-ficha-panel.arrastrando{ visibility:visible; transition:none; }
+/* El botón de la plataforma es una pastilla amarilla; sobre el amarillo del
+   panel se invierte, como la pastilla «Contacto» de la esfera. */
+.mvisor-ficha-panel .pastilla-enlace{
+  background:var(--black); color:var(--yellow);
+  margin-top:1.2rem;
+}
 .mvisor-ficha-titulo{
   margin:0 0 1.2rem;
   font-size:clamp(2rem, 10vw, 3rem); font-weight:700; line-height:.95;
