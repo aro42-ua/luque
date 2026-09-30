@@ -660,6 +660,17 @@ describe('MovilGlobo — la corona', function () {
     });
   });
 
+  /* Visto en el panel: sin esto, una miniatura que no llega enseña el icono
+     de imagen rota del navegador. Queda el hueco gris, como en las teselas. */
+  prueba('una foto que no carga deja el hueco sin el icono roto', function () {
+    conGlobo(function (g, marco) {
+      abrir(marco);
+      var f = fotos(marco)[0];
+      f.querySelector('img').dispatchEvent(new Event('error'));
+      cierto(f.classList.contains('sin-foto'));
+    });
+  });
+
   prueba('un trabajo sin fotos abre el visor directamente', function () {
     var lista = globoProyectos();
     lista[0].piezas = [];

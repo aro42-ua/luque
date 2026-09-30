@@ -1328,6 +1328,9 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
   position:absolute; left:0; top:0;
   transform-origin:50% 50%;
   will-change:transform;
+  /* Sólo la opacidad: el `transform` lo escribe el JS en cada fotograma y una
+     transición lo arrastraría. La opacidad es la de la corona, más abajo. */
+  transition:opacity 320ms ease;
 }
 .esfera-tesela[hidden]{ display:none; }
 .esfera-tesela.detras{ pointer-events:none; }
@@ -1397,6 +1400,54 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
 /* El aviso de «no hay trabajos» ya se centra solo (`.galeria-vacia`, más
    arriba); sobre el amarillo de la esfera va en negro. */
 body.es-movil .hoja .galeria-vacia{ color:var(--black); }
+
+/* ------------------------------------------------------------
+   LA CORONA — ver js/movil-corona.js y js/movil-globo.js
+   Al tocar la portada de delante, sus fotos salen de detrás y se colocan
+   alrededor. La capa va por encima de las teselas (llegan a 2001) y por
+   debajo del pie (3001), y sólo sus fotos reciben toques. Cada foto nace en
+   el centro de la portada, pequeña y transparente, y la transición la lleva a
+   su sitio, escalonada por `--i`; los 320 y 20 ms casan con `CORONA_MS` y
+   `CORONA_PASO` de js/movil-globo.js.
+------------------------------------------------------------ */
+.esfera-corona{ position:absolute; inset:0; z-index:2500; pointer-events:none; }
+.esfera-foto{
+  position:absolute; left:0; top:0;
+  padding:0; border:0; overflow:hidden;
+  background:var(--grey-dark);
+  cursor:pointer;
+  pointer-events:auto;
+  opacity:0;
+  transition:
+    transform 320ms cubic-bezier(.2,.8,.2,1) calc(var(--i, 0) * 20ms),
+    opacity 240ms ease calc(var(--i, 0) * 20ms);
+}
+.esfera-foto img{
+  display:block; width:100%; height:100%;
+  object-fit:cover;
+  pointer-events:none;
+  -webkit-user-drag:none;
+}
+.esfera-foto.fuera{ opacity:1; }
+.esfera-foto.sin-foto img{ display:none; }
+.esfera-foto.saliendo{ opacity:0; pointer-events:none; }
+.esfera-foto:focus-visible{ outline:3px solid var(--black); outline-offset:3px; }
+/* La portada abierta encoge (el JS le escribe `scale`) con transición mientras
+   abre y mientras vuelve; el resto de la esfera se apaga hacia el amarillo
+   para que mande el trabajo abierto. */
+.esfera-tesela.en-corona,
+.esfera-tesela.volviendo{
+  transition:transform 320ms cubic-bezier(.2,.8,.2,1), opacity 320ms ease;
+}
+.esfera.con-corona .esfera-tesela:not(.en-corona){ opacity:.3; }
+.esfera.con-corona .esfera-rama,
+.esfera.con-corona .esfera-nudo{ opacity:.2 !important; }
+@media (prefers-reduced-motion: reduce){
+  .esfera-foto,
+  .esfera-tesela,
+  .esfera-tesela.en-corona,
+  .esfera-tesela.volviendo{ transition:none; }
+}
 
 /* ------------------------------------------------------------
    LA HOJA QUE SE DESLIZA

@@ -356,6 +356,9 @@ window.MovilGlobo = (function () {
         img.decoding = 'async';
         img.draggable = false;
         img.src = pieza.miniatura || pieza.url;
+        /* Una miniatura que no llega deja el hueco gris, como las teselas, y
+           no el icono de imagen rota del navegador. */
+        img.addEventListener('error', function () { b.classList.add('sin-foto'); });
         b.appendChild(img);
         var centro = trasladar(portada.x - f.ancho / 2, portada.y - f.alto / 2, 0.3);
         b.style.transform = centro;

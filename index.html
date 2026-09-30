@@ -469,6 +469,8 @@
   <!-- Va DETRÁS de movil-esfera.js, que usa en todo lo que calcula, y
        ANTES del script de arranque. Sin él, `window.MovilGlobo` es undefined
        y el arranque lanza antes de `Router.init()`. -->
+  <!-- Va ANTES de movil-globo.js, que lo usa al abrir la corona de fotos. -->
+  <script src="js/movil-corona.js"></script>
   <script src="js/movil-globo.js"></script>
   <!-- Va ANTES de movil-visor.js, que lo usa en `aplicar()` y en
        `siguienteRuta()`. Sin esta línea `window.MovilRecorrido` es undefined y
@@ -558,7 +560,9 @@
       titulo: document.getElementById('esferaTitulo'),
       meta:   document.getElementById('esferaMeta')
     }, window.Datos.PROYECTOS, {
-      alAbrir: function (id) { window.Router.ir('proyecto', id); }
+      /* `pieza` la trae la corona de fotos; sin ella, el visor abre el
+         trabajo por el principio, como siempre. */
+      alAbrir: function (id, pieza) { window.Router.ir('proyecto', id, pieza); }
     });
     /* Girar el teléfono cambia el lado corto: las teselas se recolocan sin
        perder cuál está delante. */
