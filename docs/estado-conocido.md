@@ -755,6 +755,10 @@ cuatro corridas y era mentira: inspeccionando el DOM hay 12 celdas con sus 12
 
 ## El visor móvil de dos ejes (bloque 4f)
 
+**Desde el 2026-09-30 este visor ya no existe:** lo sustituyó el visor premium
+(sección «El visor móvil premium», al final). Lo que sigue es historia y explica
+decisiones que el visor nuevo hereda —la guarda de lado, la carga con previa—.
+
 **La guarda de lado tiene dos mitades, una en cada visor.** Desde este bloque
 hay dos suscriptores a `Router.alCambiar` compitiendo por la misma ruta: el
 de `Visor.init` (`js/visor.js`) y `MovilVisor.aplicar` (`js/movil-visor.js`).
@@ -1732,3 +1736,47 @@ de que Ángel la vea en su teléfono.
 **En local las teselas salen grises con su número**, porque toda foto da 404.
 El número sólo se ve cuando falta la foto (`.sin-foto`); con fotos, quien
 nombra el trabajo es el pie.
+
+## El visor móvil premium y la cascada de la corona (2026-09-30)
+
+Spec `docs/superpowers/specs/2026-09-30-visor-premium-design.md`, plan
+`docs/superpowers/plans/2026-09-30-visor-premium.md`.
+
+**Un carrusel de UN trabajo, sobre negro.** Deslizar de lado pasa de foto con la
+foto siguiendo al dedo; bajar cierra; subir abre la ficha, que es un panel
+amarillo; un toque alterna los controles y dos amplían. Ya no se cambia de
+trabajo desde el visor: para eso está la esfera.
+
+**Quién hace qué.** `js/movil-carrusel.js` (`MovilCarrusel`) es la física pura:
+umbrales, resistencia en los extremos, destino según distancia y velocidad,
+duración de la animación, progreso de cerrar y de la ficha, y el estado de zoom
+del doble toque. `js/movil-visor.js` (`MovilVisor`) pinta según la ruta
+—diapositivas anterior/actual/siguiente, controles, ficha, teclado, la foto que
+crece al abrir y vuelve al cerrar—. `js/movil-visor-gestos.js`
+(`MovilVisorGestos`) lee los punteros; `MovilVisor.init` lo engancha y le pasa
+una `api` estrecha. Las animaciones van con la Web Animations API, inyectable
+(`opciones.animar`) para que las pruebas no dependan del reloj; el reloj de las
+velocidades también se inyecta (`opciones.ahora`).
+
+**Los gestos navegan, no pintan.** Pasar de foto anima la pista y, al llegar,
+pide la ruta; `aplicar` repinta con la pista en cero y, como la diapositiva que
+queda delante es la que acaba de entrar, el relevo no se ve.
+
+**Retirados** con sus pruebas: `MovilHud`, `MovilTira`, `MovilFlechas`,
+`MovilCartel`, `MovilAnimacion` y `MovilRecorrido`. **`MovilGestos` se quedó**:
+el visor ya no lo usa, pero la puerta (`js/movil-arrastre.js`) lee de él sus
+umbrales. `MovilZoom` exporta ahora `encajar`, que usa el doble toque.
+
+**La corona sigue abierta detrás del visor del mismo trabajo**
+(`MovilGlobo.aplicar`), para que la foto vuelva a su hueco al cerrar
+(`MovilGlobo.origenDe`); el visor de otro trabajo la cierra.
+
+**La cascada de la corona:** 480 ms por foto con 45 ms de escalonado; la vuelta,
+260 ms en orden inverso (`--j`). La capa de la corona tiene `z-index:2000`,
+justo por debajo de la portada abierta (2001), para que las fotos salgan de
+detrás.
+
+**Sin comprobar en local:** el panel del navegador no llegó a dibujar mientras
+se hacía (la ventana estaba detrás), así que el visor nuevo se comprobó por
+estado (ruta, diapositivas, contador) y por la suite, no a la vista. Lo que sólo
+se ve en un teléfono está en `docs/comprobaciones-en-produccion.md`, apartado 6.

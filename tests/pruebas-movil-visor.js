@@ -518,3 +518,96 @@ describe('MovilVisor — los gestos', function () {
     });
   });
 });
+
+/* Las transiciones de abrir y cerrar: la foto sale del rectángulo de lo que
+   se tocó —la foto de la corona o la portada (`MovilGlobo.origenDe`)— y vuelve
+   a él al cerrar, mientras el fondo pasa a negro y de vuelta. Se apunta cada
+   llamada a `animar` para leer desde dónde y hasta dónde va cada cosa. */
+describe('MovilVisor — la foto que crece y vuelve', function () {
+
+  function conOrigen(fn, extra) {
+    var llamadas = [];
+    var origen = document.createElement('button');
+    origen.style.cssText = 'position:absolute;left:40px;top:100px;width:80px;height:100px';
+    var o = {
+      animar: function (el, desde, hasta, ms, curva, fin) {
+        llamadas.push({ el: el, desde: desde, hasta: hasta, ms: ms });
+        Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+        if (fin) fin();
+        return function () {};
+      },
+      origen: function () { return origen; }
+    };
+    Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+    return conVisor(function (v) {
+      v.caja.appendChild(origen);
+      return fn(v, llamadas);
+    }, o);
+  }
+
+  function de(llamadas, el) { return llamadas.filter(function (l) { return l.el === el; }); }
+
+  prueba('al abrir, la foto crece desde el origen hasta su sitio', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var diapo = v.refs.pista.querySelector('.mvisor-diapo[data-pieza="2"]');
+      var l = de(llamadas, diapo)[0];
+      cierto(l, 'la diapositiva no se animó');
+      cierto(/scale\(0\.\d+\)/.test(l.desde.transform), 'desde: ' + l.desde.transform);
+      igual([l.hasta.transform, l.ms], ['translate3d(0px,0px,0px)', 420]);
+    });
+  });
+
+  prueba('al abrir, el fondo se funde a negro a la vez', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var l = de(llamadas, v.refs.fondo)[0];
+      igual([l.desde.opacity, l.hasta.opacity, l.ms], ['0', '1', 420]);
+    });
+  });
+
+  prueba('al cerrar, la foto vuelve al origen, más deprisa, y el visor se esconde', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var diapo = v.refs.pista.querySelector('.mvisor-diapo[data-pieza="2"]');
+      llamadas.length = 0;
+      MovilVisor.aplicar(MV_TODOS);
+      var l = de(llamadas, diapo)[0];
+      cierto(l && /scale\(0\.\d+\)/.test(l.hasta.transform), 'hasta: ' + (l && l.hasta.transform));
+      igual([l.ms, de(llamadas, v.refs.fondo)[0].hasta.opacity, v.refs.raiz.hidden],
+            [300, '0', true]);
+    });
+  });
+
+  prueba('sin origen, entra y sale con un fundido del visor entero', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var entrada = de(llamadas, v.refs.raiz)[0];
+      MovilVisor.aplicar(MV_TODOS);
+      var salida = de(llamadas, v.refs.raiz)[1];
+      igual([entrada.hasta.opacity, salida.hasta.opacity], ['1', '0']);
+    }, { origen: function () { return null; } });
+  });
+
+  prueba('con movimiento reducido, sólo un fundido corto', function () {
+    conOrigen(function (v, llamadas) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      var diapo = v.refs.pista.querySelector('.mvisor-diapo[data-pieza="2"]');
+      var entrada = de(llamadas, v.refs.raiz)[0];
+      igual([de(llamadas, diapo).length, entrada.ms], [0, 150]);
+    }, { reducido: true });
+  });
+
+  prueba('reabrir mientras sale corta la salida y no lo deja escondido', function () {
+    var cortes = 0;
+    conOrigen(function (v) {
+      MovilVisor.aplicar(mvRuta('niebla', 2));
+      MovilVisor.aplicar(MV_TODOS);            // la salida queda en curso
+      MovilVisor.aplicar(mvRuta('niebla', 3));
+      igual([v.refs.raiz.hidden, cortes > 0, MovilVisor.estado().pieza], [false, true, 3]);
+    }, { animar: function (el, desde, hasta, ms, curva, fin) {
+      Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+      return function () { cortes++; };
+    } });
+  });
+});
