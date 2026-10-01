@@ -11,28 +11,46 @@ pasó de contenerlo a custodiarlo: `js/contenido.js` pide el JSON, lo valida y s
 entrega con `Datos.establecer()`. Si el archivo no llega o no valida, la galería sale
 vacía con un aviso en pantalla (`Galeria.mostrarError`) en vez de callarse.
 
-**El contenido ya no es de relleno: son los ocho proyectos de Lidia**, con sus 65
-piezas, entrados en el bloque del contenido real (spec y plan del 2026-09-10). Se
-acabaron los doce de picsum con fichas inventadas.
+**El contenido ya no es de relleno: son los proyectos de Lidia.** Entraron ocho,
+con 65 piezas, en el bloque del contenido real (spec y plan del 2026-09-10), y se
+acabaron los doce de picsum con fichas inventadas. **El 2026-10-01 llegaron
+cuatro más**, de una segunda entrega de su carpeta: *Mi playa favorita*
+(videoclip), *PF* (cortometraje), *Creativa* y *POV-Becario* (foto stills). Son
+doce y 105 piezas. Lo que falta —seis cortos y un editorial, con carpeta pero sin
+fotos— lo sube ella desde el panel.
 
 El orden de la galería es el que Lidia numeró en sus `TEXTOS.docx`, no el
 alfabético, y por eso vive escrito a mano en `herramientas/proyectos.json`.
 
 `contenido.json` **no se edita a mano**: lo genera
 `herramientas/derivar_imagenes.py --contenido` mezclando los datos humanos de
-`herramientas/proyectos.json` con las fotos que hay en disco. Las 195 rutas se
+`herramientas/proyectos.json` con las fotos que hay en disco. Las rutas se
 generan a propósito: una ruta mal escrita sigue siendo una ruta válida y la
 validación no la atrapa.
 
-**Dos categorías se quedan vacías, y sus enlaces del menú no se pulsan.**
-`cortometraje` y `foto-stills` están declaradas en `CATEGORIAS` y no tienen ni un
-proyecto. Pulsarlas dejaba la rejilla en blanco; ahora `Galeria.marcarVacias()`
-les quita el ratón y las atenúa (`.navbar-categorias a.vacia`), y un enlace
-escrito a mano a `#/cortometraje` se va a «todos» en vez de pintar el vacío. Se
-calcula del contenido, así que el día que entre un cortometraje el enlace se
-enciende solo. Sigue sin decidirse si además deberían enseñar algo —un aviso, un
-«muy pronto»—: es la tercera de las tres preguntas que la spec dejó abiertas para
-Lidia, y esto es sólo el suelo para que no se vea rota mientras se decide.
+**Las cuatro carpetas del 2026-10-01 no marcan la portada en el nombre.** Las
+ocho primeras traían `ESTA PORTADA.jpg`; éstas no, pero las cuatro tienen un
+archivo `1.jpg` o `1.png`, y ése es la portada. Se dice en `proyectos.json` con
+`"portada": "<archivo>"` en vez de renombrar el original, que no se toca. Ella
+puede cambiarla desde el panel («Portada» en cada foto).
+
+**El detector de franjas negras confunde una escena oscura con una banda.** En
+tres de las fotos nuevas (*PF* `2.png` y `…200117.png`, *Creativa* `2.jpg`) se
+comía la penumbra del encuadre: un 33 % del ancho en una, un 45 % en la otra. Se
+distingue por el brillo: una banda de verdad es negro puro, con máximo 0 (el
+rótulo de *Mi playa favorita*), y la escena llega justo al umbral, 32. Esas tres
+van en `sin_recorte`, como los rótulos de Conejita. No se tocó el umbral: es la
+regla de los trece recortes ya publicados con llave `-r`, y cambiarla obligaría a
+comprobarlos uno a uno y a resubir los que cambiaran.
+
+**Las cuatro categorías tienen trabajo desde el 2026-10-01.** Hasta entonces
+`cortometraje` y `foto-stills` estaban vacías, y `Galeria.marcarVacias()` les
+quitaba el ratón y las atenuaba (`.navbar-categorias a.vacia`); un enlace escrito
+a mano a `#/cortometraje` se iba a «todos» en vez de pintar el vacío. Se calcula
+del contenido, así que se encendieron solas al entrar *PF* y los dos de foto
+stills, y el mecanismo sigue ahí para cualquier categoría que se quede sin
+proyectos. La pregunta de si una vacía debería enseñar un aviso o un «muy pronto»
+deja de urgir, pero no se llegó a decidir.
 
 **La barra superior es texto, ya no el SVG «tabla navegadores» (2026-09-11).**
 Hasta entonces era una píldora amarilla con sombra y desenfoque y, dentro, un

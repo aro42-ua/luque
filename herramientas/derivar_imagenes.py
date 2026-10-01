@@ -131,17 +131,24 @@ def derivar(origen, destino, lado, calidad, caja=None):
         return im.size
 
 
-def fotos_de(raiz, carpeta):
+def fotos_de(raiz, carpeta, elegida=None):
     """Las fotos de un proyecto, ordenadas por nombre.
 
     La portada la eligio la artista marcandola en el nombre del archivo
     ("ESTA PORTADA.jpg", "ESTE PORTADA.jpg"), y va la primera. El resto en
     orden alfabetico, que es como salen de la camara.
+
+    Las cuatro carpetas que llegaron el 2026-10-01 no traen ninguna marcada.
+    Para esas la portada se escribe en proyectos.json (`portada`, el nombre
+    del archivo) en vez de renombrar el original, que no se toca.
     """
     d = os.path.join(raiz, carpeta.replace('/', os.sep))
     nombres = [f for f in sorted(os.listdir(d))
                if os.path.splitext(f)[1].lower() in EXTENSIONES]
-    portadas = [f for f in nombres if 'portada' in f.lower()]
+    if elegida and elegida not in nombres:
+        raise SystemExit('%s: la portada %s no esta en la carpeta' % (carpeta, elegida))
+    portadas = ([elegida] if elegida else
+                [f for f in nombres if 'portada' in f.lower()])
     resto = [f for f in nombres if f not in portadas]
     return portadas + resto, portadas[0] if portadas else None
 
@@ -154,7 +161,7 @@ def se_recorta(nombre, proyecto):
 
 
 def leer_meta():
-    """Los datos humanos de los ocho, escritos UNA vez y a mano."""
+    """Los datos humanos de cada proyecto, escritos UNA vez y a mano."""
     with io.open(os.path.join(AQUI, 'proyectos.json'), encoding='utf-8') as f:
         return json.load(f)
 
@@ -173,7 +180,7 @@ def derivar_todo(raiz, meta, destino):
         os.remove(viejo)
     hechas = 0
     for p in meta['proyectos']:
-        nombres, _ = fotos_de(raiz, p['carpeta'])
+        nombres, _ = fotos_de(raiz, p['carpeta'], p.get('portada'))
         relativa = p['carpeta'].replace('/', os.sep)
         recortadas = 0
         for nombre in nombres:
@@ -217,7 +224,7 @@ def contenido(raiz, meta):
     """
     salida = []
     for p in meta['proyectos']:
-        nombres, portada = fotos_de(raiz, p['carpeta'])
+        nombres, portada = fotos_de(raiz, p['carpeta'], p.get('portada'))
         if not portada:
             raise SystemExit('%s no tiene portada marcada' % p['carpeta'])
         relativa = p['carpeta'].replace('/', os.sep)

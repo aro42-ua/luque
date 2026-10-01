@@ -4,11 +4,11 @@
 Aparte del arnes del navegador y por el mismo motivo que
 `tests/pesar_imagenes.py`: esto es Python y se lanza a mano.
 """
-import os, sys, unittest
+import os, shutil, sys, tempfile, unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 '..', 'herramientas'))
 from derivar_imagenes import (llave, medidas_de, franjas_negras, caja_sin_franjas,
-                              se_recorta)
+                              se_recorta, fotos_de)
 from PIL import Image
 
 
@@ -108,6 +108,34 @@ class PruebaExclusion(unittest.TestCase):
 
     def test_un_proyecto_sin_lista_recorta_todo(self):
         self.assertTrue(se_recorta('a.jpg', {}))
+
+
+class PruebaPortada(unittest.TestCase):
+    """Las carpetas del 2026-10-01 no marcan la portada en el nombre del
+    archivo: se escribe en proyectos.json, y el original no se renombra."""
+
+    def setUp(self):
+        self.raiz = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.raiz, 'CAT', 'P'))
+        for f in ('b.jpg', '1.jpg', 'ESTA PORTADA.jpg', 'notas.docx'):
+            open(os.path.join(self.raiz, 'CAT', 'P', f), 'wb').close()
+
+    def tearDown(self):
+        shutil.rmtree(self.raiz)
+
+    def test_sin_eleccion_manda_la_marca_del_nombre(self):
+        self.assertEqual(fotos_de(self.raiz, 'CAT/P'),
+                         (['ESTA PORTADA.jpg', '1.jpg', 'b.jpg'], 'ESTA PORTADA.jpg'))
+
+    def test_la_elegida_va_primera_y_gana_a_la_marca(self):
+        self.assertEqual(fotos_de(self.raiz, 'CAT/P', 'b.jpg'),
+                         (['b.jpg', '1.jpg', 'ESTA PORTADA.jpg'], 'b.jpg'))
+
+    def test_una_elegida_que_no_esta_para_en_seco(self):
+        """Una errata en proyectos.json no puede publicar un proyecto sin
+        portada: la validacion lo rechazaria, pero ya en produccion."""
+        with self.assertRaises(SystemExit):
+            fotos_de(self.raiz, 'CAT/P', '2.jpg')
 
 
 if __name__ == '__main__':
