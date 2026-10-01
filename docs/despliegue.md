@@ -903,9 +903,10 @@ Cuatro proyectos nuevos —*Mi playa favorita*, *PF*, *Creativa*, *POV-Becario*�
 y 40 fotos. **No hizo falta `wrangler deploy`**: el contenido vive en R2 y el
 código ya sabía pintar las cuatro categorías. Fueron tres escrituras a R2:
 
-1. Las **120 imágenes nuevas** (40 fotos × 3 medidas), sólo las que no estaban,
-   comprobando antes cada llave por HTTPS. Las 195 de antes salen de la
-   derivación con la misma llave y no se volvieron a subir.
+1. Las **120 imágenes nuevas** (40 fotos × 3 medidas). Las 195 de antes salen
+   de la derivación con la misma llave y no se tocaron. Verificadas después las
+   120 por HTTPS, descargadas y comparadas con `cmp`: `200`, `image/jpeg` y los
+   bytes exactos, las 120.
 2. `contenido.json` con la **versión 10**, una por encima de la viva. El del
    repositorio sale de la herramienta con `version: 2`, y no se toca a mano: la
    copia con la versión buena se escribe aparte.
@@ -920,7 +921,10 @@ rechazaba la URL («Malformed input») y la comprobación previa daba siempre
 «falta». Las subidas sí llegaron con la llave limpia —el atajo de `npx` en
 Windows se come el `\r`—, pero ninguna comprobación medía nada. Quitar los `\r`
 antes del bucle, y redirigir `</dev/null` a `curl` y a `wrangler` dentro de un
-`while read`, que si no se comen la lista.
+`while read`, que si no se comen la lista. Aun así, el «saltar las que ya
+están» del guion no llegó a casar ninguna vez y se volvieron a subir las 120:
+mismos bytes encima de los mismos, sin daño, pero sin explicar. Por eso la
+verificación que cuenta es la de después, con `cmp`, no la de antes.
 
 ## La hoja de contacto, en el escaparate (2026-09-12)
 
