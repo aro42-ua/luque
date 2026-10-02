@@ -897,6 +897,35 @@ advertencia en mayúsculas de `_redirects` no bastó.
 Sigue **cerrada a los buscadores**, y ahora por un solo motivo: las tipografías
 siguen siendo Trial. El del contenido de relleno dejó de valer.
 
+## La segunda entrega de Lidia, sin desplegar código (2026-10-01)
+
+Cuatro proyectos nuevos —*Mi playa favorita*, *PF*, *Creativa*, *POV-Becario*—
+y 40 fotos. **No hizo falta `wrangler deploy`**: el contenido vive en R2 y el
+código ya sabía pintar las cuatro categorías. Fueron tres escrituras a R2:
+
+1. Las **120 imágenes nuevas** (40 fotos × 3 medidas). Las 195 de antes salen
+   de la derivación con la misma llave y no se tocaron. Verificadas después las
+   120 por HTTPS, descargadas y comparadas con `cmp`: `200`, `image/jpeg` y los
+   bytes exactos, las 120.
+2. `contenido.json` con la **versión 10**, una por encima de la viva. El del
+   repositorio sale de la herramienta con `version: 2`, y no se toca a mano: la
+   copia con la versión buena se escribe aparte.
+3. `borrador.json` con el mismo archivo, por lo de la sección «Sembrar el
+   borrador con lo publicado». Antes se comprobó que el borrador vivo coincidía
+   con lo publicado (versión 9 los dos, mismo contenido): no había trabajo de
+   Lidia sin publicar que pisar.
+
+**Cuidado con la lista de llaves en Windows.** La primera tanda leyó un `.txt`
+escrito por Python con finales CRLF: cada nombre arrastraba un `\r`, `curl`
+rechazaba la URL («Malformed input») y la comprobación previa daba siempre
+«falta». Las subidas sí llegaron con la llave limpia —el atajo de `npx` en
+Windows se come el `\r`—, pero ninguna comprobación medía nada. Quitar los `\r`
+antes del bucle, y redirigir `</dev/null` a `curl` y a `wrangler` dentro de un
+`while read`, que si no se comen la lista. Aun así, el «saltar las que ya
+están» del guion no llegó a casar ninguna vez y se volvieron a subir las 120:
+mismos bytes encima de los mismos, sin daño, pero sin explicar. Por eso la
+verificación que cuenta es la de después, con `cmp`, no la de antes.
+
 ## La hoja de contacto, en el escaparate (2026-09-12)
 
 **Desplegado el commit `29dfeb1` de `main`** (fusión del PR #26), versión
