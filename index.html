@@ -256,6 +256,11 @@
         <span class="esfera-titulo" id="esferaTitulo"></span>
         <span class="esfera-meta" id="esferaMeta"></span>
       </p>
+      <!-- El selector de categorías (js/movil-modos.js): una fila que se
+           desliza bajo una marca fija, como el selector de modos de una
+           cámara. Los botones los pinta el JS con las categorías de la barra
+           de escritorio que tienen algún trabajo. -->
+      <nav class="esfera-modos" id="esferaModos" aria-label="Categorías"></nav>
       <a class="esfera-contacto" href="#/contacto">Contacto</a>
     </div>
   </section>
@@ -437,6 +442,8 @@
        y el arranque lanza antes de `Router.init()`. -->
   <!-- Va ANTES de movil-globo.js, que lo usa al abrir la corona de fotos. -->
   <script src="js/movil-corona.js"></script>
+  <!-- Va ANTES de movil-globo.js, que crea con él el selector de categorías. -->
+  <script src="js/movil-modos.js"></script>
   <script src="js/movil-globo.js"></script>
   <!-- Va ANTES de movil-visor.js, que lo usa para construir el panel de la
        ficha. Sin esta línea `window.MovilFicha` es undefined y abrir un
@@ -500,8 +507,14 @@
       raiz:   esfera,
       lista:  document.getElementById('esferaLista'),
       titulo: document.getElementById('esferaTitulo'),
-      meta:   document.getElementById('esferaMeta')
+      meta:   document.getElementById('esferaMeta'),
+      modos:  document.getElementById('esferaModos')
     }, window.Datos.PROYECTOS, {
+      /* Las categorías del selector, con sus nombres y en su orden, salen de
+         la barra de escritorio: un solo sitio donde se escriben. */
+      categorias: Array.prototype.map.call(
+        document.querySelectorAll('.navbar-categorias a[data-cat]'),
+        function (a) { return { id: a.getAttribute('data-cat'), nombre: a.textContent.trim() }; }),
       /* `pieza` la trae la corona de fotos; sin ella, el visor abre el
          trabajo por el principio, como siempre. */
       alAbrir: function (id, pieza) { window.Router.ir('proyecto', id, pieza); }

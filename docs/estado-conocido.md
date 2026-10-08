@@ -1798,3 +1798,28 @@ detrás.
 se hacía (la ventana estaba detrás), así que el visor nuevo se comprobó por
 estado (ruta, diapositivas, contador) y por la suite, no a la vista. Lo que sólo
 se ve en un teléfono está en `docs/comprobaciones-en-produccion.md`, apartado 6.
+
+## Las categorías en la esfera móvil (2026-10-08)
+
+Spec `docs/superpowers/specs/2026-10-08-esfera-categorias-design.md`.
+
+**El selector** (`js/movil-modos.js`, `MovilModos`) es una fila bajo el pie que
+se desliza bajo una marca fija, como el selector de modos de una cámara; la
+mueve el JS porque dentro de `.esfera` (`touch-action:pinch-zoom`) el navegador
+no desplaza en horizontal. Sus categorías, con nombre y orden, salen de la
+barra de escritorio (`.navbar-categorias a[data-cat]`) y sólo se pintan las que
+tienen algún trabajo. Elegir navega; la ruta lo coloca (`MovilGlobo.aplicar`).
+Nada que empiece en el selector —dedo o flechas— gira la esfera.
+
+**La absorción** vive en `MovilGlobo.reconstruir(cat, animado)`: apunta los
+estilos de antes, reparte y dibuja la esfera nueva, y anima con la Web
+Animations API —inyectable, `opciones.animar`— las que salen (al nudo, 450 ms,
+acelerando), las que se quedan (del sitio viejo al nuevo, 600 ms) y las que
+entran (desde el nudo, en cascada). Mientras dura, la esfera no atiende gestos
+y el pie no cambia. **La primera ruta no anima**, venga la que venga: es la
+carga, detrás de la puerta.
+
+**Sin ver en pantalla:** el panel del navegador estaba oculto mientras se hizo
+(`document.visibilityState` «hidden», cero fotogramas), así que se comprobó que
+la ruta cambia, que la absorción arranca y que el selector se mueve, pero no
+cómo se ve. Ver `docs/comprobaciones-en-produccion.md`, apartado 7.

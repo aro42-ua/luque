@@ -1373,7 +1373,8 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
    invierte: negra con el texto amarillo. */
 .esfera-pie{
   position:absolute; left:24px; right:24px;
-  bottom:calc(28px + env(safe-area-inset-bottom));
+  /* Sube para dejar sitio al selector de categorías, que va debajo. */
+  bottom:calc(76px + env(safe-area-inset-bottom));
   margin:0;
   z-index:3001;
   color:var(--black);
@@ -1385,6 +1386,47 @@ body.es-movil .hoja.con-hero .esfera{ visibility:hidden; }
   line-height:0.95; letter-spacing:var(--kerning);
 }
 .esfera-meta{ display:block; margin-top:.5rem; font-size:.9rem; opacity:.75; }
+/* El selector de categorías (js/movil-modos.js): la fila se desliza bajo una
+   marca fija —la raya del centro— y la categoría que queda encima es la
+   activa. Se funde hacia los bordes para que se lea como una rueda que sigue
+   fuera de la pantalla. Lo mueve el JS: dentro de `.esfera` el navegador no
+   desplaza en horizontal. */
+.esfera-modos{
+  position:absolute; left:0; right:0;
+  bottom:calc(18px + env(safe-area-inset-bottom));
+  height:48px;
+  z-index:3003;
+  overflow:hidden;
+  touch-action:none;
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+          mask-image:linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+}
+.esfera-modos::after{
+  content:""; position:absolute; left:50%; bottom:6px;
+  width:18px; height:2px; margin-left:-9px;
+  background:var(--black);
+  pointer-events:none;
+}
+.esfera-modos-pista{
+  display:flex; align-items:center; gap:22px;
+  height:100%;
+  white-space:nowrap;
+  will-change:transform;
+}
+.esfera-modo{
+  flex:none;
+  background:none; border:0; padding:10px 2px;
+  font:inherit; font-size:.95rem; letter-spacing:-0.01em;
+  color:var(--black);
+  opacity:.45;
+  cursor:pointer;
+  transition:opacity 200ms ease;
+}
+.esfera-modo.activo{ opacity:1; font-weight:700; }
+.esfera-modo:focus-visible{ outline:2px solid var(--black); outline-offset:3px; }
+@media (prefers-reduced-motion: reduce){
+  .esfera-modo{ transition:none; }
+}
 .esfera-contacto{
   position:absolute; right:24px;
   top:calc(20px + env(safe-area-inset-top));
