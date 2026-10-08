@@ -785,6 +785,30 @@ describe('MovilGlobo — la absorción al cambiar de categoría', function () {
     });
   });
 
+  /* Visto en el iPhone de Ángel (2026-10-08): un rectángulo pequeño, con foto
+     o gris, en el centro durante un segundo al cambiar de categoría. Las que
+     pasan por el nudo se escondían sólo con el velo amarillo de DENTRO, y
+     animar la opacidad de un hijo de un elemento que se transforma no es
+     fiable en todos los móviles. La propia tesela tiene que desvanecerse. */
+  prueba('las que salen llegan al nudo invisibles, no sólo veladas', function () {
+    conAnimar(function (g, marco, llamadas) {
+      var niebla = teselaDe(marco, 'niebla');
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var l = de(llamadas, niebla);
+      igual([l.desde.opacity, l.hasta.opacity], ['1', '0']);
+    });
+  });
+
+  prueba('las que entran salen del nudo desde invisibles', function () {
+    conAnimar(function (g, marco, llamadas) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      llamadas.length = 0;
+      MovilGlobo.aplicar(TODOS);
+      var l = de(llamadas, teselaDe(marco, 'niebla'));
+      igual([l.desde.opacity, l.hasta.opacity], ['0', '1']);
+    });
+  });
+
   prueba('mientras salen, siguen a la vista', function () {
     conAnimar(function (g, marco) {
       MovilGlobo.aplicar(categoria('videoclip'));
