@@ -17,6 +17,9 @@ window.MovilModos = (function () {
   /* Cuánto se proyecta la velocidad del dedo al soltar: un golpe llega más
      lejos que su arrastre. */
   var PROYECCION = 150;
+  /* Si el dedo lleva esto quieto al soltar, no se lanza: la velocidad que
+     quedaba apuntada es de antes de pararse (revisión final). */
+  var QUIETO_MS = 80;
   var UMBRAL = 8;
   var ENCAJE_MS = 320;
   var CURVA = 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -132,7 +135,8 @@ window.MovilModos = (function () {
         if (!cancelado && g.k >= 0) elegir(g.k);
         return;
       }
-      elegir(cancelado ? activo : destino(offset, g.v, centros(), mitad()));
+      var v = ahora() - g.t > QUIETO_MS ? 0 : g.v;
+      elegir(cancelado ? activo : destino(offset, v, centros(), mitad()));
     }
     nav.addEventListener('pointerup', function (e) { soltar(e, false); });
     nav.addEventListener('pointercancel', function (e) { soltar(e, true); });
@@ -153,6 +157,16 @@ window.MovilModos = (function () {
       botones[activo].focus({ preventScroll: true });
     });
 
+    function recolocar() { colocar(offsetDe(activo), false); }
+
+    /* Space Grotesk llega con `font-display:swap`: lo que se midió con la
+       tipografía de respaldo deja la activa fuera de la marca. Al llegar la
+       buena, se vuelve a medir (revisión final). */
+    var alCargarFuentes = opciones.alCargarFuentes || function (cb) {
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(cb);
+    };
+    alCargarFuentes(recolocar);
+
     function poner(id, animado) {
       var k = indice(id);
       if (k < 0) k = 0;
@@ -165,7 +179,7 @@ window.MovilModos = (function () {
       activo: function () { return categorias[activo].id; },
       /* La esfera tiene que saber medir el selector cuando el lado móvil se
          enciende (antes, con `.hoja` apagada, todo mide 0). */
-      recolocar: function () { colocar(offsetDe(activo), false); }
+      recolocar: recolocar
     };
   }
 

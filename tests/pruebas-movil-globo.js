@@ -943,3 +943,157 @@ describe('MovilGlobo — el selector de categorías', function () {
     });
   });
 });
+
+/* Lo que encontró la revisión final de las categorías (2026-10-08): cambiar de
+   categoría otra vez antes de que termine la absorción. Aquí las animaciones
+   NO terminan solas: se apuntan con su `fin` y su cancelación, y la prueba
+   decide cuándo acaban. */
+describe('MovilGlobo — dos absorciones seguidas', function () {
+
+  var TODOS = { tipo: 'todos', valor: null, pieza: null };
+  function categoria(c) { return { tipo: 'categoria', valor: c, pieza: null }; }
+
+  function conEnCurso(fn, lista) {
+    var llamadas = [];
+    var o = {
+      animar: function (el, desde, hasta, ms, curva, fin, retardo) {
+        var l = { el: el, desde: desde, hasta: hasta, fin: fin, cancelada: false };
+        llamadas.push(l);
+        return function () { l.cancelada = true; };
+      }
+    };
+    return conGlobo(function (g, marco) {
+      MovilGlobo.aplicar(TODOS);
+      llamadas.length = 0;
+      return fn(g, marco, llamadas);
+    }, o, lista);
+  }
+
+  function terminar(llamadas) {
+    llamadas.slice().forEach(function (l) {
+      if (!l.cancelada && l.fin) { var f = l.fin; l.fin = null; f(); }
+    });
+  }
+  function deLa(llamadas, el) {
+    return llamadas.filter(function (l) { return l.el === el; }).pop();
+  }
+  function arrastrar(marco, id) {
+    var b = teselaDe(marco, id).querySelector('button');
+    b.dispatchEvent(new PointerEvent('pointerdown', { clientX: 195, clientY: 380, bubbles: true }));
+    b.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 380, bubbles: true }));
+    b.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 380, bubbles: true }));
+  }
+
+  prueba('cambiar otra vez cancela la absorción que estaba en curso', function () {
+    conEnCurso(function (g, marco, llamadas) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var primeras = llamadas.slice();
+      MovilGlobo.aplicar(categoria('editorial'));
+      cierto(primeras.length > 0 && primeras.every(function (l) { return l.cancelada; }),
+             'quedaron animaciones de la primera sin cancelar');
+    });
+  });
+
+  prueba('las que salían y vuelven a entrar parten de donde están, no del nudo', function () {
+    conEnCurso(function (g, marco, llamadas) {
+      MovilGlobo.aplicar(categoria('videoclip'));     // niebla empieza a salir
+      MovilGlobo.aplicar(TODOS);                       // y vuelve
+      var l = deLa(llamadas, teselaDe(marco, 'niebla'));
+      cierto(!/scale\(0\.1(000)?\)/.test(l.desde.transform), 'salió del nudo: ' + l.desde.transform);
+    });
+  });
+
+  prueba('las que salían y siguen fuera siguen saliendo, sin esconderse de golpe', function () {
+    var lista = globoProyectos();
+    lista[7].categoria = 'cortometraje';               // resaca: ni videoclip ni editorial
+    conEnCurso(function (g, marco, llamadas) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      MovilGlobo.aplicar(categoria('editorial'));
+      var resaca = teselaDe(marco, 'resaca');
+      var l = deLa(llamadas, resaca);
+      igual(resaca.hidden, false);
+      cierto(l && !l.cancelada && /scale\(0\.1(000)?\)/.test(l.hasta.transform), 'no sigue saliendo');
+    }, lista);
+  });
+
+  prueba('el bloqueo dura hasta que termina la última absorción', function () {
+    conEnCurso(function (g, marco, llamadas) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var primeras = llamadas.slice();
+      MovilGlobo.aplicar(categoria('editorial'));
+      primeras.forEach(function (l) { if (l.fin) l.fin(); });   // la vieja «termina» tarde
+      var q = g.estado().q;
+      arrastrar(marco, 'niebla');
+      var bloqueada = MovilEsfera.distancia(q, g.estado().q) < 1e-9;
+      terminar(llamadas);
+      arrastrar(marco, 'niebla');
+      igual([bloqueada, MovilEsfera.distancia(q, g.estado().q) > 0.01], [true, true]);
+    });
+  });
+
+  prueba('durante la absorción, las flechas y la rueda tampoco giran la esfera', function () {
+    conEnCurso(function (g, marco) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var q = g.estado().q;
+      var raiz = marco.querySelector('#e');
+      raiz.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      raiz.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true }));
+      igual(g.estado().q, q);
+    });
+  });
+});
+
+/* Y del selector: soltar tras una pausa no lanza la fila con una velocidad
+   vieja, y cuando llega la tipografía se vuelve a medir. */
+describe('MovilModos — lo que encontró la revisión final', function () {
+
+  var CATS = [
+    { id: 'todos', nombre: 'Todo' }, { id: 'editorial', nombre: 'Editorial' },
+    { id: 'videoclip', nombre: 'Videoclip' }, { id: 'cortometraje', nombre: 'Cortometraje' }
+  ];
+
+  function centroEnNav(nav, id) {
+    var b = nav.querySelector('button[data-id="' + id + '"]').getBoundingClientRect();
+    return b.left + b.width / 2 - nav.getBoundingClientRect().left;
+  }
+
+  prueba('soltar tras quedarse quieto encaja en la más cercana, sin proyectar', function () {
+    ArnesDom.conElemento('<nav style="position:relative;width:300px;white-space:nowrap"></nav>',
+      function (nav) {
+        var reloj = { t: 0, paso: 10 };
+        var elegidas = [];
+        var s = MovilModos.crear(nav, CATS, {
+          alElegir: function (id) { elegidas.push(id); },
+          ahora: function () { return (reloj.t += reloj.paso); }, reducido: true
+        });
+        s.poner('todos', false);
+        var paso = centroEnNav(nav, 'editorial') - centroEnNav(nav, 'todos');
+        function dedo(tipo, x) {
+          nav.dispatchEvent(new PointerEvent(tipo, { clientX: x, clientY: 5, pointerId: 1, bubbles: true }));
+        }
+        dedo('pointerdown', 250);
+        dedo('pointermove', 250 - paso / 2);
+        dedo('pointermove', 250 - paso);          // rápido hasta Editorial…
+        reloj.t += 500;                           // …se para medio segundo…
+        dedo('pointerup', 250 - paso);            // …y suelta
+        igual(elegidas, ['editorial']);
+      });
+  });
+
+  prueba('cuando llega la tipografía, la activa vuelve a quedar bajo la marca', function () {
+    ArnesDom.conElemento('<nav style="position:relative;width:300px;white-space:nowrap"></nav>',
+      function (nav) {
+        var listas = null;
+        var s = MovilModos.crear(nav, CATS, {
+          reducido: true,
+          alCargarFuentes: function (cb) { listas = cb; }
+        });
+        s.poner('videoclip', false);
+        /* La tipografía de verdad cambia los anchos: aquí, un relleno. */
+        nav.querySelector('button[data-id="todos"]').style.paddingLeft = '60px';
+        var descolocada = Math.abs(centroEnNav(nav, 'videoclip') - 150);
+        listas();
+        igual([descolocada > 20, Math.abs(centroEnNav(nav, 'videoclip') - 150) < 1], [true, true]);
+      });
+  });
+});

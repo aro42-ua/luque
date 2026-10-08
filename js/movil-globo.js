@@ -85,7 +85,8 @@ window.MovilGlobo = (function () {
       return { ancho: r.width, alto: r.height };
     };
     var alAbrir = opciones.alAbrir || function () {};
-    var animar = opciones.animar || animarDeVerdad;
+    var animarCon = opciones.animar || animarDeVerdad;
+    var animar = animarCon;
 
     var teselas = [];     // por índice en la lista COMPLETA
     var ramas = [];       // ídem: la rama que va del centro a cada tesela
@@ -105,6 +106,11 @@ window.MovilGlobo = (function () {
     var capaCorona = null;
     /* Mientras dura la absorción, la esfera no atiende gestos. */
     var transicionando = false;
+    /* Las cancelaciones de la absorción en curso y su generación: una
+       absorción nueva corta la anterior, y los avisos tardíos de la vieja no
+       sueltan el bloqueo ni anuncian (revisión final, 2026-10-08). */
+    var enCurso = [];
+    var generacion = 0;
     /* El selector de categorías (`MovilModos`), si la página trae su `<nav>`. */
     var modos = null;
     /* La primera ruta no anima: es la carga, detrás de la puerta. */
@@ -194,9 +200,16 @@ window.MovilGlobo = (function () {
        superficie, conservando su número de la lista completa. */
     function reconstruir(cat, animado) {
       cerrarCorona(false);
-      var previos = visibles.slice();
+      /* Las que están A LA VISTA, que no siempre son las de `visibles`: con
+         una absorción en curso, las que salían siguen en pantalla. Y dónde
+         están se lee de la pantalla (`getComputedStyle`), no del estilo en
+         línea, que ya guarda el destino de la absorción anterior. */
+      var previos = [];
+      proyectos.forEach(function (p, i) { if (!teselas[i].hidden) previos.push(i); });
+      var vivos = transicionando;
       var antes = {};
-      previos.forEach(function (i) { antes[i] = estiloDe(i); });
+      if (animado) previos.forEach(function (i) { antes[i] = vivos ? estiloAhora(i) : estiloDe(i); });
+      cortarAbsorcion();
       categoria = cat;
       visibles = [];
       proyectos.forEach(function (p, i) {
@@ -212,6 +225,20 @@ window.MovilGlobo = (function () {
       var m = medir();
       if (!animado || !previos.length || !m.ancho || !m.alto) { anunciar(); return; }
       absorber(previos, antes);
+    }
+
+    function estiloAhora(i) {
+      var cs = function (el) { return window.getComputedStyle(el); };
+      var li = cs(teselas[i]), velo = cs(teselas[i].querySelector('.esfera-velo')), rama = cs(ramas[i]);
+      return { t: li.transform, v: velo.opacity, rt: rama.transform, rw: rama.width, ro: rama.opacity };
+    }
+
+    function cortarAbsorcion() {
+      generacion++;
+      var c = enCurso;
+      enCurso = [];
+      c.forEach(function (cortar) { cortar(); });
+      transicionando = false;
     }
 
     function estiloDe(i) {
@@ -247,12 +274,20 @@ window.MovilGlobo = (function () {
       }
 
       var pendientes = 0;
+      var gen = generacion;
       transicionando = true;
+      /* Cada animación se apunta para poder cortarla si llega otra categoría. */
+      function animar() {
+        var cortar = animarCon.apply(null, arguments);
+        enCurso.push(cortar);
+        return cortar;
+      }
       function una() {
         pendientes++;
         return function () {
+          if (gen !== generacion) return;      // aviso tardío de una absorción cortada
           pendientes--;
-          if (pendientes === 0) { transicionando = false; anunciar(); }
+          if (pendientes === 0) { transicionando = false; enCurso = []; anunciar(); }
         };
       }
       var nudoT = enElNudo();
@@ -267,14 +302,14 @@ window.MovilGlobo = (function () {
         rama.hidden = false;
         var hecho = una();
         animar(li, { transform: antes[i].t }, { transform: nudoT }, SALE_MS, SALE_CURVA, function () {
-          li.hidden = visibles.indexOf(i) < 0;
+          if (gen === generacion) li.hidden = visibles.indexOf(i) < 0;
           hecho();
         });
         animar(li.querySelector('.esfera-velo'), { opacity: antes[i].v }, { opacity: '1' },
                SALE_MS, SALE_CURVA);
         animar(rama, { transform: antes[i].rt + ' scaleX(1)', opacity: antes[i].ro },
                { transform: antes[i].rt + ' scaleX(0)', opacity: '0' }, SALE_MS, SALE_CURVA,
-               function () { rama.hidden = visibles.indexOf(i) < 0; });
+               function () { if (gen === generacion) rama.hidden = visibles.indexOf(i) < 0; });
       });
 
       quedan.forEach(function (i) {
@@ -658,7 +693,7 @@ window.MovilGlobo = (function () {
     /* Sólo el clic de TECLADO (Intro o espacio sobre un botón) trae
        `detail` 0; el de dedo o ratón ya lo atendió `pointerup`. */
     lista.addEventListener('click', function (e) {
-      if (e.detail !== 0 || congelado) return;
+      if (e.detail !== 0 || congelado || transicionando) return;
       var i = indiceDeEvento(e);
       if (corona) {
         if (i === corona.i) abrirPieza(1);
@@ -681,7 +716,7 @@ window.MovilGlobo = (function () {
                    ArrowUp: 'arriba', ArrowDown: 'abajo' };
 
     raiz.addEventListener('keydown', function (e) {
-      if (enElSelector(e)) return;
+      if (enElSelector(e) || transicionando) return;
       if (e.key === 'Escape' && corona) {
         e.preventDefault();
         var portada = teselas[corona.i].querySelector('button');
@@ -704,7 +739,7 @@ window.MovilGlobo = (function () {
        a la vecina, porque girar un poco y volver al sitio sería movimiento
        sin resultado. */
     raiz.addEventListener('wheel', function (e) {
-      if (congelado || !visibles.length) return;
+      if (congelado || transicionando || !visibles.length) return;
       e.preventDefault();
       cerrarCorona(false);
       var dx = e.shiftKey ? -e.deltaY : -e.deltaX;
