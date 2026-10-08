@@ -26,6 +26,38 @@ window.MovilGlobo = (function () {
   var CORONA_MS = 260;
   var CORONA_PASO = 25;
 
+  /* La absorción al cambiar de categoría (spec
+     docs/superpowers/specs/2026-10-08-esfera-categorias-design.md): las que
+     salen aceleran hacia el nudo, como tragadas; las que se quedan y las que
+     entran deceleran hasta su sitio, con la curva de la casa. */
+  var SALE_MS = 450;
+  var SALE_CURVA = 'cubic-bezier(0.5, 0, 0.75, 0)';
+  var QUEDA_MS = 600;
+  var QUEDA_RETARDO = 120;
+  var ENTRA_RETARDO = 150;
+  var ENTRA_PASO = 30;
+  var CURVA = 'cubic-bezier(0.16, 1, 0.3, 1)';
+  var FUNDIDO_MS = 150;
+
+  /* La animación de verdad, con la Web Animations API, como en el visor:
+     `fill:'both'` para que durante el retardo se vea el punto de partida y,
+     al terminar, el estilo en línea vuelve a mandar. */
+  function animarDeVerdad(el, desde, hasta, ms, curva, alTerminar, retardo) {
+    if (!(ms > 0) || !el.animate) {
+      Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+      if (alTerminar) alTerminar();
+      return function () {};
+    }
+    var a = el.animate([desde, hasta], {
+      duration: ms, delay: retardo || 0, easing: curva || CURVA, fill: 'both'
+    });
+    a.onfinish = function () {
+      a.cancel();
+      if (alTerminar) alTerminar();
+    };
+    return function () { a.cancel(); };
+  }
+
   var actual = null;
 
   /* La portada llega en 1500; su miniatura de 250 sale del mismo nombre,
@@ -53,6 +85,7 @@ window.MovilGlobo = (function () {
       return { ancho: r.width, alto: r.height };
     };
     var alAbrir = opciones.alAbrir || function () {};
+    var animar = opciones.animar || animarDeVerdad;
 
     var teselas = [];     // por índice en la lista COMPLETA
     var ramas = [];       // ídem: la rama que va del centro a cada tesela
@@ -70,6 +103,10 @@ window.MovilGlobo = (function () {
     /* La corona abierta: `{ i, fotos: [{ boton, centro }] }`, o null. */
     var corona = null;
     var capaCorona = null;
+    /* Mientras dura la absorción, la esfera no atiende gestos. */
+    var transicionando = false;
+    /* La primera ruta no anima: es la carga, detrás de la puerta. */
+    var primeraRuta = true;
 
     function total() { return window.MovilEsfera.numero(proyectos.length - 1); }
 
@@ -153,8 +190,11 @@ window.MovilGlobo = (function () {
     /* Rehace la esfera para una categoría (`null` = todas). Las de otras
        categorías salen con `hidden` y las que quedan se reparten por TODA la
        superficie, conservando su número de la lista completa. */
-    function reconstruir(cat) {
+    function reconstruir(cat, animado) {
       cerrarCorona(false);
+      var previos = visibles.slice();
+      var antes = {};
+      previos.forEach(function (i) { antes[i] = estiloDe(i); });
       categoria = cat;
       visibles = [];
       proyectos.forEach(function (p, i) {
@@ -167,7 +207,98 @@ window.MovilGlobo = (function () {
       puntos = window.MovilEsfera.reparto(visibles.length);
       estado = window.MovilEsfera.inicial(puntos);
       dibujar();
-      anunciar();
+      var m = medir();
+      if (!animado || !previos.length || !m.ancho || !m.alto) { anunciar(); return; }
+      absorber(previos, antes);
+    }
+
+    function estiloDe(i) {
+      return {
+        t: teselas[i].style.transform,
+        v: teselas[i].querySelector('.esfera-velo').style.opacity || '0',
+        rt: ramas[i].style.transform,
+        rw: ramas[i].style.width,
+        ro: ramas[i].style.opacity || '0'
+      };
+    }
+
+    /* La tesela hecha un punto en el nudo: encogida al 10 % en el centro de
+       la esfera, de frente. */
+    function enElNudo() {
+      var g = window.MovilEsfera.geometria(medir());
+      var ancho = g.tesela, alto = g.tesela * 1.25;
+      return 'translate3d(' + (g.cx - ancho / 2).toFixed(1) + 'px,' + (g.cy - alto / 2).toFixed(1) +
+        'px,0) scale(0.1000) perspective(' + Math.round(ancho * 3) + 'px) rotateY(0.00deg) rotateX(0.00deg)';
+    }
+
+    function absorber(previos, antes) {
+      var salen = previos.filter(function (i) { return visibles.indexOf(i) < 0; });
+      var entran = visibles.filter(function (i) { return previos.indexOf(i) < 0; });
+      var quedan = visibles.filter(function (i) { return previos.indexOf(i) >= 0; });
+
+      /* Con movimiento reducido no se mueve nada: las que salen ya están
+         escondidas y la esfera nueva entra con un fundido corto. */
+      if (reducido) {
+        animar(lista, { opacity: '0' }, { opacity: '1' }, FUNDIDO_MS, 'ease');
+        anunciar();
+        return;
+      }
+
+      var pendientes = 0;
+      transicionando = true;
+      function una() {
+        pendientes++;
+        return function () {
+          pendientes--;
+          if (pendientes === 0) { transicionando = false; anunciar(); }
+        };
+      }
+      var nudoT = enElNudo();
+      /* `pendientes` arranca en 1 y se suelta al final: con una animación que
+         termina al instante, el contador no puede llegar a 0 antes de haber
+         lanzado todas. */
+      var fin = una();
+
+      salen.forEach(function (i) {
+        var li = teselas[i], rama = ramas[i];
+        li.hidden = false;
+        rama.hidden = false;
+        var hecho = una();
+        animar(li, { transform: antes[i].t }, { transform: nudoT }, SALE_MS, SALE_CURVA, function () {
+          li.hidden = visibles.indexOf(i) < 0;
+          hecho();
+        });
+        animar(li.querySelector('.esfera-velo'), { opacity: antes[i].v }, { opacity: '1' },
+               SALE_MS, SALE_CURVA);
+        animar(rama, { transform: antes[i].rt + ' scaleX(1)', opacity: antes[i].ro },
+               { transform: antes[i].rt + ' scaleX(0)', opacity: '0' }, SALE_MS, SALE_CURVA,
+               function () { rama.hidden = visibles.indexOf(i) < 0; });
+      });
+
+      quedan.forEach(function (i) {
+        var li = teselas[i], rama = ramas[i];
+        animar(li, { transform: antes[i].t }, { transform: li.style.transform },
+               QUEDA_MS, CURVA, una(), QUEDA_RETARDO);
+        animar(li.querySelector('.esfera-velo'), { opacity: antes[i].v },
+               { opacity: li.querySelector('.esfera-velo').style.opacity }, QUEDA_MS, CURVA, null, QUEDA_RETARDO);
+        animar(rama, { transform: antes[i].rt, width: antes[i].rw, opacity: antes[i].ro },
+               { transform: rama.style.transform, width: rama.style.width, opacity: rama.style.opacity },
+               QUEDA_MS, CURVA, null, QUEDA_RETARDO);
+      });
+
+      entran.forEach(function (i, k) {
+        var li = teselas[i], rama = ramas[i];
+        var retardo = ENTRA_RETARDO + k * ENTRA_PASO;
+        animar(li, { transform: nudoT }, { transform: li.style.transform },
+               QUEDA_MS, CURVA, una(), retardo);
+        animar(li.querySelector('.esfera-velo'), { opacity: '1' },
+               { opacity: li.querySelector('.esfera-velo').style.opacity }, QUEDA_MS, CURVA, null, retardo);
+        animar(rama, { transform: rama.style.transform + ' scaleX(0)', opacity: '0' },
+               { transform: rama.style.transform + ' scaleX(1)', opacity: rama.style.opacity },
+               QUEDA_MS, CURVA, null, retardo);
+      });
+
+      fin();
     }
 
     function cambiarAGrande(li, p) {
@@ -463,7 +594,7 @@ window.MovilGlobo = (function () {
     function esDelGesto(e) { return gesto !== null && e.pointerId === gesto.id; }
 
     raiz.addEventListener('pointerdown', function (e) {
-      if (congelado || !visibles.length || esAjeno(e)) return;
+      if (congelado || transicionando || !visibles.length || esAjeno(e)) return;
       if (gesto !== null && e.pointerId !== gesto.id) return;
       /* `enMarcha`: la esfera giraba por inercia cuando llegó el dedo. Un
          toque así es para FRENARLA, como en cualquier lista con inercia, y
@@ -609,6 +740,9 @@ window.MovilGlobo = (function () {
        index.html la suscribe después. Si el foco estaba en otro sitio, no se
        le roba. */
     function aplicar(ruta) {
+      /* La primera ruta, venga la que venga, es la carga: no anima. */
+      var animado = !primeraRuta;
+      primeraRuta = false;
       if (ruta.tipo === 'proyecto') {
         recordado = ruta.valor;
         /* La corona sigue abierta detrás del visor del MISMO trabajo, para
@@ -619,7 +753,7 @@ window.MovilGlobo = (function () {
       }
       if (ruta.tipo === 'contacto') return;
       var cat = ruta.tipo === 'categoria' ? ruta.valor : null;
-      if (cat !== categoria) reconstruir(cat);
+      if (cat !== categoria) reconstruir(cat, animado);
       if (recordado === null) return;
       var id = recordado;
       recordado = null;

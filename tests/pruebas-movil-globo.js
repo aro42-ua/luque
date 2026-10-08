@@ -30,7 +30,14 @@ function conGlobo(fn, opciones, lista) {
       alAbrir: function (id, pieza) { abiertos.push(pieza == null ? id : id + '/' + pieza); },
       fotograma: function () {},
       reducido: false,
-      medir: function () { return { ancho: 390, alto: 844 }; }
+      medir: function () { return { ancho: 390, alto: 844 }; },
+      /* La animación termina al instante: escribe el estado final y avisa. Las
+         pruebas de la absorción la sustituyen para apuntar las llamadas. */
+      animar: function (el, desde, hasta, ms, curva, fin) {
+        Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+        if (fin) fin();
+        return function () {};
+      }
     };
     Object.keys(opciones || {}).forEach(function (k) { o[k] = opciones[k]; });
     var g = MovilGlobo.init({
@@ -715,5 +722,130 @@ describe('MovilGlobo — la corona', function () {
       abrir(marco);
       igual([abiertos, g.corona()], [['niebla'], null]);
     }, {}, lista);
+  });
+});
+
+/* La absorción (spec docs/superpowers/specs/2026-10-08-esfera-categorias-design.md):
+   al cambiar de categoría con la esfera ya pintada, las que salen viajan al
+   nudo, las que se quedan van de su sitio viejo al nuevo y las que entran
+   salen del nudo. `conAnimar` apunta cada llamada a `animar`; `terminar`
+   decide si cada animación acaba al instante (como el arnés) o se queda en
+   curso. La primera ruta no anima, así que cada prueba la gasta antes. */
+describe('MovilGlobo — la absorción al cambiar de categoría', function () {
+
+  var TODOS = { tipo: 'todos', valor: null, pieza: null };
+  function categoria(c) { return { tipo: 'categoria', valor: c, pieza: null }; }
+
+  function conAnimar(fn, terminar, extra) {
+    var llamadas = [];
+    var o = {
+      animar: function (el, desde, hasta, ms, curva, fin, retardo) {
+        llamadas.push({ el: el, desde: desde, hasta: hasta, ms: ms, retardo: retardo || 0 });
+        Object.keys(hasta).forEach(function (k) { el.style[k] = hasta[k]; });
+        if (terminar !== false && fin) fin();
+        return function () {};
+      }
+    };
+    Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+    return conGlobo(function (g, marco, abiertos) {
+      MovilGlobo.aplicar(TODOS);                 // la primera ruta, sin animar
+      llamadas.length = 0;
+      return fn(g, marco, llamadas, abiertos);
+    }, o);
+  }
+
+  function de(llamadas, el) { return llamadas.filter(function (l) { return l.el === el; })[0]; }
+
+  prueba('la primera ruta no anima', function () {
+    var llamadas = [];
+    conGlobo(function () {
+      MovilGlobo.aplicar(categoria('videoclip'));
+    }, { animar: function (el, d, h, ms, c, fin) { llamadas.push(el); if (fin) fin(); return function () {}; } });
+    igual(llamadas.length, 0);
+  });
+
+  prueba('las que salen encogen hacia el nudo y se esconden al acabar', function () {
+    conAnimar(function (g, marco, llamadas) {
+      var niebla = teselaDe(marco, 'niebla');
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var l = de(llamadas, niebla);
+      cierto(l, 'niebla no se animó');
+      cierto(/scale\(0\.1(000)?\)/.test(l.hasta.transform), 'hasta: ' + l.hasta.transform);
+      igual([l.ms, niebla.hidden], [450, true]);
+    });
+  });
+
+  prueba('su rama se recoge hacia el nudo', function () {
+    conAnimar(function (g, marco, llamadas) {
+      var rama = marco.querySelector('.esfera-rama[data-id="niebla"]');
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var l = de(llamadas, rama);
+      cierto(l && /scaleX\(0\)/.test(l.hasta.transform), 'rama: ' + (l && l.hasta.transform));
+      igual(rama.hidden, true);
+    });
+  });
+
+  prueba('mientras salen, siguen a la vista', function () {
+    conAnimar(function (g, marco) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      igual(teselaDe(marco, 'niebla').hidden, false);
+    }, false);
+  });
+
+  prueba('las que se quedan van de su sitio viejo al nuevo', function () {
+    conAnimar(function (g, marco, llamadas) {
+      var oleaje = teselaDe(marco, 'oleaje');
+      var antes = oleaje.style.transform;
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var l = de(llamadas, oleaje);
+      cierto(l, 'oleaje no se animó');
+      igual([l.desde.transform, l.hasta.transform, l.ms, l.retardo],
+            [antes, oleaje.style.transform, 600, 120]);
+      cierto(l.desde.transform !== l.hasta.transform, 'no se movió');
+    });
+  });
+
+  prueba('al volver a Todo, las que faltaban salen del nudo en cascada', function () {
+    conAnimar(function (g, marco, llamadas) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      llamadas.length = 0;
+      MovilGlobo.aplicar(TODOS);
+      var entran = ['niebla', 'bruma', 'marea', 'espuma'].map(function (id) {
+        return de(llamadas, teselaDe(marco, id));
+      });
+      entran.forEach(function (l, k) {
+        cierto(l && /scale\(0\.1(000)?\)/.test(l.desde.transform), 'entra ' + k);
+      });
+      igual(entran.map(function (l) { return l.retardo; }), [150, 180, 210, 240]);
+      igual(teselaDe(marco, 'niebla').hidden, false);
+    });
+  });
+
+  prueba('mientras dura, la esfera no gira', function () {
+    conAnimar(function (g, marco) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var q = g.estado().q;
+      var b = teselaDe(marco, 'oleaje').querySelector('button');
+      b.dispatchEvent(new PointerEvent('pointerdown', { clientX: 195, clientY: 380, bubbles: true }));
+      b.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 380, bubbles: true }));
+      b.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 380, bubbles: true }));
+      igual(g.estado().q, q);
+    }, false);
+  });
+
+  prueba('el pie cambia al terminar, no antes', function () {
+    conAnimar(function (g, marco) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      igual(marco.querySelector('#t').textContent, 'Niebla');
+    }, false);
+  });
+
+  prueba('con movimiento reducido, un fundido y ninguna tesela se mueve', function () {
+    conAnimar(function (g, marco, llamadas) {
+      MovilGlobo.aplicar(categoria('videoclip'));
+      var movidas = llamadas.filter(function (l) { return l.hasta.transform; });
+      var fundido = llamadas.filter(function (l) { return l.hasta.opacity === '1' && l.ms === 150; });
+      igual([movidas.length, fundido.length, teselaDe(marco, 'niebla').hidden], [0, 1, true]);
+    }, true, { reducido: true });
   });
 });
