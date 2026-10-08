@@ -230,7 +230,7 @@ window.MovilGlobo = (function () {
     function estiloAhora(i) {
       var cs = function (el) { return window.getComputedStyle(el); };
       var li = cs(teselas[i]), velo = cs(teselas[i].querySelector('.esfera-velo')), rama = cs(ramas[i]);
-      return { t: li.transform, v: velo.opacity, rt: rama.transform, rw: rama.width, ro: rama.opacity };
+      return { t: li.transform, o: li.opacity, v: velo.opacity, rt: rama.transform, rw: rama.width, ro: rama.opacity };
     }
 
     function cortarAbsorcion() {
@@ -244,6 +244,7 @@ window.MovilGlobo = (function () {
     function estiloDe(i) {
       return {
         t: teselas[i].style.transform,
+        o: '1',
         v: teselas[i].querySelector('.esfera-velo').style.opacity || '0',
         rt: ramas[i].style.transform,
         rw: ramas[i].style.width,
@@ -301,7 +302,12 @@ window.MovilGlobo = (function () {
         li.hidden = false;
         rama.hidden = false;
         var hecho = una();
-        animar(li, { transform: antes[i].t }, { transform: nudoT }, SALE_MS, SALE_CURVA, function () {
+        /* La tesela ENTERA se desvanece, no sólo su velo: en el iPhone de
+           Ángel el velo amarillo de dentro no la tapaba a tiempo y se veía un
+           rectángulo pequeño en el nudo (2026-10-08). La opacidad del propio
+           elemento que se transforma es la que todos los móviles respetan. */
+        animar(li, { transform: antes[i].t, opacity: antes[i].o }, { transform: nudoT, opacity: '0' },
+               SALE_MS, SALE_CURVA, function () {
           if (gen === generacion) li.hidden = visibles.indexOf(i) < 0;
           hecho();
         });
@@ -314,7 +320,7 @@ window.MovilGlobo = (function () {
 
       quedan.forEach(function (i) {
         var li = teselas[i], rama = ramas[i];
-        animar(li, { transform: antes[i].t }, { transform: li.style.transform },
+        animar(li, { transform: antes[i].t, opacity: antes[i].o }, { transform: li.style.transform, opacity: '1' },
                QUEDA_MS, CURVA, una(), QUEDA_RETARDO);
         animar(li.querySelector('.esfera-velo'), { opacity: antes[i].v },
                { opacity: li.querySelector('.esfera-velo').style.opacity }, QUEDA_MS, CURVA, null, QUEDA_RETARDO);
@@ -326,7 +332,7 @@ window.MovilGlobo = (function () {
       entran.forEach(function (i, k) {
         var li = teselas[i], rama = ramas[i];
         var retardo = ENTRA_RETARDO + k * ENTRA_PASO;
-        animar(li, { transform: nudoT }, { transform: li.style.transform },
+        animar(li, { transform: nudoT, opacity: '0' }, { transform: li.style.transform, opacity: '1' },
                QUEDA_MS, CURVA, una(), retardo);
         animar(li.querySelector('.esfera-velo'), { opacity: '1' },
                { opacity: li.querySelector('.esfera-velo').style.opacity }, QUEDA_MS, CURVA, null, retardo);
