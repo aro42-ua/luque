@@ -194,6 +194,17 @@ visto todavía en una pantalla: sólo la suite y el estado de la página.
 Si algo da tirones, los números están en `js/movil-carrusel.js` (física) y en
 las constantes de arriba de `js/movil-visor.js` (duraciones).
 
+## 7. Las categorías en la esfera (2026-10-08)
+
+| | # | Qué se mira | Qué tiene que pasar |
+|---|---|---|---|
+| [ ] | 1 | Mirar el pie de la esfera | Bajo el título, la fila «Todo · Editorial · …» con la activa bajo la raya del centro |
+| [ ] | 2 | Deslizar la fila y soltar | Encaja en una categoría; un golpe rápido llega más lejos |
+| [ ] | 3 | Elegir Editorial | Las portadas de otras categorías encogen hacia el nudo por su rama; las de Editorial se recolocan, sin tirones |
+| [ ] | 4 | Volver a Todo | Las que faltaban salen del nudo en cascada |
+| [ ] | 5 | Elegir Cortometraje (un solo trabajo) | Queda una sola portada, delante |
+| [ ] | 6 | Deslizar sobre la fila | Mueve la fila, no gira la esfera |
+
 ## Lo que salió distinto
 
 Commit desplegado: `______`. Fecha: `______`.

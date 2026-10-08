@@ -105,6 +105,8 @@ window.MovilGlobo = (function () {
     var capaCorona = null;
     /* Mientras dura la absorción, la esfera no atiende gestos. */
     var transicionando = false;
+    /* El selector de categorías (`MovilModos`), si la página trae su `<nav>`. */
+    var modos = null;
     /* La primera ruta no anima: es la carga, detrás de la puerta. */
     var primeraRuta = true;
 
@@ -583,8 +585,15 @@ window.MovilGlobo = (function () {
        Sin esta guarda, la captura de abajo se quedaba el puntero y el clic
        nunca llegaba al enlace: medido en el panel, la pastilla no abría nada. */
     function esAjeno(e) {
+      if (enElSelector(e)) return true;
       var el = e.target && e.target.closest ? e.target.closest('a, button') : null;
       return !!el && !lista.contains(el) && !capaCorona.contains(el);
+    }
+
+    /* El selector de categorías tiene sus propios gestos y sus propias
+       flechas: nada que empiece en él gira la esfera. */
+    function enElSelector(e) {
+      return !!(nodos.modos && e.target && e.target.closest && nodos.modos.contains(e.target));
     }
 
     /* El gesto es de UN dedo, el primero. Con dos, cada `pointermove`
@@ -672,6 +681,7 @@ window.MovilGlobo = (function () {
                    ArrowUp: 'arriba', ArrowDown: 'abajo' };
 
     raiz.addEventListener('keydown', function (e) {
+      if (enElSelector(e)) return;
       if (e.key === 'Escape' && corona) {
         e.preventDefault();
         var portada = teselas[corona.i].querySelector('button');
@@ -753,6 +763,7 @@ window.MovilGlobo = (function () {
       }
       if (ruta.tipo === 'contacto') return;
       var cat = ruta.tipo === 'categoria' ? ruta.valor : null;
+      if (modos) modos.poner(cat || 'todos', animado);
       if (cat !== categoria) reconstruir(cat, animado);
       if (recordado === null) return;
       var id = recordado;
@@ -770,6 +781,22 @@ window.MovilGlobo = (function () {
 
     pintar();
     reconstruir(null);
+    if (nodos.modos && window.MovilModos) {
+      /* «Todo» y las categorías de la barra que tienen algún trabajo, en su
+         orden. Elegir NAVEGA, como todo en el sitio: la ruta reconstruye. */
+      var cats = [{ id: 'todos', nombre: 'Todo' }].concat(
+        (opciones.categorias || []).filter(function (c) {
+          return proyectos.some(function (p) { return p.categoria === c.id; });
+        }));
+      modos = window.MovilModos.crear(nodos.modos, cats, {
+        reducido: reducido,
+        alElegir: function (id) {
+          if (id === 'todos') window.Router.ir('todos', null);
+          else window.Router.ir('categoria', id);
+        }
+      });
+      modos.poner('todos', false);
+    }
 
     return {
       delante: function () { var i = indiceDelante(); return i < 0 ? null : proyectos[i].id; },
@@ -780,7 +807,9 @@ window.MovilGlobo = (function () {
         });
       },
       avanzar: avanzar,
-      redibujar: dibujar,
+      /* Girar el teléfono, o encenderse el lado móvil: la esfera y el
+         selector se vuelven a medir. */
+      redibujar: function () { dibujar(); if (modos) modos.recolocar(); },
       elementoDe: elementoDe,
       origenDe: origenDe,
       corona: function () { return corona ? proyectos[corona.i].id : null; },

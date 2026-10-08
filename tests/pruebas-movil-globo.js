@@ -849,3 +849,97 @@ describe('MovilGlobo — la absorción al cambiar de categoría', function () {
     }, true, { reducido: true });
   });
 });
+
+/* El selector dentro de la esfera: lo crea `MovilGlobo` si le llega
+   `nodos.modos`, con las categorías de `opciones.categorias` que tengan algún
+   trabajo. Elegir navega; la ruta lo coloca. */
+describe('MovilGlobo — el selector de categorías', function () {
+
+  var CATEGORIAS = [
+    { id: 'editorial', nombre: 'Editorial' },
+    { id: 'videoclip', nombre: 'Videoclip' },
+    { id: 'cortometraje', nombre: 'Cortometraje' }
+  ];
+
+  var MARCO_CON_SELECTOR =
+    '<div style="position:relative;width:390px;height:844px">' +
+      '<div class="esfera" id="e"><ul id="l"></ul>' +
+      '<p><span id="t"></span><span id="m"></span></p>' +
+      '<nav id="n" style="position:relative;width:300px;white-space:nowrap"></nav></div>' +
+    '</div>';
+
+  function conSelector(fn) {
+    return ArnesDom.conElemento(MARCO_CON_SELECTOR, function (marco) {
+      var rutas = [];
+      var irDeVerdad = window.Router.ir;
+      window.Router.ir = function (tipo, valor) { rutas.push([tipo, valor]); };
+      try {
+        var g = MovilGlobo.init({
+          raiz: marco.querySelector('#e'), lista: marco.querySelector('#l'),
+          titulo: marco.querySelector('#t'), meta: marco.querySelector('#m'),
+          modos: marco.querySelector('#n')
+        }, globoProyectos(), {
+          fotograma: function () {}, reducido: true,
+          medir: function () { return { ancho: 390, alto: 844 }; },
+          animar: function (el, d, h, ms, c, fin) {
+            Object.keys(h).forEach(function (k) { el.style[k] = h[k]; });
+            if (fin) fin();
+            return function () {};
+          },
+          categorias: CATEGORIAS
+        });
+        return fn(g, marco, rutas);
+      } finally { window.Router.ir = irDeVerdad; }
+    });
+  }
+
+  function botonModo(marco, id) { return marco.querySelector('#n button[data-id="' + id + '"]'); }
+  function tocar(el) {
+    el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 10, bubbles: true }));
+    el.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 10, bubbles: true }));
+  }
+
+  prueba('pinta Todo y sólo las categorías que tienen algún trabajo', function () {
+    conSelector(function (g, marco) {
+      igual(Array.prototype.map.call(marco.querySelectorAll('#n button'), function (b) {
+        return b.textContent;
+      }), ['Todo', 'Editorial', 'Videoclip']);
+    });
+  });
+
+  prueba('elegir una categoría pide su ruta, y Todo la de la portada', function () {
+    conSelector(function (g, marco, rutas) {
+      tocar(botonModo(marco, 'videoclip'));
+      tocar(botonModo(marco, 'todos'));
+      igual(rutas, [['categoria', 'videoclip'], ['todos', null]]);
+    });
+  });
+
+  prueba('la ruta coloca el selector', function () {
+    conSelector(function (g, marco) {
+      MovilGlobo.aplicar({ tipo: 'categoria', valor: 'videoclip', pieza: null });
+      igual([botonModo(marco, 'videoclip').getAttribute('aria-pressed'),
+             botonModo(marco, 'todos').getAttribute('aria-pressed')], ['true', 'false']);
+    });
+  });
+
+  prueba('un gesto que empieza en el selector no gira la esfera', function () {
+    conSelector(function (g, marco) {
+      var nav = marco.querySelector('#n');
+      var q = g.estado().q;
+      nav.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 10, bubbles: true }));
+      nav.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 10, bubbles: true }));
+      nav.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 10, bubbles: true }));
+      igual(g.estado().q, q);
+    });
+  });
+
+  prueba('las flechas con el foco en el selector no giran la esfera', function () {
+    conSelector(function (g, marco) {
+      var antes = g.delante();
+      marco.querySelector('#n').dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      igual(g.delante(), antes);
+    });
+  });
+});
