@@ -1116,3 +1116,26 @@ contra `https://lidialuque.com` con cache-bust: el `index.html` vivo llama a
 `Contacto.colocar` y ya no lleva `.hoja-contacto`, `js/contacto.js` sirve la
 función `colocar`, la hoja de estilos lleva `body.es-movil .hoja .contacto`,
 y `/panel` sigue dando 302. La suite quedó en 699 pruebas en verde.
+
+### El logotipo nuevo (L6) (2026-11-10)
+
+**Desplegado el commit `141fae5` de `main`**, versión
+`9fb586c9-3d83-4b30-bda9-16d077ea32c3` (la anterior, con el logo en el navbar y
+la portada pero no en el pie, fue `3e4d0c2b-4cf5-45ef-a0fc-8281d78f5f5a`, sobre
+`7161fd4`). Entran los PR #51 y #52: `logo-luque.svg` es ahora `L6.svg`, y el
+navbar, el pie, los cuatro fotogramas del preloader y `fin-de-carga.svg` usan sus
+trazos. 202 archivos exportados.
+
+**El logo nuevo dice «Luque!», con minúsculas**, no «LUQUE!». Es lo que eligió
+Ángel entre las seis variantes de `new_SVGs.zip`. El `aria-label` sigue siendo
+«LUQUE!».
+
+**Hay cuatro sitios con los trazos del logo copiados a mano**, no uno: el navbar
+y el pie en `index.html`, los `<symbol carga-1…4>` también en `index.html` y los
+archivos `Carga 1–4.svg` y `fin-de-carga.svg`. Cambiar `logo-luque.svg` no basta.
+El PR #51 se dejó el pie y hubo que hacer un segundo despliegue.
+
+Comprobado contra `https://lidialuque.com` con cache-bust: ya no queda el
+`viewBox` viejo (`422.66 339.17`) en el `index.html` vivo; navbar y pie llevan
+`0 0 400 126.56`; `/panel` sigue dando 302. **Sin comprobar:** cómo se ve en un
+navegador (navbar y pie montados, el preloader en movimiento) ni en un teléfono.
