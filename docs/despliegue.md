@@ -1139,3 +1139,23 @@ Comprobado contra `https://lidialuque.com` con cache-bust: ya no queda el
 `viewBox` viejo (`422.66 339.17`) en el `index.html` vivo; navbar y pie llevan
 `0 0 400 126.56`; `/panel` sigue dando 302. **Sin comprobar:** cómo se ve en un
 navegador (navbar y pie montados, el preloader en movimiento) ni en un teléfono.
+
+### El rol de cámara: «Light & Camera dept.» (2026-11-20)
+
+**Desplegado el commit `29fc835` de `main`**, versión
+`14447e11-290d-4cba-8e64-9dc0b6785d51` (la anterior, con «Departamento de
+cámara y luz», fue `addebc6e-f941-4a5b-80b9-70a71597f646`, sobre `31a004a`).
+Entran los PR #54 y #55: el segundo rol deja de ser «Operadora de cámara» en
+la portada de escritorio, la portada móvil y la línea de contacto. Lidia pidió
+primero «Departamento de cámara y luz» y después «Light & Camera dept.», que
+es el que queda. En el HTML el `&` va escrito `&amp;`. 202 archivos exportados
+las dos veces; la suite, 745 pruebas en verde.
+
+**Desde Git Bash, `tar -xf` no acepta rutas `C:\…`**: interpreta `C:` como una
+máquina remota (`Cannot connect to C: resolve failed`). Se pasa la ruta por
+`cygpath -u` antes de extraer.
+
+Comprobado contra `https://lidialuque.com` con cache-bust: el texto nuevo sale
+tres veces y el anterior ninguna; `/panel` sigue dando 302. **Sin comprobar:**
+cómo se ve en un navegador ni en un teléfono, donde el texto podría partir
+línea.
